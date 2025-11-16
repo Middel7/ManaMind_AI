@@ -1,0 +1,46 @@
+# Configuration pre-commit pour ManaMind AI
+# Installation: uv run pre-commit install
+# Exécution manuelle: uv run pre-commit run --all-files
+
+repos:
+  # Hook pour synchroniser uv.lock
+  - repo: local
+    hooks:
+      - id: uv-lock
+        name: uv lock
+        entry: uv lock
+        language: system
+        pass_filenames: false
+        files: ^(pyproject\.toml|uv\.lock)$
+        always_run: true
+
+  # Hooks Ruff pour linting et formatage
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.7.4  # Utiliser la dernière version stable
+    hooks:
+      # Linter Ruff
+      - id: ruff
+        name: ruff check
+        args: [--fix, --exit-non-zero-on-fix]
+        types_or: [python, pyi]
+
+      # Formatter Ruff
+      - id: ruff-format
+        name: ruff format
+        types_or: [python, pyi]
+
+
+  # Vérification de sécurité Python
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.10
+    hooks:
+      - id: bandit
+        name: Security checks with bandit
+        args: ['-c', 'pyproject.toml']
+        additional_dependencies: ['bandit[toml]']
+        exclude: ^tests/
+
+# Configuration globale
+default_install_hook_types: [pre-commit, pre-push]
+default_stages: [pre-commit]
+fail_fast: false

@@ -1,0 +1,58 @@
+[project]
+name = "manamind-ai"
+version = "0.1.0"
+description = "manamind system recommender"
+readme = "README.md"
+requires-python = "==3.12.8"
+dependencies = [
+    "matplotlib>=3.10.7",
+    "pandas>=2.3.3",
+    "pre-commit>=1.11.2",
+    "pydantic>=2.12.4",
+    "ruff>=0.0.17",
+    "scikit-learn>=1.7.2",
+]
+
+[tool.ruff]
+# Longueur max de ligne (format + lint)
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+# Familles de règles activées :
+# E/W/F : erreurs et warnings style/pyflakes
+# I     : organisation des imports
+# B     : bugbear (détections de bugs potentiels)
+# UP    : modernisation Python (>=3.12)
+# ANN   : vérification des type hints (cohérent avec AGENTS.md)
+select = ["E", "W", "F", "I", "B", "UP", "ANN"]
+
+# Tu peux ignorer certaines règles trop strictes ici si besoin
+ignore = [
+    # Exemple : ignorer l’obligation de type hints pour variables
+    "ANN101",  # missing-type-self
+    "ANN102",  # missing-type-cls
+]
+
+# Fichiers/dossiers à exclure du lint
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "build",
+    "dist",
+    "data",
+]
+
+[tool.ruff.lint.isort]
+# Garder un style simple pour les imports
+known-first-party = ["manamind"]
+combine-as-imports = true
+
+[tool.ruff.format]
+# Options de formatage
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+docstring-code-format = true
