@@ -1,0 +1,82 @@
+1 Abhorrent Oculus
+1 Al Bhed Salvagers
+1 Alandra, Sky Dreamer
+1 Assassin's Trophy
+1 Avenger of Zendikar
+1 Azusa, Lost but Seeking
+1 Bala Ged Recovery
+1 Baleful Strix
+1 Bastion of Remembrance
+1 Beast Within
+1 Beledros Witherbloom
+1 Bitterblossom
+1 Black Sun's Twilight
+1 Bloodghast
+1 Chasm Skulker
+1 Clearwater Pathway
+1 Command Tower
+1 Counterspell
+1 Culling Ritual
+1 Darkslick Shores
+1 Dimir Aqueduct
+1 Dina, Soul Steeper
+1 Ertai Resurrected
+1 Exotic Orchard
+1 Extinction Event
+1 Fabled Passage
+7 Forest
+1 Gisa, Glorious Resurrector
+1 Gixian Puppeteer
+1 Golgari Rot Farm
+1 Grave Pact
+1 Greedy Freebooter
+1 Hall of Storm Giants
+4 Island
+1 Jolrael, Mwonvuli Recluse
+1 Jwari Disruption
+1 Kiora's Follower
+1 Kura, the Boundless Sky
+1 Minn, Wily Illusionist
+1 Mischievous Mystic
+1 Morbid Opportunist
+1 Nadir Kraken
+1 Negate
+1 Nine-Lives Familiar
+1 Ominous Seas
+1 Path of Ancestry
+1 Preacher of the Schism
+1 Quirion Ranger
+1 Rampaging Baloths
+1 Reassembling Skeleton
+1 Reclamation Sage
+1 Restless Cottage
+1 Retreat to Coralhelm
+1 Scute Swarm
+1 Shipwreck Marsh
+1 Simic Growth Chamber
+1 Slip Out the Back
+1 Sol Ring
+1 Spelunking
+1 Spinner of Souls
+8 Swamp
+1 Swiftfoot Boots
+1 Syr Konrad, the Grim
+1 Takenuma, Abandoned Mire
+1 The Gitrog, Ravenous Ride
+1 The Meathook Massacre
+1 Tireless Tracker
+1 Turntimber Symbiosis
+1 Tyvar, Jubilant Brawler
+1 Underground River
+1 Undergrowth Stadium
+1 Unearth
+1 Uro, Titan of Nature's Wrath
+1 Vampiric Tutor
+1 Vein Ripper
+1 Vito, Thorn of the Dusk Rose
+1 Yawgmoth, Thran Physician
+1 Zimone, All-Questioning
+1 Zimone, Quandrix Prodigy
+1 Zulaport Cutthroat
+
+1 Zimone and Dina

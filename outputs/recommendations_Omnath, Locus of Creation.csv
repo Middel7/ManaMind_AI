@@ -1,0 +1,46 @@
+Section,Card Name,Score,Support,Deck Frequency
+Commander,"Omnath, Locus of Creation",,,
+
+Additions,,,,
+add,Lotus Cobra,646,,
+add,Windswept Heath,637,,
+add,Breeding Pool,628,,
+add,Arid Mesa,622,,
+add,Scalding Tarn,613,,
+add,Wooded Foothills,606,,
+add,Stomping Ground,601,,
+add,Temple Garden,600,,
+add,Flooded Strand,588,,
+add,Dryad of the Ilysian Grove,569,,
+add,Exploration,567,,
+add,Hallowed Fountain,563,,
+add,Ramunap Excavator,548,,
+add,Steam Vents,542,,
+add,Ancient Greenwarden,541,,
+add,Crop Rotation,526,,
+add,Farseek,475,,
+add,"Aesi, Tyrant of Gyre Strait",474,,
+add,Sacred Foundry,466,,
+add,Cyclonic Rift,436,,
+
+Removals,,,,
+remove,"Mina and Denn, Wildborn",,0,0
+remove,Sapling Nursery,,0,0
+remove,Summon: Fenrir,,0,0
+remove,Vibrance,,0,0
+remove,Quandrix Cultivator,,7,36
+remove,"Jolrael, Voice of Zhalfir",,9,247
+remove,Kenrith's Transformation,,11,796
+remove,"Shigeki, Jukai Visionary",,12,79
+remove,Traverse the Outlands,,17,157
+remove,Wayfarer's Bauble,,17,2203
+remove,Zell Dincht,,25,25
+remove,Far Wanderings,,30,53
+remove,Turntimber Symbiosis,,32,811
+remove,Nahiri's Lithoforming,,46,51
+remove,Naya Panorama,,48,79
+remove,Mossborn Hydra,,64,156
+remove,"Obuun, Mul Daya Ancestor",,70,71
+remove,Case of the Locked Hothouse,,72,144
+remove,Blighted Woodland,,81,1389
+remove,Chaos Warp,,85,2230

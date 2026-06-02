@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recherche de cartes MTG — ManaMind</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      color: #f8fafc;
+      background: #020617;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background-image:
+        linear-gradient(rgba(2, 6, 23, 0.9), rgba(2, 6, 23, 0.9)),
+        url('chandra-jace-and-nissa-from-magic-the-gathering.avif');
+      background-repeat: no-repeat;
+      background-size: cover;
+      background-position: center;
+      padding: 24px;
+    }
+
+    .page {
+      max-width: 1400px;
+      width: min(96vw, 1400px);
+      margin: 0 auto;
+      display: grid;
+      gap: 20px;
+    }
+
+    /* ── Navigation ────────────────────────────────────────────── */
+    .site-nav {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      padding: 14px 24px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: 20px;
+    }
+
+    .site-nav a {
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 0.9rem;
+      padding: 6px 14px;
+      border-radius: 10px;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .site-nav a:hover { background: rgba(148, 163, 184, 0.08); color: #f8fafc; }
+    .site-nav a.active { color: #38bdf8; background: rgba(56, 189, 248, 0.08); }
+
+    .site-nav .sep { color: rgba(148, 163, 184, 0.3); user-select: none; }
+
+    /* ── Header ────────────────────────────────────────────────── */
+    .search-header {
+      padding: 32px;
+      border-radius: 28px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.4);
+    }
+
+    .search-header h1 {
+      font-size: clamp(1.6rem, 2.5vw, 2.6rem);
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 8px;
+    }
+
+    .search-header p {
+      color: #94a3b8;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    /* ── Formulaire ─────────────────────────────────────────────── */
+    .search-form {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      max-width: 680px;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 14px 18px;
+      background: rgba(2, 6, 23, 0.8);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 14px;
+      color: #f8fafc;
+      font-size: 1rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-input::placeholder { color: #475569; }
+    .search-input:focus { border-color: #38bdf8; }
+
+    .search-btn {
+      padding: 14px 28px;
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      border: none;
+      border-radius: 14px;
+      color: #020617;
+      font-size: 1rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+
+    .search-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .search-btn:active { transform: translateY(0); }
+
+    /* ── Statut ─────────────────────────────────────────────────── */
+    .status-bar {
+      font-size: 0.9rem;
+      color: #94a3b8;
+      min-height: 1.4em;
+      padding: 0 4px;
+    }
+
+    .status-bar.error { color: #f87171; }
+    .status-bar.loading { color: #38bdf8; }
+    .status-bar.success { color: #86efac; }
+
+    /* ── Grille de résultats ────────────────────────────────────── */
+    .results-grid {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 520px), 1fr));
+    }
+
+    /* ── Carte résultat ─────────────────────────────────────────── */
+    .card-result {
+      display: grid;
+      grid-template-columns: 110px 1fr;
+      gap: 16px;
+      align-items: start;
+      background: rgba(8, 16, 35, 0.96);
+      border: 1px solid rgba(148, 163, 184, 0.1);
+      border-radius: 20px;
+      padding: 16px;
+      transition: border-color 0.2s, transform 0.15s;
+    }
+
+    .card-result:hover {
+      border-color: rgba(56, 189, 248, 0.3);
+      transform: translateY(-2px);
+    }
+
+    /* Image MTG : ratio 5:7 */
+    .card-thumb {
+      width: 110px;
+      aspect-ratio: 5 / 7;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #0f172a;
+      flex-shrink: 0;
+    }
+
+    .card-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .card-thumb .no-image {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #334155;
+      font-size: 0.75rem;
+      text-align: center;
+      padding: 8px;
+    }
+
+    /* Informations texte */
+    .card-info { display: grid; gap: 8px; min-width: 0; }
+
+    .card-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .card-name {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #f8fafc;
+      letter-spacing: -0.01em;
+    }
+
+    .mana-cost {
+      font-size: 0.8rem;
+      color: #a5f3fc;
+      font-family: ui-monospace, monospace;
+      white-space: nowrap;
+      background: rgba(14, 116, 144, 0.2);
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+
+    .card-type {
+      font-size: 0.82rem;
+      color: #7dd3fc;
+      font-style: italic;
+    }
+
+    .oracle-text {
+      font-size: 0.82rem;
+      color: #cbd5e1;
+      line-height: 1.55;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+    }
+
+    .card-footer {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    /* Badges légalité */
+    .badge {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.02em;
+    }
+
+    .badge-legal {
+      background: rgba(34, 197, 94, 0.15);
+      color: #86efac;
+      border: 1px solid rgba(34, 197, 94, 0.25);
+    }
+
+    .badge-illegal {
+      background: rgba(148, 163, 184, 0.08);
+      color: #64748b;
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    /* EDHREC rank */
+    .edhrec-rank {
+      font-size: 0.72rem;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    /* Prix EUR */
+    .price-eur {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #4ade80;
+      background: rgba(74, 222, 128, 0.1);
+      border: 1px solid rgba(74, 222, 128, 0.2);
+      padding: 2px 10px;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+
+    .price-na {
+      font-size: 0.78rem;
+      color: #475569;
+    }
+
+    .scryfall-link {
+      font-size: 0.78rem;
+      color: #7dd3fc;
+      text-decoration: none;
+      margin-left: auto;
+      white-space: nowrap;
+    }
+
+    .scryfall-link:hover { text-decoration: underline; }
+
+    /* ── État vide ──────────────────────────────────────────────── */
+    .empty-state {
+      padding: 48px 24px;
+      text-align: center;
+      color: #475569;
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+
+    /* ── Responsive ─────────────────────────────────────────────── */
+    @media (max-width: 500px) {
+      .card-result { grid-template-columns: 1fr; }
+      .card-thumb { width: 100%; max-width: 160px; margin: 0 auto; }
+      .search-form { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- Navigation -->
+    <nav class="site-nav">
+      <a href="/">The card mentor</a>
+      <span class="sep">|</span>
+      <a href="/cards" class="active">Recherche de cartes</a>
+    </nav>
+
+    <!-- En-tête + formulaire -->
+    <header class="search-header">
+      <h1>Recherche de cartes MTG</h1>
+      <p>Cherche une carte par son nom. La recherche est partielle et insensible à la casse.</p>
+
+      <form class="search-form" id="searchForm" autocomplete="off">
+        <input
+          id="searchInput"
+          class="search-input"
+          type="search"
+          name="q"
+          placeholder="Ex : sol, counterspell, rhystic…"
+          minlength="2"
+          autofocus
+        />
+        <button class="search-btn" type="submit">Rechercher</button>
+      </form>
+    </header>
+
+    <!-- Barre de statut -->
+    <div class="status-bar" id="statusBar" role="status" aria-live="polite">
+      Saisissez au moins 2 caractères pour lancer la recherche.
+    </div>
+
+    <!-- Résultats -->
+    <div class="results-grid" id="resultsGrid"></div>
+
+  </div>
+
+  <script>
+    'use strict';
+
+    const form        = document.getElementById('searchForm');
+    const input       = document.getElementById('searchInput');
+    const statusBar   = document.getElementById('statusBar');
+    const resultsGrid = document.getElementById('resultsGrid');
+
+    // ── Helpers sécurité ───────────────────────────────────────────────────────
+    // textContent est utilisé pour toutes les données texte → pas d'injection HTML possible
+    function setStatus(msg, type = '') {
+      statusBar.textContent = msg;
+      statusBar.className = 'status-bar' + (type ? ' ' + type : '');
+    }
+
+    // ── Soumission du formulaire ────────────────────────────────────────────────
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const q = input.value.trim();
+
+      if (q.length < 2) {
+        setStatus('Saisissez au moins 2 caractères.', '');
+        return;
+      }
+
+      setStatus('Recherche en cours…', 'loading');
+      resultsGrid.innerHTML = '';
+
+      try {
+        const resp = await fetch(`/api/cards/search?q=${encodeURIComponent(q)}&limit=100`);
+        const data = await resp.json();
+
+        if (data.error) {
+          setStatus(`Erreur : ${data.error}`, 'error');
+          return;
+        }
+
+        if (data.total === 0) {
+          setStatus(`Aucun résultat pour « ${q} ».`, '');
+          resultsGrid.appendChild(emptyState(q));
+          return;
+        }
+
+        const suffix = data.total >= 100 ? ' (limité à 100 — affine ta recherche)' : '';
+        setStatus(`${data.total} carte${data.total > 1 ? 's' : ''} pour « ${q} »${suffix} — triées par popularité EDHREC`, 'success');
+        data.cards.forEach(card => resultsGrid.appendChild(buildCard(card)));
+
+      } catch (err) {
+        setStatus(`Erreur réseau : ${err.message}`, 'error');
+      }
+    });
+
+    // Recherche aussi en appuyant Entrée depuis le champ
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') form.dispatchEvent(new Event('submit', { cancelable: true }));
+    });
+
+    // ── Construction d'une carte résultat ──────────────────────────────────────
+    function buildCard(card) {
+      const el = document.createElement('div');
+      el.className = 'card-result';
+
+      // -- Image ----------------------------------------------------------------
+      const thumb = document.createElement('div');
+      thumb.className = 'card-thumb';
+
+      if (card.image_normal) {
+        const img = document.createElement('img');
+        img.src = card.image_normal;
+        img.alt = card.name;
+        img.loading = 'lazy';
+        // Fallback si l'URL Scryfall ne répond pas
+        img.onerror = () => { thumb.innerHTML = ''; thumb.appendChild(noImageDiv()); };
+        thumb.appendChild(img);
+      } else {
+        thumb.appendChild(noImageDiv());
+      }
+
+      // -- Infos texte ----------------------------------------------------------
+      const info = document.createElement('div');
+      info.className = 'card-info';
+
+      // Nom + coût de mana
+      const headerRow = document.createElement('div');
+      headerRow.className = 'card-header-row';
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'card-name';
+      nameSpan.textContent = card.name;
+      headerRow.appendChild(nameSpan);
+
+      if (card.mana_cost) {
+        const manaSpan = document.createElement('span');
+        manaSpan.className = 'mana-cost';
+        manaSpan.textContent = card.mana_cost;
+        headerRow.appendChild(manaSpan);
+      }
+
+      // Type
+      const typeDiv = document.createElement('div');
+      typeDiv.className = 'card-type';
+      typeDiv.textContent = card.type_line || '';
+
+      // Texte oracle (chaque \n devient un saut de ligne via BR)
+      const oracleDiv = document.createElement('div');
+      oracleDiv.className = 'oracle-text';
+      if (card.oracle_text) {
+        card.oracle_text.split('\n').forEach((line, i) => {
+          if (i > 0) oracleDiv.appendChild(document.createElement('br'));
+          oracleDiv.appendChild(document.createTextNode(line));
+        });
+      }
+
+      // Footer (badge légalité, rank EDHREC, lien Scryfall)
+      const footer = document.createElement('div');
+      footer.className = 'card-footer';
+
+      const badge = document.createElement('span');
+      badge.className = card.legal_commander ? 'badge badge-legal' : 'badge badge-illegal';
+      badge.textContent = card.legal_commander ? 'Commander' : 'Non légal';
+      footer.appendChild(badge);
+
+      // Prix EUR
+      const priceEl = document.createElement('span');
+      if (card.eur_price !== null && card.eur_price !== undefined) {
+        priceEl.className = 'price-eur';
+        priceEl.textContent = `EUR ${card.eur_price.toFixed(2)}`;
+      } else {
+        priceEl.className = 'price-na';
+        priceEl.textContent = 'Prix N/D';
+      }
+      footer.appendChild(priceEl);
+
+      // EDHREC rank
+      if (card.edhrec_rank) {
+        const rank = document.createElement('span');
+        rank.className = 'edhrec-rank';
+        rank.textContent = `#${card.edhrec_rank.toLocaleString()}`;
+        rank.title = 'Classement EDHREC (plus petit = plus populaire)';
+        footer.appendChild(rank);
+      }
+
+      if (card.scryfall_uri) {
+        const link = document.createElement('a');
+        link.href = card.scryfall_uri;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.className = 'scryfall-link';
+        link.textContent = 'Scryfall ↗';
+        footer.appendChild(link);
+      }
+
+      info.appendChild(headerRow);
+      info.appendChild(typeDiv);
+      if (card.oracle_text) info.appendChild(oracleDiv);
+      info.appendChild(footer);
+
+      el.appendChild(thumb);
+      el.appendChild(info);
+      return el;
+    }
+
+    // ── Placeholder quand pas d'image ──────────────────────────────────────────
+    function noImageDiv() {
+      const d = document.createElement('div');
+      d.className = 'no-image';
+      d.textContent = 'Pas d\'image';
+      return d;
+    }
+
+    // ── Message aucun résultat ─────────────────────────────────────────────────
+    function emptyState(q) {
+      const d = document.createElement('div');
+      d.className = 'empty-state';
+      d.textContent = `Aucune carte trouvée pour « ${q} ». Essaie avec moins de caractères ou vérifie l'orthographe.`;
+      return d;
+    }
+  </script>
+</body>
+</html>

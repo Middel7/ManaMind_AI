@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <title>The card mentor — ManaMind</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      color: #f8fafc;
+      background: #020617;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background-image:
+        linear-gradient(rgba(2, 6, 23, 0.88), rgba(2, 6, 23, 0.88)),
+        url('chandra-jace-and-nissa-from-magic-the-gathering.avif');
+      background-repeat: no-repeat;
+      background-size: cover;
+      background-position: center;
+      padding: 24px;
+    }
+
+    .page {
+      max-width: 1680px;
+      width: min(96vw, 1680px);
+      margin: 0 auto;
+      display: grid;
+      gap: 24px;
+    }
+
+    /* ── Navigation ─────────────────────────────────────────────── */
+    .site-nav {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      padding: 14px 24px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: 20px;
+    }
+
+    .site-nav a {
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 0.9rem;
+      padding: 6px 14px;
+      border-radius: 10px;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .site-nav a:hover { background: rgba(148, 163, 184, 0.08); color: #f8fafc; }
+    .site-nav a.active { color: #38bdf8; background: rgba(56, 189, 248, 0.08); }
+    .site-nav .sep { color: rgba(148, 163, 184, 0.3); user-select: none; }
+
+    header {
+      padding: 32px;
+      border-radius: 32px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      box-shadow: 0 30px 70px rgba(15, 23, 42, 0.35);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 3vw, 3.4rem);
+      letter-spacing: -0.04em;
+      line-height: 1.05;
+    }
+
+    p.subtitle {
+      margin: 16px 0 0;
+      max-width: 860px;
+      color: #94a3b8;
+      line-height: 1.75;
+      font-size: 1rem;
+    }
+
+    .top-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 24px;
+      align-items: start;
+    }
+
+    header,
+    .header-panel {
+      border-radius: 32px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      box-shadow: 0 30px 70px rgba(15, 23, 42, 0.35);
+      padding: 32px;
+      aspect-ratio: 1.3698 / 1;
+      overflow: hidden;
+      width: 70%;
+      max-width: 100%;
+      margin: 0 auto;
+    }
+
+    .header-panel {
+      display: grid;
+      gap: 18px;
+    }
+
+    @media (max-width: 1000px) {
+      .top-grid { grid-template-columns: 1fr; }
+    }
+
+    .actions {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+    }
+
+    button,
+    label.upload {
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      border-radius: 16px;
+      color: #f8fafc;
+      background: rgba(15, 23, 42, 0.92);
+      padding: 16px 20px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+      text-align: center;
+      width: 100%;
+      display: inline-flex;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    button:hover,
+    label.upload:hover {
+      transform: translateY(-1px);
+      border-color: #7dd3fc;
+      background: rgba(30, 41, 59, 0.98);
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .notice {
+      color: #94a3b8;
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 12px;
+      background: rgba(148, 163, 184, 0.15);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 20px;
+    }
+
+    .progress-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #38bdf8, #818cf8);
+      transition: width 0.25s ease;
+    }
+
+    .progress-label {
+      margin-top: 12px;
+      color: #cbd5e1;
+      font-size: 0.95rem;
+    }
+
+    .footer {
+      color: #94a3b8;
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- Navigation -->
+    <nav class="site-nav">
+      <a href="/" class="active">The card mentor</a>
+      <span class="sep">|</span>
+      <a href="/cards">Recherche de cartes</a>
+    </nav>
+
+    <div class="top-grid">
+      <header>
+        <h1>The card mentor</h1>
+        <p class="subtitle">Sélectionnez un deck pour voir l'analyse, les cartes recommandées et le style de jeu.</p>
+        <div class="actions" style="margin-top: 24px;">
+          <label class="upload">
+            Charger un deck texte
+            <input id="fileInput" type="file" accept=".txt" />
+          </label>
+        </div>
+        <div class="progress-bar" id="uploadProgress" aria-hidden="true">
+          <div class="progress-fill" id="uploadProgressFill"></div>
+        </div>
+        <div class="progress-label" id="uploadProgressLabel">Prêt à charger un fichier .txt.</div>
+      </header>
+
+      <section class="header-panel" id="commanderPanel">
+        <div class="header-card" style="position:relative; z-index:1;">
+          <h3 style="font-size:0.75rem; letter-spacing:0.1em; color:#64748b; text-transform:uppercase; margin-bottom:8px;">Commandant</h3>
+          <span id="headerCommanderName" style="font-size:1.2rem; font-weight:600;">—</span>
+        </div>
+        <div style="display:flex; justify-content:center; margin-top:auto;">
+          <img id="commanderCardImg"
+            style="display:none; width:180px; aspect-ratio:5/7; border-radius:14px; object-fit:cover; box-shadow:0 8px 32px rgba(0,0,0,0.5);"
+            alt="Commander card" />
+        </div>
+      </section>
+    </div>
+
+  </div>
+
+  <script>
+    const fileInput           = document.getElementById('fileInput');
+    const uploadProgressFill  = document.getElementById('uploadProgressFill');
+    const uploadProgressLabel = document.getElementById('uploadProgressLabel');
+    const uploadProgress      = document.getElementById('uploadProgress');
+    const headerCommanderName = document.getElementById('headerCommanderName');
+    const commanderPanel      = document.getElementById('commanderPanel');
+    const commanderCardImg    = document.getElementById('commanderCardImg');
+
+    async function setProgress(percent, message) {
+      uploadProgressFill.style.width = `${percent}%`;
+      uploadProgressLabel.textContent = message;
+      uploadProgress.setAttribute('aria-hidden', 'false');
+    }
+
+    // Extrait le commandant depuis le texte brut du fichier deck
+    function extractCommander(text) {
+      const lines = text.split(/\r?\n/);
+      const sections = [];
+      let current = [];
+      for (const line of lines) {
+        const t = line.trim();
+        if (!t) { if (current.length) { sections.push(current); current = []; } }
+        else current.push(t);
+      }
+      if (current.length) sections.push(current);
+
+      // Le commandant est dans la dernière section à une seule carte
+      const last = sections[sections.length - 1];
+      if (sections.length >= 2 && last && last.length === 1) {
+        const m = last[0].match(/^(\d+)\s+(.+)$/);
+        if (m) return m[2].replace(/^A-/, '').trim();
+      }
+      return null;
+    }
+
+    // Affiche la carte du commandant dans le panneau droit
+    async function showCommanderCard(name) {
+      if (!name) return;
+      headerCommanderName.textContent = name;
+      try {
+        const r = await fetch(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}`);
+        if (!r.ok) return;
+        const d = await r.json();
+
+        // Image de la carte
+        const img = d.image_uris?.normal || d.card_faces?.[0]?.image_uris?.normal || null;
+        if (img) {
+          commanderCardImg.src = img;
+          commanderCardImg.style.display = 'block';
+        }
+
+        // Art crop en fond du panneau
+        const art = d.image_uris?.art_crop || d.card_faces?.[0]?.image_uris?.art_crop || null;
+        if (art) {
+          commanderPanel.style.backgroundImage =
+            `linear-gradient(rgba(2,6,23,0.55), rgba(2,6,23,0.55)), url('${art}')`;
+          commanderPanel.style.backgroundSize = 'cover';
+          commanderPanel.style.backgroundPosition = 'center';
+        }
+      } catch {}
+    }
+
+    async function uploadDeck(file) {
+      const formData = new FormData();
+      formData.append('deckfile', file);
+      await setProgress(10, 'Préparation du téléchargement...');
+      const response = await fetch('/upload-deck', { method: 'POST', body: formData });
+      await setProgress(40, 'Envoi du deck au serveur...');
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Erreur de serveur pendant l\'upload.');
+      await setProgress(60, 'Génération des recommandations...');
+      return data;
+    }
+
+    fileInput.addEventListener('change', async (event) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      try {
+        // 1. Lire le fichier localement et afficher le commandant immédiatement
+        const text = await file.text();
+        const commander = extractCommander(text);
+        if (commander) {
+          headerCommanderName.textContent = commander;
+          showCommanderCard(commander); // async, n'attend pas
+        }
+
+        // 2. Uploader et générer les recommandations
+        const uploadResult = await uploadDeck(file);
+        await setProgress(100, 'Recommandations prêtes !');
+
+        // 3. Rediriger vers la page de résultats
+        window.location.href = '/results?csv=' + encodeURIComponent(uploadResult.recommendationsFile);
+
+      } catch (error) {
+        await setProgress(0, 'Erreur : ' + error.message);
+      }
+    });
+  </script>
+</body>
+</html>

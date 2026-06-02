@@ -1,0 +1,46 @@
+Section,Card Name,Score,Support,Deck Frequency
+Commander,Zimone and Dina,,,
+
+Additions,,,,
+add,"Tatyova, Benthic Druid",2146,,
+add,Tireless Provisioner,1769,,
+add,Overgrown Tomb,1663,,
+add,Breeding Pool,1606,,
+add,Watery Grave,1580,,
+add,Lotus Cobra,1577,,
+add,Zagoth Triome,1516,,
+add,Cultivate,1506,,
+add,Arcane Signet,1483,,
+add,Zendikar's Roil,1429,,
+add,Eternal Witness,1427,,
+add,Growth Spiral,1416,,
+add,Reliquary Tower,1400,,
+add,Nature's Lore,1325,,
+add,Verdant Catacombs,1318,,
+add,Misty Rainforest,1310,,
+add,Opulent Palace,1272,,
+add,Field of the Dead,1256,,
+add,Retreat to Hagra,1245,,
+add,Polluted Delta,1237,,
+
+Removals,,,,
+remove,Al Bhed Salvagers,,0,0
+remove,"Zimone, All-Questioning",,0,0
+remove,Extinction Event,,6,39
+remove,Preacher of the Schism,,6,42
+remove,Abhorrent Oculus,,12,46
+remove,"The Gitrog, Ravenous Ride",,15,16
+remove,"Gisa, Glorious Resurrector",,15,25
+remove,Greedy Freebooter,,16,20
+remove,Slip Out the Back,,16,457
+remove,Spinner of Souls,,19,28
+remove,Jwari Disruption,,23,288
+remove,Vein Ripper,,27,32
+remove,Turntimber Symbiosis,,28,811
+remove,Black Sun's Twilight,,29,70
+remove,Hall of Storm Giants,,30,202
+remove,Nine-Lives Familiar,,42,44
+remove,Restless Cottage,,76,119
+remove,"Yawgmoth, Thran Physician",,105,590
+remove,Grave Pact,,110,283
+remove,"Kura, the Boundless Sky",,114,132

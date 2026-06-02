@@ -1,0 +1,73 @@
+1 Abhorrent Oculus
+1 Aetherize
+1 Aetherspouts
+1 Alrund's Epiphany
+1 An Offer You Can't Refuse
+1 Arcane Denial
+1 Archmage Emeritus
+1 Archmage's Charm
+1 Aven Courier
+1 Brainstorm
+1 Castle Vantress
+1 Chrome Host Seedshark
+1 Compulsive Research
+1 Conjurer's Closet
+1 Counterspell
+1 Cyclonic Rift
+1 Demilich
+1 Dig Through Time
+1 Ertai's Scorn
+1 Fact or Fiction
+1 Fellwar Stone
+1 Finale of Revelation
+1 Flow of Knowledge
+1 Gifts Ungiven
+1 Hall of Storm Giants
+1 Hullbreaker Horror
+1 Invoke the Winds
+31 Island
+1 Jwari Disruption
+1 Ledger Shredder
+1 Lier, Disciple of the Drowned
+1 Lórien Revealed
+1 Malevolent Hermit
+1 March of Swirling Mist
+1 Mind Stone
+1 Murmuring Mystic
+1 Myriad Landscape
+1 Mystic Remora
+1 Mystical Tutor
+1 Narset, Parter of Veils
+1 Negate
+1 Nykthos, Shrine to Nyx
+1 Pact of Negation
+1 Planar Incision
+1 Ponder
+1 Refute
+1 Renegade Doppelganger
+1 Rewind
+1 Rhystic Study
+1 Rivendell
+1 Roaming Throne
+1 Sapphire Medallion
+1 Search for Azcanta
+1 Season of Weaving
+1 Shadowspear
+1 Shark Typhoon
+1 Shore Up
+1 Silundi Vision
+1 Silver Scrutiny
+1 Sky Diamond
+1 Sol Ring
+1 Solve the Equation
+1 Steamcore Scholar
+1 Sublime Epiphany
+1 Talrand, Sky Summoner
+1 Thought Vessel
+1 Thundertrap Trainer
+1 Time Stop
+1 Time Warp
+1 Tyrite Sanctum
+1 Wavebreak Hippocamp
+
+1 Eluge, the Shoreless Sea

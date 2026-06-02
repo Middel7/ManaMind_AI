@@ -1,0 +1,46 @@
+Section,Card Name,Score,Support,Deck Frequency
+Commander,"Orah, Skyclave Hierophant",,,
+
+Additions,,,,
+add,Edgewalker,812,,
+add,Arcane Signet,748,,
+add,"Vito, Thorn of the Dusk Rose",728,,
+add,Soul Warden,711,,
+add,Starlit Sanctum,708,,
+add,"Ayli, Eternal Pilgrim",685,,
+add,Doomed Necromancer,680,,
+add,Orzhov Signet,641,,
+add,Caves of Koilos,623,,
+add,Suture Priest,613,,
+add,Talisman of Hierarchy,584,,
+add,Priest of Forgotten Gods,572,,
+add,Isolated Chapel,557,,
+add,Rotlung Reanimator,535,,
+add,Mother of Runes,532,,
+add,Godless Shrine,527,,
+add,Soul's Attendant,518,,
+add,Tainted Field,498,,
+add,"Whisper, Blood Liturgist",471,,
+add,Remorseful Cleric,446,,
+
+Removals,,,,
+remove,Amalia Benavides Aguirre,,0,0
+remove,"Erebos, Bleak-Hearted",,0,0
+remove,"Heliod, Sun-Crowned",,0,0
+remove,Sigardian Savior,,0,7
+remove,The Wandering Emperor,,0,53
+remove,Wedding Announcement,,0,168
+remove,"Vraan, Executioner Thane",,0,539
+remove,Bartolomé del Presidio,,1,2
+remove,Helping Hand,,1,9
+remove,The Dross Pits,,1,54
+remove,White Sun's Twilight,,1,56
+remove,Unyielding Gatekeeper,,2,12
+remove,Pelakka Predation,,3,21
+remove,"Liesa, Shroud of Dusk",,4,6
+remove,Uncharted Haven,,4,73
+remove,Get Lost,,5,182
+remove,Vivid Meadow,,6,43
+remove,Spirit-Sister's Call,,7,8
+remove,Fell the Mighty,,10,67
+remove,Welcoming Vampire,,10,138

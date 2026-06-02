@@ -2,6 +2,13 @@
 
 Ce dossier contient la documentation complète du projet **ManaMind AI**.
 
+2. Lance le bon serveur :
+
+
+cd "c:\Users\fabie\Documents\GitHub\ManaMind_AI"
+python server.py
+3. Ouvre http://localhost:8000/
+
 ---
 
 ## 📁 Structure des Documents
@@ -71,6 +78,9 @@ Ce dossier contient la documentation complète du projet **ManaMind AI**.
 ---
 
 ## 🔄 Mise à Jour de la Documentation
+
+### Scripts retirés
+- Les scripts `src/manamind/build_card_database_detailed.py`, `src/manamind/build_card_database_final.py`, `src/manamind/build_card_database_fixed.py` et `src/manamind/build_card_database.py` ont été supprimés.
 
 ### Quand mettre à jour ?
 

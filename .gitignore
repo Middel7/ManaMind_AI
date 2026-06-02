@@ -4,6 +4,12 @@
 tmp/
 data/
 
+# Environnement local — ne jamais commiter
+.env
+
+# Données brutes téléchargées (bulk Scryfall, ~1 Go)
+data/raw/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
