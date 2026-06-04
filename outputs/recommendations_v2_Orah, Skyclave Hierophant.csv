@@ -1,0 +1,46 @@
+Section,Card Name,Score,Support,Deck Frequency,Popularity,Specificity,Synergy,Structure,Similarity,Reason
+Commander,"Orah, Skyclave Hierophant",,,,,,,,,
+
+Additions,,,,,,,,,,
+add,Edgewalker,1473,,,1.0,0.9963,0.1878,0.0,1.0,Très présente dans les decks similaires.
+add,Arcane Signet,1428,,,0.9212,0.0456,1.0,0.875,0.9317,Bonne synergie avec plusieurs cartes du deck.
+add,Starlit Sanctum,1351,,,0.8719,0.9958,0.1665,0.0,0.8875,Carte spécifique à ce commandant.
+add,"Ayli, Eternal Pilgrim",1321,,,0.8436,0.9928,0.1604,0.0,0.8541,Carte spécifique à ce commandant.
+add,Doomed Necromancer,1304,,,0.8374,0.97,0.1608,0.0,0.8499,Carte spécifique à ce commandant.
+add,"Vito, Thorn of the Dusk Rose",1288,,,0.8966,0.8189,0.1781,0.0,0.9024,Présente dans les decks les plus proches du vôtre.
+add,Orzhov Signet,1251,,,0.7894,0.5875,0.1786,0.875,0.792,Corrige un manque structural du deck.
+add,Soul Warden,1204,,,0.8756,0.6733,0.1933,0.0,0.8938,Présente dans les decks les plus proches du vôtre.
+add,Suture Priest,1200,,,0.7549,0.919,0.1472,0.0,0.7747,Carte spécifique à ce commandant.
+add,Talisman of Hierarchy,1194,,,0.7192,0.6141,0.1599,0.875,0.7212,Corrige un manque structural du deck.
+add,Rotlung Reanimator,1138,,,0.6589,0.9926,0.1237,0.0,0.6521,Carte spécifique à ce commandant.
+add,Priest of Forgotten Gods,1096,,,0.7044,0.8079,0.1423,0.0,0.7143,Carte spécifique à ce commandant.
+add,Caves of Koilos,1072,,,0.7672,0.623,0.1735,0.0,0.7748,Présente dans les decks les plus proches du vôtre.
+add,"Whisper, Blood Liturgist",1051,,,0.58,0.9632,0.113,0.0,0.5991,Carte spécifique à ce commandant.
+add,Tainted Field,1032,,,0.6133,0.8557,0.1245,0.0,0.6339,Carte spécifique à ce commandant.
+add,Remorseful Cleric,1020,,,0.5493,0.9633,0.1067,0.0,0.5583,Carte spécifique à ce commandant.
+add,Soul's Attendant,987,,,0.6379,0.7155,0.1361,0.0,0.6407,Carte spécifique à ce commandant.
+add,Isolated Chapel,986,,,0.686,0.6134,0.1549,0.0,0.6815,Très présente dans les decks similaires.
+add,Battletide Alchemist,948,,,0.4643,0.9895,0.0881,0.0,0.4681,Carte spécifique à ce commandant.
+add,Anguished Unmaking,937,,,0.4877,0.5641,0.1134,0.8571,0.4846,Corrige un manque structural du deck.
+
+Removals,,,,,,,,,,
+remove,"Heliod, Sun-Crowned",,0,0,,,,,,
+remove,Amalia Benavides Aguirre,,0,0,,,,,,
+remove,"Erebos, Bleak-Hearted",,0,0,,,,,,
+remove,Sigardian Savior,,0,7,,,,,,
+remove,The Wandering Emperor,,0,53,,,,,,
+remove,Wedding Announcement,,0,168,,,,,,
+remove,"Vraan, Executioner Thane",,0,539,,,,,,
+remove,Bartolomé del Presidio,,1,2,,,,,,
+remove,Helping Hand,,1,9,,,,,,
+remove,The Dross Pits,,1,54,,,,,,
+remove,White Sun's Twilight,,1,56,,,,,,
+remove,Unyielding Gatekeeper,,2,12,,,,,,
+remove,Pelakka Predation,,3,21,,,,,,
+remove,"Liesa, Shroud of Dusk",,4,6,,,,,,
+remove,Uncharted Haven,,4,73,,,,,,
+remove,Get Lost,,5,182,,,,,,
+remove,Vivid Meadow,,6,43,,,,,,
+remove,Spirit-Sister's Call,,7,8,,,,,,
+remove,Fell the Mighty,,10,67,,,,,,
+remove,Welcoming Vampire,,10,138,,,,,,

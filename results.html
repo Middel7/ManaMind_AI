@@ -253,6 +253,12 @@
     letter-spacing: 0.04em;
   }
   .sort:hover { color: var(--text-dim); }
+  .algo-badge {
+    font-family: var(--serif-cap); font-size: 9px; letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--arcane-br);
+    border: 1px solid rgba(167,149,214,0.30); padding: 5px 12px; border-radius: 999px;
+    background: rgba(124,107,168,0.12);
+  }
 
   .grid {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
@@ -431,6 +437,7 @@
             <button class="pill active" data-f="add"><span class="dot"></span>À ajouter · <span id="pillAdd">0</span></button>
             <button class="pill" data-f="rem"><span class="dot"></span>À retirer · <span id="pillRem">0</span></button>
           </div>
+          <span class="algo-badge" id="algoBadge" style="display:none"></span>
           <button class="sort" id="sortBtn">trié par score ▾</button>
         </div>
         <div class="grid" id="grid"></div>
@@ -600,14 +607,13 @@ async function hydrate(el, c, isAdd){
   const data = await scryfall(c.name);
   const full = data ? (data.normal || data.art) : null;
   const price = data ? fmtEur(data.eur) : null;
-  const badge = isAdd ? `<span class="badge add">+</span>` : `<span class="badge rem">−</span>`;
   const priceHtml = price ? `<span class="price">${price}</span>` : `<span class="price na">N/A</span>`;
   const btnLabel = isAdd ? 'Acheter ↗' : 'Vendre ↗';
   const artHtml = full
     ? `<img alt="${c.name}" src="${full}" />`
     : `<div class="art-fallback">${c.name}</div>`;
   el.innerHTML = `
-    <div class="card-art">${badge}${artHtml}</div>
+    <div class="card-art">${artHtml}</div>
     <div class="card-body">
       <div class="card-foot">
         ${priceHtml}
@@ -627,6 +633,12 @@ document.querySelectorAll('.pill').forEach(p=>{
 
 /* ── Boot ─────────────────────────────────────────────────────────────────── */
 async function boot(){
+  const algo = new URLSearchParams(location.search).get('algo');
+  if (algo === 'v2') {
+    const badge = $('#algoBadge');
+    badge.textContent = 'Algorithme V2 — score hybride';
+    badge.style.display = 'inline-flex';
+  }
   const csv = new URLSearchParams(location.search).get('csv');
   let text=null;
   if (csv){
@@ -650,8 +662,8 @@ async function boot(){
       <p>Le mentor n'a trouvé aucune carte à ajouter ou retirer pour ce deck.</p></div>`;
     return;
   }
-  renderGallery();
   renderCommander();
+  renderGallery();
 }
 boot();
 </script>

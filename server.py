@@ -5,7 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from fastapi import FastAPI, File, Query, UploadFile
+from fastapi import FastAPI, File, Form, Query, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -64,18 +64,27 @@ def results_page() -> FileResponse:
 
 
 @app.post("/upload-deck")
-async def upload_deck(deckfile: UploadFile = File(...)) -> JSONResponse:
+async def upload_deck(
+    deckfile: UploadFile = File(...),
+    algo: str = Form(default="v1"),
+) -> JSONResponse:
     filename = Path(deckfile.filename).name
     deck_path = UPLOADS_DIR / filename
     deck_path.write_bytes(await deckfile.read())
 
     stem = Path(filename).stem
-    output_path = OUTPUTS_DIR / f"recommendations_{stem}.csv"
+
+    if algo == "v2":
+        output_path = OUTPUTS_DIR / f"recommendations_v2_{stem}.csv"
+        script = "src/manamind/recommend_deck_changes_v2.py"
+        output_key = f"/outputs/recommendations_v2_{stem}.csv"
+    else:
+        output_path = OUTPUTS_DIR / f"recommendations_{stem}.csv"
+        script = "src/manamind/recommend_deck_changes.py"
+        output_key = f"/outputs/recommendations_{stem}.csv"
 
     result = subprocess.run(
-        [sys.executable, "src/manamind/recommend_deck_changes.py",
-         "--input", str(deck_path),
-         "--output", str(output_path)],
+        [sys.executable, script, "--input", str(deck_path), "--output", str(output_path)],
         capture_output=True,
         text=True,
         cwd=ROOT,
@@ -86,7 +95,7 @@ async def upload_deck(deckfile: UploadFile = File(...)) -> JSONResponse:
 
     return JSONResponse({
         "deckFile": f"/uploads/{filename}",
-        "recommendationsFile": f"/outputs/recommendations_{stem}.csv",
+        "recommendationsFile": output_key,
     })
 
 
