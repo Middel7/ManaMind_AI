@@ -1,0 +1,60 @@
+MANAMIND AI — INPUT CHATGPT (VERSION SANS PPT)
+
+IMPORTANT : Ne pas utiliser le contenu de Projet_IA_MTG_Recommandation.pptx / Projet_IA_MTG_Recommandation.md comme source principale pour cette demande. Ce texte ci-dessous est le contexte officiel à utiliser.
+
+1) PROJET
+- Nom : ManaMind AI
+- Objectif : recommander des cartes pour améliorer des decks Commander / EDH Magic: The Gathering.
+- But fonctionnel : analyser un deck utilisateur, proposer des cartes à ajouter et à retirer, puis générer des résultats exploitables via l’interface web ou les fichiers CSV.
+
+2) STACK TECHNIQUE ACTUEL
+- Langage : Python 3.12
+- Web API : FastAPI
+- Serveur : Uvicorn
+- Données : fichiers CSV / decklists, base de cartes, données de recommandation
+- Base de données : SQLAlchemy, Alembic, PostgreSQL (optionnelle, via .env)
+- Gestion des dépendances : uv, pas pip directement
+- Fichier principal d’exécution : server.py
+
+3) STRUCTURE IMPORTANTE DU DÉPÔT
+- server.py : point d’entrée API + routes web
+- src/manamind/recommend_deck_changes.py : logique principale de recommandation
+- src/manamind/db/ : couche base de données SQLAlchemy / Alembic
+- src/manamind/db/models/ : modèles de données PostgreSQL / cartes / prix / impressions
+- src/manamind/ : code métier Python
+- data/Decklists/ : datasets de decks par commandant
+- outputs/ : fichiers de recommandation générés
+- uploads/ : fichiers decklist uploadés par l’utilisateur
+- docs/ : documentation du projet
+
+4) RÈGLES DE DÉVELOPPEMENT À RESPECTER
+- Utiliser uv pour la gestion des dépendances
+- Ne pas utiliser pip directement
+- Respecter la documentation dans docs/AGENTS.md et docs/PROJECT_DOCUMENTATION.md
+- Préférer du code propre, lisible, avec type hints et docstrings
+- Maintenir la documentation à jour si un workflow ou une fonctionnalité change
+- Garder l’architecture actuelle compatible avec le projet
+
+5) FONCTIONNEMENT ACTUEL
+- L’application permet d’uploader un decklist, de générer des recommandations CSV, puis de consulter les résultats via l’interface web.
+- Les recommandations reposent sur des statistiques de co-occurrence entre cartes et sur les decks similaires par commandant.
+- Le projet est encore un POC et peut évoluer vers des approches plus avancées.
+
+6) PRIORITÉS DE DÉVELOPPEMENT
+1. Améliorer la qualité des recommandations à ajouter / retirer.
+2. Corriger et stabiliser le parsing des decklists utilisateur.
+3. Enrichir les données de cartes (couleurs, types, synergies, prix, etc.).
+4. Améliorer l’interface utilisateur et le flux global de recommandation.
+5. Ajouter des tests et une validation robuste des entrées.
+
+7) COMMANDES DE DÉMARRAGE
+- cd "c:\Users\fabie\Documents\GitHub\ManaMind_AI"
+- python server.py
+
+8) TÂCHE À RÉALISER POUR CHATGPT
+Aide-moi à analyser, améliorer et maintenir ce projet ManaMind AI.
+- Propose des améliorations concrètes et réalistes.
+- Corrige les bugs éventuels.
+- Suggère une architecture propre et maintenable.
+- Écris ou refactorise le code dans src/manamind/ et server.py.
+- Respecte strictement les règles du projet et les contraintes techniques actuelles.

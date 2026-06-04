@@ -1,0 +1,48 @@
+MANAMIND AI — CONTEXTE POUR CHATGPT
+
+Projet : ManaMind AI
+Objectif : système de recommandation de cartes Magic: The Gathering (format Commander/EDH) pour améliorer les decks existants et proposer des cartes à ajouter/retirer.
+
+Contexte technique
+- Langage : Python 3.12
+- Framework web : FastAPI + Uvicorn
+- Données : fichiers CSV/CSV decklists dans data/Decklists et data/cards_unique_global.csv
+- Base de données : SQLAlchemy / Alembic / PostgreSQL (optionnelle, via .env)
+- Gestion des dépendances : uv (et non pip)
+- Point d’entrée principal : server.py
+- Script de recommandation : src/manamind/recommend_deck_changes.py
+
+Structure importante
+- server.py : API FastAPI et interface web
+- src/manamind/ : logique métier Python
+- data/Decklists/ : datasets de decks par commandant
+- outputs/ : recommandations générées
+- uploads/ : decklists uploadées par l’utilisateur
+- docs/ : documentation projet
+
+Fonctionnement actuel
+- L’application permet de charger un decklist, de générer des recommandations CSV, et d’afficher les résultats via un front web.
+- Le système s’appuie sur des statistiques de cooccurrence entre cartes et sur les decks similaires par commandant.
+- Le projet est prévu pour évoluer vers des recommandations plus avancées (content-based, hybrid, DB enrichie, interface utilisateur améliorée).
+
+Points à garder en tête pour le développement
+- Respecter les consignes de docs/AGENTS.md
+- Utiliser uv pour gérer les dépendances
+- Ne pas utiliser pip directement
+- Mettre à jour docs/PROJECT_DOCUMENTATION.md si un changement de workflow ou de fonctionnalité est ajouté
+- Préférer des fonctions bien séparées, avec type hints et docstrings
+- Rester compatible avec l’architecture actuelle du projet
+
+Questions à résoudre / priorité de développement
+1. Améliorer la qualité des recommandations de cartes à ajouter/retirer
+2. Clarifier et stabiliser la logique de parsing des decklists
+3. Intégrer davantage de données de cartes et de métadonnées (prix, couleurs, types, synergies)
+4. Améliorer l’interface utilisateur et le flux de recommandation
+5. Ajouter des tests et une validation plus robuste des entrées
+
+Commande de démarrage
+- cd "c:\Users\fabie\Documents\GitHub\ManaMind_AI"
+- python server.py
+
+Objectif de ce prompt pour ChatGPT
+Aide-moi à analyser, améliorer et maintenir ce projet ManaMind AI. Propose des améliorations concrètes, corrige les bugs éventuels, suggère une architecture propre, et aide à écrire ou refactorer le code dans src/manamind/ et server.py tout en respectant les règles du projet.
