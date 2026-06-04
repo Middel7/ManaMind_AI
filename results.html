@@ -1,474 +1,659 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Recommandations — ManaMind</title>
-  <style>
-    :root {
-      color-scheme: dark;
-      color: #f8fafc;
-      background: #020617;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ManaMind — Recommandations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink:        #16111e;
+    --ink-2:      #1d1629;
+    --ink-3:      #241b33;
+    --panel:      rgba(38, 28, 54, 0.46);
+    --panel-edge: rgba(212, 177, 95, 0.16);
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    --gold:        #d4b15f;
+    --gold-bright: #ecd28a;
+    --gold-dim:    #8c7335;
+    --gold-faint:  rgba(212, 177, 95, 0.30);
 
-    body {
-      min-height: 100vh;
-      background-image:
-        linear-gradient(rgba(2, 6, 23, 0.88), rgba(2, 6, 23, 0.88)),
-        url('chandra-jace-and-nissa-from-magic-the-gathering.avif');
-      background-repeat: no-repeat;
-      background-size: cover;
-      background-position: center;
-      padding: 24px;
-    }
+    --arcane:      #7c6ba8;
+    --arcane-br:   #a795d6;
 
-    .page {
-      max-width: 1680px;
-      width: min(96vw, 1680px);
-      margin: 0 auto;
-      display: grid;
-      gap: 24px;
-    }
+    --text:       #ece2d3;
+    --text-dim:   #a99fb5;
+    --text-faint: #756b88;
 
-    /* ── Navigation ─────────────────────────────────────────────── */
-    .site-nav {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      padding: 14px 24px;
-      background: rgba(15, 23, 42, 0.95);
-      border: 1px solid rgba(148, 163, 184, 0.12);
-      border-radius: 20px;
-    }
+    --green:    #2f7d52;
+    --green-br: #5fb583;
+    --copper:   #b5452f;
+    --copper-br:#d77a5e;
 
-    .site-nav a {
-      color: #94a3b8;
-      text-decoration: none;
-      font-size: 0.9rem;
-      padding: 6px 14px;
-      border-radius: 10px;
-      transition: background 0.15s, color 0.15s;
-    }
+    --mana-w: #f4ecd0;
+    --mana-u: #2a6fdb;
+    --mana-b: #3a3340;
+    --mana-r: #c44a2f;
+    --mana-g: #2f7d52;
 
-    .site-nav a:hover { background: rgba(148, 163, 184, 0.08); color: #f8fafc; }
-    .site-nav a.active { color: #38bdf8; background: rgba(56, 189, 248, 0.08); }
-    .site-nav .sep { color: rgba(148, 163, 184, 0.3); user-select: none; }
+    --serif-disp: "Cormorant Garamond", Georgia, serif;
+    --serif-cap:  "Cinzel", Georgia, serif;
+    --serif-body: "Spectral", Georgia, serif;
+  }
 
-    /* ── En-tête commandant ─────────────────────────────────────── */
-    .commander-header {
-      padding: 32px;
-      border-radius: 32px;
-      background: rgba(15, 23, 42, 0.95);
-      border: 1px solid rgba(148, 163, 184, 0.12);
-      box-shadow: 0 30px 70px rgba(15, 23, 42, 0.35);
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
-      transition: background-image 0.4s ease;
-      display: flex;
-      align-items: center;
-      gap: 24px;
-      flex-wrap: wrap;
-    }
+  * { box-sizing: border-box; }
 
-    .commander-label {
-      font-size: 0.8rem;
-      color: #64748b;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      display: block;
-      margin-bottom: 6px;
-    }
+  html, body { margin: 0; padding: 0; }
 
-    .commander-name {
-      font-size: clamp(1.4rem, 2.5vw, 2.4rem);
-      font-weight: 700;
-      letter-spacing: -0.03em;
-      color: #f8fafc;
-    }
+  body {
+    background: var(--ink);
+    color: var(--text);
+    font-family: var(--serif-body);
+    font-size: 16px;
+    line-height: 1.5;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    position: relative;
+  }
 
-    .status-note {
-      margin-left: auto;
-      color: #94a3b8;
-      font-size: 0.9rem;
-      line-height: 1.6;
-      text-align: right;
-    }
+  /* ── Veiled background artwork + vignette ──────────────────── */
+  .bg-layer {
+    position: fixed; inset: 0; z-index: 0;
+    background-size: cover; background-position: center 22%;
+    opacity: 0; transition: opacity 1.4s ease;
+    filter: saturate(0.7) brightness(0.5);
+  }
+  .bg-layer.show { opacity: 0.22; }
+  .bg-wash {
+    position: fixed; inset: 0; z-index: 1; pointer-events: none;
+    background:
+      radial-gradient(120% 90% at 50% -10%, rgba(86,60,120,0.40) 0%, rgba(22,17,30,0) 55%),
+      radial-gradient(140% 120% at 50% 120%, rgba(10,7,16,0.92) 30%, rgba(22,17,30,0) 75%),
+      linear-gradient(180deg, rgba(22,17,30,0.55) 0%, rgba(22,17,30,0.78) 100%);
+  }
+  .bg-vignette {
+    position: fixed; inset: 0; z-index: 1; pointer-events: none;
+    box-shadow: inset 0 0 320px 60px rgba(0,0,0,0.85);
+  }
+  /* faint parchment grain */
+  .bg-grain {
+    position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0.05;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
 
-    /* ── Grille résultats ───────────────────────────────────────── */
-    .grid-results {
-      display: grid;
-      gap: 24px;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
+  /* ── Outer gold frame ──────────────────────────────────────── */
+  .frame {
+    position: relative; z-index: 2;
+    margin: 14px;
+    border: 1px solid var(--gold-faint);
+    border-radius: 3px;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 24px 80px rgba(0,0,0,0.55);
+    min-height: calc(100vh - 28px);
+  }
+  /* corner brackets */
+  .corner {
+    position: absolute; width: 26px; height: 26px; z-index: 5; pointer-events: none;
+    border: 1px solid var(--gold); opacity: 0.7;
+  }
+  .corner.tl { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
+  .corner.tr { top: -1px; right: -1px; border-left: 0; border-bottom: 0; }
+  .corner.bl { bottom: -1px; left: -1px; border-right: 0; border-top: 0; }
+  .corner.br { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
 
-    @media (max-width: 900px) {
-      .grid-results { grid-template-columns: 1fr; }
-    }
+  /* ── Top navigation ────────────────────────────────────────── */
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 30px;
+    border-bottom: 1px solid var(--panel-edge);
+  }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .seal {
+    width: 42px; height: 42px; flex: 0 0 42px;
+    display: grid; place-items: center;
+    border-radius: 50%;
+    border: 1px solid var(--gold-faint);
+    background: radial-gradient(circle at 35% 30%, rgba(124,107,168,0.5), rgba(30,22,44,0.9));
+    box-shadow: inset 0 0 14px rgba(124,107,168,0.35), 0 0 18px rgba(86,60,120,0.25);
+  }
+  .seal svg { width: 22px; height: 22px; }
+  .brand-text { display: flex; flex-direction: column; line-height: 1; }
+  .brand-name {
+    font-family: var(--serif-cap); font-weight: 600; font-size: 21px;
+    letter-spacing: 0.14em; color: var(--text);
+  }
+  .brand-name b { color: var(--gold-bright); font-weight: 600; }
+  .brand-sub {
+    font-family: var(--serif-cap); font-size: 9.5px; font-weight: 400;
+    letter-spacing: 0.34em; color: var(--text-faint); margin-top: 7px;
+  }
 
-    .result-card {
-      border-radius: 24px;
-      background: rgba(8, 16, 35, 0.95);
-      border: 1px solid rgba(148, 163, 184, 0.12);
-      padding: 20px;
-      display: grid;
-      gap: 18px;
-    }
+  .nav-right { display: flex; align-items: center; gap: 10px; }
+  .nav-link {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--serif-cap); font-size: 11px; letter-spacing: 0.18em;
+    text-transform: uppercase; text-decoration: none;
+    color: var(--text-dim); padding: 10px 16px; border-radius: 3px;
+    border: 1px solid transparent; transition: color .25s, border-color .25s, background .25s;
+  }
+  .nav-link:hover { color: var(--gold-bright); }
+  .nav-link svg { width: 14px; height: 14px; }
+  .nav-link.active {
+    color: var(--gold-bright);
+    border-color: var(--gold-faint);
+    background: linear-gradient(180deg, rgba(212,177,95,0.10), rgba(212,177,95,0.02));
+    box-shadow: inset 0 0 16px rgba(212,177,95,0.08);
+  }
 
-    .result-card h3 {
-      font-size: 1.1rem;
-      letter-spacing: -0.02em;
-      margin-bottom: 4px;
-    }
+  /* ── Main hybride grid ─────────────────────────────────────── */
+  .stage {
+    display: grid;
+    grid-template-columns: minmax(300px, 0.62fr) 1px minmax(0, 1fr);
+    gap: 0;
+  }
 
-    .result-card h3.add-title { color: #86efac; }
-    .result-card h3.remove-title { color: #fca5a5; }
+  /* reliure / binding divider */
+  .reliure {
+    position: relative;
+    background:
+      repeating-linear-gradient(180deg, var(--gold-faint) 0 7px, transparent 7px 16px);
+    opacity: 0.6;
+  }
+  .reliure::before, .reliure::after {
+    content: ""; position: absolute; left: 50%; width: 7px; height: 7px;
+    transform: translateX(-50%) rotate(45deg);
+    background: var(--gold); opacity: 0.8;
+  }
+  .reliure::before { top: 90px; }
+  .reliure::after  { bottom: 90px; }
 
-    .result-card span {
-      color: #94a3b8;
-      font-size: 0.92rem;
-    }
+  /* ── LEFT — deck profile ───────────────────────────────────── */
+  .profile {
+    padding: 38px 40px 60px;
+    position: sticky; top: 0; align-self: start;
+    max-height: 100vh; overflow: auto;
+    scrollbar-width: thin; scrollbar-color: var(--gold-dim) transparent;
+  }
+  .profile::-webkit-scrollbar { width: 6px; }
+  .profile::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 3px; }
 
-    /* ── Liste de cartes ────────────────────────────────────────── */
-    .card-list {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
-    }
+  .cmd-art-wrap {
+    position: relative; width: 100%; max-width: 360px; margin: 0 auto 28px;
+    aspect-ratio: 5 / 7; border-radius: 8px; overflow: hidden;
+    border: 1px solid var(--gold-faint);
+    box-shadow: 0 18px 44px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,0,0,0.5),
+                inset 0 0 30px rgba(0,0,0,0.4);
+    background: linear-gradient(135deg, var(--ink-3), var(--ink-2));
+  }
+  .cmd-art-wrap img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .cmd-art-wrap::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    box-shadow: inset 0 -50px 60px rgba(11,8,16,0.65);
+    border-radius: 6px;
+  }
+  .cmd-art-glow {
+    position: absolute; inset: -14px; z-index: -1; border-radius: 12px;
+    background: radial-gradient(circle, rgba(124,107,168,0.45), transparent 70%);
+    filter: blur(8px);
+  }
 
-    .item {
-      display: grid;
-      justify-items: center;
-      gap: 12px;
-      align-items: center;
-      padding: 14px;
-      border-radius: 20px;
-      background: rgba(15, 23, 42, 0.8);
-      border: 1px solid rgba(148, 163, 184, 0.08);
-      transition: border-color 0.2s;
-    }
+  .label {
+    font-family: var(--serif-cap); font-size: 10.5px; letter-spacing: 0.32em;
+    text-transform: uppercase; color: var(--gold); opacity: 0.85;
+  }
+  .cmd-name {
+    font-family: var(--serif-disp); font-weight: 600; font-size: 32px;
+    line-height: 1.06; color: var(--text); margin: 8px 0 14px;
+    text-wrap: balance;
+  }
 
-    .item:hover { border-color: rgba(56, 189, 248, 0.2); }
+  .mana-id { display: flex; gap: 7px; margin-bottom: 26px; }
+  .pip {
+    width: 22px; height: 22px; border-radius: 50%;
+    display: grid; place-items: center;
+    font-family: var(--serif-cap); font-size: 11px; font-weight: 600;
+    border: 1px solid rgba(0,0,0,0.45);
+    box-shadow: inset 0 1px 2px rgba(255,255,255,0.25), inset 0 -3px 6px rgba(0,0,0,0.35), 0 1px 3px rgba(0,0,0,0.4);
+  }
+  .pip.W { background: var(--mana-w); color: #6b5a2a; }
+  .pip.U { background: var(--mana-u); color: #d9e8ff; }
+  .pip.B { background: var(--mana-b); color: #b9b2c4; }
+  .pip.R { background: var(--mana-r); color: #ffe2d6; }
+  .pip.G { background: var(--mana-g); color: #d6f0e0; }
 
-    .thumb {
-      width: 200px;
-      aspect-ratio: 0.7;
-      border-radius: 18px;
-      overflow: hidden;
-      background: #0f172a;
-      display: grid;
-      place-items: center;
-    }
+  /* ── RIGHT — gallery ──────────────────────────────────────── */
+  .gallery { padding: 34px 40px 56px; min-width: 0; }
+  .gal-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; margin-bottom: 26px; flex-wrap: wrap;
+  }
+  .filters { display: flex; gap: 10px; }
+  .pill {
+    font-family: var(--serif-cap); font-size: 12px; letter-spacing: 0.1em;
+    text-transform: uppercase; cursor: pointer;
+    padding: 11px 20px; border-radius: 999px;
+    background: rgba(20,15,28,0.5); color: var(--text-dim);
+    border: 1px solid var(--panel-edge);
+    transition: all .25s ease; white-space: nowrap;
+    display: inline-flex; align-items: center; gap: 9px;
+  }
+  .pill .dot { width: 8px; height: 8px; border-radius: 50%; opacity: 0.6; }
+  .pill[data-f="add"] .dot { background: var(--green-br); }
+  .pill[data-f="rem"] .dot { background: var(--copper-br); }
+  .pill:hover { color: var(--text); border-color: var(--gold-faint); }
+  .pill.active { color: var(--ink); border-color: transparent; box-shadow: 0 6px 18px rgba(0,0,0,0.4); }
+  .pill.active .dot { opacity: 1; }
+  .pill[data-f="add"].active { background: linear-gradient(180deg, #6fc491, var(--green)); }
+  .pill[data-f="rem"].active { background: linear-gradient(180deg, #d98668, var(--copper)); }
 
-    .thumb img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
+  .sort {
+    font-family: var(--serif-body); font-size: 13px; color: var(--text-faint);
+    background: transparent; border: 0; cursor: pointer;
+    letter-spacing: 0.04em;
+  }
+  .sort:hover { color: var(--text-dim); }
 
-    .item-title {
-      color: #f8fafc;
-      font-size: 0.96rem;
-      line-height: 1.3;
-      text-align: center;
-      max-width: 220px;
-      word-break: break-word;
-      font-weight: 500;
-    }
+  .grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+    gap: 22px;
+  }
 
-    .item-price {
-      color: #a5f3fc;
-      font-size: 0.88rem;
-      text-align: center;
-    }
+  .card {
+    position: relative; border-radius: 7px; overflow: hidden;
+    background: linear-gradient(180deg, rgba(36,27,51,0.9), rgba(24,18,34,0.95));
+    border: 1px solid var(--panel-edge);
+    box-shadow: 0 14px 32px rgba(0,0,0,0.5);
+    transition: transform .28s ease, box-shadow .28s ease, border-color .28s ease;
+    display: flex; flex-direction: column;
+  }
+  .card:hover {
+    transform: translateY(-5px);
+    border-color: var(--gold-faint);
+    box-shadow: 0 22px 46px rgba(0,0,0,0.6), 0 0 0 1px var(--gold-faint);
+  }
+  .card.best { border-color: rgba(236,210,138,0.4); }
+  .card.best::after {
+    content: ""; position: absolute; inset: -1px; border-radius: 7px; pointer-events: none;
+    box-shadow: 0 0 26px rgba(236,210,138,0.28), inset 0 0 14px rgba(236,210,138,0.12);
+  }
 
-    .item-link {
-      color: #7dd3fc;
-      font-size: 0.88rem;
-      text-decoration: none;
-      text-align: center;
-    }
+  .card-art {
+    position: relative; aspect-ratio: 5 / 7; overflow: hidden;
+    background: radial-gradient(circle at 50% 38%, #2a2038, #161020);
+  }
+  .card-art img { width: 100%; height: 100%; object-fit: contain; display: block;
+    transition: transform .45s ease; }
+  .card:hover .card-art img { transform: scale(1.035); }
+  .art-fallback {
+    position: absolute; inset: 0; display: grid; place-items: center; padding: 18px;
+    text-align: center; font-family: var(--serif-disp); font-weight: 600; font-size: 17px;
+    color: var(--text-dim); background: radial-gradient(circle at 50% 38%, #2a2038, #161020);
+  }
 
-    .item-link:hover { text-decoration: underline; }
+  .badge {
+    position: absolute; top: 10px; left: 10px; z-index: 3;
+    width: 28px; height: 28px; border-radius: 50%;
+    display: grid; place-items: center;
+    font-family: var(--serif-cap); font-weight: 700; font-size: 16px; line-height: 1;
+    color: #fff; border: 1px solid rgba(0,0,0,0.4);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.3);
+  }
+  .badge.add { background: linear-gradient(180deg, #4aa873, var(--green)); }
+  .badge.rem { background: linear-gradient(180deg, #c96a4e, var(--copper)); }
 
-    /* ── État chargement / erreur ───────────────────────────────── */
-    .loading-state {
-      text-align: center;
-      padding: 60px 24px;
-      color: #64748b;
-      font-size: 1rem;
-    }
+  .card-body { padding: 13px 14px 14px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+  .card-name {
+    font-family: var(--serif-disp); font-weight: 600; font-size: 18px; line-height: 1.12;
+    color: var(--text); margin: 0; text-wrap: balance;
+  }
+  .card-metric {
+    font-family: var(--serif-cap); font-size: 10px; letter-spacing: 0.16em;
+    text-transform: uppercase; display: flex; align-items: baseline;
+    gap: 4px 7px; flex-wrap: wrap;
+  }
+  .card-metric .k { color: var(--text-faint); }
+  .card-metric .v { font-size: 13px; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
+  .card-metric.add .v { color: var(--green-br); }
+  .card-metric.rem .v { color: var(--copper-br); }
 
-    .spinner {
-      width: 40px;
-      height: 40px;
-      border: 3px solid rgba(56, 189, 248, 0.2);
-      border-top-color: #38bdf8;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin: 0 auto 16px;
-    }
+  .card-foot {
+    margin-top: auto; padding-top: 4px;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .price {
+    font-family: var(--serif-body); font-size: 16px; color: var(--text);
+    font-variant-numeric: tabular-nums; font-weight: 500;
+  }
+  .price.na { color: var(--text-faint); font-size: 13px; font-style: italic; }
+  .buy {
+    font-family: var(--serif-cap); font-size: 10px; letter-spacing: 0.12em;
+    text-transform: uppercase; text-decoration: none;
+    padding: 8px 13px; border-radius: 3px; white-space: nowrap;
+    border: 1px solid var(--gold-faint); color: var(--gold-bright);
+    background: linear-gradient(180deg, rgba(212,177,95,0.12), rgba(212,177,95,0.03));
+    transition: all .22s ease;
+  }
+  .buy:hover { color: var(--ink); background: linear-gradient(180deg, var(--gold-bright), var(--gold)); border-color: transparent; }
+  .card-rem .buy { color: var(--copper-br); border-color: rgba(215,122,94,0.32);
+    background: linear-gradient(180deg, rgba(181,69,47,0.14), rgba(181,69,47,0.03)); }
+  .card-rem .buy:hover { color: #2a1410; background: linear-gradient(180deg, var(--copper-br), var(--copper)); border-color: transparent; }
 
-    @keyframes spin { to { transform: rotate(360deg); } }
+  /* skeletons */
+  .skeleton { position: relative; overflow: hidden; background: rgba(60,46,82,0.35); border-radius: 3px; }
+  .skeleton::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(167,149,214,0.16), transparent);
+    transform: translateX(-100%); animation: shimmer 1.5s infinite;
+  }
+  @keyframes shimmer { 100% { transform: translateX(100%); } }
+  .sk-line { height: 12px; margin-bottom: 8px; }
+  .sk-line.w70 { width: 70%; } .sk-line.w40 { width: 40%; }
 
-    .error-state {
-      text-align: center;
-      padding: 60px 24px;
-      color: #f87171;
-    }
+  /* empty / error */
+  .notice {
+    grid-column: 1 / -1; text-align: center; padding: 70px 30px; color: var(--text-dim);
+  }
+  .notice .label { display: block; margin-bottom: 14px; }
+  .notice h3 { font-family: var(--serif-disp); font-size: 26px; color: var(--text); margin: 0 0 8px; font-weight: 600; }
+  .notice p { margin: 0 auto; max-width: 420px; font-size: 15px; }
 
-    /* ── Footer note ────────────────────────────────────────────── */
-    .footer-note {
-      color: #64748b;
-      font-size: 0.88rem;
-      text-align: center;
-      padding: 8px 0;
-    }
-  </style>
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+
+  @media (max-width: 880px) {
+    .stage { grid-template-columns: 1fr; }
+    .reliure { display: none; }
+    .profile { position: static; max-height: none; border-bottom: 1px solid var(--panel-edge); }
+    .cmd-art-wrap { width: 168px; }
+  }
+</style>
 </head>
 <body>
-  <div class="page">
+  <div class="bg-layer" id="bgLayer"></div>
+  <div class="bg-wash"></div>
+  <div class="bg-grain"></div>
+  <div class="bg-vignette"></div>
 
-    <!-- Navigation -->
-    <nav class="site-nav">
-      <a href="/">← Analyser un nouveau deck</a>
-      <span class="sep">|</span>
-      <a href="/cards">Recherche de cartes</a>
-      <span class="sep">|</span>
-      <a href="/results" class="active">Recommandations</a>
+  <div class="frame">
+    <span class="corner tl"></span><span class="corner tr"></span>
+    <span class="corner bl"></span><span class="corner br"></span>
+
+    <nav>
+      <div class="brand">
+        <span class="seal" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#a795d6" stroke-width="1.3">
+            <path d="M12 2.5 20 7v10l-8 4.5L4 17V7l8-4.5Z"/>
+            <path d="M12 7.2 16 9.5v5L12 16.8 8 14.5v-5L12 7.2Z" stroke="#d4b15f"/>
+            <circle cx="12" cy="12" r="1.4" fill="#d4b15f" stroke="none"/>
+          </svg>
+        </span>
+        <span class="brand-text">
+          <span class="brand-name">Mana<b>Mind</b></span>
+          <span class="brand-sub">Le mentor de tes decks</span>
+        </span>
+      </div>
+      <div class="nav-right">
+        <a class="nav-link" href="/" id="newDeck">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M15 6l-6 6 6 6"/></svg>
+          Nouveau deck
+        </a>
+        <a class="nav-link" href="/cards">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg>
+          Recherche de cartes
+        </a>
+        <a class="nav-link active" href="#" aria-current="page">Recommandations</a>
+      </div>
     </nav>
 
-    <!-- En-tête commandant (rempli dynamiquement) -->
-    <header class="commander-header" id="commanderHeader">
-      <div>
-        <span class="commander-label">Commandant</span>
-        <span class="commander-name" id="commanderName">Chargement…</span>
-      </div>
-      <div class="status-note" id="statusNote"></div>
-    </header>
-
-    <!-- Zone de chargement initiale -->
-    <div id="loadingZone" class="loading-state">
-      <div class="spinner"></div>
-      Chargement des recommandations…
-    </div>
-
-    <!-- Résultats (masqués jusqu'au chargement) -->
-    <div id="resultsZone" style="display:none; display:none;">
-      <div class="grid-results">
-        <div class="result-card">
-          <div>
-            <h3 class="add-title">Cartes à ajouter</h3>
-            <span id="addCount">0 cartes</span>
-          </div>
-          <div id="addList" class="card-list"></div>
+    <div class="stage">
+      <!-- LEFT: deck profile -->
+      <aside class="profile" id="profile">
+        <div class="cmd-art-wrap" id="cmdArt">
+          <div class="cmd-art-glow"></div>
+          <div class="skeleton" style="position:absolute;inset:0"></div>
         </div>
-        <div class="result-card">
-          <div>
-            <h3 class="remove-title">Cartes à retirer</h3>
-            <span id="removeCount">0 cartes</span>
-          </div>
-          <div id="removeList" class="card-list"></div>
-        </div>
-      </div>
-      <div class="footer-note" id="footerNote"></div>
-    </div>
 
+        <span class="label">Commandant</span>
+        <h1 class="cmd-name" id="cmdName">&nbsp;</h1>
+
+        <div class="mana-id" id="manaId"></div>
+
+      </aside>
+
+      <div class="reliure" aria-hidden="true"></div>
+
+      <!-- RIGHT: gallery -->
+      <section class="gallery">
+        <div class="gal-head">
+          <div class="filters">
+            <button class="pill active" data-f="add"><span class="dot"></span>À ajouter · <span id="pillAdd">0</span></button>
+            <button class="pill" data-f="rem"><span class="dot"></span>À retirer · <span id="pillRem">0</span></button>
+          </div>
+          <button class="sort" id="sortBtn">trié par score ▾</button>
+        </div>
+        <div class="grid" id="grid"></div>
+      </section>
+    </div>
   </div>
 
-  <script>
-    'use strict';
+<script>
+/* ───────────────────────── Demo data (Eluge, blue control-tempo) ─────────── */
+const DEMO_CSV = `Section,Card Name,Score,Support,Deck Frequency
+Commander,"Eluge, the Shoreless Sea",,,
+Add,Mystic Sanctuary,1958,,
+Add,Arcane Signet,1854,,
+Add,Reliquary Tower,1823,,
+Add,High Tide,1594,,
+Add,Frantic Search,1404,,
+Add,Displacer Kitten,1355,,
+Add,Cyclonic Rift,1320,,
+Add,Rhystic Study,1290,,
+Add,Mystic Remora,1255,,
+Add,Brainstorm,1190,,
+Add,Counterspell,1140,,
+Add,Ponder,1080,,
+Add,Preordain,1040,,
+Add,Mana Drain,990,,
+Add,Force of Will,950,,
+Add,Sol Ring,920,,
+Add,Swan Song,880,,
+Add,Pongify,840,,
+Add,Fierce Guardianship,800,,
+Add,Consecrated Sphinx,760,,
+Remove,Compulsive Research,,,20
+Remove,Divination,,,28
+Remove,Mind Rot,,,12
+Remove,Cancel,,,34
+Remove,Negate,,,41
+Remove,Tome Scour,,,8
+Remove,Wall of Frost,,,15
+Remove,Aether Adept,,,22
+Remove,Sleep,,,9
+Remove,Mind Sculpt,,,6
+Remove,Glimmerpoint Stag,,,11
+Remove,Coral Merfolk,,,4
+Remove,Sea Gate Oracle,,,18
+Remove,Inspiration,,,7`;
 
-    // ── Éléments DOM ──────────────────────────────────────────────────────────
-    const commanderNameEl  = document.getElementById('commanderName');
-    const commanderHeader  = document.getElementById('commanderHeader');
-    const statusNote       = document.getElementById('statusNote');
-    const loadingZone      = document.getElementById('loadingZone');
-    const resultsZone      = document.getElementById('resultsZone');
-    const addList          = document.getElementById('addList');
-    const removeList       = document.getElementById('removeList');
-    const addCount         = document.getElementById('addCount');
-    const removeCount      = document.getElementById('removeCount');
-    const footerNote       = document.getElementById('footerNote');
+const SCRY_DELAY = 95;
 
-    // ── Lecture du paramètre ?csv= dans l'URL ─────────────────────────────────
-    const csvPath = new URLSearchParams(window.location.search).get('csv');
-    if (!csvPath) {
-      showError('Aucun fichier de recommandations spécifié. <a href="/">Retourner à l\'accueil</a>');
-    } else {
-      loadResults(csvPath);
+const $ = (s, el=document) => el.querySelector(s);
+const grid = $('#grid');
+let state = { commander:null, add:[], rem:[], filter:'add' };
+
+/* ── CSV parsing ──────────────────────────────────────────────────────────── */
+function parseCSV(text){
+  const rows = [];
+  const lines = text.replace(/\r/g,'').split('\n').filter(l => l.length);
+  for (let i=1; i<lines.length; i++){
+    const cells = []; let cur=''; let q=false; const line=lines[i];
+    for (let j=0; j<line.length; j++){
+      const c=line[j];
+      if (q){ if (c==='"'){ if (line[j+1]==='"'){cur+='"';j++;} else q=false; } else cur+=c; }
+      else { if (c==='"') q=true; else if (c===','){ cells.push(cur); cur=''; } else cur+=c; }
     }
+    cells.push(cur);
+    rows.push({ section:cells[0], name:cells[1], score:cells[2], support:cells[3], freq:cells[4] });
+  }
+  return rows;
+}
 
-    // ── Chargement principal ──────────────────────────────────────────────────
-    async function loadResults(path) {
-      try {
-        const resp = await fetch(path);
-        if (!resp.ok) throw new Error(`Fichier introuvable : ${path}`);
-        const csv = await resp.text();
-        const { commander, add, remove } = parseCsv(csv);
+function ingest(rows){
+  const add=[], rem=[]; let commander=null;
+  for (const r of rows){
+    if (!r.name) continue;
+    const sec=(r.section||'').trim().toLowerCase();
+    if (sec==='commander') commander={ name:r.name.trim() };
+    else if (sec==='add') add.push({ name:r.name.trim(), score:parseInt(r.score)||0 });
+    else if (sec==='remove') rem.push({ name:r.name.trim(), freq:parseInt(r.freq)||null });
+  }
+  add.sort((a,b)=>b.score-a.score);
+  state.commander=commander; state.add=add; state.rem=rem;
+}
 
-        // Affiche le commandant
-        commanderNameEl.textContent = commander !== 'inconnu' ? commander : 'Commandant inconnu';
-        document.title = `${commanderNameEl.textContent} — Recommandations`;
+/* ── Scryfall lookup with cache + throttle ────────────────────────────────── */
+const cache=new Map(); let queue=Promise.resolve();
+function scryfall(name){
+  if (cache.has(name)) return cache.get(name);
+  const p = queue.then(()=> new Promise(res=>setTimeout(res, SCRY_DELAY)))
+    .then(()=> fetch('https://api.scryfall.com/cards/named?exact='+encodeURIComponent(name)))
+    .then(r=> r.ok ? r.json() : null)
+    .then(d=>{
+      if (!d) return null;
+      const face = (d.image_uris) ? d : (d.card_faces && d.card_faces[0].image_uris ? d.card_faces[0] : null);
+      const iu = face && face.image_uris ? face.image_uris : {};
+      return {
+        art: iu.art_crop || iu.normal || null,
+        normal: iu.normal || null,
+        eur: d.prices ? d.prices.eur : null,
+        colors: d.color_identity || []
+      };
+    }).catch(()=>null);
+  queue = p.catch(()=>{});
+  cache.set(name, p);
+  return p;
+}
 
-        // Compte
-        addCount.textContent    = `${add.length} carte${add.length > 1 ? 's' : ''}`;
-        removeCount.textContent = `${remove.length} carte${remove.length > 1 ? 's' : ''}`;
+const cardmarket = name =>
+  'https://www.cardmarket.com/en/Magic/Products/Search?category=-1&searchString='+
+  encodeURIComponent(name)+'&searchMode=v2';
+const fmtEur = v => v==null ? null : '€'+Number(v).toFixed(2).replace('.', ',');
 
-        // Affiche la zone résultats
-        loadingZone.style.display = 'none';
-        resultsZone.style.display = 'block';
+/* ── Commander profile render ─────────────────────────────────────────────── */
+async function renderCommander(){
+  $('#pillAdd').textContent = state.add.length;
+  $('#pillRem').textContent = state.rem.length;
+  if (!state.commander){ return; }
+  $('#cmdName').textContent = state.commander.name;
+  const data = await scryfall(state.commander.name);
+  if (!data) return;
+  if (data.normal){
+    const w=$('#cmdArt');
+    w.querySelector('.skeleton')?.remove();
+    const img=new Image(); img.alt=state.commander.name; img.src=data.normal;
+    img.onload=()=>{ w.appendChild(img); };
+  }
+  if (data.art){
+    const bg=$('#bgLayer'); bg.style.backgroundImage=`url("${data.art}")`;
+    setTimeout(()=>bg.classList.add('show'), 40);
+  }
+  const order=['W','U','B','R','G'];
+  const ids=(data.colors&&data.colors.length)? order.filter(c=>data.colors.includes(c)) : ['U'];
+  $('#manaId').innerHTML = ids.map(c=>`<span class="pip ${c}">${c}</span>`).join('');
+}
 
-        // Charge les visuels en parallèle
-        statusNote.textContent = 'Chargement des images Scryfall…';
-        footerNote.textContent = 'Chargement des images…';
+/* ── Gallery render ───────────────────────────────────────────────────────── */
+function skeletonCard(){
+  const el=document.createElement('article'); el.className='card';
+  el.innerHTML=`<div class="card-art" style="position:relative"><div class="skeleton" style="position:absolute;inset:0"></div></div>
+    <div class="card-body"><div class="card-foot">
+      <div class="skeleton sk-line" style="width:54px;margin:0"></div>
+      <div class="skeleton sk-line" style="width:64px;height:30px;margin:0"></div>
+    </div></div>`;
+  return el;
+}
 
-        await Promise.all([
-          renderCards(add, addList),
-          renderCards(remove, removeList),
-        ]);
+function renderGallery(){
+  grid.innerHTML='';
+  const isAdd = state.filter==='add';
+  const list = isAdd ? state.add : state.rem;
 
-        footerNote.textContent = `Fichier : ${path}`;
-        statusNote.textContent = `${add.length} ajouts · ${remove.length} retraits`;
+  if (!list.length){
+    grid.innerHTML = `<div class="notice"><span class="label">Le grimoire reste muet</span>
+      <h3>Aucune carte ${isAdd?'à ajouter':'à retirer'}</h3>
+      <p>Le mentor n'a relevé aucune recommandation de ce type pour ce deck.</p></div>`;
+    return;
+  }
 
-        // Art du commandant en fond
-        if (commander !== 'inconnu') {
-          const artUrl = await fetchCommanderArt(commander);
-          if (artUrl) {
-            commanderHeader.style.backgroundImage =
-              `linear-gradient(rgba(2, 6, 23, 0.72), rgba(2, 6, 23, 0.72)), url('${artUrl}')`;
-          }
-        }
+  list.forEach((c,idx)=>{
+    const el=skeletonCard();
+    if (isAdd && idx===0) el.classList.add('best');
+    if (!isAdd) el.classList.add('card-rem');
+    grid.appendChild(el);
+    hydrate(el, c, isAdd);
+  });
+}
 
-      } catch (err) {
-        showError(`Erreur : ${err.message}`);
-      }
+async function hydrate(el, c, isAdd){
+  const data = await scryfall(c.name);
+  const full = data ? (data.normal || data.art) : null;
+  const price = data ? fmtEur(data.eur) : null;
+  const badge = isAdd ? `<span class="badge add">+</span>` : `<span class="badge rem">−</span>`;
+  const priceHtml = price ? `<span class="price">${price}</span>` : `<span class="price na">N/A</span>`;
+  const btnLabel = isAdd ? 'Acheter ↗' : 'Vendre ↗';
+  const artHtml = full
+    ? `<img alt="${c.name}" src="${full}" />`
+    : `<div class="art-fallback">${c.name}</div>`;
+  el.innerHTML = `
+    <div class="card-art">${badge}${artHtml}</div>
+    <div class="card-body">
+      <div class="card-foot">
+        ${priceHtml}
+        <a class="buy" href="${cardmarket(c.name)}" target="_blank" rel="noopener noreferrer">${btnLabel}</a>
+      </div>
+    </div>`;
+}
+
+/* ── Filters ──────────────────────────────────────────────────────────────── */
+document.querySelectorAll('.pill').forEach(p=>{
+  p.addEventListener('click',()=>{
+    document.querySelectorAll('.pill').forEach(x=>x.classList.remove('active'));
+    p.classList.add('active');
+    state.filter=p.dataset.f; renderGallery();
+  });
+});
+
+/* ── Boot ─────────────────────────────────────────────────────────────────── */
+async function boot(){
+  const csv = new URLSearchParams(location.search).get('csv');
+  let text=null;
+  if (csv){
+    try {
+      const r = await fetch(csv);
+      if (r.ok) text = await r.text();
+    } catch(e){ text=null; }
+    if (!text){
+      grid.innerHTML = `<div class="notice"><span class="label">Parchemin introuvable</span>
+        <h3>Impossible de lire ce deck</h3>
+        <p>Le fichier <em>${csv}</em> est introuvable ou illisible. Reviens à l'accueil pour recharger ta decklist.</p></div>`;
+      return;
     }
-
-    // ── Parseur CSV ───────────────────────────────────────────────────────────
-    // Utilise la même regex que la page originale qui fonctionnait :
-    // "([^"]*)" gère les champs entre guillemets (ex: "Eluge, the Shoreless Sea")
-    // ([^,]+)   gère les champs sans guillemets non vides
-    function parseRow(line) {
-      return line.match(/(?:"([^"]*)"|([^,]+))/g)
-        ?.map(cell => cell.replace(/^"|"$/g, '').trim()) || [];
-    }
-
-    function parseCsv(text) {
-      const lines = text.trim().split(/\r?\n/);
-      const header = parseRow(lines[0]).map(c => c.toLowerCase());
-
-      const sectionIdx = header.indexOf('section');
-      const cardIdx    = header.indexOf('card name');
-      const scoreIdx   = header.indexOf('score');
-      const supportIdx = header.indexOf('support');
-
-      const add = [], remove = [];
-      let commander = 'inconnu';
-
-      for (let i = 1; i < lines.length; i++) {
-        const row = parseRow(lines[i]);
-
-        const section  = (row[sectionIdx] || '').toLowerCase();
-        const cardName = row[cardIdx] || '';
-        if (!cardName) continue;
-
-        if (section === 'commander') { commander = cardName; continue; }
-
-        if (section === 'add' || section === 'remove') {
-          const entry = {
-            cardName,
-            score:       scoreIdx   >= 0 ? row[scoreIdx]   || '' : '',
-            support:     supportIdx >= 0 ? row[supportIdx]  || '' : '',
-            marketLink:  'https://www.cardmarket.com/en/Magic/Products/Search?category=-1&searchString=' + encodeURIComponent(cardName).replace(/%20/g, '+') + '&searchMode=v2',
-            marketLabel: section === 'add' ? 'Voir chez Relic sur Cardmarket' : 'Vendre à RELIC',
-          };
-          if (section === 'add') add.push(entry); else remove.push(entry);
-        }
-      }
-      return { commander, add, remove };
-    }
-
-    // ── Rendu d'une liste de cartes ───────────────────────────────────────────
-    async function renderCards(entries, container) {
-      const tasks = entries.map(entry => {
-        const { el, img, priceEl } = buildCardEl(entry);
-        container.appendChild(el);
-
-        return fetchCardFace(entry.cardName).then(data => {
-          if (data?.imageUrl) img.src = data.imageUrl;
-          else img.src = 'https://placehold.co/200x286/0f172a/475569?text=N%2FA';
-          if (data?.eurPrice) priceEl.textContent = `Prix EUR: €${data.eurPrice}`;
-        });
-      });
-      await Promise.all(tasks);
-    }
-
-    // ── Construction d'un élément carte ──────────────────────────────────────
-    function buildCardEl(entry) {
-      const el = document.createElement('div');
-      el.className = 'item';
-
-      const thumb = document.createElement('div');
-      thumb.className = 'thumb';
-      const img = document.createElement('img');
-      img.alt     = entry.cardName;
-      img.loading = 'lazy';
-      img.src     = 'https://placehold.co/200x286/0f172a/475569?text=...';
-      thumb.appendChild(img);
-
-      const title = document.createElement('div');
-      title.className = 'item-title';
-      title.textContent = entry.cardName;
-
-      const priceEl = document.createElement('div');
-      priceEl.className = 'item-price';
-      priceEl.textContent = 'Prix EUR: chargement…';
-
-      const link = document.createElement('a');
-      link.className = 'item-link';
-      link.href   = entry.marketLink;
-      link.target = '_blank';
-      link.rel    = 'noopener noreferrer';
-      link.textContent = entry.marketLabel;
-
-      el.appendChild(thumb);
-      el.appendChild(title);
-      el.appendChild(priceEl);
-      el.appendChild(link);
-
-      return { el, img, priceEl };
-    }
-
-    // ── API Scryfall ──────────────────────────────────────────────────────────
-    async function fetchCardFace(name) {
-      try {
-        const r = await fetch(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}`);
-        if (!r.ok) return null;
-        const d = await r.json();
-        return {
-          imageUrl: d.image_uris?.normal || d.card_faces?.[0]?.image_uris?.normal || null,
-          eurPrice: d.prices?.eur || null,
-        };
-      } catch { return null; }
-    }
-
-    async function fetchCommanderArt(name) {
-      try {
-        const r = await fetch(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}`);
-        if (!r.ok) return null;
-        const d = await r.json();
-        return d.image_uris?.art_crop || d.card_faces?.[0]?.image_uris?.art_crop || null;
-      } catch { return null; }
-    }
-
-    // ── Affichage d'une erreur ────────────────────────────────────────────────
-    function showError(msg) {
-      loadingZone.innerHTML = `<div class="error-state">${msg}</div>`;
-    }
-  </script>
+  } else {
+    text = DEMO_CSV;
+  }
+  ingest(parseCSV(text));
+  if (!state.add.length && !state.rem.length){
+    grid.innerHTML = `<div class="notice"><span class="label">Le grimoire reste muet</span>
+      <h3>Aucune recommandation</h3>
+      <p>Le mentor n'a trouvé aucune carte à ajouter ou retirer pour ce deck.</p></div>`;
+    return;
+  }
+  renderGallery();
+  renderCommander();
+}
+boot();
+</script>
 </body>
 </html>
