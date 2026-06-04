@@ -478,7 +478,7 @@
     font-family: var(--serif-engraved); font-size: 0.62rem;
     letter-spacing: 0.28em; text-transform: uppercase; color: var(--gold-soft); opacity: 0.75;
   }
-  .algo-options { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+  .algo-options { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 9px; }
   .algo-card {
     display: flex; flex-direction: column; gap: 4px;
     padding: 12px 14px; border-radius: 4px; cursor: pointer; text-align: left;
@@ -579,7 +579,7 @@
 
     <!-- Navigation -->
     <nav class="codex-nav">
-      <div class="brand">
+      <a class="brand" href="/" style="text-decoration:none">
         <span class="seal" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none">
             <path d="M12 2.5 L20 7 V17 L12 21.5 L4 17 V7 Z" stroke="#d8bd83" stroke-width="1" fill="rgba(160,123,224,0.18)"/>
@@ -591,7 +591,7 @@
           <div class="brand-name">Mana<b>Mind</b></div>
           <div class="brand-tag">Le Mentor de tes decks</div>
         </div>
-      </div>
+      </a>
       <div class="nav-tabs">
         <a href="/" class="active">Le mentor</a>
         <span class="nav-sep"></span>
@@ -687,6 +687,10 @@
                     <button class="algo-card" data-algo="v2">
                       <span class="algo-card-name">Analyse Avancée</span>
                       <span class="algo-card-desc">Score hybride : synergie, spécificité, structure</span>
+                    </button>
+                    <button class="algo-card" data-algo="v3">
+                      <span class="algo-card-name">IA Vectorielle</span>
+                      <span class="algo-card-desc">Similarité vectorielle BAAI/bge-m3</span>
                     </button>
                   </div>
                   <button class="btn-analyse" id="analyseBtn">Analyser le deck ↗</button>

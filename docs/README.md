@@ -2,12 +2,75 @@
 
 Ce dossier contient la documentation complète du projet **ManaMind AI**.
 
-2. Lance le bon serveur :
+---
 
+## 🚀 Démarrage rapide
 
-cd "c:\Users\fabie\Documents\GitHub\ManaMind_AI"
-python server.py
-3. Ouvre http://localhost:8000/
+### 1. Installer `uv` (si pas encore fait)
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+$env:Path = "C:\Users\fabie\.local\bin;$env:Path"
+```
+
+### 2. Installer les dépendances
+
+```powershell
+cd "C:\Users\fabie\Documents\GitHub\ManaMind_AI"
+uv sync
+```
+
+### 3. Lancer le serveur
+
+```powershell
+uv run python server.py
+```
+
+Ouvre http://localhost:8000/
+
+---
+
+## 🤖 Algorithme V3 — IA Vectorielle (BAAI/bge-m3)
+
+L'algorithme V3 utilise des embeddings vectoriels locaux (gratuit, sans API payante).
+
+### Prérequis — GPU NVIDIA (recommandé, ~20x plus rapide)
+
+Le `pyproject.toml` est déjà configuré pour PyTorch CUDA 12.6. Lance simplement :
+
+```powershell
+uv sync
+```
+
+Pour vérifier que le GPU est bien détecté :
+
+```powershell
+uv run python -c "import torch; print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0))"
+```
+
+### Générer les embeddings (à faire une seule fois)
+
+```powershell
+uv run python scripts/build_card_embeddings.py
+```
+
+> Premier lancement : télécharge le modèle BAAI/bge-m3 (~1.5 Go).  
+> Durée : 2-5 min avec GPU, 20-60 min avec CPU.  
+> Résultat : `data/embeddings/card_embeddings.npy` + `card_metadata.json`
+
+### Tester les recommandations vectorielles
+
+```powershell
+uv run python scripts/test_vector_recommendation.py
+```
+
+Avec une requête personnalisée :
+
+```powershell
+uv run python scripts/test_vector_recommendation.py --query "ramp green elves tribal"
+```
+
+---
 
 ---
 

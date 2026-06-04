@@ -11,8 +11,12 @@ dependencies = [
     "python-multipart>=0.0.9",
     # Data science
     "matplotlib>=3.10.7",
+    "numpy>=1.26",
     "pandas>=2.3.3",
     "scikit-learn>=1.7.2",
+    # Embeddings vectoriels — Phase V3
+    "sentence-transformers>=2.7",
+    "torch>=2.0",
     # Quality
     "pre-commit>=1.11.2",
     "pydantic>=2.12.4",
@@ -27,6 +31,14 @@ dependencies = [
     "ijson>=3.3",
     "tqdm>=4.66",
 ]
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu126" }
 
 [tool.ruff]
 # Longueur max de ligne (format + lint)

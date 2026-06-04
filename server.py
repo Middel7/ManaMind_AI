@@ -78,6 +78,10 @@ async def upload_deck(
         output_path = OUTPUTS_DIR / f"recommendations_v2_{stem}.csv"
         script = "src/manamind/recommend_deck_changes_v2.py"
         output_key = f"/outputs/recommendations_v2_{stem}.csv"
+    elif algo == "v3":
+        output_path = OUTPUTS_DIR / f"recommendations_v3_{stem}.csv"
+        script = "src/manamind/recommend_deck_changes_v3.py"
+        output_key = f"/outputs/recommendations_v3_{stem}.csv"
     else:
         output_path = OUTPUTS_DIR / f"recommendations_{stem}.csv"
         script = "src/manamind/recommend_deck_changes.py"
@@ -132,8 +136,39 @@ def search_cards(
 
     try:
         with SessionLocal() as session:
-            # Sous-requête 1 : première impression par carte (pour l'image)
-            first_printing = (
+            # Sous-requête 1a : rang de chaque impression par prix EUR décroissant
+            # row_number() = 1 → impression la plus chère de la carte
+            expensive_rank_subq = (
+                select(
+                    CardPrinting.card_id,
+                    CardPrinting.id.label("pid"),
+                    CardPrinting.image_normal,
+                    CardPrinting.scryfall_uri,
+                    func.row_number().over(
+                        partition_by=CardPrinting.card_id,
+                        order_by=CardPrice.price.desc().nulls_last(),
+                    ).label("rn"),
+                )
+                .join(CardPrice, CardPrinting.id == CardPrice.printing_id)
+                .where(
+                    CardPrice.currency == "eur",
+                    CardPrice.price_type == "regular",
+                    CardPrice.price > 0,
+                )
+                .subquery()
+            )
+            expensive_printing_subq = (
+                select(
+                    expensive_rank_subq.c.card_id,
+                    expensive_rank_subq.c.image_normal,
+                    expensive_rank_subq.c.scryfall_uri,
+                )
+                .where(expensive_rank_subq.c.rn == 1)
+                .subquery()
+            )
+
+            # Sous-requête 1b : première impression (fallback si aucun prix disponible)
+            first_printing_subq = (
                 select(
                     CardPrinting.card_id,
                     func.min(CardPrinting.id).label("pid"),
@@ -141,16 +176,20 @@ def search_cards(
                 .group_by(CardPrinting.card_id)
                 .subquery()
             )
-            PrintingAlias = aliased(CardPrinting)
+            FallbackPrinting = aliased(CardPrinting)
 
-            # Sous-requête 2 : prix EUR régulier par carte
+            # Sous-requête 2 : prix EUR minimum (le moins cher) parmi toutes les impressions
             price_subq = (
                 select(
                     CardPrinting.card_id,
-                    func.max(CardPrice.price).label("eur_price"),
+                    func.min(CardPrice.price).label("eur_price"),
                 )
                 .join(CardPrice, CardPrinting.id == CardPrice.printing_id)
-                .where(CardPrice.currency == "eur", CardPrice.price_type == "regular")
+                .where(
+                    CardPrice.currency == "eur",
+                    CardPrice.price_type == "regular",
+                    CardPrice.price > 0,
+                )
                 .group_by(CardPrinting.card_id)
                 .subquery()
             )
@@ -158,12 +197,19 @@ def search_cards(
             stmt = (
                 select(
                     Card,
-                    PrintingAlias.image_normal,
-                    PrintingAlias.scryfall_uri,
+                    func.coalesce(
+                        expensive_printing_subq.c.image_normal,
+                        FallbackPrinting.image_normal,
+                    ).label("image_normal"),
+                    func.coalesce(
+                        expensive_printing_subq.c.scryfall_uri,
+                        FallbackPrinting.scryfall_uri,
+                    ).label("scryfall_uri"),
                     price_subq.c.eur_price,
                 )
-                .outerjoin(first_printing, Card.id == first_printing.c.card_id)
-                .outerjoin(PrintingAlias, PrintingAlias.id == first_printing.c.pid)
+                .outerjoin(expensive_printing_subq, Card.id == expensive_printing_subq.c.card_id)
+                .outerjoin(first_printing_subq, Card.id == first_printing_subq.c.card_id)
+                .outerjoin(FallbackPrinting, FallbackPrinting.id == first_printing_subq.c.pid)
                 .outerjoin(price_subq, Card.id == price_subq.c.card_id)
                 # ilike = ILIKE PostgreSQL : case-insensitive, paramétré → pas d'injection SQL
                 .where(Card.name.ilike(f"%{q}%"))

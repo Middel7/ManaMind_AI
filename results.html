@@ -387,7 +387,7 @@
     <span class="corner bl"></span><span class="corner br"></span>
 
     <nav>
-      <div class="brand">
+      <a class="brand" href="/" style="text-decoration:none">
         <span class="seal" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="#a795d6" stroke-width="1.3">
             <path d="M12 2.5 20 7v10l-8 4.5L4 17V7l8-4.5Z"/>
@@ -399,7 +399,7 @@
           <span class="brand-name">Mana<b>Mind</b></span>
           <span class="brand-sub">Le mentor de tes decks</span>
         </span>
-      </div>
+      </a>
       <div class="nav-right">
         <a class="nav-link" href="/" id="newDeck">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M15 6l-6 6 6 6"/></svg>
@@ -634,9 +634,13 @@ document.querySelectorAll('.pill').forEach(p=>{
 /* ── Boot ─────────────────────────────────────────────────────────────────── */
 async function boot(){
   const algo = new URLSearchParams(location.search).get('algo');
-  if (algo === 'v2') {
+  const algoLabels = {
+    v2: 'Algorithme V2 — score hybride',
+    v3: 'Algorithme V3 — IA vectorielle',
+  };
+  if (algo && algoLabels[algo]) {
     const badge = $('#algoBadge');
-    badge.textContent = 'Algorithme V2 — score hybride';
+    badge.textContent = algoLabels[algo];
     badge.style.display = 'inline-flex';
   }
   const csv = new URLSearchParams(location.search).get('csv');
