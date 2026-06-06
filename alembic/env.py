@@ -24,8 +24,8 @@ load_dotenv(ROOT / ".env")
 # ── Modèles ────────────────────────────────────────────────────────────────────
 # On importe Base et tous les modèles AVANT d'utiliser target_metadata.
 # Sans ces imports, Alembic ne peut pas détecter les tables lors de l'autogenerate.
-from src.manamind.db.base import Base  # noqa: E402
-import src.manamind.db.models  # noqa: E402, F401 — déclenche l'enregistrement des modèles
+from mtgdb.db.base import Base  # noqa: E402
+import mtgdb.db.models  # noqa: E402, F401 — déclenche l'enregistrement des modèles
 
 # ── Config Alembic ──────────────────────────────────────────────────────────────
 config = context.config

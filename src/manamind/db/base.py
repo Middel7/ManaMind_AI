@@ -1,10 +1,4 @@
-"""
-Classe de base SQLAlchemy partagée par tous les modèles.
-Tous les modèles héritent de Base pour que Alembic puisse
-détecter automatiquement les tables lors de l'autogenerate.
-"""
-from sqlalchemy.orm import DeclarativeBase
+# Re-export depuis le package partagé mtgdb
+from mtgdb.db.base import Base
 
-
-class Base(DeclarativeBase):
-    pass
+__all__ = ["Base"]
