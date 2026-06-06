@@ -84,6 +84,9 @@ class Card(Base):
     # Classement EDHREC (plus petit = plus populaire ; null si absent)
     edhrec_rank: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
+    # True si la carte est classée "Game Changer" par Scryfall
+    game_changer: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="false")
+
     # Horodatages gérés automatiquement
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

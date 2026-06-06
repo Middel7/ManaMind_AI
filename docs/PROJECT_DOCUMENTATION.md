@@ -42,14 +42,14 @@ Ce document est la documentation centrale du projet. Il contient tout ce qui doi
 1. Lire `docs/Projet_IA_MTG_Recommandation.pptx` et `docs/PROJECT_DOCUMENTATION.md` pour comprendre le contexte.
 2. Vérifier `pyproject.toml` pour les dépendances.
 3. Ajouter ou modifier du code dans `src/manamind/`.
-   - Exemple : `src/manamind/recommend_deck_changes.py` pour générer des recommandations de cartes à ajouter/retirer.
+   - Exemple : `src/manamind/recommandation_populaire.py` pour générer des recommandations de cartes à ajouter/retirer.
 5. Mettre à jour la documentation si une information utilisateur ou développeur évolue.
 6. Lancer les tests et vérifier le formatage.
 7. Committer les changements avec un message clair.
 
 ## 7. Documentation et mise à jour
 - Toute nouvelle fonctionnalité, changement de workflow, ajout de dépendance ou modification de structure doit être documenté ici.
-- Pour les algorithmes de recommandation, le script `src/manamind/recommend_deck_changes.py` doit être décrit dans la documentation du projet.
+- Pour les algorithmes de recommandation, le script `src/manamind/recommandation_populaire.py` doit être décrit dans la documentation du projet.
 - Les informations importantes doivent être accessibles dans `docs/PROJECT_DOCUMENTATION.md` et, si nécessaire, dans `docs/AGENTS.md`.
 - Les mises à jour de la documentation sont obligatoires lorsque les utilisateurs ou développeurs ont besoin d’une information nouvelle ou modifiée.
 

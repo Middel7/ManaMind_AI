@@ -1,0 +1,1263 @@
+{
+  "commander": "Orah, Skyclave Hierophant",
+  "color_identity": [
+    "B",
+    "W"
+  ],
+  "profile": "graveyard_recursion",
+  "total_recommendations": 20,
+  "groups": {
+    "top_global": [
+      {
+        "name": "Victimize",
+        "mana_cost": "{2}{B}",
+        "mana_value": 3.0,
+        "type_line": "Sorcery",
+        "edhrec_rank": 127,
+        "final_score": 0.7502,
+        "score_details": {
+          "decklist_popularity": 0.8062,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.24,
+          "vector_similarity": 0.7939,
+          "edhrec": 0.85,
+          "mana_curve": 1.0,
+          "card_quality": 0.8281
+        },
+        "roles": [
+          "graveyard_synergy",
+          "sacrifice_synergy",
+          "recursion"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : graveyard_synergy, recursion, sacrifice_synergy",
+          "Bonne présence dans les decklists similaires",
+          "Remplit/exploite le cimetiere : sacrifice_synergy, recursion, graveyard_synergy",
+          "Très bien classé EDHREC (rank 127)",
+          "Mana value cohérente (3.0)"
+        ]
+      },
+      {
+        "name": "Bojuka Bog",
+        "mana_cost": "",
+        "mana_value": 0,
+        "type_line": "Land",
+        "edhrec_rank": 25,
+        "final_score": 0.7438,
+        "score_details": {
+          "decklist_popularity": 0.811,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.19,
+          "vector_similarity": 0.7378,
+          "edhrec": 1.0,
+          "mana_curve": 0.75,
+          "card_quality": 0.996
+        },
+        "roles": [
+          "ramp",
+          "etb_synergy",
+          "graveyard_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : ramp, graveyard_synergy",
+          "Bonne présence dans les decklists similaires",
+          "Remplit/exploite le cimetiere : graveyard_synergy",
+          "Très bien classé EDHREC (rank 25)"
+        ]
+      },
+      {
+        "name": "Doomed Necromancer",
+        "mana_cost": "{2}{B}",
+        "mana_value": 3.0,
+        "type_line": "Creature — Human Cleric Mercenary",
+        "edhrec_rank": 3781,
+        "final_score": 0.7428,
+        "score_details": {
+          "decklist_popularity": 0.9252,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.29,
+          "vector_similarity": 0.8018,
+          "edhrec": 0.4,
+          "mana_curve": 1.0,
+          "card_quality": 0.6626
+        },
+        "roles": [
+          "tribal_synergy",
+          "graveyard_synergy",
+          "recursion"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : recursion, graveyard_synergy",
+          "Bonne présence dans les decklists similaires",
+          "Remplit/exploite le cimetiere : recursion, graveyard_synergy",
+          "Mana value cohérente (3.0)"
+        ]
+      },
+      {
+        "name": "Priest of Forgotten Gods",
+        "mana_cost": "{1}{B}",
+        "mana_value": 2.0,
+        "type_line": "Creature — Human Cleric",
+        "edhrec_rank": 1428,
+        "final_score": 0.7383,
+        "score_details": {
+          "decklist_popularity": 0.8901,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.19,
+          "vector_similarity": 0.7721,
+          "edhrec": 0.65,
+          "mana_curve": 1.0,
+          "card_quality": 0.847
+        },
+        "roles": [
+          "ramp",
+          "card_draw",
+          "tribal_synergy",
+          "sacrifice_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : ramp, card_draw, sacrifice_synergy",
+          "Bonne présence dans les decklists similaires",
+          "Remplit/exploite le cimetiere : sacrifice_synergy",
+          "Très bien classé EDHREC (rank 1428)",
+          "Mana value cohérente (2.0)"
+        ]
+      },
+      {
+        "name": "Village Rites",
+        "mana_cost": "{B}",
+        "mana_value": 1.0,
+        "type_line": "Instant",
+        "edhrec_rank": 194,
+        "final_score": 0.7325,
+        "score_details": {
+          "decklist_popularity": 0.8238,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.19,
+          "vector_similarity": 0.751,
+          "edhrec": 0.85,
+          "mana_curve": 0.75,
+          "card_quality": 0.9206
+        },
+        "roles": [
+          "card_draw",
+          "sacrifice_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : card_draw, sacrifice_synergy",
+          "Bonne présence dans les decklists similaires",
+          "Remplit/exploite le cimetiere : sacrifice_synergy",
+          "Très bien classé EDHREC (rank 194)"
+        ]
+      },
+      {
+        "name": "Ashnod's Altar",
+        "mana_cost": "{3}",
+        "mana_value": 3.0,
+        "type_line": "Artifact",
+        "edhrec_rank": 131,
+        "final_score": 0.7316,
+        "score_details": {
+          "decklist_popularity": 0.8233,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.14,
+          "vector_similarity": 0.7628,
+          "edhrec": 0.85,
+          "mana_curve": 1.0,
+          "card_quality": 0.9203
+        },
+        "roles": [
+          "ramp",
+          "sacrifice_synergy",
+          "artifact_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : ramp, sacrifice_synergy",
+          "Bonne présence dans les decklists similaires",
+          "Remplit/exploite le cimetiere : sacrifice_synergy",
+          "Très bien classé EDHREC (rank 131)",
+          "Mana value cohérente (3.0)"
+        ]
+      },
+      {
+        "name": "Ayli, Eternal Pilgrim",
+        "mana_cost": "{W}{B}",
+        "mana_value": 2.0,
+        "type_line": "Legendary Creature — Kor Cleric",
+        "edhrec_rank": 5437,
+        "final_score": 0.7238,
+        "score_details": {
+          "decklist_popularity": 0.9264,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.19,
+          "vector_similarity": 0.7976,
+          "edhrec": 0.4,
+          "mana_curve": 1.0,
+          "card_quality": 0.7295
+        },
+        "roles": [
+          "targeted_removal",
+          "sacrifice_synergy",
+          "lifegain"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : lifegain, sacrifice_synergy",
+          "Bonne présence dans les decklists similaires",
+          "Remplit/exploite le cimetiere : sacrifice_synergy",
+          "Mana value cohérente (2.0)"
+        ]
+      },
+      {
+        "name": "Cleric Class",
+        "mana_cost": "{W}",
+        "mana_value": 1.0,
+        "type_line": "Enchantment — Class",
+        "edhrec_rank": 1479,
+        "final_score": 0.7231,
+        "score_details": {
+          "decklist_popularity": 0.7567,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.29,
+          "vector_similarity": 0.8197,
+          "edhrec": 0.65,
+          "mana_curve": 0.75,
+          "card_quality": 0.7737
+        },
+        "roles": [
+          "ramp",
+          "counter_synergy",
+          "graveyard_synergy",
+          "lifegain",
+          "enchantment_synergy",
+          "recursion"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : lifegain, ramp, recursion, graveyard_synergy",
+          "Bonne présence dans les decklists similaires",
+          "Remplit/exploite le cimetiere : recursion, graveyard_synergy",
+          "Très bien classé EDHREC (rank 1479)"
+        ]
+      },
+      {
+        "name": "Yawgmoth, Thran Physician",
+        "mana_cost": "{2}{B}{B}",
+        "mana_value": 4.0,
+        "type_line": "Legendary Creature — Human Cleric",
+        "edhrec_rank": 813,
+        "final_score": 0.7187,
+        "score_details": {
+          "decklist_popularity": 0.8344,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.19,
+          "vector_similarity": 0.7785,
+          "edhrec": 0.65,
+          "mana_curve": 0.8,
+          "card_quality": 0.8164
+        },
+        "roles": [
+          "card_draw",
+          "protection",
+          "tribal_synergy",
+          "sacrifice_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : card_draw, protection, sacrifice_synergy",
+          "Bonne présence dans les decklists similaires",
+          "Remplit/exploite le cimetiere : sacrifice_synergy",
+          "Très bien classé EDHREC (rank 813)",
+          "Mana value cohérente (4.0)"
+        ]
+      },
+      {
+        "name": "Whisper, Blood Liturgist",
+        "mana_cost": "{3}{B}",
+        "mana_value": 4.0,
+        "type_line": "Legendary Creature — Human Cleric",
+        "edhrec_rank": 5799,
+        "final_score": 0.7167,
+        "score_details": {
+          "decklist_popularity": 0.8469,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.29,
+          "vector_similarity": 0.8035,
+          "edhrec": 0.4,
+          "mana_curve": 0.8,
+          "card_quality": 0.6234
+        },
+        "roles": [
+          "tribal_synergy",
+          "graveyard_synergy",
+          "recursion"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : recursion, graveyard_synergy",
+          "Bonne présence dans les decklists similaires",
+          "Remplit/exploite le cimetiere : recursion, graveyard_synergy",
+          "Mana value cohérente (4.0)"
+        ]
+      }
+    ],
+    "ramp": [
+      {
+        "name": "Phyrexian Altar",
+        "mana_cost": "{3}",
+        "mana_value": 3.0,
+        "type_line": "Artifact",
+        "edhrec_rank": 309,
+        "final_score": 0.713,
+        "score_details": {
+          "decklist_popularity": 0.7142,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.19,
+          "vector_similarity": 0.7615,
+          "edhrec": 0.85,
+          "mana_curve": 1.0,
+          "card_quality": 0.8603
+        },
+        "roles": [
+          "ramp",
+          "sacrifice_synergy",
+          "artifact_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : ramp, sacrifice_synergy",
+          "Bonne présence dans les decklists similaires",
+          "Remplit/exploite le cimetiere : sacrifice_synergy",
+          "Très bien classé EDHREC (rank 309)",
+          "Mana value cohérente (3.0)"
+        ]
+      },
+      {
+        "name": "Deadly Dispute",
+        "mana_cost": "{1}{B}",
+        "mana_value": 2.0,
+        "type_line": "Instant",
+        "edhrec_rank": 128,
+        "final_score": 0.7113,
+        "score_details": {
+          "decklist_popularity": 0.6704,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.24,
+          "vector_similarity": 0.7599,
+          "edhrec": 0.85,
+          "mana_curve": 1.0,
+          "card_quality": 0.8362
+        },
+        "roles": [
+          "ramp",
+          "card_draw",
+          "token_generation",
+          "sacrifice_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : ramp, card_draw, sacrifice_synergy, token_generation",
+          "Bonne présence dans les decklists similaires",
+          "Remplit/exploite le cimetiere : sacrifice_synergy",
+          "Très bien classé EDHREC (rank 128)",
+          "Mana value cohérente (2.0)"
+        ]
+      },
+      {
+        "name": "Smothering Tithe",
+        "mana_cost": "{3}{W}",
+        "mana_value": 4.0,
+        "type_line": "Enchantment",
+        "edhrec_rank": 60,
+        "final_score": 0.7055,
+        "score_details": {
+          "decklist_popularity": 0.727,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.1,
+          "vector_similarity": 0.7383,
+          "edhrec": 1.0,
+          "mana_curve": 0.8,
+          "card_quality": 0.9498
+        },
+        "roles": [
+          "ramp",
+          "token_generation",
+          "artifact_synergy",
+          "enchantment_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : ramp, token_generation",
+          "Bonne présence dans les decklists similaires",
+          "Très bien classé EDHREC (rank 60)",
+          "Mana value cohérente (4.0)"
+        ]
+      },
+      {
+        "name": "Phyrexian Tower",
+        "mana_cost": "",
+        "mana_value": 0,
+        "type_line": "Legendary Land",
+        "edhrec_rank": 199,
+        "final_score": 0.6995,
+        "score_details": {
+          "decklist_popularity": 0.7376,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.14,
+          "vector_similarity": 0.7475,
+          "edhrec": 0.85,
+          "mana_curve": 0.75,
+          "card_quality": 0.8732
+        },
+        "roles": [
+          "ramp",
+          "sacrifice_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : ramp, sacrifice_synergy",
+          "Bonne présence dans les decklists similaires",
+          "Remplit/exploite le cimetiere : sacrifice_synergy",
+          "Très bien classé EDHREC (rank 199)"
+        ]
+      },
+      {
+        "name": "Arcane Signet",
+        "mana_cost": "{2}",
+        "mana_value": 2.0,
+        "type_line": "Artifact",
+        "edhrec_rank": 3,
+        "final_score": 0.6964,
+        "score_details": {
+          "decklist_popularity": 0.9473,
+          "strategic_role": 0.75,
+          "commander_synergy": 0.05,
+          "vector_similarity": 0.7471,
+          "edhrec": 1.0,
+          "mana_curve": 1.0,
+          "card_quality": 1.0
+        },
+        "roles": [
+          "ramp",
+          "artifact_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : ramp",
+          "Bonne présence dans les decklists similaires",
+          "Très bien classé EDHREC (rank 3)",
+          "Mana value cohérente (2.0)"
+        ]
+      }
+    ],
+    "card_draw": [
+      {
+        "name": "Deadly Dispute",
+        "mana_cost": "{1}{B}",
+        "mana_value": 2.0,
+        "type_line": "Instant",
+        "edhrec_rank": 128,
+        "final_score": 0.7113,
+        "score_details": {
+          "decklist_popularity": 0.6704,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.24,
+          "vector_similarity": 0.7599,
+          "edhrec": 0.85,
+          "mana_curve": 1.0,
+          "card_quality": 0.8362
+        },
+        "roles": [
+          "ramp",
+          "card_draw",
+          "token_generation",
+          "sacrifice_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : ramp, card_draw, sacrifice_synergy, token_generation",
+          "Bonne présence dans les decklists similaires",
+          "Remplit/exploite le cimetiere : sacrifice_synergy",
+          "Très bien classé EDHREC (rank 128)",
+          "Mana value cohérente (2.0)"
+        ]
+      }
+    ],
+    "removal": [],
+    "protection": [],
+    "synergy": [
+      {
+        "name": "Drana, the Last Bloodchief",
+        "mana_cost": "{3}{B}{B}",
+        "mana_value": 5.0,
+        "type_line": "Legendary Creature — Vampire Cleric",
+        "edhrec_rank": 6202,
+        "final_score": 0.712,
+        "score_details": {
+          "decklist_popularity": 0.7968,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.34,
+          "vector_similarity": 0.7919,
+          "edhrec": 0.4,
+          "mana_curve": 0.8,
+          "card_quality": 0.5984
+        },
+        "roles": [
+          "counter_synergy",
+          "tribal_synergy",
+          "graveyard_synergy",
+          "recursion"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : recursion, graveyard_synergy",
+          "Bonne présence dans les decklists similaires",
+          "Remplit/exploite le cimetiere : recursion, graveyard_synergy",
+          "Mana value cohérente (5.0)"
+        ]
+      },
+      {
+        "name": "Deadly Dispute",
+        "mana_cost": "{1}{B}",
+        "mana_value": 2.0,
+        "type_line": "Instant",
+        "edhrec_rank": 128,
+        "final_score": 0.7113,
+        "score_details": {
+          "decklist_popularity": 0.6704,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.24,
+          "vector_similarity": 0.7599,
+          "edhrec": 0.85,
+          "mana_curve": 1.0,
+          "card_quality": 0.8362
+        },
+        "roles": [
+          "ramp",
+          "card_draw",
+          "token_generation",
+          "sacrifice_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : ramp, card_draw, sacrifice_synergy, token_generation",
+          "Bonne présence dans les decklists similaires",
+          "Remplit/exploite le cimetiere : sacrifice_synergy",
+          "Très bien classé EDHREC (rank 128)",
+          "Mana value cohérente (2.0)"
+        ]
+      },
+      {
+        "name": "Smothering Tithe",
+        "mana_cost": "{3}{W}",
+        "mana_value": 4.0,
+        "type_line": "Enchantment",
+        "edhrec_rank": 60,
+        "final_score": 0.7055,
+        "score_details": {
+          "decklist_popularity": 0.727,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.1,
+          "vector_similarity": 0.7383,
+          "edhrec": 1.0,
+          "mana_curve": 0.8,
+          "card_quality": 0.9498
+        },
+        "roles": [
+          "ramp",
+          "token_generation",
+          "artifact_synergy",
+          "enchantment_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : ramp, token_generation",
+          "Bonne présence dans les decklists similaires",
+          "Très bien classé EDHREC (rank 60)",
+          "Mana value cohérente (4.0)"
+        ]
+      },
+      {
+        "name": "Animate Dead",
+        "mana_cost": "{1}{B}",
+        "mana_value": 2.0,
+        "type_line": "Enchantment — Aura",
+        "edhrec_rank": 224,
+        "final_score": 0.7016,
+        "score_details": {
+          "decklist_popularity": 0.6143,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.24,
+          "vector_similarity": 0.8025,
+          "edhrec": 0.85,
+          "mana_curve": 1.0,
+          "card_quality": 0.7322
+        },
+        "roles": [
+          "etb_synergy",
+          "graveyard_synergy",
+          "enchantment_synergy",
+          "recursion",
+          "voltron_only"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : recursion, graveyard_synergy",
+          "Bonne présence dans les decklists similaires",
+          "Remplit/exploite le cimetiere : recursion, graveyard_synergy",
+          "Très bien classé EDHREC (rank 224)",
+          "Mana value cohérente (2.0)"
+        ]
+      },
+      {
+        "name": "Vito, Thorn of the Dusk Rose",
+        "mana_cost": "{2}{B}",
+        "mana_value": 3.0,
+        "type_line": "Legendary Creature — Vampire Cleric",
+        "edhrec_rank": 487,
+        "final_score": 0.6988,
+        "score_details": {
+          "decklist_popularity": 0.9408,
+          "strategic_role": 0.75,
+          "commander_synergy": 0.15,
+          "vector_similarity": 0.7544,
+          "edhrec": 0.85,
+          "mana_curve": 1.0,
+          "card_quality": 0.8954
+        },
+        "roles": [
+          "tribal_synergy",
+          "lifegain"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : lifegain",
+          "Bonne présence dans les decklists similaires",
+          "Très bien classé EDHREC (rank 487)",
+          "Mana value cohérente (3.0)"
+        ]
+      },
+      {
+        "name": "Sister Hospitaller",
+        "mana_cost": "{4}{W}{B}",
+        "mana_value": 6.0,
+        "type_line": "Creature — Human Cleric",
+        "edhrec_rank": 6359,
+        "final_score": 0.6964,
+        "score_details": {
+          "decklist_popularity": 0.7361,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.39,
+          "vector_similarity": 0.7869,
+          "edhrec": 0.4,
+          "mana_curve": 0.5,
+          "card_quality": 0.568
+        },
+        "roles": [
+          "etb_synergy",
+          "tribal_synergy",
+          "graveyard_synergy",
+          "lifegain",
+          "recursion"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : lifegain, recursion, graveyard_synergy",
+          "Bonne présence dans les decklists similaires",
+          "Remplit/exploite le cimetiere : recursion, graveyard_synergy"
+        ]
+      }
+    ],
+    "high_impact": [
+      {
+        "name": "Deadly Dispute",
+        "mana_cost": "{1}{B}",
+        "mana_value": 2.0,
+        "type_line": "Instant",
+        "edhrec_rank": 128,
+        "final_score": 0.7113,
+        "score_details": {
+          "decklist_popularity": 0.6704,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.24,
+          "vector_similarity": 0.7599,
+          "edhrec": 0.85,
+          "mana_curve": 1.0,
+          "card_quality": 0.8362
+        },
+        "roles": [
+          "ramp",
+          "card_draw",
+          "token_generation",
+          "sacrifice_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : ramp, card_draw, sacrifice_synergy, token_generation",
+          "Bonne présence dans les decklists similaires",
+          "Remplit/exploite le cimetiere : sacrifice_synergy",
+          "Très bien classé EDHREC (rank 128)",
+          "Mana value cohérente (2.0)"
+        ]
+      }
+    ]
+  },
+  "all_results": [
+    {
+      "name": "Victimize",
+      "mana_cost": "{2}{B}",
+      "mana_value": 3.0,
+      "type_line": "Sorcery",
+      "edhrec_rank": 127,
+      "final_score": 0.7502,
+      "score_details": {
+        "decklist_popularity": 0.8062,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.24,
+        "vector_similarity": 0.7939,
+        "edhrec": 0.85,
+        "mana_curve": 1.0,
+        "card_quality": 0.8281
+      },
+      "roles": [
+        "graveyard_synergy",
+        "sacrifice_synergy",
+        "recursion"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : graveyard_synergy, recursion, sacrifice_synergy",
+        "Bonne présence dans les decklists similaires",
+        "Remplit/exploite le cimetiere : sacrifice_synergy, recursion, graveyard_synergy",
+        "Très bien classé EDHREC (rank 127)",
+        "Mana value cohérente (3.0)"
+      ]
+    },
+    {
+      "name": "Bojuka Bog",
+      "mana_cost": "",
+      "mana_value": 0,
+      "type_line": "Land",
+      "edhrec_rank": 25,
+      "final_score": 0.7438,
+      "score_details": {
+        "decklist_popularity": 0.811,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.19,
+        "vector_similarity": 0.7378,
+        "edhrec": 1.0,
+        "mana_curve": 0.75,
+        "card_quality": 0.996
+      },
+      "roles": [
+        "ramp",
+        "etb_synergy",
+        "graveyard_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : ramp, graveyard_synergy",
+        "Bonne présence dans les decklists similaires",
+        "Remplit/exploite le cimetiere : graveyard_synergy",
+        "Très bien classé EDHREC (rank 25)"
+      ]
+    },
+    {
+      "name": "Doomed Necromancer",
+      "mana_cost": "{2}{B}",
+      "mana_value": 3.0,
+      "type_line": "Creature — Human Cleric Mercenary",
+      "edhrec_rank": 3781,
+      "final_score": 0.7428,
+      "score_details": {
+        "decklist_popularity": 0.9252,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.29,
+        "vector_similarity": 0.8018,
+        "edhrec": 0.4,
+        "mana_curve": 1.0,
+        "card_quality": 0.6626
+      },
+      "roles": [
+        "tribal_synergy",
+        "graveyard_synergy",
+        "recursion"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : recursion, graveyard_synergy",
+        "Bonne présence dans les decklists similaires",
+        "Remplit/exploite le cimetiere : recursion, graveyard_synergy",
+        "Mana value cohérente (3.0)"
+      ]
+    },
+    {
+      "name": "Priest of Forgotten Gods",
+      "mana_cost": "{1}{B}",
+      "mana_value": 2.0,
+      "type_line": "Creature — Human Cleric",
+      "edhrec_rank": 1428,
+      "final_score": 0.7383,
+      "score_details": {
+        "decklist_popularity": 0.8901,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.19,
+        "vector_similarity": 0.7721,
+        "edhrec": 0.65,
+        "mana_curve": 1.0,
+        "card_quality": 0.847
+      },
+      "roles": [
+        "ramp",
+        "card_draw",
+        "tribal_synergy",
+        "sacrifice_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : ramp, card_draw, sacrifice_synergy",
+        "Bonne présence dans les decklists similaires",
+        "Remplit/exploite le cimetiere : sacrifice_synergy",
+        "Très bien classé EDHREC (rank 1428)",
+        "Mana value cohérente (2.0)"
+      ]
+    },
+    {
+      "name": "Village Rites",
+      "mana_cost": "{B}",
+      "mana_value": 1.0,
+      "type_line": "Instant",
+      "edhrec_rank": 194,
+      "final_score": 0.7325,
+      "score_details": {
+        "decklist_popularity": 0.8238,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.19,
+        "vector_similarity": 0.751,
+        "edhrec": 0.85,
+        "mana_curve": 0.75,
+        "card_quality": 0.9206
+      },
+      "roles": [
+        "card_draw",
+        "sacrifice_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : card_draw, sacrifice_synergy",
+        "Bonne présence dans les decklists similaires",
+        "Remplit/exploite le cimetiere : sacrifice_synergy",
+        "Très bien classé EDHREC (rank 194)"
+      ]
+    },
+    {
+      "name": "Ashnod's Altar",
+      "mana_cost": "{3}",
+      "mana_value": 3.0,
+      "type_line": "Artifact",
+      "edhrec_rank": 131,
+      "final_score": 0.7316,
+      "score_details": {
+        "decklist_popularity": 0.8233,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.14,
+        "vector_similarity": 0.7628,
+        "edhrec": 0.85,
+        "mana_curve": 1.0,
+        "card_quality": 0.9203
+      },
+      "roles": [
+        "ramp",
+        "sacrifice_synergy",
+        "artifact_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : ramp, sacrifice_synergy",
+        "Bonne présence dans les decklists similaires",
+        "Remplit/exploite le cimetiere : sacrifice_synergy",
+        "Très bien classé EDHREC (rank 131)",
+        "Mana value cohérente (3.0)"
+      ]
+    },
+    {
+      "name": "Ayli, Eternal Pilgrim",
+      "mana_cost": "{W}{B}",
+      "mana_value": 2.0,
+      "type_line": "Legendary Creature — Kor Cleric",
+      "edhrec_rank": 5437,
+      "final_score": 0.7238,
+      "score_details": {
+        "decklist_popularity": 0.9264,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.19,
+        "vector_similarity": 0.7976,
+        "edhrec": 0.4,
+        "mana_curve": 1.0,
+        "card_quality": 0.7295
+      },
+      "roles": [
+        "targeted_removal",
+        "sacrifice_synergy",
+        "lifegain"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : lifegain, sacrifice_synergy",
+        "Bonne présence dans les decklists similaires",
+        "Remplit/exploite le cimetiere : sacrifice_synergy",
+        "Mana value cohérente (2.0)"
+      ]
+    },
+    {
+      "name": "Cleric Class",
+      "mana_cost": "{W}",
+      "mana_value": 1.0,
+      "type_line": "Enchantment — Class",
+      "edhrec_rank": 1479,
+      "final_score": 0.7231,
+      "score_details": {
+        "decklist_popularity": 0.7567,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.29,
+        "vector_similarity": 0.8197,
+        "edhrec": 0.65,
+        "mana_curve": 0.75,
+        "card_quality": 0.7737
+      },
+      "roles": [
+        "ramp",
+        "counter_synergy",
+        "graveyard_synergy",
+        "lifegain",
+        "enchantment_synergy",
+        "recursion"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : lifegain, ramp, recursion, graveyard_synergy",
+        "Bonne présence dans les decklists similaires",
+        "Remplit/exploite le cimetiere : recursion, graveyard_synergy",
+        "Très bien classé EDHREC (rank 1479)"
+      ]
+    },
+    {
+      "name": "Yawgmoth, Thran Physician",
+      "mana_cost": "{2}{B}{B}",
+      "mana_value": 4.0,
+      "type_line": "Legendary Creature — Human Cleric",
+      "edhrec_rank": 813,
+      "final_score": 0.7187,
+      "score_details": {
+        "decklist_popularity": 0.8344,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.19,
+        "vector_similarity": 0.7785,
+        "edhrec": 0.65,
+        "mana_curve": 0.8,
+        "card_quality": 0.8164
+      },
+      "roles": [
+        "card_draw",
+        "protection",
+        "tribal_synergy",
+        "sacrifice_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : card_draw, protection, sacrifice_synergy",
+        "Bonne présence dans les decklists similaires",
+        "Remplit/exploite le cimetiere : sacrifice_synergy",
+        "Très bien classé EDHREC (rank 813)",
+        "Mana value cohérente (4.0)"
+      ]
+    },
+    {
+      "name": "Whisper, Blood Liturgist",
+      "mana_cost": "{3}{B}",
+      "mana_value": 4.0,
+      "type_line": "Legendary Creature — Human Cleric",
+      "edhrec_rank": 5799,
+      "final_score": 0.7167,
+      "score_details": {
+        "decklist_popularity": 0.8469,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.29,
+        "vector_similarity": 0.8035,
+        "edhrec": 0.4,
+        "mana_curve": 0.8,
+        "card_quality": 0.6234
+      },
+      "roles": [
+        "tribal_synergy",
+        "graveyard_synergy",
+        "recursion"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : recursion, graveyard_synergy",
+        "Bonne présence dans les decklists similaires",
+        "Remplit/exploite le cimetiere : recursion, graveyard_synergy",
+        "Mana value cohérente (4.0)"
+      ]
+    },
+    {
+      "name": "Phyrexian Altar",
+      "mana_cost": "{3}",
+      "mana_value": 3.0,
+      "type_line": "Artifact",
+      "edhrec_rank": 309,
+      "final_score": 0.713,
+      "score_details": {
+        "decklist_popularity": 0.7142,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.19,
+        "vector_similarity": 0.7615,
+        "edhrec": 0.85,
+        "mana_curve": 1.0,
+        "card_quality": 0.8603
+      },
+      "roles": [
+        "ramp",
+        "sacrifice_synergy",
+        "artifact_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : ramp, sacrifice_synergy",
+        "Bonne présence dans les decklists similaires",
+        "Remplit/exploite le cimetiere : sacrifice_synergy",
+        "Très bien classé EDHREC (rank 309)",
+        "Mana value cohérente (3.0)"
+      ]
+    },
+    {
+      "name": "High Market",
+      "mana_cost": "",
+      "mana_value": 0,
+      "type_line": "Land",
+      "edhrec_rank": 468,
+      "final_score": 0.7123,
+      "score_details": {
+        "decklist_popularity": 0.781,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.14,
+        "vector_similarity": 0.768,
+        "edhrec": 0.85,
+        "mana_curve": 0.75,
+        "card_quality": 0.8155
+      },
+      "roles": [
+        "sacrifice_synergy",
+        "lifegain"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : lifegain, sacrifice_synergy",
+        "Bonne présence dans les decklists similaires",
+        "Remplit/exploite le cimetiere : sacrifice_synergy",
+        "Très bien classé EDHREC (rank 468)"
+      ]
+    },
+    {
+      "name": "Drana, the Last Bloodchief",
+      "mana_cost": "{3}{B}{B}",
+      "mana_value": 5.0,
+      "type_line": "Legendary Creature — Vampire Cleric",
+      "edhrec_rank": 6202,
+      "final_score": 0.712,
+      "score_details": {
+        "decklist_popularity": 0.7968,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.34,
+        "vector_similarity": 0.7919,
+        "edhrec": 0.4,
+        "mana_curve": 0.8,
+        "card_quality": 0.5984
+      },
+      "roles": [
+        "counter_synergy",
+        "tribal_synergy",
+        "graveyard_synergy",
+        "recursion"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : recursion, graveyard_synergy",
+        "Bonne présence dans les decklists similaires",
+        "Remplit/exploite le cimetiere : recursion, graveyard_synergy",
+        "Mana value cohérente (5.0)"
+      ]
+    },
+    {
+      "name": "Deadly Dispute",
+      "mana_cost": "{1}{B}",
+      "mana_value": 2.0,
+      "type_line": "Instant",
+      "edhrec_rank": 128,
+      "final_score": 0.7113,
+      "score_details": {
+        "decklist_popularity": 0.6704,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.24,
+        "vector_similarity": 0.7599,
+        "edhrec": 0.85,
+        "mana_curve": 1.0,
+        "card_quality": 0.8362
+      },
+      "roles": [
+        "ramp",
+        "card_draw",
+        "token_generation",
+        "sacrifice_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : ramp, card_draw, sacrifice_synergy, token_generation",
+        "Bonne présence dans les decklists similaires",
+        "Remplit/exploite le cimetiere : sacrifice_synergy",
+        "Très bien classé EDHREC (rank 128)",
+        "Mana value cohérente (2.0)"
+      ]
+    },
+    {
+      "name": "Smothering Tithe",
+      "mana_cost": "{3}{W}",
+      "mana_value": 4.0,
+      "type_line": "Enchantment",
+      "edhrec_rank": 60,
+      "final_score": 0.7055,
+      "score_details": {
+        "decklist_popularity": 0.727,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.1,
+        "vector_similarity": 0.7383,
+        "edhrec": 1.0,
+        "mana_curve": 0.8,
+        "card_quality": 0.9498
+      },
+      "roles": [
+        "ramp",
+        "token_generation",
+        "artifact_synergy",
+        "enchantment_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : ramp, token_generation",
+        "Bonne présence dans les decklists similaires",
+        "Très bien classé EDHREC (rank 60)",
+        "Mana value cohérente (4.0)"
+      ]
+    },
+    {
+      "name": "Animate Dead",
+      "mana_cost": "{1}{B}",
+      "mana_value": 2.0,
+      "type_line": "Enchantment — Aura",
+      "edhrec_rank": 224,
+      "final_score": 0.7016,
+      "score_details": {
+        "decklist_popularity": 0.6143,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.24,
+        "vector_similarity": 0.8025,
+        "edhrec": 0.85,
+        "mana_curve": 1.0,
+        "card_quality": 0.7322
+      },
+      "roles": [
+        "etb_synergy",
+        "graveyard_synergy",
+        "enchantment_synergy",
+        "recursion",
+        "voltron_only"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : recursion, graveyard_synergy",
+        "Bonne présence dans les decklists similaires",
+        "Remplit/exploite le cimetiere : recursion, graveyard_synergy",
+        "Très bien classé EDHREC (rank 224)",
+        "Mana value cohérente (2.0)"
+      ]
+    },
+    {
+      "name": "Phyrexian Tower",
+      "mana_cost": "",
+      "mana_value": 0,
+      "type_line": "Legendary Land",
+      "edhrec_rank": 199,
+      "final_score": 0.6995,
+      "score_details": {
+        "decklist_popularity": 0.7376,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.14,
+        "vector_similarity": 0.7475,
+        "edhrec": 0.85,
+        "mana_curve": 0.75,
+        "card_quality": 0.8732
+      },
+      "roles": [
+        "ramp",
+        "sacrifice_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : ramp, sacrifice_synergy",
+        "Bonne présence dans les decklists similaires",
+        "Remplit/exploite le cimetiere : sacrifice_synergy",
+        "Très bien classé EDHREC (rank 199)"
+      ]
+    },
+    {
+      "name": "Vito, Thorn of the Dusk Rose",
+      "mana_cost": "{2}{B}",
+      "mana_value": 3.0,
+      "type_line": "Legendary Creature — Vampire Cleric",
+      "edhrec_rank": 487,
+      "final_score": 0.6988,
+      "score_details": {
+        "decklist_popularity": 0.9408,
+        "strategic_role": 0.75,
+        "commander_synergy": 0.15,
+        "vector_similarity": 0.7544,
+        "edhrec": 0.85,
+        "mana_curve": 1.0,
+        "card_quality": 0.8954
+      },
+      "roles": [
+        "tribal_synergy",
+        "lifegain"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : lifegain",
+        "Bonne présence dans les decklists similaires",
+        "Très bien classé EDHREC (rank 487)",
+        "Mana value cohérente (3.0)"
+      ]
+    },
+    {
+      "name": "Arcane Signet",
+      "mana_cost": "{2}",
+      "mana_value": 2.0,
+      "type_line": "Artifact",
+      "edhrec_rank": 3,
+      "final_score": 0.6964,
+      "score_details": {
+        "decklist_popularity": 0.9473,
+        "strategic_role": 0.75,
+        "commander_synergy": 0.05,
+        "vector_similarity": 0.7471,
+        "edhrec": 1.0,
+        "mana_curve": 1.0,
+        "card_quality": 1.0
+      },
+      "roles": [
+        "ramp",
+        "artifact_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : ramp",
+        "Bonne présence dans les decklists similaires",
+        "Très bien classé EDHREC (rank 3)",
+        "Mana value cohérente (2.0)"
+      ]
+    },
+    {
+      "name": "Sister Hospitaller",
+      "mana_cost": "{4}{W}{B}",
+      "mana_value": 6.0,
+      "type_line": "Creature — Human Cleric",
+      "edhrec_rank": 6359,
+      "final_score": 0.6964,
+      "score_details": {
+        "decklist_popularity": 0.7361,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.39,
+        "vector_similarity": 0.7869,
+        "edhrec": 0.4,
+        "mana_curve": 0.5,
+        "card_quality": 0.568
+      },
+      "roles": [
+        "etb_synergy",
+        "tribal_synergy",
+        "graveyard_synergy",
+        "lifegain",
+        "recursion"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : lifegain, recursion, graveyard_synergy",
+        "Bonne présence dans les decklists similaires",
+        "Remplit/exploite le cimetiere : recursion, graveyard_synergy"
+      ]
+    }
+  ]
+}

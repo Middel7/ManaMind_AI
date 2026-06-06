@@ -14,7 +14,7 @@ Stratégie :
   7. Exporter un CSV compatible avec l'affichage existant
 
 Usage (CLI) :
-  python src/manamind/recommend_deck_changes_v3.py \\
+  python src/manamind/recommandation_vectorielle.py \\
       --input  uploads/my_deck.txt \\
       --output outputs/recommendations_v3_my_deck.csv
 
@@ -39,7 +39,7 @@ _ROOT = _HERE.parents[1]
 sys.path.insert(0, str(_ROOT))
 sys.path.insert(0, str(_ROOT / "src"))
 
-from manamind.recommend_deck_changes import (   # noqa: E402
+from manamind.recommandation_populaire import (   # noqa: E402
     BASIC_LANDS,
     normalize_name,
     parse_decklist_text,

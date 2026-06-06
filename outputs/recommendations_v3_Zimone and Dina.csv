@@ -1,0 +1,46 @@
+Section,Card Name,Score,Support,Deck Frequency,Vector Score,Algorithm
+Commander,Zimone and Dina,,,,,v3
+
+Additions,,,,,,
+add,Sindbad,1739,,,0.869302,v3
+add,Dina's Guidance,1735,,,0.867463,v3
+add,Reincarnation,1733,,,0.866718,v3
+add,Primal Druid,1725,,,0.862691,v3
+add,Undead Augur,1722,,,0.860875,v3
+add,Live or Die,1719,,,0.859579,v3
+add,Greed,1717,,,0.858334,v3
+add,Inheritance,1716,,,0.858138,v3
+add,"Dina, Essence Brewer",1715,,,0.85773,v3
+add,Dredge,1715,,,0.857693,v3
+add,Thraxodemon,1713,,,0.856688,v3
+add,Erudite Wizard,1711,,,0.85571,v3
+add,One with Nature,1711,,,0.855391,v3
+add,Carom,1707,,,0.853683,v3
+add,Cauldron Haze,1707,,,0.85348,v3
+add,Regeneration,1705,,,0.852481,v3
+add,Lifeline,1704,,,0.852123,v3
+add,Life Goes On,1703,,,0.851395,v3
+add,Riveteers Ascendancy,1702,,,0.85123,v3
+add,Rushed Rebirth,1702,,,0.851185,v3
+
+Removals,,,,,,
+remove,Turntimber Symbiosis,,,,0.0,v3
+remove,Clearwater Pathway,,,,0.0,v3
+remove,Jwari Disruption,,,,0.0,v3
+remove,Bala Ged Recovery,,,,0.0,v3
+remove,Golgari Rot Farm,,,,0.7116,v3
+remove,Swiftfoot Boots,,,,0.71411,v3
+remove,Darkslick Shores,,,,0.718823,v3
+remove,Hall of Storm Giants,,,,0.724761,v3
+remove,Restless Cottage,,,,0.727549,v3
+remove,Dimir Aqueduct,,,,0.731156,v3
+remove,Preacher of the Schism,,,,0.741914,v3
+remove,Simic Growth Chamber,,,,0.746472,v3
+remove,Culling Ritual,,,,0.749943,v3
+remove,Undergrowth Stadium,,,,0.750355,v3
+remove,Abhorrent Oculus,,,,0.751178,v3
+remove,"Takenuma, Abandoned Mire",,,,0.752471,v3
+remove,Swamp,,,,0.754592,v3
+remove,Shipwreck Marsh,,,,0.754869,v3
+remove,Fabled Passage,,,,0.755343,v3
+remove,Island,,,,0.756838,v3

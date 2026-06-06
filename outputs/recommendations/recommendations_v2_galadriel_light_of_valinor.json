@@ -1,0 +1,1673 @@
+{
+  "commander": "Galadriel, Light of Valinor",
+  "color_identity": [
+    "G",
+    "U",
+    "W"
+  ],
+  "profile": "big_mana",
+  "total_recommendations": 20,
+  "groups": {
+    "top_global": [
+      {
+        "name": "Rumor Gatherer",
+        "mana_cost": "{1}{W}{W}",
+        "mana_value": 3.0,
+        "type_line": "Creature — Elf Wizard",
+        "edhrec_rank": 1438,
+        "final_score": 0.7768,
+        "score_details": {
+          "decklist_popularity": 0.72,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.57,
+          "vector_similarity": 0.8179,
+          "edhrec": 0.65,
+          "mana_curve": 1.0,
+          "card_quality": 0.7535
+        },
+        "roles": [
+          "card_draw",
+          "etb_synergy",
+          "tribal_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : card_draw, etb_synergy",
+          "Bonne présence dans les decklists similaires",
+          "Bonne synergie avec le texte du commandant",
+          "Synergise avec les ETB : etb_synergy",
+          "Très bien classé EDHREC (rank 1438)",
+          "Mana value cohérente (3.0)"
+        ]
+      },
+      {
+        "name": "Guardian Project",
+        "mana_cost": "{3}{G}",
+        "mana_value": 4.0,
+        "type_line": "Enchantment",
+        "edhrec_rank": 307,
+        "final_score": 0.7736,
+        "score_details": {
+          "decklist_popularity": 0.6876,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.52,
+          "vector_similarity": 0.8116,
+          "edhrec": 0.85,
+          "mana_curve": 0.8,
+          "card_quality": 0.8457
+        },
+        "roles": [
+          "card_draw",
+          "etb_synergy",
+          "enchantment_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : card_draw, etb_synergy",
+          "Bonne présence dans les decklists similaires",
+          "Bonne synergie avec le texte du commandant",
+          "Synergise avec les ETB : etb_synergy",
+          "Très bien classé EDHREC (rank 307)",
+          "Mana value cohérente (4.0)"
+        ]
+      },
+      {
+        "name": "Temple Garden",
+        "mana_cost": "",
+        "mana_value": 0,
+        "type_line": "Land — Forest Plains",
+        "edhrec_rank": 82,
+        "final_score": 0.7701,
+        "score_details": {
+          "decklist_popularity": 0.8563,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.25,
+          "vector_similarity": 0.7566,
+          "edhrec": 1.0,
+          "mana_curve": 0.75,
+          "card_quality": 1.0
+        },
+        "roles": [
+          "ramp",
+          "etb_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : etb_synergy, ramp",
+          "Bonne présence dans les decklists similaires",
+          "Synergise avec les ETB : etb_synergy",
+          "Très bien classé EDHREC (rank 82)"
+        ]
+      },
+      {
+        "name": "Breeding Pool",
+        "mana_cost": "",
+        "mana_value": 0,
+        "type_line": "Land — Forest Island",
+        "edhrec_rank": 63,
+        "final_score": 0.7695,
+        "score_details": {
+          "decklist_popularity": 0.8538,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.25,
+          "vector_similarity": 0.7571,
+          "edhrec": 1.0,
+          "mana_curve": 0.75,
+          "card_quality": 1.0
+        },
+        "roles": [
+          "ramp",
+          "etb_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : etb_synergy, ramp",
+          "Bonne présence dans les decklists similaires",
+          "Synergise avec les ETB : etb_synergy",
+          "Très bien classé EDHREC (rank 63)"
+        ]
+      },
+      {
+        "name": "Hallowed Fountain",
+        "mana_cost": "",
+        "mana_value": 0,
+        "type_line": "Land — Plains Island",
+        "edhrec_rank": 65,
+        "final_score": 0.7663,
+        "score_details": {
+          "decklist_popularity": 0.8462,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.25,
+          "vector_similarity": 0.7483,
+          "edhrec": 1.0,
+          "mana_curve": 0.75,
+          "card_quality": 1.0
+        },
+        "roles": [
+          "ramp",
+          "etb_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : etb_synergy, ramp",
+          "Bonne présence dans les decklists similaires",
+          "Synergise avec les ETB : etb_synergy",
+          "Très bien classé EDHREC (rank 65)"
+        ]
+      },
+      {
+        "name": "Swan Song",
+        "mana_cost": "{U}",
+        "mana_value": 1.0,
+        "type_line": "Instant",
+        "edhrec_rank": 74,
+        "final_score": 0.7639,
+        "score_details": {
+          "decklist_popularity": 0.7849,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.3,
+          "vector_similarity": 0.7703,
+          "edhrec": 1.0,
+          "mana_curve": 0.75,
+          "card_quality": 0.9817
+        },
+        "roles": [
+          "token_generation",
+          "counterspell"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : token_generation, counterspell",
+          "Bonne présence dans les decklists similaires",
+          "Synergise avec les ETB : token_generation",
+          "Très bien classé EDHREC (rank 74)"
+        ]
+      },
+      {
+        "name": "Tribute to the World Tree",
+        "mana_cost": "{G}{G}{G}",
+        "mana_value": 3.0,
+        "type_line": "Enchantment",
+        "edhrec_rank": 589,
+        "final_score": 0.7598,
+        "score_details": {
+          "decklist_popularity": 0.653,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.59,
+          "vector_similarity": 0.7945,
+          "edhrec": 0.65,
+          "mana_curve": 1.0,
+          "card_quality": 0.7167
+        },
+        "roles": [
+          "card_draw",
+          "etb_synergy",
+          "counter_synergy",
+          "enchantment_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : card_draw, etb_synergy",
+          "Bonne présence dans les decklists similaires",
+          "Bonne synergie avec le texte du commandant",
+          "Synergise avec les ETB : etb_synergy",
+          "Très bien classé EDHREC (rank 589)",
+          "Mana value cohérente (3.0)"
+        ]
+      },
+      {
+        "name": "The Great Henge",
+        "mana_cost": "{7}{G}{G}",
+        "mana_value": 9.0,
+        "type_line": "Legendary Artifact",
+        "edhrec_rank": 237,
+        "final_score": 0.7591,
+        "score_details": {
+          "decklist_popularity": 0.6077,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.59,
+          "vector_similarity": 0.8007,
+          "edhrec": 0.85,
+          "mana_curve": 0.6,
+          "card_quality": 0.8017
+        },
+        "roles": [
+          "ramp",
+          "card_draw",
+          "etb_synergy",
+          "counter_synergy",
+          "lifegain",
+          "artifact_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : card_draw, etb_synergy, ramp",
+          "Bonne présence dans les decklists similaires",
+          "Bonne synergie avec le texte du commandant",
+          "Synergise avec les ETB : etb_synergy",
+          "Très bien classé EDHREC (rank 237)"
+        ]
+      },
+      {
+        "name": "Kindred Discovery",
+        "mana_cost": "{3}{U}{U}",
+        "mana_value": 5.0,
+        "type_line": "Enchantment",
+        "edhrec_rank": 347,
+        "final_score": 0.7585,
+        "score_details": {
+          "decklist_popularity": 0.6021,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.57,
+          "vector_similarity": 0.7932,
+          "edhrec": 0.85,
+          "mana_curve": 0.8,
+          "card_quality": 0.7987
+        },
+        "roles": [
+          "card_draw",
+          "etb_synergy",
+          "enchantment_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : card_draw, etb_synergy",
+          "Bonne présence dans les decklists similaires",
+          "Bonne synergie avec le texte du commandant",
+          "Synergise avec les ETB : etb_synergy",
+          "Très bien classé EDHREC (rank 347)",
+          "Mana value cohérente (5.0)"
+        ]
+      },
+      {
+        "name": "Inspiring Call",
+        "mana_cost": "{2}{G}",
+        "mana_value": 3.0,
+        "type_line": "Instant",
+        "edhrec_rank": 272,
+        "final_score": 0.7551,
+        "score_details": {
+          "decklist_popularity": 0.731,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.34,
+          "vector_similarity": 0.8133,
+          "edhrec": 0.85,
+          "mana_curve": 1.0,
+          "card_quality": 0.8695
+        },
+        "roles": [
+          "card_draw",
+          "counter_synergy",
+          "protection"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : card_draw, protection",
+          "Bonne présence dans les decklists similaires",
+          "Très bien classé EDHREC (rank 272)",
+          "Mana value cohérente (3.0)"
+        ]
+      }
+    ],
+    "ramp": [
+      {
+        "name": "Galadhrim Brigade",
+        "mana_cost": "{2}{G}",
+        "mana_value": 3.0,
+        "type_line": "Creature — Elf Soldier",
+        "edhrec_rank": 3700,
+        "final_score": 0.7456,
+        "score_details": {
+          "decklist_popularity": 0.8301,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.42,
+          "vector_similarity": 0.8037,
+          "edhrec": 0.4,
+          "mana_curve": 1.0,
+          "card_quality": 0.6766
+        },
+        "roles": [
+          "ramp",
+          "etb_synergy",
+          "token_generation",
+          "tribal_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : token_generation, etb_synergy, ramp",
+          "Bonne présence dans les decklists similaires",
+          "Synergise avec les ETB : token_generation, etb_synergy",
+          "Mana value cohérente (3.0)"
+        ]
+      },
+      {
+        "name": "Farhaven Elf",
+        "mana_cost": "{2}{G}",
+        "mana_value": 3.0,
+        "type_line": "Creature — Elf Druid",
+        "edhrec_rank": 1392,
+        "final_score": 0.7423,
+        "score_details": {
+          "decklist_popularity": 0.7352,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.42,
+          "vector_similarity": 0.7616,
+          "edhrec": 0.65,
+          "mana_curve": 1.0,
+          "card_quality": 0.7619
+        },
+        "roles": [
+          "ramp",
+          "etb_synergy",
+          "tribal_synergy",
+          "tutor"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : tutor, etb_synergy, ramp",
+          "Bonne présence dans les decklists similaires",
+          "Synergise avec les ETB : etb_synergy",
+          "Très bien classé EDHREC (rank 1392)",
+          "Mana value cohérente (3.0)"
+        ]
+      },
+      {
+        "name": "Cultivate",
+        "mana_cost": "{2}{G}",
+        "mana_value": 3.0,
+        "type_line": "Sorcery",
+        "edhrec_rank": 20,
+        "final_score": 0.7321,
+        "score_details": {
+          "decklist_popularity": 0.8001,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.07,
+          "vector_similarity": 0.7885,
+          "edhrec": 1.0,
+          "mana_curve": 1.0,
+          "card_quality": 0.9901
+        },
+        "roles": [
+          "ramp",
+          "tutor"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : tutor, ramp",
+          "Bonne présence dans les decklists similaires",
+          "Très bien classé EDHREC (rank 20)",
+          "Mana value cohérente (3.0)"
+        ]
+      },
+      {
+        "name": "Otawara, Soaring City",
+        "mana_cost": "",
+        "mana_value": 0,
+        "type_line": "Legendary Land",
+        "edhrec_rank": 90,
+        "final_score": 0.7317,
+        "score_details": {
+          "decklist_popularity": 0.6418,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.32,
+          "vector_similarity": 0.7782,
+          "edhrec": 1.0,
+          "mana_curve": 0.75,
+          "card_quality": 0.903
+        },
+        "roles": [
+          "ramp",
+          "blink",
+          "artifact_synergy",
+          "enchantment_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : blink, ramp",
+          "Bonne présence dans les decklists similaires",
+          "Synergise avec les ETB : blink",
+          "Très bien classé EDHREC (rank 90)"
+        ]
+      },
+      {
+        "name": "Elvish Harbinger",
+        "mana_cost": "{2}{G}",
+        "mana_value": 3.0,
+        "type_line": "Creature — Elf Druid",
+        "edhrec_rank": 2935,
+        "final_score": 0.7274,
+        "score_details": {
+          "decklist_popularity": 0.7232,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.49,
+          "vector_similarity": 0.7749,
+          "edhrec": 0.4,
+          "mana_curve": 1.0,
+          "card_quality": 0.6178
+        },
+        "roles": [
+          "ramp",
+          "etb_synergy",
+          "tribal_synergy",
+          "tutor"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : tutor, etb_synergy, ramp",
+          "Bonne présence dans les decklists similaires",
+          "Synergise avec les ETB : etb_synergy",
+          "Mana value cohérente (3.0)"
+        ]
+      }
+    ],
+    "card_draw": [
+      {
+        "name": "The One Ring",
+        "mana_cost": "{4}",
+        "mana_value": 4.0,
+        "type_line": "Legendary Artifact",
+        "edhrec_rank": 88,
+        "final_score": 0.7546,
+        "score_details": {
+          "decklist_popularity": 0.6131,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.47,
+          "vector_similarity": 0.7707,
+          "edhrec": 1.0,
+          "mana_curve": 0.8,
+          "card_quality": 0.8872
+        },
+        "roles": [
+          "card_draw",
+          "etb_synergy",
+          "protection",
+          "lifegain",
+          "artifact_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : card_draw, etb_synergy, protection",
+          "Bonne présence dans les decklists similaires",
+          "Synergise avec les ETB : etb_synergy",
+          "Très bien classé EDHREC (rank 88)",
+          "Mana value cohérente (4.0)"
+        ]
+      },
+      {
+        "name": "Vanquisher's Banner",
+        "mana_cost": "{5}",
+        "mana_value": 5.0,
+        "type_line": "Artifact",
+        "edhrec_rank": 350,
+        "final_score": 0.7363,
+        "score_details": {
+          "decklist_popularity": 0.4998,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.59,
+          "vector_similarity": 0.7967,
+          "edhrec": 0.85,
+          "mana_curve": 0.8,
+          "card_quality": 0.7424
+        },
+        "roles": [
+          "card_draw",
+          "etb_synergy",
+          "artifact_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : card_draw, etb_synergy",
+          "Bonne synergie avec le texte du commandant",
+          "Synergise avec les ETB : etb_synergy",
+          "Très bien classé EDHREC (rank 350)",
+          "Mana value cohérente (5.0)"
+        ]
+      },
+      {
+        "name": "Fathom Mage",
+        "mana_cost": "{2}{G}{U}",
+        "mana_value": 4.0,
+        "type_line": "Creature — Human Wizard",
+        "edhrec_rank": 1716,
+        "final_score": 0.7329,
+        "score_details": {
+          "decklist_popularity": 0.5337,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.64,
+          "vector_similarity": 0.7966,
+          "edhrec": 0.65,
+          "mana_curve": 0.8,
+          "card_quality": 0.651
+        },
+        "roles": [
+          "card_draw",
+          "etb_synergy",
+          "counter_synergy",
+          "tribal_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : card_draw, etb_synergy",
+          "Bonne présence dans les decklists similaires",
+          "Bonne synergie avec le texte du commandant",
+          "Synergise avec les ETB : etb_synergy",
+          "Très bien classé EDHREC (rank 1716)",
+          "Mana value cohérente (4.0)"
+        ]
+      },
+      {
+        "name": "Legolas Greenleaf",
+        "mana_cost": "{2}{G}",
+        "mana_value": 3.0,
+        "type_line": "Legendary Creature — Elf Archer",
+        "edhrec_rank": 5750,
+        "final_score": 0.7277,
+        "score_details": {
+          "decklist_popularity": 0.6064,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.64,
+          "vector_similarity": 0.7804,
+          "edhrec": 0.4,
+          "mana_curve": 1.0,
+          "card_quality": 0.5535
+        },
+        "roles": [
+          "card_draw",
+          "etb_synergy",
+          "counter_synergy",
+          "tribal_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : card_draw, etb_synergy",
+          "Bonne présence dans les decklists similaires",
+          "Bonne synergie avec le texte du commandant",
+          "Synergise avec les ETB : etb_synergy",
+          "Mana value cohérente (3.0)"
+        ]
+      }
+    ],
+    "removal": [],
+    "protection": [
+      {
+        "name": "The One Ring",
+        "mana_cost": "{4}",
+        "mana_value": 4.0,
+        "type_line": "Legendary Artifact",
+        "edhrec_rank": 88,
+        "final_score": 0.7546,
+        "score_details": {
+          "decklist_popularity": 0.6131,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.47,
+          "vector_similarity": 0.7707,
+          "edhrec": 1.0,
+          "mana_curve": 0.8,
+          "card_quality": 0.8872
+        },
+        "roles": [
+          "card_draw",
+          "etb_synergy",
+          "protection",
+          "lifegain",
+          "artifact_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : card_draw, etb_synergy, protection",
+          "Bonne présence dans les decklists similaires",
+          "Synergise avec les ETB : etb_synergy",
+          "Très bien classé EDHREC (rank 88)",
+          "Mana value cohérente (4.0)"
+        ]
+      }
+    ],
+    "synergy": [
+      {
+        "name": "The One Ring",
+        "mana_cost": "{4}",
+        "mana_value": 4.0,
+        "type_line": "Legendary Artifact",
+        "edhrec_rank": 88,
+        "final_score": 0.7546,
+        "score_details": {
+          "decklist_popularity": 0.6131,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.47,
+          "vector_similarity": 0.7707,
+          "edhrec": 1.0,
+          "mana_curve": 0.8,
+          "card_quality": 0.8872
+        },
+        "roles": [
+          "card_draw",
+          "etb_synergy",
+          "protection",
+          "lifegain",
+          "artifact_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : card_draw, etb_synergy, protection",
+          "Bonne présence dans les decklists similaires",
+          "Synergise avec les ETB : etb_synergy",
+          "Très bien classé EDHREC (rank 88)",
+          "Mana value cohérente (4.0)"
+        ]
+      },
+      {
+        "name": "Galadhrim Brigade",
+        "mana_cost": "{2}{G}",
+        "mana_value": 3.0,
+        "type_line": "Creature — Elf Soldier",
+        "edhrec_rank": 3700,
+        "final_score": 0.7456,
+        "score_details": {
+          "decklist_popularity": 0.8301,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.42,
+          "vector_similarity": 0.8037,
+          "edhrec": 0.4,
+          "mana_curve": 1.0,
+          "card_quality": 0.6766
+        },
+        "roles": [
+          "ramp",
+          "etb_synergy",
+          "token_generation",
+          "tribal_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : token_generation, etb_synergy, ramp",
+          "Bonne présence dans les decklists similaires",
+          "Synergise avec les ETB : token_generation, etb_synergy",
+          "Mana value cohérente (3.0)"
+        ]
+      },
+      {
+        "name": "Farhaven Elf",
+        "mana_cost": "{2}{G}",
+        "mana_value": 3.0,
+        "type_line": "Creature — Elf Druid",
+        "edhrec_rank": 1392,
+        "final_score": 0.7423,
+        "score_details": {
+          "decklist_popularity": 0.7352,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.42,
+          "vector_similarity": 0.7616,
+          "edhrec": 0.65,
+          "mana_curve": 1.0,
+          "card_quality": 0.7619
+        },
+        "roles": [
+          "ramp",
+          "etb_synergy",
+          "tribal_synergy",
+          "tutor"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : tutor, etb_synergy, ramp",
+          "Bonne présence dans les decklists similaires",
+          "Synergise avec les ETB : etb_synergy",
+          "Très bien classé EDHREC (rank 1392)",
+          "Mana value cohérente (3.0)"
+        ]
+      },
+      {
+        "name": "Vanquisher's Banner",
+        "mana_cost": "{5}",
+        "mana_value": 5.0,
+        "type_line": "Artifact",
+        "edhrec_rank": 350,
+        "final_score": 0.7363,
+        "score_details": {
+          "decklist_popularity": 0.4998,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.59,
+          "vector_similarity": 0.7967,
+          "edhrec": 0.85,
+          "mana_curve": 0.8,
+          "card_quality": 0.7424
+        },
+        "roles": [
+          "card_draw",
+          "etb_synergy",
+          "artifact_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : card_draw, etb_synergy",
+          "Bonne synergie avec le texte du commandant",
+          "Synergise avec les ETB : etb_synergy",
+          "Très bien classé EDHREC (rank 350)",
+          "Mana value cohérente (5.0)"
+        ]
+      },
+      {
+        "name": "Fathom Mage",
+        "mana_cost": "{2}{G}{U}",
+        "mana_value": 4.0,
+        "type_line": "Creature — Human Wizard",
+        "edhrec_rank": 1716,
+        "final_score": 0.7329,
+        "score_details": {
+          "decklist_popularity": 0.5337,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.64,
+          "vector_similarity": 0.7966,
+          "edhrec": 0.65,
+          "mana_curve": 0.8,
+          "card_quality": 0.651
+        },
+        "roles": [
+          "card_draw",
+          "etb_synergy",
+          "counter_synergy",
+          "tribal_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : card_draw, etb_synergy",
+          "Bonne présence dans les decklists similaires",
+          "Bonne synergie avec le texte du commandant",
+          "Synergise avec les ETB : etb_synergy",
+          "Très bien classé EDHREC (rank 1716)",
+          "Mana value cohérente (4.0)"
+        ]
+      },
+      {
+        "name": "Otawara, Soaring City",
+        "mana_cost": "",
+        "mana_value": 0,
+        "type_line": "Legendary Land",
+        "edhrec_rank": 90,
+        "final_score": 0.7317,
+        "score_details": {
+          "decklist_popularity": 0.6418,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.32,
+          "vector_similarity": 0.7782,
+          "edhrec": 1.0,
+          "mana_curve": 0.75,
+          "card_quality": 0.903
+        },
+        "roles": [
+          "ramp",
+          "blink",
+          "artifact_synergy",
+          "enchantment_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : blink, ramp",
+          "Bonne présence dans les decklists similaires",
+          "Synergise avec les ETB : blink",
+          "Très bien classé EDHREC (rank 90)"
+        ]
+      },
+      {
+        "name": "Legolas Greenleaf",
+        "mana_cost": "{2}{G}",
+        "mana_value": 3.0,
+        "type_line": "Legendary Creature — Elf Archer",
+        "edhrec_rank": 5750,
+        "final_score": 0.7277,
+        "score_details": {
+          "decklist_popularity": 0.6064,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.64,
+          "vector_similarity": 0.7804,
+          "edhrec": 0.4,
+          "mana_curve": 1.0,
+          "card_quality": 0.5535
+        },
+        "roles": [
+          "card_draw",
+          "etb_synergy",
+          "counter_synergy",
+          "tribal_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : card_draw, etb_synergy",
+          "Bonne présence dans les decklists similaires",
+          "Bonne synergie avec le texte du commandant",
+          "Synergise avec les ETB : etb_synergy",
+          "Mana value cohérente (3.0)"
+        ]
+      },
+      {
+        "name": "Elvish Harbinger",
+        "mana_cost": "{2}{G}",
+        "mana_value": 3.0,
+        "type_line": "Creature — Elf Druid",
+        "edhrec_rank": 2935,
+        "final_score": 0.7274,
+        "score_details": {
+          "decklist_popularity": 0.7232,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.49,
+          "vector_similarity": 0.7749,
+          "edhrec": 0.4,
+          "mana_curve": 1.0,
+          "card_quality": 0.6178
+        },
+        "roles": [
+          "ramp",
+          "etb_synergy",
+          "tribal_synergy",
+          "tutor"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : tutor, etb_synergy, ramp",
+          "Bonne présence dans les decklists similaires",
+          "Synergise avec les ETB : etb_synergy",
+          "Mana value cohérente (3.0)"
+        ]
+      },
+      {
+        "name": "Felidar Retreat",
+        "mana_cost": "{3}{W}",
+        "mana_value": 4.0,
+        "type_line": "Enchantment",
+        "edhrec_rank": 482,
+        "final_score": 0.726,
+        "score_details": {
+          "decklist_popularity": 0.4772,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.57,
+          "vector_similarity": 0.7937,
+          "edhrec": 0.85,
+          "mana_curve": 0.8,
+          "card_quality": 0.73
+        },
+        "roles": [
+          "etb_synergy",
+          "token_generation",
+          "counter_synergy",
+          "landfall",
+          "enchantment_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : token_generation, etb_synergy",
+          "Bonne synergie avec le texte du commandant",
+          "Synergise avec les ETB : token_generation, etb_synergy",
+          "Très bien classé EDHREC (rank 482)",
+          "Mana value cohérente (4.0)"
+        ]
+      }
+    ],
+    "high_impact": [
+      {
+        "name": "The One Ring",
+        "mana_cost": "{4}",
+        "mana_value": 4.0,
+        "type_line": "Legendary Artifact",
+        "edhrec_rank": 88,
+        "final_score": 0.7546,
+        "score_details": {
+          "decklist_popularity": 0.6131,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.47,
+          "vector_similarity": 0.7707,
+          "edhrec": 1.0,
+          "mana_curve": 0.8,
+          "card_quality": 0.8872
+        },
+        "roles": [
+          "card_draw",
+          "etb_synergy",
+          "protection",
+          "lifegain",
+          "artifact_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : card_draw, etb_synergy, protection",
+          "Bonne présence dans les decklists similaires",
+          "Synergise avec les ETB : etb_synergy",
+          "Très bien classé EDHREC (rank 88)",
+          "Mana value cohérente (4.0)"
+        ]
+      },
+      {
+        "name": "Farhaven Elf",
+        "mana_cost": "{2}{G}",
+        "mana_value": 3.0,
+        "type_line": "Creature — Elf Druid",
+        "edhrec_rank": 1392,
+        "final_score": 0.7423,
+        "score_details": {
+          "decklist_popularity": 0.7352,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.42,
+          "vector_similarity": 0.7616,
+          "edhrec": 0.65,
+          "mana_curve": 1.0,
+          "card_quality": 0.7619
+        },
+        "roles": [
+          "ramp",
+          "etb_synergy",
+          "tribal_synergy",
+          "tutor"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : tutor, etb_synergy, ramp",
+          "Bonne présence dans les decklists similaires",
+          "Synergise avec les ETB : etb_synergy",
+          "Très bien classé EDHREC (rank 1392)",
+          "Mana value cohérente (3.0)"
+        ]
+      },
+      {
+        "name": "Vanquisher's Banner",
+        "mana_cost": "{5}",
+        "mana_value": 5.0,
+        "type_line": "Artifact",
+        "edhrec_rank": 350,
+        "final_score": 0.7363,
+        "score_details": {
+          "decklist_popularity": 0.4998,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.59,
+          "vector_similarity": 0.7967,
+          "edhrec": 0.85,
+          "mana_curve": 0.8,
+          "card_quality": 0.7424
+        },
+        "roles": [
+          "card_draw",
+          "etb_synergy",
+          "artifact_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : card_draw, etb_synergy",
+          "Bonne synergie avec le texte du commandant",
+          "Synergise avec les ETB : etb_synergy",
+          "Très bien classé EDHREC (rank 350)",
+          "Mana value cohérente (5.0)"
+        ]
+      },
+      {
+        "name": "Fathom Mage",
+        "mana_cost": "{2}{G}{U}",
+        "mana_value": 4.0,
+        "type_line": "Creature — Human Wizard",
+        "edhrec_rank": 1716,
+        "final_score": 0.7329,
+        "score_details": {
+          "decklist_popularity": 0.5337,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.64,
+          "vector_similarity": 0.7966,
+          "edhrec": 0.65,
+          "mana_curve": 0.8,
+          "card_quality": 0.651
+        },
+        "roles": [
+          "card_draw",
+          "etb_synergy",
+          "counter_synergy",
+          "tribal_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : card_draw, etb_synergy",
+          "Bonne présence dans les decklists similaires",
+          "Bonne synergie avec le texte du commandant",
+          "Synergise avec les ETB : etb_synergy",
+          "Très bien classé EDHREC (rank 1716)",
+          "Mana value cohérente (4.0)"
+        ]
+      },
+      {
+        "name": "Cultivate",
+        "mana_cost": "{2}{G}",
+        "mana_value": 3.0,
+        "type_line": "Sorcery",
+        "edhrec_rank": 20,
+        "final_score": 0.7321,
+        "score_details": {
+          "decklist_popularity": 0.8001,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.07,
+          "vector_similarity": 0.7885,
+          "edhrec": 1.0,
+          "mana_curve": 1.0,
+          "card_quality": 0.9901
+        },
+        "roles": [
+          "ramp",
+          "tutor"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : tutor, ramp",
+          "Bonne présence dans les decklists similaires",
+          "Très bien classé EDHREC (rank 20)",
+          "Mana value cohérente (3.0)"
+        ]
+      },
+      {
+        "name": "Legolas Greenleaf",
+        "mana_cost": "{2}{G}",
+        "mana_value": 3.0,
+        "type_line": "Legendary Creature — Elf Archer",
+        "edhrec_rank": 5750,
+        "final_score": 0.7277,
+        "score_details": {
+          "decklist_popularity": 0.6064,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.64,
+          "vector_similarity": 0.7804,
+          "edhrec": 0.4,
+          "mana_curve": 1.0,
+          "card_quality": 0.5535
+        },
+        "roles": [
+          "card_draw",
+          "etb_synergy",
+          "counter_synergy",
+          "tribal_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : card_draw, etb_synergy",
+          "Bonne présence dans les decklists similaires",
+          "Bonne synergie avec le texte du commandant",
+          "Synergise avec les ETB : etb_synergy",
+          "Mana value cohérente (3.0)"
+        ]
+      },
+      {
+        "name": "Elvish Harbinger",
+        "mana_cost": "{2}{G}",
+        "mana_value": 3.0,
+        "type_line": "Creature — Elf Druid",
+        "edhrec_rank": 2935,
+        "final_score": 0.7274,
+        "score_details": {
+          "decklist_popularity": 0.7232,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.49,
+          "vector_similarity": 0.7749,
+          "edhrec": 0.4,
+          "mana_curve": 1.0,
+          "card_quality": 0.6178
+        },
+        "roles": [
+          "ramp",
+          "etb_synergy",
+          "tribal_synergy",
+          "tutor"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : tutor, etb_synergy, ramp",
+          "Bonne présence dans les decklists similaires",
+          "Synergise avec les ETB : etb_synergy",
+          "Mana value cohérente (3.0)"
+        ]
+      }
+    ]
+  },
+  "all_results": [
+    {
+      "name": "Rumor Gatherer",
+      "mana_cost": "{1}{W}{W}",
+      "mana_value": 3.0,
+      "type_line": "Creature — Elf Wizard",
+      "edhrec_rank": 1438,
+      "final_score": 0.7768,
+      "score_details": {
+        "decklist_popularity": 0.72,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.57,
+        "vector_similarity": 0.8179,
+        "edhrec": 0.65,
+        "mana_curve": 1.0,
+        "card_quality": 0.7535
+      },
+      "roles": [
+        "card_draw",
+        "etb_synergy",
+        "tribal_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : card_draw, etb_synergy",
+        "Bonne présence dans les decklists similaires",
+        "Bonne synergie avec le texte du commandant",
+        "Synergise avec les ETB : etb_synergy",
+        "Très bien classé EDHREC (rank 1438)",
+        "Mana value cohérente (3.0)"
+      ]
+    },
+    {
+      "name": "Guardian Project",
+      "mana_cost": "{3}{G}",
+      "mana_value": 4.0,
+      "type_line": "Enchantment",
+      "edhrec_rank": 307,
+      "final_score": 0.7736,
+      "score_details": {
+        "decklist_popularity": 0.6876,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.52,
+        "vector_similarity": 0.8116,
+        "edhrec": 0.85,
+        "mana_curve": 0.8,
+        "card_quality": 0.8457
+      },
+      "roles": [
+        "card_draw",
+        "etb_synergy",
+        "enchantment_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : card_draw, etb_synergy",
+        "Bonne présence dans les decklists similaires",
+        "Bonne synergie avec le texte du commandant",
+        "Synergise avec les ETB : etb_synergy",
+        "Très bien classé EDHREC (rank 307)",
+        "Mana value cohérente (4.0)"
+      ]
+    },
+    {
+      "name": "Temple Garden",
+      "mana_cost": "",
+      "mana_value": 0,
+      "type_line": "Land — Forest Plains",
+      "edhrec_rank": 82,
+      "final_score": 0.7701,
+      "score_details": {
+        "decklist_popularity": 0.8563,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.25,
+        "vector_similarity": 0.7566,
+        "edhrec": 1.0,
+        "mana_curve": 0.75,
+        "card_quality": 1.0
+      },
+      "roles": [
+        "ramp",
+        "etb_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : etb_synergy, ramp",
+        "Bonne présence dans les decklists similaires",
+        "Synergise avec les ETB : etb_synergy",
+        "Très bien classé EDHREC (rank 82)"
+      ]
+    },
+    {
+      "name": "Breeding Pool",
+      "mana_cost": "",
+      "mana_value": 0,
+      "type_line": "Land — Forest Island",
+      "edhrec_rank": 63,
+      "final_score": 0.7695,
+      "score_details": {
+        "decklist_popularity": 0.8538,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.25,
+        "vector_similarity": 0.7571,
+        "edhrec": 1.0,
+        "mana_curve": 0.75,
+        "card_quality": 1.0
+      },
+      "roles": [
+        "ramp",
+        "etb_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : etb_synergy, ramp",
+        "Bonne présence dans les decklists similaires",
+        "Synergise avec les ETB : etb_synergy",
+        "Très bien classé EDHREC (rank 63)"
+      ]
+    },
+    {
+      "name": "Hallowed Fountain",
+      "mana_cost": "",
+      "mana_value": 0,
+      "type_line": "Land — Plains Island",
+      "edhrec_rank": 65,
+      "final_score": 0.7663,
+      "score_details": {
+        "decklist_popularity": 0.8462,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.25,
+        "vector_similarity": 0.7483,
+        "edhrec": 1.0,
+        "mana_curve": 0.75,
+        "card_quality": 1.0
+      },
+      "roles": [
+        "ramp",
+        "etb_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : etb_synergy, ramp",
+        "Bonne présence dans les decklists similaires",
+        "Synergise avec les ETB : etb_synergy",
+        "Très bien classé EDHREC (rank 65)"
+      ]
+    },
+    {
+      "name": "Swan Song",
+      "mana_cost": "{U}",
+      "mana_value": 1.0,
+      "type_line": "Instant",
+      "edhrec_rank": 74,
+      "final_score": 0.7639,
+      "score_details": {
+        "decklist_popularity": 0.7849,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.3,
+        "vector_similarity": 0.7703,
+        "edhrec": 1.0,
+        "mana_curve": 0.75,
+        "card_quality": 0.9817
+      },
+      "roles": [
+        "token_generation",
+        "counterspell"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : token_generation, counterspell",
+        "Bonne présence dans les decklists similaires",
+        "Synergise avec les ETB : token_generation",
+        "Très bien classé EDHREC (rank 74)"
+      ]
+    },
+    {
+      "name": "Tribute to the World Tree",
+      "mana_cost": "{G}{G}{G}",
+      "mana_value": 3.0,
+      "type_line": "Enchantment",
+      "edhrec_rank": 589,
+      "final_score": 0.7598,
+      "score_details": {
+        "decklist_popularity": 0.653,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.59,
+        "vector_similarity": 0.7945,
+        "edhrec": 0.65,
+        "mana_curve": 1.0,
+        "card_quality": 0.7167
+      },
+      "roles": [
+        "card_draw",
+        "etb_synergy",
+        "counter_synergy",
+        "enchantment_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : card_draw, etb_synergy",
+        "Bonne présence dans les decklists similaires",
+        "Bonne synergie avec le texte du commandant",
+        "Synergise avec les ETB : etb_synergy",
+        "Très bien classé EDHREC (rank 589)",
+        "Mana value cohérente (3.0)"
+      ]
+    },
+    {
+      "name": "The Great Henge",
+      "mana_cost": "{7}{G}{G}",
+      "mana_value": 9.0,
+      "type_line": "Legendary Artifact",
+      "edhrec_rank": 237,
+      "final_score": 0.7591,
+      "score_details": {
+        "decklist_popularity": 0.6077,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.59,
+        "vector_similarity": 0.8007,
+        "edhrec": 0.85,
+        "mana_curve": 0.6,
+        "card_quality": 0.8017
+      },
+      "roles": [
+        "ramp",
+        "card_draw",
+        "etb_synergy",
+        "counter_synergy",
+        "lifegain",
+        "artifact_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : card_draw, etb_synergy, ramp",
+        "Bonne présence dans les decklists similaires",
+        "Bonne synergie avec le texte du commandant",
+        "Synergise avec les ETB : etb_synergy",
+        "Très bien classé EDHREC (rank 237)"
+      ]
+    },
+    {
+      "name": "Kindred Discovery",
+      "mana_cost": "{3}{U}{U}",
+      "mana_value": 5.0,
+      "type_line": "Enchantment",
+      "edhrec_rank": 347,
+      "final_score": 0.7585,
+      "score_details": {
+        "decklist_popularity": 0.6021,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.57,
+        "vector_similarity": 0.7932,
+        "edhrec": 0.85,
+        "mana_curve": 0.8,
+        "card_quality": 0.7987
+      },
+      "roles": [
+        "card_draw",
+        "etb_synergy",
+        "enchantment_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : card_draw, etb_synergy",
+        "Bonne présence dans les decklists similaires",
+        "Bonne synergie avec le texte du commandant",
+        "Synergise avec les ETB : etb_synergy",
+        "Très bien classé EDHREC (rank 347)",
+        "Mana value cohérente (5.0)"
+      ]
+    },
+    {
+      "name": "Inspiring Call",
+      "mana_cost": "{2}{G}",
+      "mana_value": 3.0,
+      "type_line": "Instant",
+      "edhrec_rank": 272,
+      "final_score": 0.7551,
+      "score_details": {
+        "decklist_popularity": 0.731,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.34,
+        "vector_similarity": 0.8133,
+        "edhrec": 0.85,
+        "mana_curve": 1.0,
+        "card_quality": 0.8695
+      },
+      "roles": [
+        "card_draw",
+        "counter_synergy",
+        "protection"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : card_draw, protection",
+        "Bonne présence dans les decklists similaires",
+        "Très bien classé EDHREC (rank 272)",
+        "Mana value cohérente (3.0)"
+      ]
+    },
+    {
+      "name": "The One Ring",
+      "mana_cost": "{4}",
+      "mana_value": 4.0,
+      "type_line": "Legendary Artifact",
+      "edhrec_rank": 88,
+      "final_score": 0.7546,
+      "score_details": {
+        "decklist_popularity": 0.6131,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.47,
+        "vector_similarity": 0.7707,
+        "edhrec": 1.0,
+        "mana_curve": 0.8,
+        "card_quality": 0.8872
+      },
+      "roles": [
+        "card_draw",
+        "etb_synergy",
+        "protection",
+        "lifegain",
+        "artifact_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : card_draw, etb_synergy, protection",
+        "Bonne présence dans les decklists similaires",
+        "Synergise avec les ETB : etb_synergy",
+        "Très bien classé EDHREC (rank 88)",
+        "Mana value cohérente (4.0)"
+      ]
+    },
+    {
+      "name": "Galadhrim Brigade",
+      "mana_cost": "{2}{G}",
+      "mana_value": 3.0,
+      "type_line": "Creature — Elf Soldier",
+      "edhrec_rank": 3700,
+      "final_score": 0.7456,
+      "score_details": {
+        "decklist_popularity": 0.8301,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.42,
+        "vector_similarity": 0.8037,
+        "edhrec": 0.4,
+        "mana_curve": 1.0,
+        "card_quality": 0.6766
+      },
+      "roles": [
+        "ramp",
+        "etb_synergy",
+        "token_generation",
+        "tribal_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : token_generation, etb_synergy, ramp",
+        "Bonne présence dans les decklists similaires",
+        "Synergise avec les ETB : token_generation, etb_synergy",
+        "Mana value cohérente (3.0)"
+      ]
+    },
+    {
+      "name": "Farhaven Elf",
+      "mana_cost": "{2}{G}",
+      "mana_value": 3.0,
+      "type_line": "Creature — Elf Druid",
+      "edhrec_rank": 1392,
+      "final_score": 0.7423,
+      "score_details": {
+        "decklist_popularity": 0.7352,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.42,
+        "vector_similarity": 0.7616,
+        "edhrec": 0.65,
+        "mana_curve": 1.0,
+        "card_quality": 0.7619
+      },
+      "roles": [
+        "ramp",
+        "etb_synergy",
+        "tribal_synergy",
+        "tutor"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : tutor, etb_synergy, ramp",
+        "Bonne présence dans les decklists similaires",
+        "Synergise avec les ETB : etb_synergy",
+        "Très bien classé EDHREC (rank 1392)",
+        "Mana value cohérente (3.0)"
+      ]
+    },
+    {
+      "name": "Vanquisher's Banner",
+      "mana_cost": "{5}",
+      "mana_value": 5.0,
+      "type_line": "Artifact",
+      "edhrec_rank": 350,
+      "final_score": 0.7363,
+      "score_details": {
+        "decklist_popularity": 0.4998,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.59,
+        "vector_similarity": 0.7967,
+        "edhrec": 0.85,
+        "mana_curve": 0.8,
+        "card_quality": 0.7424
+      },
+      "roles": [
+        "card_draw",
+        "etb_synergy",
+        "artifact_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : card_draw, etb_synergy",
+        "Bonne synergie avec le texte du commandant",
+        "Synergise avec les ETB : etb_synergy",
+        "Très bien classé EDHREC (rank 350)",
+        "Mana value cohérente (5.0)"
+      ]
+    },
+    {
+      "name": "Fathom Mage",
+      "mana_cost": "{2}{G}{U}",
+      "mana_value": 4.0,
+      "type_line": "Creature — Human Wizard",
+      "edhrec_rank": 1716,
+      "final_score": 0.7329,
+      "score_details": {
+        "decklist_popularity": 0.5337,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.64,
+        "vector_similarity": 0.7966,
+        "edhrec": 0.65,
+        "mana_curve": 0.8,
+        "card_quality": 0.651
+      },
+      "roles": [
+        "card_draw",
+        "etb_synergy",
+        "counter_synergy",
+        "tribal_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : card_draw, etb_synergy",
+        "Bonne présence dans les decklists similaires",
+        "Bonne synergie avec le texte du commandant",
+        "Synergise avec les ETB : etb_synergy",
+        "Très bien classé EDHREC (rank 1716)",
+        "Mana value cohérente (4.0)"
+      ]
+    },
+    {
+      "name": "Cultivate",
+      "mana_cost": "{2}{G}",
+      "mana_value": 3.0,
+      "type_line": "Sorcery",
+      "edhrec_rank": 20,
+      "final_score": 0.7321,
+      "score_details": {
+        "decklist_popularity": 0.8001,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.07,
+        "vector_similarity": 0.7885,
+        "edhrec": 1.0,
+        "mana_curve": 1.0,
+        "card_quality": 0.9901
+      },
+      "roles": [
+        "ramp",
+        "tutor"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : tutor, ramp",
+        "Bonne présence dans les decklists similaires",
+        "Très bien classé EDHREC (rank 20)",
+        "Mana value cohérente (3.0)"
+      ]
+    },
+    {
+      "name": "Otawara, Soaring City",
+      "mana_cost": "",
+      "mana_value": 0,
+      "type_line": "Legendary Land",
+      "edhrec_rank": 90,
+      "final_score": 0.7317,
+      "score_details": {
+        "decklist_popularity": 0.6418,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.32,
+        "vector_similarity": 0.7782,
+        "edhrec": 1.0,
+        "mana_curve": 0.75,
+        "card_quality": 0.903
+      },
+      "roles": [
+        "ramp",
+        "blink",
+        "artifact_synergy",
+        "enchantment_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : blink, ramp",
+        "Bonne présence dans les decklists similaires",
+        "Synergise avec les ETB : blink",
+        "Très bien classé EDHREC (rank 90)"
+      ]
+    },
+    {
+      "name": "Legolas Greenleaf",
+      "mana_cost": "{2}{G}",
+      "mana_value": 3.0,
+      "type_line": "Legendary Creature — Elf Archer",
+      "edhrec_rank": 5750,
+      "final_score": 0.7277,
+      "score_details": {
+        "decklist_popularity": 0.6064,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.64,
+        "vector_similarity": 0.7804,
+        "edhrec": 0.4,
+        "mana_curve": 1.0,
+        "card_quality": 0.5535
+      },
+      "roles": [
+        "card_draw",
+        "etb_synergy",
+        "counter_synergy",
+        "tribal_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : card_draw, etb_synergy",
+        "Bonne présence dans les decklists similaires",
+        "Bonne synergie avec le texte du commandant",
+        "Synergise avec les ETB : etb_synergy",
+        "Mana value cohérente (3.0)"
+      ]
+    },
+    {
+      "name": "Elvish Harbinger",
+      "mana_cost": "{2}{G}",
+      "mana_value": 3.0,
+      "type_line": "Creature — Elf Druid",
+      "edhrec_rank": 2935,
+      "final_score": 0.7274,
+      "score_details": {
+        "decklist_popularity": 0.7232,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.49,
+        "vector_similarity": 0.7749,
+        "edhrec": 0.4,
+        "mana_curve": 1.0,
+        "card_quality": 0.6178
+      },
+      "roles": [
+        "ramp",
+        "etb_synergy",
+        "tribal_synergy",
+        "tutor"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : tutor, etb_synergy, ramp",
+        "Bonne présence dans les decklists similaires",
+        "Synergise avec les ETB : etb_synergy",
+        "Mana value cohérente (3.0)"
+      ]
+    },
+    {
+      "name": "Felidar Retreat",
+      "mana_cost": "{3}{W}",
+      "mana_value": 4.0,
+      "type_line": "Enchantment",
+      "edhrec_rank": 482,
+      "final_score": 0.726,
+      "score_details": {
+        "decklist_popularity": 0.4772,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.57,
+        "vector_similarity": 0.7937,
+        "edhrec": 0.85,
+        "mana_curve": 0.8,
+        "card_quality": 0.73
+      },
+      "roles": [
+        "etb_synergy",
+        "token_generation",
+        "counter_synergy",
+        "landfall",
+        "enchantment_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : token_generation, etb_synergy",
+        "Bonne synergie avec le texte du commandant",
+        "Synergise avec les ETB : token_generation, etb_synergy",
+        "Très bien classé EDHREC (rank 482)",
+        "Mana value cohérente (4.0)"
+      ]
+    }
+  ]
+}

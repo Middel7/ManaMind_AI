@@ -51,7 +51,7 @@ ManaMind_AI/
 │   └── MTG_DB_CONTEXT.md       # CE FICHIER
 ├── outputs/                     # CSV générés par server.py
 ├── src/manamind/                # code Python
-│   ├── recommend_deck_changes.py
+│   ├── recommandation_populaire.py
 │   └── refresh_ppt_summary.py
 ├── uploads/                     # uploads temporaires
 ├── card_database_final.csv      # base de cartes (format , — 7 778+ cartes)

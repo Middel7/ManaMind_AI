@@ -10,9 +10,7 @@ dependencies = [
     "uvicorn[standard]>=0.29.0",
     "python-multipart>=0.0.9",
     # Data science
-    "matplotlib>=3.10.7",
     "numpy>=1.26",
-    "pandas>=2.3.3",
     "scikit-learn>=1.7.2",
     # Embeddings vectoriels — Phase V3
     "sentence-transformers>=2.7",

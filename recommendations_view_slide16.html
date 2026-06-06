@@ -610,7 +610,7 @@
       <!-- Page gauche — comprendre -->
       <section class="page page--left">
         <div class="eyebrow">Ton mentor de deck Commander</div>
-        <h1 class="hero">L'IA qui <em>affine</em><br />ton deck.</h1>
+        <h1 class="hero">L'IA qui <em>affine</em> ton deck.</h1>
         <p class="lede">Charge ta decklist, laisse le mentor lire ton commandant, et découvre les cartes qui élèveront ta stratégie.</p>
 
         <div class="howto">
@@ -689,8 +689,8 @@
                       <span class="algo-card-desc">Score hybride : synergie, spécificité, structure</span>
                     </button>
                     <button class="algo-card" data-algo="v3">
-                      <span class="algo-card-name">IA Vectorielle</span>
-                      <span class="algo-card-desc">Similarité vectorielle BAAI/bge-m3</span>
+                      <span class="algo-card-name">IA Vectorielle V2</span>
+                      <span class="algo-card-desc">Moteur hybride : rôles, decklists, synergie, vectoriel</span>
                     </button>
                   </div>
                   <button class="btn-analyse" id="analyseBtn">Analyser le deck ↗</button>
@@ -820,11 +820,32 @@
       try {
         const fd = new FormData();
         fd.append("deckfile", file);
-        fd.append("algo", selectedAlgo);
-        setProgress(40, "Envoi du deck…");
-        const res = await fetch("/upload-deck", { method: "POST", body: fd });
-        if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Erreur serveur");
-        setProgress(80, "Génération des recommandations…");
+
+        let endpoint = "/upload-deck";
+
+        if (selectedAlgo === "v3") {
+          // Moteur hybride V2 : route dédiée
+          endpoint = "/upload-deck-v2";
+          setProgress(20, "Envoi du deck…");
+        } else {
+          fd.append("algo", selectedAlgo);
+          setProgress(40, "Envoi du deck…");
+        }
+
+        const res = await fetch(endpoint, { method: "POST", body: fd });
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}));
+          throw new Error(errBody.error || "Erreur serveur");
+        }
+
+        if (selectedAlgo === "v3") {
+          setProgress(50, "Analyse du commandant…");
+          await new Promise(r => setTimeout(r, 400));
+          setProgress(75, "Scoring hybride en cours…");
+        } else {
+          setProgress(80, "Génération des recommandations…");
+        }
+
         const data = await res.json();
         setProgress(100, "Recommandations prêtes !");
         setTimeout(() => {
@@ -832,10 +853,9 @@
             + "&algo=" + encodeURIComponent(selectedAlgo);
         }, 500);
       } catch (err) {
-        setProgress(70, "Génération des recommandations…");
-        await new Promise((r) => setTimeout(r, 900));
-        setProgress(100, "Recommandations prêtes !");
-        showNotice(`Aperçu local — sur le serveur, le mentor enverrait <b>${file.name}</b> à <b>/upload-deck</b> puis ouvrirait <b>/results</b>.`);
+        algoSection.style.display = "";
+        progressWrap.classList.remove("show");
+        showNotice(`<b>Erreur :</b> ${err.message}`);
       }
     }
 

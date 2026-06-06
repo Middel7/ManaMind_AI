@@ -17,7 +17,7 @@ USER_DECKLIST_DIR = ROOT / "data" / "User decklist"
 USER_RECOMM_DIR = ROOT / "data" / "User recommendations"
 USER_DECKLIST_DIR.mkdir(parents=True, exist_ok=True)
 USER_RECOMM_DIR.mkdir(parents=True, exist_ok=True)
-RECOMMEND_SCRIPT = ROOT / "src" / "manamind" / "recommend_deck_changes.py"
+RECOMMEND_SCRIPT = ROOT / "src" / "manamind" / "recommandation_populaire.py"
 NEXT_PATTERN = re.compile(r"user_deck_(\d+)\.txt$")
 
 

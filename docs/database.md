@@ -3,7 +3,61 @@
 > **Stack** : PostgreSQL · SQLAlchemy 2.x (mapped_column) · Alembic  
 > **Source des données** : Scryfall Bulk Data API  
 > **Connexion** : variable d'environnement `DATABASE_URL` dans `.env`  
-> **Migration initiale** : `392e971f7759` (2026-06-02)
+> **Migrations** : `392e971f7759` (init 2026-06-02) · `a1b2c3d4e5f6` (game_changer 2026-06-05)
+
+---
+
+## Partage entre projets
+
+**Oui, c'est possible et recommandé.** La base ne contient que des données MTG (cartes, éditions, prix importés depuis Scryfall) — aucune logique applicative propre à ManaMind. N'importe quel autre projet peut se connecter avec la même `DATABASE_URL`.
+
+### Trois options selon le contexte
+
+| Option | Quand l'utiliser |
+|---|---|
+| **A — Connexion directe** (Python + SQLAlchemy) | Accès complet en lecture/écriture. Copie les modèles ou utilise `MetaData.reflect()`. |
+| **B — Connexion directe** (autre langage) | Connexion PostgreSQL native. Attention aux colonnes `text[]` (ARRAY PostgreSQL). |
+| **C — API REST ManaMind** | Si le serveur tourne (`GET /api/cards/search?q=…`). Pas besoin d'accès à la base. |
+
+#### Option A — Python + SQLAlchemy
+
+```python
+from sqlalchemy import create_engine, MetaData
+from sqlalchemy.orm import Session
+
+engine = create_engine("postgresql://manamind:manamind@localhost:5432/manamind")
+
+# Soit tu copies les modèles depuis src/manamind/db/models/
+# Soit tu utilises reflect pour éviter de les copier :
+meta = MetaData()
+meta.reflect(bind=engine)
+cards_table = meta.tables["cards"]
+
+with Session(engine) as session:
+    rows = session.execute(
+        cards_table.select()
+        .where(cards_table.c.legal_commander == True)
+        .limit(10)
+    ).fetchall()
+```
+
+> Les migrations Alembic restent gérées par ce repo. Si ton autre projet ajoute ses propres tables, configure un `version_table` différent dans son `alembic.ini` pour ne pas entrer en conflit.
+
+#### Option B — Autre langage (Node.js, Go, etc.)
+
+```
+host=localhost port=5432 dbname=manamind user=manamind password=manamind
+```
+
+Point d'attention : `colors`, `color_identity` et `keywords` sont de type `text[]` (tableau PostgreSQL natif). La plupart des drivers les retournent sous forme de tableau ou de chaîne `{U,B}` à parser.
+
+#### Option C — API REST
+
+```
+GET http://localhost:8000/api/cards/search?q=goblin&limit=100
+```
+
+Retourne jusqu'à 100 cartes avec `id`, `oracle_id`, `name`, `type_line`, `color_identity`, `edhrec_rank`.
 
 ---
 
@@ -55,6 +109,7 @@ import_runs  (table standalone, aucune FK)
 | `keywords` | `VARCHAR[]` | OUI | — | Mots-clés de règles (ex: `["Flying", "Deathtouch"]`) |
 | `legal_commander` | `BOOLEAN` | NON | — | `true` si la carte est légale en format Commander |
 | `edhrec_rank` | `INTEGER` | OUI | — | Classement EDHREC (1 = plus populaire, null si absent de EDHREC) |
+| `game_changer` | `BOOLEAN` | NON | INDEX | `true` si la carte est classée "Game Changer" par Scryfall (cartes à fort impact sur le jeu) |
 | `created_at` | `TIMESTAMPTZ` | NON | — | Date de première insertion (géré par `server_default`) |
 | `updated_at` | `TIMESTAMPTZ` | NON | — | Date de dernière mise à jour (géré par `onupdate`) |
 
@@ -211,6 +266,7 @@ cards ◄──────────────────── card_print
   keywords []
   legal_commander
   edhrec_rank
+  game_changer
     │
     └── card_faces
           id PK

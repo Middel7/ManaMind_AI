@@ -1,0 +1,1328 @@
+{
+  "commander": "Captain N'ghathrod",
+  "color_identity": [
+    "B",
+    "U"
+  ],
+  "profile": "combat_damage",
+  "total_recommendations": 20,
+  "groups": {
+    "top_global": [
+      {
+        "name": "Animate Dead",
+        "mana_cost": "{1}{B}",
+        "mana_value": 2.0,
+        "type_line": "Enchantment — Aura",
+        "edhrec_rank": 224,
+        "final_score": 0.7023,
+        "score_details": {
+          "decklist_popularity": 0.6499,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.2,
+          "vector_similarity": 0.7988,
+          "edhrec": 0.85,
+          "mana_curve": 1.0,
+          "card_quality": 0.75
+        },
+        "roles": [
+          "etb_synergy",
+          "graveyard_synergy",
+          "enchantment_synergy",
+          "recursion",
+          "voltron_only"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : graveyard_synergy, recursion",
+          "Bonne présence dans les decklists similaires",
+          "Très bien classé EDHREC (rank 224)",
+          "Mana value cohérente (2.0)"
+        ]
+      },
+      {
+        "name": "Port of Karfell",
+        "mana_cost": "",
+        "mana_value": 0,
+        "type_line": "Land",
+        "edhrec_rank": 3768,
+        "final_score": 0.6962,
+        "score_details": {
+          "decklist_popularity": 0.8386,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.2,
+          "vector_similarity": 0.8028,
+          "edhrec": 0.4,
+          "mana_curve": 0.75,
+          "card_quality": 0.6812
+        },
+        "roles": [
+          "ramp",
+          "graveyard_synergy",
+          "recursion"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : graveyard_synergy, ramp, recursion",
+          "Bonne présence dans les decklists similaires"
+        ]
+      },
+      {
+        "name": "Syr Konrad, the Grim",
+        "mana_cost": "{3}{B}{B}",
+        "mana_value": 5.0,
+        "type_line": "Legendary Creature — Human Knight",
+        "edhrec_rank": 252,
+        "final_score": 0.6926,
+        "score_details": {
+          "decklist_popularity": 0.7793,
+          "strategic_role": 0.75,
+          "commander_synergy": 0.3,
+          "vector_similarity": 0.8333,
+          "edhrec": 0.85,
+          "mana_curve": 0.8,
+          "card_quality": 0.8146
+        },
+        "roles": [
+          "tribal_synergy",
+          "graveyard_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : graveyard_synergy",
+          "Bonne présence dans les decklists similaires",
+          "Très bien classé EDHREC (rank 252)",
+          "Mana value cohérente (5.0)"
+        ]
+      },
+      {
+        "name": "Bojuka Bog",
+        "mana_cost": "",
+        "mana_value": 0,
+        "type_line": "Land",
+        "edhrec_rank": 25,
+        "final_score": 0.6866,
+        "score_details": {
+          "decklist_popularity": 0.6909,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.05,
+          "vector_similarity": 0.7517,
+          "edhrec": 1.0,
+          "mana_curve": 0.75,
+          "card_quality": 0.93
+        },
+        "roles": [
+          "ramp",
+          "etb_synergy",
+          "graveyard_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : graveyard_synergy, ramp",
+          "Bonne présence dans les decklists similaires",
+          "Très bien classé EDHREC (rank 25)"
+        ]
+      },
+      {
+        "name": "Ruin Crab",
+        "mana_cost": "{U}",
+        "mana_value": 1.0,
+        "type_line": "Creature — Crab",
+        "edhrec_rank": 1304,
+        "final_score": 0.6828,
+        "score_details": {
+          "decklist_popularity": 0.857,
+          "strategic_role": 0.75,
+          "commander_synergy": 0.3,
+          "vector_similarity": 0.7902,
+          "edhrec": 0.65,
+          "mana_curve": 0.75,
+          "card_quality": 0.7535
+        },
+        "roles": [
+          "etb_synergy",
+          "graveyard_synergy",
+          "landfall"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : graveyard_synergy",
+          "Bonne présence dans les decklists similaires",
+          "Très bien classé EDHREC (rank 1304)"
+        ]
+      },
+      {
+        "name": "Thought Vessel",
+        "mana_cost": "{2}",
+        "mana_value": 2.0,
+        "type_line": "Artifact",
+        "edhrec_rank": 21,
+        "final_score": 0.6672,
+        "score_details": {
+          "decklist_popularity": 0.874,
+          "strategic_role": 0.75,
+          "commander_synergy": 0.0,
+          "vector_similarity": 0.7412,
+          "edhrec": 1.0,
+          "mana_curve": 1.0,
+          "card_quality": 1.0
+        },
+        "roles": [
+          "ramp",
+          "artifact_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : ramp",
+          "Bonne présence dans les decklists similaires",
+          "Très bien classé EDHREC (rank 21)",
+          "Mana value cohérente (2.0)"
+        ]
+      },
+      {
+        "name": "Drownyard Temple",
+        "mana_cost": "",
+        "mana_value": 0,
+        "type_line": "Land",
+        "edhrec_rank": 1977,
+        "final_score": 0.6666,
+        "score_details": {
+          "decklist_popularity": 0.7488,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.05,
+          "vector_similarity": 0.7861,
+          "edhrec": 0.65,
+          "mana_curve": 0.75,
+          "card_quality": 0.6994
+        },
+        "roles": [
+          "graveyard_synergy",
+          "recursion"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : graveyard_synergy, recursion",
+          "Bonne présence dans les decklists similaires",
+          "Très bien classé EDHREC (rank 1977)"
+        ]
+      },
+      {
+        "name": "Takenuma, Abandoned Mire",
+        "mana_cost": "",
+        "mana_value": 0,
+        "type_line": "Legendary Land",
+        "edhrec_rank": 241,
+        "final_score": 0.6636,
+        "score_details": {
+          "decklist_popularity": 0.5676,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.15,
+          "vector_similarity": 0.791,
+          "edhrec": 0.85,
+          "mana_curve": 0.75,
+          "card_quality": 0.7797
+        },
+        "roles": [
+          "ramp",
+          "graveyard_synergy",
+          "recursion"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : graveyard_synergy, ramp, recursion",
+          "Bonne présence dans les decklists similaires",
+          "Très bien classé EDHREC (rank 241)"
+        ]
+      },
+      {
+        "name": "Commander's Sphere",
+        "mana_cost": "{3}",
+        "mana_value": 3.0,
+        "type_line": "Artifact",
+        "edhrec_rank": 45,
+        "final_score": 0.6624,
+        "score_details": {
+          "decklist_popularity": 0.5524,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.05,
+          "vector_similarity": 0.7815,
+          "edhrec": 1.0,
+          "mana_curve": 1.0,
+          "card_quality": 0.8538
+        },
+        "roles": [
+          "ramp",
+          "card_draw",
+          "artifact_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : ramp, card_draw",
+          "Bonne présence dans les decklists similaires",
+          "Très bien classé EDHREC (rank 45)",
+          "Mana value cohérente (3.0)"
+        ]
+      },
+      {
+        "name": "Hunted Horror",
+        "mana_cost": "{B}{B}",
+        "mana_value": 2.0,
+        "type_line": "Creature — Horror",
+        "edhrec_rank": 4466,
+        "final_score": 0.646,
+        "score_details": {
+          "decklist_popularity": 0.9049,
+          "strategic_role": 0.75,
+          "commander_synergy": 0.15,
+          "vector_similarity": 0.7859,
+          "edhrec": 0.4,
+          "mana_curve": 1.0,
+          "card_quality": 0.7177
+        },
+        "roles": [
+          "etb_synergy",
+          "token_generation",
+          "protection"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : protection",
+          "Bonne présence dans les decklists similaires",
+          "Mana value cohérente (2.0)"
+        ]
+      }
+    ],
+    "ramp": [
+      {
+        "name": "Solemn Simulacrum",
+        "mana_cost": "{4}",
+        "mana_value": 4.0,
+        "type_line": "Artifact Creature — Golem",
+        "edhrec_rank": 38,
+        "final_score": 0.6416,
+        "score_details": {
+          "decklist_popularity": 0.385,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.2,
+          "vector_similarity": 0.7741,
+          "edhrec": 1.0,
+          "mana_curve": 0.8,
+          "card_quality": 0.7618
+        },
+        "roles": [
+          "ramp",
+          "card_draw",
+          "etb_synergy",
+          "artifact_synergy",
+          "tutor"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : ramp, card_draw",
+          "Très bien classé EDHREC (rank 38)",
+          "Mana value cohérente (4.0)"
+        ]
+      },
+      {
+        "name": "Watery Grave",
+        "mana_cost": "",
+        "mana_value": 0,
+        "type_line": "Land — Island Swamp",
+        "edhrec_rank": 52,
+        "final_score": 0.6377,
+        "score_details": {
+          "decklist_popularity": 0.7961,
+          "strategic_role": 0.75,
+          "commander_synergy": 0.0,
+          "vector_similarity": 0.7265,
+          "edhrec": 1.0,
+          "mana_curve": 0.75,
+          "card_quality": 0.9878
+        },
+        "roles": [
+          "ramp",
+          "etb_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : ramp",
+          "Bonne présence dans les decklists similaires",
+          "Très bien classé EDHREC (rank 52)"
+        ]
+      },
+      {
+        "name": "Fellwar Stone",
+        "mana_cost": "{2}",
+        "mana_value": 2.0,
+        "type_line": "Artifact",
+        "edhrec_rank": 18,
+        "final_score": 0.6373,
+        "score_details": {
+          "decklist_popularity": 0.7172,
+          "strategic_role": 0.75,
+          "commander_synergy": 0.05,
+          "vector_similarity": 0.7444,
+          "edhrec": 1.0,
+          "mana_curve": 1.0,
+          "card_quality": 0.9444
+        },
+        "roles": [
+          "ramp",
+          "artifact_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : ramp",
+          "Bonne présence dans les decklists similaires",
+          "Très bien classé EDHREC (rank 18)",
+          "Mana value cohérente (2.0)"
+        ]
+      },
+      {
+        "name": "Polluted Delta",
+        "mana_cost": "",
+        "mana_value": 0,
+        "type_line": "Land",
+        "edhrec_rank": 37,
+        "final_score": 0.6372,
+        "score_details": {
+          "decklist_popularity": 0.6985,
+          "strategic_role": 0.75,
+          "commander_synergy": 0.1,
+          "vector_similarity": 0.7595,
+          "edhrec": 1.0,
+          "mana_curve": 0.75,
+          "card_quality": 0.9342
+        },
+        "roles": [
+          "ramp",
+          "tutor"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : ramp",
+          "Bonne présence dans les decklists similaires",
+          "Très bien classé EDHREC (rank 37)"
+        ]
+      },
+      {
+        "name": "Realmbreaker, the Invasion Tree",
+        "mana_cost": "{3}",
+        "mana_value": 3.0,
+        "type_line": "Legendary Artifact",
+        "edhrec_rank": 3961,
+        "final_score": 0.6328,
+        "score_details": {
+          "decklist_popularity": 0.5362,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.25,
+          "vector_similarity": 0.7896,
+          "edhrec": 0.4,
+          "mana_curve": 1.0,
+          "card_quality": 0.5149
+        },
+        "roles": [
+          "ramp",
+          "graveyard_synergy",
+          "artifact_synergy",
+          "tutor"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : graveyard_synergy, ramp",
+          "Bonne présence dans les decklists similaires",
+          "Mana value cohérente (3.0)"
+        ]
+      }
+    ],
+    "card_draw": [
+      {
+        "name": "Solemn Simulacrum",
+        "mana_cost": "{4}",
+        "mana_value": 4.0,
+        "type_line": "Artifact Creature — Golem",
+        "edhrec_rank": 38,
+        "final_score": 0.6416,
+        "score_details": {
+          "decklist_popularity": 0.385,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.2,
+          "vector_similarity": 0.7741,
+          "edhrec": 1.0,
+          "mana_curve": 0.8,
+          "card_quality": 0.7618
+        },
+        "roles": [
+          "ramp",
+          "card_draw",
+          "etb_synergy",
+          "artifact_synergy",
+          "tutor"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : ramp, card_draw",
+          "Très bien classé EDHREC (rank 38)",
+          "Mana value cohérente (4.0)"
+        ]
+      },
+      {
+        "name": "Rhystic Study",
+        "mana_cost": "{2}{U}",
+        "mana_value": 3.0,
+        "type_line": "Enchantment",
+        "edhrec_rank": 41,
+        "final_score": 0.6374,
+        "score_details": {
+          "decklist_popularity": 0.678,
+          "strategic_role": 0.75,
+          "commander_synergy": 0.1,
+          "vector_similarity": 0.7464,
+          "edhrec": 1.0,
+          "mana_curve": 1.0,
+          "card_quality": 0.9229
+        },
+        "roles": [
+          "card_draw",
+          "enchantment_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : card_draw",
+          "Bonne présence dans les decklists similaires",
+          "Très bien classé EDHREC (rank 41)",
+          "Mana value cohérente (3.0)"
+        ]
+      },
+      {
+        "name": "Toxrill, the Corrosive",
+        "mana_cost": "{5}{B}{B}",
+        "mana_value": 7.0,
+        "type_line": "Legendary Creature — Slug Horror",
+        "edhrec_rank": 2317,
+        "final_score": 0.631,
+        "score_details": {
+          "decklist_popularity": 0.8335,
+          "strategic_role": 0.75,
+          "commander_synergy": 0.25,
+          "vector_similarity": 0.7572,
+          "edhrec": 0.4,
+          "mana_curve": 0.6,
+          "card_quality": 0.6784
+        },
+        "roles": [
+          "card_draw",
+          "token_generation",
+          "sacrifice_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : card_draw",
+          "Bonne présence dans les decklists similaires"
+        ]
+      }
+    ],
+    "removal": [],
+    "protection": [
+      {
+        "name": "Swiftfoot Boots",
+        "mana_cost": "{2}",
+        "mana_value": 2.0,
+        "type_line": "Artifact — Equipment",
+        "edhrec_rank": 12,
+        "final_score": 0.6367,
+        "score_details": {
+          "decklist_popularity": 0.6869,
+          "strategic_role": 0.75,
+          "commander_synergy": 0.1,
+          "vector_similarity": 0.7262,
+          "edhrec": 1.0,
+          "mana_curve": 1.0,
+          "card_quality": 0.9278
+        },
+        "roles": [
+          "protection",
+          "artifact_synergy",
+          "voltron_only"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : protection",
+          "Bonne présence dans les decklists similaires",
+          "Très bien classé EDHREC (rank 12)",
+          "Mana value cohérente (2.0)"
+        ]
+      }
+    ],
+    "synergy": [
+      {
+        "name": "Bruvac the Grandiloquent",
+        "mana_cost": "{2}{U}",
+        "mana_value": 3.0,
+        "type_line": "Legendary Creature — Human Advisor",
+        "edhrec_rank": 2142,
+        "final_score": 0.6419,
+        "score_details": {
+          "decklist_popularity": 0.7842,
+          "strategic_role": 0.75,
+          "commander_synergy": 0.3,
+          "vector_similarity": 0.7768,
+          "edhrec": 0.4,
+          "mana_curve": 1.0,
+          "card_quality": 0.5921
+        },
+        "roles": [
+          "tribal_synergy",
+          "graveyard_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : graveyard_synergy",
+          "Bonne présence dans les decklists similaires",
+          "Mana value cohérente (3.0)"
+        ]
+      },
+      {
+        "name": "Solemn Simulacrum",
+        "mana_cost": "{4}",
+        "mana_value": 4.0,
+        "type_line": "Artifact Creature — Golem",
+        "edhrec_rank": 38,
+        "final_score": 0.6416,
+        "score_details": {
+          "decklist_popularity": 0.385,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.2,
+          "vector_similarity": 0.7741,
+          "edhrec": 1.0,
+          "mana_curve": 0.8,
+          "card_quality": 0.7618
+        },
+        "roles": [
+          "ramp",
+          "card_draw",
+          "etb_synergy",
+          "artifact_synergy",
+          "tutor"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : ramp, card_draw",
+          "Très bien classé EDHREC (rank 38)",
+          "Mana value cohérente (4.0)"
+        ]
+      },
+      {
+        "name": "Watery Grave",
+        "mana_cost": "",
+        "mana_value": 0,
+        "type_line": "Land — Island Swamp",
+        "edhrec_rank": 52,
+        "final_score": 0.6377,
+        "score_details": {
+          "decklist_popularity": 0.7961,
+          "strategic_role": 0.75,
+          "commander_synergy": 0.0,
+          "vector_similarity": 0.7265,
+          "edhrec": 1.0,
+          "mana_curve": 0.75,
+          "card_quality": 0.9878
+        },
+        "roles": [
+          "ramp",
+          "etb_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : ramp",
+          "Bonne présence dans les decklists similaires",
+          "Très bien classé EDHREC (rank 52)"
+        ]
+      },
+      {
+        "name": "Toxrill, the Corrosive",
+        "mana_cost": "{5}{B}{B}",
+        "mana_value": 7.0,
+        "type_line": "Legendary Creature — Slug Horror",
+        "edhrec_rank": 2317,
+        "final_score": 0.631,
+        "score_details": {
+          "decklist_popularity": 0.8335,
+          "strategic_role": 0.75,
+          "commander_synergy": 0.25,
+          "vector_similarity": 0.7572,
+          "edhrec": 0.4,
+          "mana_curve": 0.6,
+          "card_quality": 0.6784
+        },
+        "roles": [
+          "card_draw",
+          "token_generation",
+          "sacrifice_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : card_draw",
+          "Bonne présence dans les decklists similaires"
+        ]
+      }
+    ],
+    "high_impact": [
+      {
+        "name": "Solemn Simulacrum",
+        "mana_cost": "{4}",
+        "mana_value": 4.0,
+        "type_line": "Artifact Creature — Golem",
+        "edhrec_rank": 38,
+        "final_score": 0.6416,
+        "score_details": {
+          "decklist_popularity": 0.385,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.2,
+          "vector_similarity": 0.7741,
+          "edhrec": 1.0,
+          "mana_curve": 0.8,
+          "card_quality": 0.7618
+        },
+        "roles": [
+          "ramp",
+          "card_draw",
+          "etb_synergy",
+          "artifact_synergy",
+          "tutor"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : ramp, card_draw",
+          "Très bien classé EDHREC (rank 38)",
+          "Mana value cohérente (4.0)"
+        ]
+      },
+      {
+        "name": "Rhystic Study",
+        "mana_cost": "{2}{U}",
+        "mana_value": 3.0,
+        "type_line": "Enchantment",
+        "edhrec_rank": 41,
+        "final_score": 0.6374,
+        "score_details": {
+          "decklist_popularity": 0.678,
+          "strategic_role": 0.75,
+          "commander_synergy": 0.1,
+          "vector_similarity": 0.7464,
+          "edhrec": 1.0,
+          "mana_curve": 1.0,
+          "card_quality": 0.9229
+        },
+        "roles": [
+          "card_draw",
+          "enchantment_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : card_draw",
+          "Bonne présence dans les decklists similaires",
+          "Très bien classé EDHREC (rank 41)",
+          "Mana value cohérente (3.0)"
+        ]
+      },
+      {
+        "name": "Polluted Delta",
+        "mana_cost": "",
+        "mana_value": 0,
+        "type_line": "Land",
+        "edhrec_rank": 37,
+        "final_score": 0.6372,
+        "score_details": {
+          "decklist_popularity": 0.6985,
+          "strategic_role": 0.75,
+          "commander_synergy": 0.1,
+          "vector_similarity": 0.7595,
+          "edhrec": 1.0,
+          "mana_curve": 0.75,
+          "card_quality": 0.9342
+        },
+        "roles": [
+          "ramp",
+          "tutor"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : ramp",
+          "Bonne présence dans les decklists similaires",
+          "Très bien classé EDHREC (rank 37)"
+        ]
+      },
+      {
+        "name": "Realmbreaker, the Invasion Tree",
+        "mana_cost": "{3}",
+        "mana_value": 3.0,
+        "type_line": "Legendary Artifact",
+        "edhrec_rank": 3961,
+        "final_score": 0.6328,
+        "score_details": {
+          "decklist_popularity": 0.5362,
+          "strategic_role": 1.0,
+          "commander_synergy": 0.25,
+          "vector_similarity": 0.7896,
+          "edhrec": 0.4,
+          "mana_curve": 1.0,
+          "card_quality": 0.5149
+        },
+        "roles": [
+          "ramp",
+          "graveyard_synergy",
+          "artifact_synergy",
+          "tutor"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : graveyard_synergy, ramp",
+          "Bonne présence dans les decklists similaires",
+          "Mana value cohérente (3.0)"
+        ]
+      },
+      {
+        "name": "Toxrill, the Corrosive",
+        "mana_cost": "{5}{B}{B}",
+        "mana_value": 7.0,
+        "type_line": "Legendary Creature — Slug Horror",
+        "edhrec_rank": 2317,
+        "final_score": 0.631,
+        "score_details": {
+          "decklist_popularity": 0.8335,
+          "strategic_role": 0.75,
+          "commander_synergy": 0.25,
+          "vector_similarity": 0.7572,
+          "edhrec": 0.4,
+          "mana_curve": 0.6,
+          "card_quality": 0.6784
+        },
+        "roles": [
+          "card_draw",
+          "token_generation",
+          "sacrifice_synergy"
+        ],
+        "reasons": [
+          "Rôles utiles pour la stratégie : card_draw",
+          "Bonne présence dans les decklists similaires"
+        ]
+      }
+    ]
+  },
+  "all_results": [
+    {
+      "name": "Animate Dead",
+      "mana_cost": "{1}{B}",
+      "mana_value": 2.0,
+      "type_line": "Enchantment — Aura",
+      "edhrec_rank": 224,
+      "final_score": 0.7023,
+      "score_details": {
+        "decklist_popularity": 0.6499,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.2,
+        "vector_similarity": 0.7988,
+        "edhrec": 0.85,
+        "mana_curve": 1.0,
+        "card_quality": 0.75
+      },
+      "roles": [
+        "etb_synergy",
+        "graveyard_synergy",
+        "enchantment_synergy",
+        "recursion",
+        "voltron_only"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : graveyard_synergy, recursion",
+        "Bonne présence dans les decklists similaires",
+        "Très bien classé EDHREC (rank 224)",
+        "Mana value cohérente (2.0)"
+      ]
+    },
+    {
+      "name": "Port of Karfell",
+      "mana_cost": "",
+      "mana_value": 0,
+      "type_line": "Land",
+      "edhrec_rank": 3768,
+      "final_score": 0.6962,
+      "score_details": {
+        "decklist_popularity": 0.8386,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.2,
+        "vector_similarity": 0.8028,
+        "edhrec": 0.4,
+        "mana_curve": 0.75,
+        "card_quality": 0.6812
+      },
+      "roles": [
+        "ramp",
+        "graveyard_synergy",
+        "recursion"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : graveyard_synergy, ramp, recursion",
+        "Bonne présence dans les decklists similaires"
+      ]
+    },
+    {
+      "name": "Syr Konrad, the Grim",
+      "mana_cost": "{3}{B}{B}",
+      "mana_value": 5.0,
+      "type_line": "Legendary Creature — Human Knight",
+      "edhrec_rank": 252,
+      "final_score": 0.6926,
+      "score_details": {
+        "decklist_popularity": 0.7793,
+        "strategic_role": 0.75,
+        "commander_synergy": 0.3,
+        "vector_similarity": 0.8333,
+        "edhrec": 0.85,
+        "mana_curve": 0.8,
+        "card_quality": 0.8146
+      },
+      "roles": [
+        "tribal_synergy",
+        "graveyard_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : graveyard_synergy",
+        "Bonne présence dans les decklists similaires",
+        "Très bien classé EDHREC (rank 252)",
+        "Mana value cohérente (5.0)"
+      ]
+    },
+    {
+      "name": "Bojuka Bog",
+      "mana_cost": "",
+      "mana_value": 0,
+      "type_line": "Land",
+      "edhrec_rank": 25,
+      "final_score": 0.6866,
+      "score_details": {
+        "decklist_popularity": 0.6909,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.05,
+        "vector_similarity": 0.7517,
+        "edhrec": 1.0,
+        "mana_curve": 0.75,
+        "card_quality": 0.93
+      },
+      "roles": [
+        "ramp",
+        "etb_synergy",
+        "graveyard_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : graveyard_synergy, ramp",
+        "Bonne présence dans les decklists similaires",
+        "Très bien classé EDHREC (rank 25)"
+      ]
+    },
+    {
+      "name": "Ruin Crab",
+      "mana_cost": "{U}",
+      "mana_value": 1.0,
+      "type_line": "Creature — Crab",
+      "edhrec_rank": 1304,
+      "final_score": 0.6828,
+      "score_details": {
+        "decklist_popularity": 0.857,
+        "strategic_role": 0.75,
+        "commander_synergy": 0.3,
+        "vector_similarity": 0.7902,
+        "edhrec": 0.65,
+        "mana_curve": 0.75,
+        "card_quality": 0.7535
+      },
+      "roles": [
+        "etb_synergy",
+        "graveyard_synergy",
+        "landfall"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : graveyard_synergy",
+        "Bonne présence dans les decklists similaires",
+        "Très bien classé EDHREC (rank 1304)"
+      ]
+    },
+    {
+      "name": "Thought Vessel",
+      "mana_cost": "{2}",
+      "mana_value": 2.0,
+      "type_line": "Artifact",
+      "edhrec_rank": 21,
+      "final_score": 0.6672,
+      "score_details": {
+        "decklist_popularity": 0.874,
+        "strategic_role": 0.75,
+        "commander_synergy": 0.0,
+        "vector_similarity": 0.7412,
+        "edhrec": 1.0,
+        "mana_curve": 1.0,
+        "card_quality": 1.0
+      },
+      "roles": [
+        "ramp",
+        "artifact_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : ramp",
+        "Bonne présence dans les decklists similaires",
+        "Très bien classé EDHREC (rank 21)",
+        "Mana value cohérente (2.0)"
+      ]
+    },
+    {
+      "name": "Drownyard Temple",
+      "mana_cost": "",
+      "mana_value": 0,
+      "type_line": "Land",
+      "edhrec_rank": 1977,
+      "final_score": 0.6666,
+      "score_details": {
+        "decklist_popularity": 0.7488,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.05,
+        "vector_similarity": 0.7861,
+        "edhrec": 0.65,
+        "mana_curve": 0.75,
+        "card_quality": 0.6994
+      },
+      "roles": [
+        "graveyard_synergy",
+        "recursion"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : graveyard_synergy, recursion",
+        "Bonne présence dans les decklists similaires",
+        "Très bien classé EDHREC (rank 1977)"
+      ]
+    },
+    {
+      "name": "Takenuma, Abandoned Mire",
+      "mana_cost": "",
+      "mana_value": 0,
+      "type_line": "Legendary Land",
+      "edhrec_rank": 241,
+      "final_score": 0.6636,
+      "score_details": {
+        "decklist_popularity": 0.5676,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.15,
+        "vector_similarity": 0.791,
+        "edhrec": 0.85,
+        "mana_curve": 0.75,
+        "card_quality": 0.7797
+      },
+      "roles": [
+        "ramp",
+        "graveyard_synergy",
+        "recursion"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : graveyard_synergy, ramp, recursion",
+        "Bonne présence dans les decklists similaires",
+        "Très bien classé EDHREC (rank 241)"
+      ]
+    },
+    {
+      "name": "Commander's Sphere",
+      "mana_cost": "{3}",
+      "mana_value": 3.0,
+      "type_line": "Artifact",
+      "edhrec_rank": 45,
+      "final_score": 0.6624,
+      "score_details": {
+        "decklist_popularity": 0.5524,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.05,
+        "vector_similarity": 0.7815,
+        "edhrec": 1.0,
+        "mana_curve": 1.0,
+        "card_quality": 0.8538
+      },
+      "roles": [
+        "ramp",
+        "card_draw",
+        "artifact_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : ramp, card_draw",
+        "Bonne présence dans les decklists similaires",
+        "Très bien classé EDHREC (rank 45)",
+        "Mana value cohérente (3.0)"
+      ]
+    },
+    {
+      "name": "Hunted Horror",
+      "mana_cost": "{B}{B}",
+      "mana_value": 2.0,
+      "type_line": "Creature — Horror",
+      "edhrec_rank": 4466,
+      "final_score": 0.646,
+      "score_details": {
+        "decklist_popularity": 0.9049,
+        "strategic_role": 0.75,
+        "commander_synergy": 0.15,
+        "vector_similarity": 0.7859,
+        "edhrec": 0.4,
+        "mana_curve": 1.0,
+        "card_quality": 0.7177
+      },
+      "roles": [
+        "etb_synergy",
+        "token_generation",
+        "protection"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : protection",
+        "Bonne présence dans les decklists similaires",
+        "Mana value cohérente (2.0)"
+      ]
+    },
+    {
+      "name": "Bruvac the Grandiloquent",
+      "mana_cost": "{2}{U}",
+      "mana_value": 3.0,
+      "type_line": "Legendary Creature — Human Advisor",
+      "edhrec_rank": 2142,
+      "final_score": 0.6419,
+      "score_details": {
+        "decklist_popularity": 0.7842,
+        "strategic_role": 0.75,
+        "commander_synergy": 0.3,
+        "vector_similarity": 0.7768,
+        "edhrec": 0.4,
+        "mana_curve": 1.0,
+        "card_quality": 0.5921
+      },
+      "roles": [
+        "tribal_synergy",
+        "graveyard_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : graveyard_synergy",
+        "Bonne présence dans les decklists similaires",
+        "Mana value cohérente (3.0)"
+      ]
+    },
+    {
+      "name": "Solemn Simulacrum",
+      "mana_cost": "{4}",
+      "mana_value": 4.0,
+      "type_line": "Artifact Creature — Golem",
+      "edhrec_rank": 38,
+      "final_score": 0.6416,
+      "score_details": {
+        "decklist_popularity": 0.385,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.2,
+        "vector_similarity": 0.7741,
+        "edhrec": 1.0,
+        "mana_curve": 0.8,
+        "card_quality": 0.7618
+      },
+      "roles": [
+        "ramp",
+        "card_draw",
+        "etb_synergy",
+        "artifact_synergy",
+        "tutor"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : ramp, card_draw",
+        "Très bien classé EDHREC (rank 38)",
+        "Mana value cohérente (4.0)"
+      ]
+    },
+    {
+      "name": "Watery Grave",
+      "mana_cost": "",
+      "mana_value": 0,
+      "type_line": "Land — Island Swamp",
+      "edhrec_rank": 52,
+      "final_score": 0.6377,
+      "score_details": {
+        "decklist_popularity": 0.7961,
+        "strategic_role": 0.75,
+        "commander_synergy": 0.0,
+        "vector_similarity": 0.7265,
+        "edhrec": 1.0,
+        "mana_curve": 0.75,
+        "card_quality": 0.9878
+      },
+      "roles": [
+        "ramp",
+        "etb_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : ramp",
+        "Bonne présence dans les decklists similaires",
+        "Très bien classé EDHREC (rank 52)"
+      ]
+    },
+    {
+      "name": "Rhystic Study",
+      "mana_cost": "{2}{U}",
+      "mana_value": 3.0,
+      "type_line": "Enchantment",
+      "edhrec_rank": 41,
+      "final_score": 0.6374,
+      "score_details": {
+        "decklist_popularity": 0.678,
+        "strategic_role": 0.75,
+        "commander_synergy": 0.1,
+        "vector_similarity": 0.7464,
+        "edhrec": 1.0,
+        "mana_curve": 1.0,
+        "card_quality": 0.9229
+      },
+      "roles": [
+        "card_draw",
+        "enchantment_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : card_draw",
+        "Bonne présence dans les decklists similaires",
+        "Très bien classé EDHREC (rank 41)",
+        "Mana value cohérente (3.0)"
+      ]
+    },
+    {
+      "name": "Fellwar Stone",
+      "mana_cost": "{2}",
+      "mana_value": 2.0,
+      "type_line": "Artifact",
+      "edhrec_rank": 18,
+      "final_score": 0.6373,
+      "score_details": {
+        "decklist_popularity": 0.7172,
+        "strategic_role": 0.75,
+        "commander_synergy": 0.05,
+        "vector_similarity": 0.7444,
+        "edhrec": 1.0,
+        "mana_curve": 1.0,
+        "card_quality": 0.9444
+      },
+      "roles": [
+        "ramp",
+        "artifact_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : ramp",
+        "Bonne présence dans les decklists similaires",
+        "Très bien classé EDHREC (rank 18)",
+        "Mana value cohérente (2.0)"
+      ]
+    },
+    {
+      "name": "Polluted Delta",
+      "mana_cost": "",
+      "mana_value": 0,
+      "type_line": "Land",
+      "edhrec_rank": 37,
+      "final_score": 0.6372,
+      "score_details": {
+        "decklist_popularity": 0.6985,
+        "strategic_role": 0.75,
+        "commander_synergy": 0.1,
+        "vector_similarity": 0.7595,
+        "edhrec": 1.0,
+        "mana_curve": 0.75,
+        "card_quality": 0.9342
+      },
+      "roles": [
+        "ramp",
+        "tutor"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : ramp",
+        "Bonne présence dans les decklists similaires",
+        "Très bien classé EDHREC (rank 37)"
+      ]
+    },
+    {
+      "name": "Swiftfoot Boots",
+      "mana_cost": "{2}",
+      "mana_value": 2.0,
+      "type_line": "Artifact — Equipment",
+      "edhrec_rank": 12,
+      "final_score": 0.6367,
+      "score_details": {
+        "decklist_popularity": 0.6869,
+        "strategic_role": 0.75,
+        "commander_synergy": 0.1,
+        "vector_similarity": 0.7262,
+        "edhrec": 1.0,
+        "mana_curve": 1.0,
+        "card_quality": 0.9278
+      },
+      "roles": [
+        "protection",
+        "artifact_synergy",
+        "voltron_only"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : protection",
+        "Bonne présence dans les decklists similaires",
+        "Très bien classé EDHREC (rank 12)",
+        "Mana value cohérente (2.0)"
+      ]
+    },
+    {
+      "name": "Terisian Mindbreaker",
+      "mana_cost": "{7}",
+      "mana_value": 7.0,
+      "type_line": "Artifact Creature — Juggernaut",
+      "edhrec_rank": 4585,
+      "final_score": 0.6333,
+      "score_details": {
+        "decklist_popularity": 0.5958,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.3,
+        "vector_similarity": 0.7789,
+        "edhrec": 0.4,
+        "mana_curve": 0.25,
+        "card_quality": 0.4979
+      },
+      "roles": [
+        "graveyard_synergy",
+        "artifact_synergy",
+        "recursion"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : graveyard_synergy, recursion",
+        "Bonne présence dans les decklists similaires"
+      ]
+    },
+    {
+      "name": "Realmbreaker, the Invasion Tree",
+      "mana_cost": "{3}",
+      "mana_value": 3.0,
+      "type_line": "Legendary Artifact",
+      "edhrec_rank": 3961,
+      "final_score": 0.6328,
+      "score_details": {
+        "decklist_popularity": 0.5362,
+        "strategic_role": 1.0,
+        "commander_synergy": 0.25,
+        "vector_similarity": 0.7896,
+        "edhrec": 0.4,
+        "mana_curve": 1.0,
+        "card_quality": 0.5149
+      },
+      "roles": [
+        "ramp",
+        "graveyard_synergy",
+        "artifact_synergy",
+        "tutor"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : graveyard_synergy, ramp",
+        "Bonne présence dans les decklists similaires",
+        "Mana value cohérente (3.0)"
+      ]
+    },
+    {
+      "name": "Toxrill, the Corrosive",
+      "mana_cost": "{5}{B}{B}",
+      "mana_value": 7.0,
+      "type_line": "Legendary Creature — Slug Horror",
+      "edhrec_rank": 2317,
+      "final_score": 0.631,
+      "score_details": {
+        "decklist_popularity": 0.8335,
+        "strategic_role": 0.75,
+        "commander_synergy": 0.25,
+        "vector_similarity": 0.7572,
+        "edhrec": 0.4,
+        "mana_curve": 0.6,
+        "card_quality": 0.6784
+      },
+      "roles": [
+        "card_draw",
+        "token_generation",
+        "sacrifice_synergy"
+      ],
+      "reasons": [
+        "Rôles utiles pour la stratégie : card_draw",
+        "Bonne présence dans les decklists similaires"
+      ]
+    }
+  ]
+}

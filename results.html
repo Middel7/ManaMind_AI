@@ -149,7 +149,7 @@
   /* ── Main hybride grid ─────────────────────────────────────── */
   .stage {
     display: grid;
-    grid-template-columns: minmax(300px, 0.62fr) 1px minmax(0, 1fr);
+    grid-template-columns: minmax(240px, 0.42fr) 1px minmax(0, 1fr);
     gap: 0;
   }
 
@@ -170,32 +170,31 @@
 
   /* ── LEFT — deck profile ───────────────────────────────────── */
   .profile {
-    padding: 38px 40px 60px;
+    padding: 22px 28px 24px;
     position: sticky; top: 0; align-self: start;
-    max-height: 100vh; overflow: auto;
-    scrollbar-width: thin; scrollbar-color: var(--gold-dim) transparent;
+    max-height: 100vh; overflow: hidden;
+    display: flex; flex-direction: column;
   }
-  .profile::-webkit-scrollbar { width: 6px; }
-  .profile::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 3px; }
 
   .cmd-art-wrap {
-    position: relative; width: 100%; max-width: 360px; margin: 0 auto 28px;
-    aspect-ratio: 5 / 7; border-radius: 8px; overflow: hidden;
+    position: relative; width: 70%; max-width: 70%; margin: 0 auto 14px;
+    aspect-ratio: 5 / 7; border-radius: 6px; overflow: hidden;
+    flex-shrink: 0;
     border: 1px solid var(--gold-faint);
-    box-shadow: 0 18px 44px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,0,0,0.5),
-                inset 0 0 30px rgba(0,0,0,0.4);
+    box-shadow: 0 10px 28px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,0,0,0.5),
+                inset 0 0 20px rgba(0,0,0,0.4);
     background: linear-gradient(135deg, var(--ink-3), var(--ink-2));
   }
   .cmd-art-wrap img { width: 100%; height: 100%; object-fit: contain; display: block; }
   .cmd-art-wrap::after {
     content: ""; position: absolute; inset: 0; pointer-events: none;
-    box-shadow: inset 0 -50px 60px rgba(11,8,16,0.65);
-    border-radius: 6px;
+    box-shadow: inset 0 -30px 40px rgba(11,8,16,0.65);
+    border-radius: 5px;
   }
   .cmd-art-glow {
-    position: absolute; inset: -14px; z-index: -1; border-radius: 12px;
+    position: absolute; inset: -10px; z-index: -1; border-radius: 10px;
     background: radial-gradient(circle, rgba(124,107,168,0.45), transparent 70%);
-    filter: blur(8px);
+    filter: blur(6px);
   }
 
   .label {
@@ -203,24 +202,19 @@
     text-transform: uppercase; color: var(--gold); opacity: 0.85;
   }
   .cmd-name {
-    font-family: var(--serif-disp); font-weight: 600; font-size: 32px;
-    line-height: 1.06; color: var(--text); margin: 8px 0 14px;
-    text-wrap: balance;
+    font-family: var(--serif-disp); font-weight: 600; font-size: 24px;
+    line-height: 1.06; color: var(--text); margin: 5px 0 8px;
+    text-wrap: balance; text-align: center;
   }
 
-  .mana-id { display: flex; gap: 7px; margin-bottom: 26px; }
+  .mana-id { display: flex; gap: 6px; margin-bottom: 12px; align-items: center; justify-content: center; }
   .pip {
-    width: 22px; height: 22px; border-radius: 50%;
+    width: 26px; height: 26px; border-radius: 50%;
     display: grid; place-items: center;
-    font-family: var(--serif-cap); font-size: 11px; font-weight: 600;
-    border: 1px solid rgba(0,0,0,0.45);
-    box-shadow: inset 0 1px 2px rgba(255,255,255,0.25), inset 0 -3px 6px rgba(0,0,0,0.35), 0 1px 3px rgba(0,0,0,0.4);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.2);
+    overflow: hidden; flex-shrink: 0;
   }
-  .pip.W { background: var(--mana-w); color: #6b5a2a; }
-  .pip.U { background: var(--mana-u); color: #d9e8ff; }
-  .pip.B { background: var(--mana-b); color: #b9b2c4; }
-  .pip.R { background: var(--mana-r); color: #ffe2d6; }
-  .pip.G { background: var(--mana-g); color: #d6f0e0; }
+  .pip img { width: 100%; height: 100%; display: block; }
 
   /* ── RIGHT — gallery ──────────────────────────────────────── */
   .gallery { padding: 34px 40px 56px; min-width: 0; }
@@ -265,36 +259,128 @@
     gap: 22px;
   }
 
+  /* ── Flip card container ───────────────────────────────────── */
   .card {
-    position: relative; border-radius: 7px; overflow: hidden;
+    position: relative; border-radius: 7px;
     background: linear-gradient(180deg, rgba(36,27,51,0.9), rgba(24,18,34,0.95));
     border: 1px solid var(--panel-edge);
     box-shadow: 0 14px 32px rgba(0,0,0,0.5);
-    transition: transform .28s ease, box-shadow .28s ease, border-color .28s ease;
+    transition: box-shadow .28s ease, border-color .28s ease;
     display: flex; flex-direction: column;
+    cursor: default;
   }
   .card:hover {
-    transform: translateY(-5px);
-    border-color: var(--gold-faint);
     box-shadow: 0 22px 46px rgba(0,0,0,0.6), 0 0 0 1px var(--gold-faint);
+    border-color: var(--gold-faint);
   }
   .card.best { border-color: rgba(236,210,138,0.4); }
   .card.best::after {
     content: ""; position: absolute; inset: -1px; border-radius: 7px; pointer-events: none;
     box-shadow: 0 0 26px rgba(236,210,138,0.28), inset 0 0 14px rgba(236,210,138,0.12);
+    z-index: 4;
   }
 
-  .card-art {
-    position: relative; aspect-ratio: 5 / 7; overflow: hidden;
+  /* Seul le zone art se retourne */
+  .card-inner {
+    position: relative;
+    aspect-ratio: 5 / 7;
+    perspective: 900px;
+    flex-shrink: 0;
+  }
+
+  /* Le plateau qui tourne (contient face avant + face arrière) */
+  .card-flip {
+    position: absolute; inset: 0;
+    transform-style: preserve-3d;
+    transition: transform .55s cubic-bezier(.4,0,.2,1);
+  }
+  .card-inner:hover .card-flip { transform: rotateY(180deg); }
+
+  /* Face avant : l'image */
+  .card-front {
+    position: absolute; inset: 0;
+    backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    border-radius: 7px 7px 0 0; overflow: hidden;
     background: radial-gradient(circle at 50% 38%, #2a2038, #161020);
   }
-  .card-art img { width: 100%; height: 100%; object-fit: contain; display: block;
-    transition: transform .45s ease; }
-  .card:hover .card-art img { transform: scale(1.035); }
+
+  /* Face arrière : les scores */
+  .card-back {
+    position: absolute; inset: 0;
+    backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    transform: rotateY(180deg);
+    border-radius: 7px 7px 0 0; overflow: hidden;
+    background: linear-gradient(160deg, rgba(22,14,36,0.98) 0%, rgba(36,24,56,0.98) 100%);
+    border-bottom: 1px solid rgba(212,177,95,0.15);
+    display: flex; flex-direction: column;
+    justify-content: center;
+    padding: 14px 13px;
+    gap: 0;
+  }
+
+  .card-back-name {
+    font-family: var(--serif-disp); font-weight: 600; font-size: 13px;
+    color: var(--gold-bright); margin-bottom: 10px;
+    text-align: center; line-height: 1.2;
+    border-bottom: 1px solid rgba(212,177,95,0.2); padding-bottom: 8px;
+  }
+  .score-final-line {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 8px;
+    font-family: var(--serif-cap); font-size: 9px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--text-faint);
+  }
+  .score-final-val {
+    font-family: var(--serif-cap); font-size: 18px; letter-spacing: 0.04em;
+    color: var(--gold-bright); font-variant-numeric: tabular-nums;
+  }
+  .flip-score-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .flip-score-row:last-child { border-bottom: none; }
+  .flip-sk {
+    font-family: var(--serif-cap); font-size: 8px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--text-faint);
+  }
+  .flip-bar-wrap {
+    display: flex; align-items: center; gap: 5px;
+  }
+  .flip-bar {
+    width: 52px; height: 4px; border-radius: 2px;
+    background: rgba(255,255,255,0.08); overflow: hidden;
+  }
+  .flip-bar-fill {
+    height: 100%; border-radius: 2px;
+    background: linear-gradient(90deg, var(--arcane), var(--gold));
+  }
+  .flip-sv {
+    font-family: var(--serif-cap); font-size: 10px; color: var(--gold-bright);
+    font-variant-numeric: tabular-nums; min-width: 28px; text-align: right;
+  }
+  .flip-roles {
+    margin-top: 8px; padding-top: 7px; border-top: 1px solid rgba(212,177,95,0.15);
+    font-family: var(--serif-body); font-size: 9.5px; color: var(--arcane-br);
+    line-height: 1.5; text-align: center;
+  }
+  .flip-reason {
+    margin-top: 6px;
+    font-family: var(--serif-body); font-size: 9px; color: var(--text-dim);
+    font-style: italic; line-height: 1.4; text-align: center;
+  }
+  .flip-scryfall {
+    margin-top: 8px; text-align: center;
+    font-family: var(--serif-cap); font-size: 8px; letter-spacing: 0.18em;
+    text-transform: uppercase; text-decoration: none;
+    color: var(--text-faint); transition: color .2s;
+  }
+  .flip-scryfall:hover { color: var(--arcane-br); }
+
+  .card-front img { width: 100%; height: 100%; object-fit: contain; display: block; }
   .art-fallback {
     position: absolute; inset: 0; display: grid; place-items: center; padding: 18px;
     text-align: center; font-family: var(--serif-disp); font-weight: 600; font-size: 17px;
-    color: var(--text-dim); background: radial-gradient(circle at 50% 38%, #2a2038, #161020);
+    color: var(--text-dim);
   }
 
   .badge {
@@ -309,19 +395,6 @@
   .badge.rem { background: linear-gradient(180deg, #c96a4e, var(--copper)); }
 
   .card-body { padding: 13px 14px 14px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
-  .card-name {
-    font-family: var(--serif-disp); font-weight: 600; font-size: 18px; line-height: 1.12;
-    color: var(--text); margin: 0; text-wrap: balance;
-  }
-  .card-metric {
-    font-family: var(--serif-cap); font-size: 10px; letter-spacing: 0.16em;
-    text-transform: uppercase; display: flex; align-items: baseline;
-    gap: 4px 7px; flex-wrap: wrap;
-  }
-  .card-metric .k { color: var(--text-faint); }
-  .card-metric .v { font-size: 13px; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
-  .card-metric.add .v { color: var(--green-br); }
-  .card-metric.rem .v { color: var(--copper-br); }
 
   .card-foot {
     margin-top: auto; padding-top: 4px;
@@ -341,6 +414,23 @@
     transition: all .22s ease;
   }
   .buy:hover { color: var(--ink); background: linear-gradient(180deg, var(--gold-bright), var(--gold)); border-color: transparent; }
+  .card-links {
+    display: flex; gap: 10px; align-self: flex-end; margin-top: 2px;
+  }
+  .scryfall-link, .moxfield-link {
+    font-family: var(--serif-cap); font-size: 9px; letter-spacing: 0.18em;
+    text-transform: uppercase; text-decoration: none;
+    color: var(--text-faint); transition: color .2s;
+  }
+  .scryfall-link:hover { color: var(--arcane-br); }
+  .moxfield-link:hover { color: var(--gold-bright); }
+
+  .rem-freq {
+    font-family: var(--serif-body); font-size: 11px; color: var(--text-faint);
+    text-align: center; padding: 2px 0;
+  }
+  .rem-freq strong { color: var(--copper-br); font-weight: 600; }
+
   .card-rem .buy { color: var(--copper-br); border-color: rgba(215,122,94,0.32);
     background: linear-gradient(180deg, rgba(181,69,47,0.14), rgba(181,69,47,0.03)); }
   .card-rem .buy:hover { color: #2a1410; background: linear-gradient(180deg, var(--copper-br), var(--copper)); border-color: transparent; }
@@ -363,6 +453,34 @@
   .notice .label { display: block; margin-bottom: 14px; }
   .notice h3 { font-family: var(--serif-disp); font-size: 26px; color: var(--text); margin: 0 0 8px; font-weight: 600; }
   .notice p { margin: 0 auto; max-width: 420px; font-size: 15px; }
+
+  /* ── V2 : profil stratégique ────────────────────────────────── */
+  .v2-profile {
+    margin-top: 8px; padding: 10px 12px; border-radius: 4px;
+    border: 1px solid var(--panel-edge); background: var(--panel);
+    flex: 1; min-height: 0; overflow-y: auto;
+    scrollbar-width: thin; scrollbar-color: var(--gold-dim) transparent;
+  }
+  .v2-profile::-webkit-scrollbar { width: 4px; }
+  .v2-profile::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 2px; }
+  .v2-profile > .label { display: block; margin-bottom: 8px; }
+  #v2ProfileContent {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 5px 10px;
+    align-items: baseline;
+  }
+  .v2-profile-row {
+    display: contents;
+  }
+  .v2-profile-row .pk {
+    font-family: var(--serif-cap); font-size: 10px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--text-faint);
+    white-space: nowrap; align-self: start; padding-top: 1px;
+  }
+  .v2-profile-row .pv { color: var(--text-dim); line-height: 1.4; font-size: 12.5px; word-break: break-word; }
+
+  /* score-detail supprimé — remplacé par l'animation de retournement */
 
   @media (prefers-reduced-motion: reduce) {
     * { animation: none !important; transition: none !important; }
@@ -421,10 +539,16 @@
           <div class="skeleton" style="position:absolute;inset:0"></div>
         </div>
 
-        <span class="label">Commandant</span>
+        <span class="label" style="display:block;text-align:center">Commandant</span>
         <h1 class="cmd-name" id="cmdName">&nbsp;</h1>
 
         <div class="mana-id" id="manaId"></div>
+
+        <!-- Profil stratégique (V2 et V3) -->
+        <div class="v2-profile" id="v2Profile" style="display:none">
+          <span class="label" id="v2ProfileLabel">Profil stratégique</span>
+          <div id="v2ProfileContent"></div>
+        </div>
 
       </aside>
 
@@ -437,8 +561,6 @@
             <button class="pill active" data-f="add"><span class="dot"></span>À ajouter · <span id="pillAdd">0</span></button>
             <button class="pill" data-f="rem"><span class="dot"></span>À retirer · <span id="pillRem">0</span></button>
           </div>
-          <span class="algo-badge" id="algoBadge" style="display:none"></span>
-          <button class="sort" id="sortBtn">trié par score ▾</button>
         </div>
         <div class="grid" id="grid"></div>
       </section>
@@ -491,18 +613,81 @@ const grid = $('#grid');
 let state = { commander:null, add:[], rem:[], filter:'add' };
 
 /* ── CSV parsing ──────────────────────────────────────────────────────────── */
+function splitCSVLine(line) {
+  // Parser CSV respectant les champs quotés (RFC 4180)
+  const cells = []; let cur = ''; let q = false;
+  for (let j = 0; j < line.length; j++) {
+    const c = line[j];
+    if (q) {
+      if (c === '"') { if (line[j+1] === '"') { cur += '"'; j++; } else q = false; }
+      else cur += c;
+    } else {
+      if (c === '"') q = true;
+      else if (c === ',') { cells.push(cur); cur = ''; }
+      else cur += c;
+    }
+  }
+  cells.push(cur);
+  return cells;
+}
+
 function parseCSV(text){
   const rows = [];
-  const lines = text.replace(/\r/g,'').split('\n').filter(l => l.length);
-  for (let i=1; i<lines.length; i++){
-    const cells = []; let cur=''; let q=false; const line=lines[i];
-    for (let j=0; j<line.length; j++){
-      const c=line[j];
-      if (q){ if (c==='"'){ if (line[j+1]==='"'){cur+='"';j++;} else q=false; } else cur+=c; }
-      else { if (c==='"') q=true; else if (c===','){ cells.push(cur); cur=''; } else cur+=c; }
+  const lines = text.replace(/^﻿/,'').replace(/\r/g,'').split('\n').filter(l => l.length);
+  if (!lines.length) return rows;
+
+  // Lire le header pour mapper les colonnes par nom
+  const headers = splitCSVLine(lines[0]).map(h => h.trim().toLowerCase().replace(/\s+/g,'_'));
+  const idx = h => headers.indexOf(h);
+
+  // Détecter le format : V3 a une colonne "algorithm"
+  const algoCol = idx('algorithm');
+  const isV3Format = algoCol !== -1;
+
+  for (let i = 1; i < lines.length; i++) {
+    const cells = splitCSVLine(lines[i]);
+    const get = col => (cells[idx(col)] || '').trim();
+
+    if (!cells[idx('card_name')] && !cells[1]) continue;
+    const name = get('card_name') || cells[1] || '';
+    if (!name) continue;
+
+    const section = get('section') || cells[0] || '';
+    const algo    = isV3Format ? get('algorithm') : '';
+    const isV3    = algo === 'v3' || isV3Format;
+
+    if (isV3) {
+      rows.push({
+        section,
+        name,
+        score:      get('score'),
+        popularity: get('support'),           // decklist_popularity
+        strategy:   get('deck_frequency'),    // strategic_role
+        similarity: get('vector_score'),      // vector_similarity
+        synergy:    get('synergy'),
+        edhrec:     get('edhrec'),
+        manacurve:  get('mana_curve'),
+        quality:    get('quality'),
+        roles:      get('roles'),
+        reason:     get('reason'),
+        isV3: true,
+      });
+    } else {
+      rows.push({
+        section, name,
+        score:        get('score'),
+        support:      get('support'),
+        freq:         get('deck_frequency'),
+        popularity:   cells[idx('popularity')]  || cells[5] || '',
+        specificity:  cells[idx('specificity')] || cells[6] || '',
+        synergy:      cells[idx('synergy')]     || cells[7] || '',
+        strategy:     cells[idx('strategy')]    || cells[8] || '',
+        structure:    cells[idx('structure')]   || cells[9] || '',
+        similarity:   cells[idx('similarity')]  || cells[10] || '',
+        reason:       (cells[idx('reason')]     || cells[11] || '').trim(),
+        isV3: false,
+      });
     }
-    cells.push(cur);
-    rows.push({ section:cells[0], name:cells[1], score:cells[2], support:cells[3], freq:cells[4] });
   }
   return rows;
 }
@@ -513,29 +698,119 @@ function ingest(rows){
     if (!r.name) continue;
     const sec=(r.section||'').trim().toLowerCase();
     if (sec==='commander') commander={ name:r.name.trim() };
-    else if (sec==='add') add.push({ name:r.name.trim(), score:parseInt(r.score)||0 });
-    else if (sec==='remove') rem.push({ name:r.name.trim(), freq:parseInt(r.freq)||null });
+    else if (sec==='add') {
+      if (r.isV3) {
+        add.push({
+          name:r.name.trim(), score:parseInt(r.score)||0,
+          popularity:parseFloat(r.popularity)||0,
+          strategy:parseFloat(r.strategy)||0,
+          similarity:parseFloat(r.similarity)||0,
+          synergy:parseFloat(r.synergy)||0,
+          edhrec:parseFloat(r.edhrec)||0,
+          manacurve:parseFloat(r.manacurve)||0,
+          quality:parseFloat(r.quality)||0,
+          roles:(r.roles||'').split('|').filter(Boolean),
+          reason:r.reason||'',
+          isV3:true,
+        });
+      } else {
+        add.push({
+          name:r.name.trim(), score:parseInt(r.score)||0,
+          popularity:parseFloat(r.popularity)||0, specificity:parseFloat(r.specificity)||0,
+          synergy:parseFloat(r.synergy)||0, strategy:parseFloat(r.strategy)||0,
+          structure:parseFloat(r.structure)||0, similarity:parseFloat(r.similarity)||0,
+          reason:r.reason||'',
+          isV3:false,
+        });
+      }
+    }
+    else if (sec==='remove') rem.push({
+        name: r.name.trim(),
+        freq: parseFloat(r.popularity) || parseFloat(r.freq) || null,
+        reason: r.reason || '',
+      });
   }
   add.sort((a,b)=>b.score-a.score);
-  state.commander=commander; state.add=add; state.rem=rem;
+  // Trier les retraits par taux croissant (les moins joués en premier)
+  rem.sort((a,b)=> (a.freq||0) - (b.freq||0));
+  state.commander=commander;
+  state.add=add.slice(0,20);
+  state.rem=rem.slice(0,25);
 }
 
 /* ── Scryfall lookup with cache + throttle ────────────────────────────────── */
+// Une seule requête /cards/search?unique=prints pour avoir toutes les éditions.
+// → image : édition avec le prix EUR le plus ÉLEVÉ (meilleur visuel premium)
+// → eur   : prix EUR le plus BAS toutes éditions confondues (meilleur achat)
 const cache=new Map(); let queue=Promise.resolve();
+async function fetchWithRetry(url, retries=3, delay=500){
+  for (let i=0; i<retries; i++){
+    const r = await fetch(url);
+    if (r.ok) return r.json();
+    if (r.status === 429){
+      await new Promise(res=>setTimeout(res, delay * (i+1)));
+      continue;
+    }
+    return null;
+  }
+  return null;
+}
 function scryfall(name){
   if (cache.has(name)) return cache.get(name);
-  const p = queue.then(()=> new Promise(res=>setTimeout(res, SCRY_DELAY)))
-    .then(()=> fetch('https://api.scryfall.com/cards/named?exact='+encodeURIComponent(name)))
-    .then(r=> r.ok ? r.json() : null)
-    .then(d=>{
-      if (!d) return null;
-      const face = (d.image_uris) ? d : (d.card_faces && d.card_faces[0].image_uris ? d.card_faces[0] : null);
-      const iu = face && face.image_uris ? face.image_uris : {};
+  const url = 'https://api.scryfall.com/cards/search?q=!'
+    + encodeURIComponent('"'+name+'"')
+    + '&unique=prints&order=eur&dir=desc';
+  const p = queue
+    .then(()=> new Promise(res=>setTimeout(res, SCRY_DELAY)))
+    .then(()=> fetchWithRetry(url))
+    .then(data=>{
+      if (!data || !data.data || !data.data.length) return null;
+
+      // Exclure les variantes numérotées (collector number terminant par z)
+      // ex: #414z doublerainbow, galaxy foil, etc.
+      const prints = data.data.filter(p =>
+        !p.collector_number || !p.collector_number.endsWith('z')
+      );
+
+      if (!prints.length) return null;
+
+      // Prix le plus bas (ignorer null/undefined)
+      let minEur = null;
+      for (const p of prints){
+        const v = p.prices && p.prices.eur ? parseFloat(p.prices.eur) : null;
+        if (v !== null && (minEur === null || v < minEur)) minEur = v;
+      }
+
+      // Édition avec le prix le plus élevé → image "premium"
+      // On cherche d'abord parmi les impressions avec un prix EUR, puis en fallback toute impression
+      const getImg = p => {
+        const face = p.image_uris ? p
+          : (p.card_faces && p.card_faces[0] && p.card_faces[0].image_uris ? p.card_faces[0] : null);
+        const iu = face && face.image_uris ? face.image_uris : {};
+        return iu.normal || iu.large || null;
+      };
+      const printsWithPrice = prints.filter(p => p.prices && p.prices.eur);
+      let imgExpensive = null;
+      for (const p of printsWithPrice){ const img=getImg(p); if(img){imgExpensive=img;break;} }
+      if (!imgExpensive){ for (const p of prints){ const img=getImg(p); if(img){imgExpensive=img;break;} } }
+
+      // Édition avec le prix le plus bas → image "budget"
+      const printsByAsc = [...prints].sort((a,b)=>{
+        const va = a.prices && a.prices.eur ? parseFloat(a.prices.eur) : Infinity;
+        const vb = b.prices && b.prices.eur ? parseFloat(b.prices.eur) : Infinity;
+        return va - vb;
+      });
+      let imgCheap = null;
+      for (const p of printsByAsc){ const img=getImg(p); if(img){imgCheap=img;break;} }
+
+      const ref = prints[0];
       return {
-        art: iu.art_crop || iu.normal || null,
-        normal: iu.normal || null,
-        eur: d.prices ? d.prices.eur : null,
-        colors: d.color_identity || []
+        art:          imgExpensive,
+        normal:       imgExpensive,  // cartes à ajouter → édition premium
+        cheap:        imgCheap,      // cartes à retirer → édition la moins chère
+        eur:          minEur !== null ? String(minEur.toFixed(2)) : null,
+        colors:       ref.color_identity || [],
+        scryfall_uri: ref.scryfall_uri || null,
       };
     }).catch(()=>null);
   queue = p.catch(()=>{});
@@ -546,6 +821,9 @@ function scryfall(name){
 const cardmarket = name =>
   'https://www.cardmarket.com/en/Magic/Products/Search?category=-1&searchString='+
   encodeURIComponent(name)+'&searchMode=v2';
+
+const moxfield = name =>
+  'https://moxfield.com/search/cards?q=' + encodeURIComponent(name) + '&advanced=';
 const fmtEur = v => v==null ? null : '€'+Number(v).toFixed(2).replace('.', ',');
 
 /* ── Commander profile render ─────────────────────────────────────────────── */
@@ -568,13 +846,24 @@ async function renderCommander(){
   }
   const order=['W','U','B','R','G'];
   const ids=(data.colors&&data.colors.length)? order.filter(c=>data.colors.includes(c)) : ['U'];
-  $('#manaId').innerHTML = ids.map(c=>`<span class="pip ${c}">${c}</span>`).join('');
+  // Symboles SVG officiels Scryfall — ordre WUBRG standard
+  const MANA_ORDER = ['W','U','B','R','G','C'];
+  const sorted = ids.slice().sort((a,b) => MANA_ORDER.indexOf(a) - MANA_ORDER.indexOf(b));
+  $('#manaId').innerHTML = sorted.map(c => {
+    const sym = encodeURIComponent(`{${c}}`);
+    return `<span class="pip"><img src="https://svgs.scryfall.io/card-symbols/${c}.svg" alt="${c}" title="${{W:'Blanc',U:'Bleu',B:'Noir',R:'Rouge',G:'Vert',C:'Incolore'}[c]||c}" onerror="this.parentElement.textContent='${c}'"/></span>`;
+  }).join('');
 }
 
 /* ── Gallery render ───────────────────────────────────────────────────────── */
 function skeletonCard(){
   const el=document.createElement('article'); el.className='card';
-  el.innerHTML=`<div class="card-art" style="position:relative"><div class="skeleton" style="position:absolute;inset:0"></div></div>
+  el.innerHTML=`
+    <div class="card-inner">
+      <div class="card-flip">
+        <div class="card-front"><div class="skeleton" style="position:absolute;inset:0;border-radius:7px 7px 0 0"></div></div>
+      </div>
+    </div>
     <div class="card-body"><div class="card-foot">
       <div class="skeleton sk-line" style="width:54px;margin:0"></div>
       <div class="skeleton sk-line" style="width:64px;height:30px;margin:0"></div>
@@ -588,9 +877,12 @@ function renderGallery(){
   const list = isAdd ? state.add : state.rem;
 
   if (!list.length){
+    const remMsg = new URLSearchParams(location.search).get('algo') === 'v3'
+      ? 'Les retraits sont calculés à partir du deck uploadé. Charge ta decklist pour obtenir des suggestions de cartes à retirer.'
+      : 'Le mentor n\'a relevé aucune recommandation de ce type pour ce deck.';
     grid.innerHTML = `<div class="notice"><span class="label">Le grimoire reste muet</span>
       <h3>Aucune carte ${isAdd?'à ajouter':'à retirer'}</h3>
-      <p>Le mentor n'a relevé aucune recommandation de ce type pour ce deck.</p></div>`;
+      <p>${isAdd ? 'Le mentor n\'a relevé aucune recommandation de ce type pour ce deck.' : remMsg}</p></div>`;
     return;
   }
 
@@ -601,25 +893,153 @@ function renderGallery(){
     grid.appendChild(el);
     hydrate(el, c, isAdd);
   });
+
+  // Pour les retraits : re-trier par prix décroissant à égalité de taux, une fois tous les prix chargés
+  if (!isAdd && list.length > 0) {
+    Promise.all(list.map(c => scryfall(c.name).then(d => {
+      c._eur = d && d.eur ? parseFloat(d.eur) : 0;
+    }))).then(() => {
+      const sorted = [...list].sort((a,b) => {
+        const fa = Math.round((a.freq||0)*100), fb = Math.round((b.freq||0)*100);
+        if (fa !== fb) return fa - fb;           // taux croissant
+        return (b._eur||0) - (a._eur||0);        // prix décroissant à égalité
+      });
+      // Re-rendre seulement si l'ordre a changé
+      const namesOld = list.map(c=>c.name).join(',');
+      const namesNew = sorted.map(c=>c.name).join(',');
+      if (namesOld !== namesNew && state.filter === 'rem') {
+        state.rem = sorted;
+        renderGallery();
+      }
+    });
+  }
 }
 
 async function hydrate(el, c, isAdd){
   const data = await scryfall(c.name);
-  const full = data ? (data.normal || data.art) : null;
+  // Cartes à ajouter → édition la plus chère (premium)
+  // Cartes à retirer → édition la moins chère (budget)
+  const full = data ? (isAdd ? (data.normal || data.art) : (data.cheap || data.normal || data.art)) : null;
   const price = data ? fmtEur(data.eur) : null;
   const priceHtml = price ? `<span class="price">${price}</span>` : `<span class="price na">N/A</span>`;
   const btnLabel = isAdd ? 'Acheter ↗' : 'Vendre ↗';
+  const scryfallUri = data?.scryfall_uri
+    || `https://scryfall.com/search?q=!"${encodeURIComponent(c.name)}"`;
   const artHtml = full
     ? `<img alt="${c.name}" src="${full}" />`
     : `<div class="art-fallback">${c.name}</div>`;
+
+  // ── Face arrière : scores ──────────────────────────────────────────
+  const buildBack = () => {
+    if (isAdd && c.isV3) {
+      const pct  = v => v > 0 ? (v * 100).toFixed(0) + '%' : '—';
+      const bar  = v => `<div class="flip-bar"><div class="flip-bar-fill" style="width:${Math.min(100,Math.round(v*100))}%"></div></div>`;
+      const finalScore = c.score ? (c.score / 2000).toFixed(3) : '—';
+      const rows = [
+        ['Decklists ×25%',  c.popularity, pct(c.popularity)],
+        ['Rôle strat. ×25%',c.strategy,   pct(c.strategy)],
+        ['Synergie ×20%',   c.synergy,    pct(c.synergy)],
+        ['Vectoriel ×15%',  c.similarity, pct(c.similarity)],
+        ['EDHREC ×10%',     c.edhrec,     pct(c.edhrec)],
+        ['Courbe ×3%',      c.manacurve,  pct(c.manacurve)],
+        ['Qualité ×2%',     c.quality,    pct(c.quality)],
+      ];
+      const rolesStr = c.roles && c.roles.length ? c.roles.slice(0,4).join(' · ') : '';
+      // Première raison lisible uniquement
+      const firstReason = c.reason
+        ? c.reason.split('|')[0].trim()
+        : '';
+      return `
+        <div class="card-back-name">${c.name}</div>
+        <div class="score-final-line">
+          <span>Score final</span>
+          <span class="score-final-val">${finalScore}</span>
+        </div>
+        ${rows.map(([label, val, display]) => `
+          <div class="flip-score-row">
+            <span class="flip-sk">${label}</span>
+            <div class="flip-bar-wrap">${bar(val)}<span class="flip-sv">${display}</span></div>
+          </div>`).join('')}
+        ${rolesStr ? `<div class="flip-roles">${rolesStr}</div>` : ''}
+        ${firstReason ? `<div class="flip-reason">${firstReason}</div>` : ''}
+        <div style="display:flex;gap:10px;justify-content:center;margin-top:8px">
+          <a class="flip-scryfall" href="${scryfallUri}" target="_blank" rel="noopener noreferrer">Scryfall ↗</a>
+          <a class="flip-scryfall" href="${moxfield(c.name)}" target="_blank" rel="noopener noreferrer">Moxfield ↗</a>
+        </div>`;
+    }
+    // Carte à retirer ou V1/V2 : juste le nom + lien
+    return `
+      <div class="card-back-name">${c.name}</div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center">
+        <a class="flip-scryfall" style="font-size:10px" href="${scryfallUri}" target="_blank" rel="noopener noreferrer">Scryfall ↗</a>
+        <a class="flip-scryfall" style="font-size:10px" href="${moxfield(c.name)}" target="_blank" rel="noopener noreferrer">Moxfield ↗</a>
+      </div>`;
+  };
+
   el.innerHTML = `
-    <div class="card-art">${artHtml}</div>
+    <div class="card-inner">
+      <div class="card-flip">
+        <div class="card-front">${artHtml}</div>
+        <div class="card-back">${buildBack()}</div>
+      </div>
+    </div>
     <div class="card-body">
       <div class="card-foot">
         ${priceHtml}
         <a class="buy" href="${cardmarket(c.name)}" target="_blank" rel="noopener noreferrer">${btnLabel}</a>
       </div>
+      ${!isAdd && c.reason ? `<div class="rem-freq">${c.reason.split('(')[0].trim()}</div>` : ''}
+      <div class="card-links">
+        <a class="scryfall-link" href="${scryfallUri}" target="_blank" rel="noopener noreferrer">Scryfall ↗</a>
+        <a class="moxfield-link" href="${moxfield(c.name)}" target="_blank" rel="noopener noreferrer">Moxfield ↗</a>
+      </div>
     </div>`;
+}
+
+/* ── Profil stratégique (V2 et V3) ───────────────────────────────────────── */
+function renderCommanderProfile(profile) {
+  const section = $('#v2Profile');
+  if (!section) return;
+  section.style.display = 'block';
+
+  // Label adapté selon la source
+  const labelEl = $('#v2ProfileLabel');
+  if (labelEl) {
+    const src = profile.source || '';
+    labelEl.textContent = src === 'manual' ? 'Profil stratégique (manuel)' : 'Profil stratégique';
+  }
+
+  const primary   = profile.primary_strategy || profile.primary_theme || '—';
+  const conf      = profile.strategy_confidence != null ? ` (${Math.round(profile.strategy_confidence * 100)}%)` : '';
+  const secondary = (profile.secondary_strategies || profile.secondary_themes || []).slice(0,3).join(', ') || '—';
+  const wantedR   = (profile.wanted_roles || []).slice(0,6).join(', ') || '—';
+  const avoidedR  = (profile.avoided_roles || []).slice(0,4).join(', ') || '—';
+  const wants     = (profile.wants || []).slice(0,4).join(' · ') || '—';
+  const prefTypes = (profile.preferred_card_types || []).join(', ') || '—';
+  const maxMV     = profile.max_preferred_mana_value != null ? profile.max_preferred_mana_value : '—';
+
+  // Contraintes deckbuilding (top 3 par importance)
+  const constraints = (profile.deckbuilding_constraints || [])
+    .sort((a,b) => (b.importance||0) - (a.importance||0))
+    .slice(0,3)
+    .map(c => c.constraint.replace(/_/g,' '));
+
+  const rows = [
+    ['Stratégie', primary + conf],
+    ['Secondaires', secondary],
+    ['Rôles voulus', wantedR],
+    ['Rôles évités', avoidedR],
+    ...(wants !== '—' ? [['Recherche', wants]] : []),
+    ['Types préférés', prefTypes],
+    ['Mana value max', maxMV],
+    ...(constraints.length ? [['Contraintes', constraints.join(' · ')]] : []),
+  ];
+
+  $('#v2ProfileContent').innerHTML = rows.map(([k,v])=>`
+    <div class="v2-profile-row">
+      <span class="pk">${k}</span>
+      <span class="pv">${v}</span>
+    </div>`).join('');
 }
 
 /* ── Filters ──────────────────────────────────────────────────────────────── */
@@ -627,7 +1047,8 @@ document.querySelectorAll('.pill').forEach(p=>{
   p.addEventListener('click',()=>{
     document.querySelectorAll('.pill').forEach(x=>x.classList.remove('active'));
     p.classList.add('active');
-    state.filter=p.dataset.f; renderGallery();
+    state.filter=p.dataset.f;
+    renderGallery();
   });
 });
 
@@ -636,14 +1057,40 @@ async function boot(){
   const algo = new URLSearchParams(location.search).get('algo');
   const algoLabels = {
     v2: 'Algorithme V2 — score hybride',
-    v3: 'Algorithme V3 — IA vectorielle',
+    v3: 'Moteur hybride V2 — rôles · decklists · vectoriel',
   };
-  if (algo && algoLabels[algo]) {
-    const badge = $('#algoBadge');
-    badge.textContent = algoLabels[algo];
-    badge.style.display = 'inline-flex';
-  }
   const csv = new URLSearchParams(location.search).get('csv');
+
+  // Charger le profil stratégique pour V2 (legacy) et V3 (hybride)
+  if ((algo === 'v2' || algo === 'v3') && csv) {
+    let profileUrl = null;
+    if (algo === 'v2') {
+      // Format legacy : CSV → _profile.json
+      profileUrl = csv.replace(/\.csv$/, '_profile.json');
+    } else {
+      // Format V3 : extraire le slug depuis le nom du CSV
+      // ex: /outputs/recommendations_v2_shadowfax_lord_of_horses.csv → shadowfax_lord_of_horses
+      // Chercher d'abord le profil manuel, sinon le généré
+      const slug = csv.replace(/.*recommendations_v2_/, '').replace(/\.csv$/, '');
+      profileUrl = '/data/commander_profiles/manual/' + slug + '.json';
+      // On tente le manuel en premier ; si échoue, on essaie le généré dans le catch
+      try {
+        const prManual = await fetch(profileUrl);
+        if (prManual.ok) { renderCommanderProfile(await prManual.json()); }
+        else {
+          const prGen = await fetch('/data/commander_profiles/generated/' + slug + '.json');
+          if (prGen.ok) renderCommanderProfile(await prGen.json());
+        }
+      } catch(e) { /* profil optionnel */ }
+      profileUrl = null; // déjà traité
+    }
+    if (profileUrl) {
+      try {
+        const pr = await fetch(profileUrl);
+        if (pr.ok) renderCommanderProfile(await pr.json());
+      } catch(e) { /* profil optionnel */ }
+    }
+  }
   let text=null;
   if (csv){
     try {

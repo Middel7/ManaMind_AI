@@ -3,7 +3,7 @@
 Recommend cards to add or remove from a decklist using the dataset in data/Decklists.
 
 Usage:
-    python src/manamind/recommend_deck_changes.py \
+    python src/manamind/recommandation_populaire.py \
         --input example_Eluge_decklist.txt \
         --output recommendations_example_Eluge_decklist.csv
 """

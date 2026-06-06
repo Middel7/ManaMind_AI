@@ -6,27 +6,13 @@ Ce dossier contient la documentation complète du projet **ManaMind AI**.
 
 ## 🚀 Démarrage rapide
 
-### 1. Installer `uv` (si pas encore fait)
-
 ```powershell
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-$env:Path = "C:\Users\fabie\.local\bin;$env:Path"
-```
 
-### 2. Installer les dépendances
-
-```powershell
 cd "C:\Users\fabie\Documents\GitHub\ManaMind_AI"
 uv sync
-```
-
-### 3. Lancer le serveur
-
-```powershell
 uv run python server.py
-```
 
-Ouvre http://localhost:8000/
+http://localhost:8000/
 
 ---
 

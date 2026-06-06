@@ -1,0 +1,46 @@
+Section,Card Name,Score,Support,Deck Frequency,Vector Score,Algorithm
+Commander,"Shadowfax, Lord of Horses",,,,,v3
+
+Additions,,,,,,
+add,Thraxodemon,1718,,,0.858934,v3
+add,Armored Warhorse,1717,,,0.858542,v3
+add,Time of Heroes,1716,,,0.857802,v3
+add,War Horn,1712,,,0.856171,v3
+add,Glory of Warfare,1711,,,0.855547,v3
+add,Warlord's Fury,1709,,,0.854547,v3
+add,Warrior's Honor,1709,,,0.854541,v3
+add,Charge,1709,,,0.854265,v3
+add,War Flare,1705,,,0.852385,v3
+add,Chance for Glory,1704,,,0.85206,v3
+add,Wall of Blood,1703,,,0.851531,v3
+add,Warded Battlements,1701,,,0.850378,v3
+add,Armed and Armored,1700,,,0.850102,v3
+add,Scarecrow,1700,,,0.849791,v3
+add,Herald of the Fair,1699,,,0.849383,v3
+add,Warleader's Call,1699,,,0.849271,v3
+add,Riding Red Hare,1698,,,0.848752,v3
+add,Dwarfhold Champion,1697,,,0.848613,v3
+add,Reverence,1697,,,0.848471,v3
+add,Forfend,1695,,,0.847629,v3
+
+Removals,,,,,,
+remove,Kabira Takedown,,,,0.0,v3
+remove,"Kellan, the Fae-Blooded",,,,0.0,v3
+remove,Furycalm Snarl,,,,0.722914,v3
+remove,Plains,,,,0.72359,v3
+remove,Spectator Seating,,,,0.730858,v3
+remove,Inspiring Vantage,,,,0.735039,v3
+remove,Boros Garrison,,,,0.736803,v3
+remove,Embercleave,,,,0.740196,v3
+remove,Clifftop Retreat,,,,0.7402,v3
+remove,Lorehold Campus,,,,0.740623,v3
+remove,Redirect Lightning,,,,0.74411,v3
+remove,Mountain,,,,0.745646,v3
+remove,"Aurelia, Exemplar of Justice",,,,0.747763,v3
+remove,Scavenger Grounds,,,,0.750136,v3
+remove,"Gisela, Blade of Goldnight",,,,0.751422,v3
+remove,Battlefield Forge,,,,0.752944,v3
+remove,"Anim Pakal, Thousandth Moon",,,,0.758258,v3
+remove,"Skrelv, Defector Mite",,,,0.762157,v3
+remove,Sacred Peaks,,,,0.762817,v3
+remove,"Elesh Norn, Grand Cenobite",,,,0.763605,v3
