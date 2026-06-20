@@ -34,7 +34,7 @@ from manamind.recommandation_populaire import (  # noqa: E402
 def _compute_removals(deck_content: str, commander_name: str, limit: int = 20) -> list[tuple[str, int, float]]:
     """
     Calcule les cartes à retirer via la logique recommandation_populaire.
-    Identique pour les trois algorithmes (V1, V2 avancée, IA Vectorielle V2).
+    Utilisée par l'algorithme Analyse Populaire (V1).
     """
     import re as _re
     # Parser les cartes du deck depuis le contenu texte
@@ -205,18 +205,9 @@ async def upload_deck(
 
     stem = Path(filename).stem
 
-    if algo == "v2":
-        output_path = OUTPUTS_DIR / f"recommendations_v2_{stem}.csv"
-        script = "src/manamind/recommandation_populaire_avancee.py"
-        output_key = f"/outputs/recommendations_v2_{stem}.csv"
-    elif algo == "v3":
-        output_path = OUTPUTS_DIR / f"recommendations_v3_{stem}.csv"
-        script = "src/manamind/recommandation_vectorielle.py"
-        output_key = f"/outputs/recommendations_v3_{stem}.csv"
-    else:
-        output_path = OUTPUTS_DIR / f"recommendations_{stem}.csv"
-        script = "src/manamind/recommandation_populaire.py"
-        output_key = f"/outputs/recommendations_{stem}.csv"
+    output_path = OUTPUTS_DIR / f"recommendations_{stem}.csv"
+    script = "src/manamind/recommandation_populaire.py"
+    output_key = f"/outputs/recommendations_{stem}.csv"
 
     import os as _os
     _env = _os.environ.copy()
@@ -240,185 +231,6 @@ async def upload_deck(
     })
 
 
-def _convert_v2_csv_to_results_format(
-    v2_csv_path: Path,
-    commander_name: str,
-    output_path: Path,
-    removals: list[tuple[str, int, float]] | None = None,
-) -> None:
-    """
-    Convertit le CSV natif du script V2 vers le format étendu attendu par results.html.
-
-    Colonnes du format display (13 colonnes) :
-      0  Section          — "Commander" | "add"
-      1  Card Name
-      2  Score            — final_score × 2000 (entier)
-      3  Support          — decklist_popularity (float)
-      4  Deck Frequency   — strategic_role (float)
-      5  Vector Score     — vector_similarity (float)
-      6  Synergy          — commander_synergy (float)
-      7  EDHREC           — edhrec (float)
-      8  Mana Curve       — mana_curve (float)
-      9  Quality          — card_quality (float)
-     10  Roles            — roles pipe-séparés (ex: ramp|card_draw)
-     11  Reason           — raisons lisibles
-     12  Algorithm        — "v3"
-    """
-    import csv as _csv
-
-    rows_out: list[dict[str, str]] = []
-    rows_out.append({
-        "Section": "Commander", "Card Name": commander_name,
-        "Score": "", "Support": "", "Deck Frequency": "", "Vector Score": "",
-        "Synergy": "", "EDHREC": "", "Mana Curve": "", "Quality": "",
-        "Roles": "", "Reason": "", "Algorithm": "v3",
-    })
-
-    try:
-        _MAX_ADD = 20
-        _MAX_REM = 25
-        _count_add = 0
-        _count_rem = 0
-
-        with open(v2_csv_path, newline="", encoding="utf-8-sig") as f:
-            reader = _csv.DictReader(f)
-            for row in reader:
-                name = (row.get("name") or "").strip()
-                if not name:
-                    continue
-                section = (row.get("section") or "add").strip().lower()
-                # Ignorer les remove du CSV natif — remplacés par _compute_removals
-                if section == "remove":
-                    continue
-                if _count_add >= _MAX_ADD:
-                    continue
-                try:
-                    score_int = int(round(float(row.get("final_score") or 0) * 2000))
-                except (ValueError, TypeError):
-                    score_int = 0
-                rows_out.append({
-                    "Section": "add",
-                    "Card Name": name,
-                    "Score": str(score_int),
-                    "Support":        row.get("decklist_popularity", ""),
-                    "Deck Frequency": row.get("strategic_role", ""),
-                    "Vector Score":   row.get("vector_similarity", ""),
-                    "Synergy":        row.get("commander_synergy", ""),
-                    "EDHREC":         row.get("edhrec", ""),
-                    "Mana Curve":     row.get("mana_curve", ""),
-                    "Quality":        row.get("card_quality", ""),
-                    "Roles":          row.get("roles", ""),
-                    "Reason":         row.get("reasons", ""),
-                    "Algorithm":      "v3",
-                })
-                _count_add += 1
-    except Exception:
-        pass
-
-    # Ajouter les retraits calculés par _compute_removals (même logique que V1/V2)
-    total_decks_for_pct = None
-    for card_name, support, freq in (removals or []):
-        if _count_rem >= _MAX_REM:
-            break
-        pct = f"{round(freq * 100, 1)}%" if freq else f"{support} deck(s)"
-        rows_out.append({
-            "Section": "remove",
-            "Card Name": card_name,
-            "Score": "",
-            "Support":        str(round(freq, 4)) if freq else "",
-            "Deck Frequency": str(round(freq, 4)) if freq else "",
-            "Vector Score":   "",
-            "Synergy":        "",
-            "EDHREC":         "",
-            "Mana Curve":     "",
-            "Quality":        "",
-            "Roles":          "",
-            "Reason":         f"Présent dans {pct} des decklists similaires",
-            "Algorithm":      "v3",
-        })
-        _count_rem += 1
-
-    fieldnames = [
-        "Section", "Card Name", "Score", "Support", "Deck Frequency",
-        "Vector Score", "Synergy", "EDHREC", "Mana Curve", "Quality",
-        "Roles", "Reason", "Algorithm",
-    ]
-    with open(output_path, "w", newline="", encoding="utf-8-sig") as f:
-        writer = _csv.DictWriter(f, fieldnames=fieldnames, quoting=_csv.QUOTE_ALL)
-        writer.writeheader()
-        writer.writerows(rows_out)
-
-
-@app.post("/upload-deck-v2")
-async def upload_deck_v2(
-    deckfile: UploadFile = File(...),
-    query: str = Form(default=""),
-) -> JSONResponse:
-    """
-    Lance le moteur de recommandation V2 (hybride) sur la decklist uploadée.
-    Extrait le commandant depuis le fichier, appelle le script V2,
-    puis convertit le CSV natif au format attendu par results.html.
-    """
-    filename = Path(deckfile.filename).name
-    deck_path = UPLOADS_DIR / filename
-    content_bytes = await deckfile.read()
-    deck_path.write_bytes(content_bytes)
-
-    # Décoder pour extraire le commandant
-    for enc in ("utf-8-sig", "utf-8", "cp1252", "latin-1"):
-        try:
-            content = content_bytes.decode(enc)
-            break
-        except UnicodeDecodeError:
-            continue
-    else:
-        return JSONResponse({"error": "Impossible de lire le fichier deck."}, status_code=400)
-
-    commander = _extract_commander_from_deck(content)
-    if not commander:
-        return JSONResponse(
-            {"error": "Commandant introuvable dans la decklist. Vérifie le format (dernière ligne séparée : '1 Nom Du Commandant')."},
-            status_code=400,
-        )
-
-    slug = _normalize_filename(commander)
-    # CSV natif V2 (format riche, conservé pour usage futur)
-    csv_native = OUTPUTS_RECO_DIR / f"recommendations_v2_{slug}.csv"
-    # CSV converti au format results.html (servi au frontend)
-    csv_display = OUTPUTS_DIR / f"recommendations_v2_{slug}.csv"
-
-    cmd = [
-        sys.executable,
-        str(ROOT / "scripts" / "Recommandations vectorielles V2.py"),
-        "--commander", commander,
-        "--deck-file", str(deck_path),
-        "--output-csv", str(csv_native),
-        "--top", "20",
-    ]
-    if query.strip():
-        cmd += ["--query", query.strip()]
-
-    import os as _os
-    _env = _os.environ.copy()
-    _env["PYTHONIOENCODING"] = "utf-8"
-    result = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT, encoding="utf-8", errors="replace", env=_env)
-
-    if result.returncode != 0:
-        error_msg = result.stderr.strip() or result.stdout.strip() or "Erreur lors de la génération V2."
-        return JSONResponse({"error": error_msg}, status_code=500)
-
-    # Calculer les retraits via recommandation_populaire (même logique que V1/V2)
-    removals = _compute_removals(content, commander, limit=20)
-
-    # Convertir le CSV natif au format attendu par results.html (avec retraits injectés)
-    _convert_v2_csv_to_results_format(csv_native, commander, csv_display, removals=removals)
-
-    output_key = f"/outputs/recommendations_v2_{slug}.csv"
-    return JSONResponse({
-        "deckFile": f"/uploads/{filename}",
-        "recommendationsFile": output_key,
-        "commander": commander,
-    })
 
 
 app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
