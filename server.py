@@ -8,8 +8,17 @@ from pathlib import Path
 import re
 import unicodedata
 
-from fastapi import FastAPI, File, Form, Query, UploadFile
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import FastAPI, File, Form, Query, Request, UploadFile
+from fastapi.responses import FileResponse, JSONResponse, Response
+import json as _json
+
+def _json_response(data: dict, status_code: int = 200) -> Response:
+    """JSONResponse avec support UTF-8 complet (pas d'échappement ASCII)."""
+    return Response(
+        content=_json.dumps(data, ensure_ascii=False),
+        status_code=status_code,
+        media_type="application/json; charset=utf-8",
+    )
 from fastapi.staticfiles import StaticFiles
 
 ROOT = Path(__file__).resolve().parent
@@ -166,6 +175,29 @@ except Exception:
 
 app = FastAPI()
 
+# ── Deck Improvement Engine — singleton lazy-loadé ────────────────────────────
+# Chargé à la première requête POST /api/deck/analyze (~24s la première fois).
+# Les appels suivants utilisent l'instance déjà en mémoire.
+_deck_engine = None
+_deck_engine_lock = None
+
+def _get_deck_engine():
+    """Retourne le DeckImprovementEngine en le chargeant si nécessaire (lazy)."""
+    global _deck_engine, _deck_engine_lock
+    import threading
+    if _deck_engine_lock is None:
+        _deck_engine_lock = threading.Lock()
+    with _deck_engine_lock:
+        if _deck_engine is None:
+            import importlib.util, sys as _sys
+            script_path = ROOT / "scripts" / "deck_improver.py"
+            spec = importlib.util.spec_from_file_location("deck_improver", script_path)
+            mod  = importlib.util.module_from_spec(spec)
+            _sys.modules["deck_improver"] = mod
+            spec.loader.exec_module(mod)
+            _deck_engine = mod.DeckImprovementEngine()
+    return _deck_engine
+
 
 @app.get("/")
 def index() -> FileResponse:
@@ -235,6 +267,247 @@ async def upload_deck(
 
 app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 app.mount("/outputs", StaticFiles(directory=str(OUTPUTS_DIR)), name="outputs")
+app.mount("/data",    StaticFiles(directory=str(ROOT / "data")), name="data")
+
+
+# ── POST /api/deck/analyze ────────────────────────────────────────────────────
+@app.post("/api/deck/analyze")
+async def api_deck_analyze(request: Request) -> JSONResponse:
+    """
+    Analyse une decklist complète avec le Deck Improvement Engine.
+
+    Body JSON :
+        { "commander": "Teysa Karlov", "decklist": ["Blood Artist", ...] }
+
+    Réponse :
+        {
+          "deck_score": 0.62,
+          "coherence": 0.59,
+          "distance_meta": 0.23,
+          "profile": { "family_distribution": {...}, "mana_curve": {...}, ... },
+          "gap": [ { "cluster_name": "...", "deck_share": 0.10, "meta_share": 0.19, "delta": -0.09 }, ... ],
+          "top_additions": [ { "rank":1, "card_name":"...", "addition_score":0.61, ... }, ... ],
+          "top_cuts":      [ { "rank":1, "card_name":"...", "cut_score":0.87,      ... }, ... ],
+          "replacements":  [ { "rank":1, "cut_card":"...", "add_card":"...", "gain_delta":42.3, ... }, ... ],
+        }
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        return _json_response({"error": "JSON invalide"}, status_code=400)
+
+    commander = (body.get("commander") or "").strip()
+    decklist  = body.get("decklist") or []
+    if not commander:
+        return _json_response({"error": "commander manquant"}, status_code=400)
+    if not isinstance(decklist, list) or len(decklist) == 0:
+        return _json_response({"error": "decklist vide ou invalide"}, status_code=400)
+
+    # Nettoyer : enlever le commandant s'il est dans la liste, terrains doublons tolérés
+    decklist = [str(c).strip() for c in decklist if str(c).strip() and str(c).strip() != commander]
+
+    try:
+        engine = _get_deck_engine()
+    except Exception as exc:
+        return _json_response({"error": f"Moteur indisponible : {exc}"}, status_code=503)
+
+    try:
+        import time as _time
+        t0 = _time.perf_counter()
+
+        profile   = engine.analyze_deck(commander, decklist)
+        gap_summaries, dist_meta = engine.gap_analysis(commander, profile)
+        additions = engine.generate_additions(commander, decklist, profile, gap_summaries)
+        cuts      = engine.generate_cuts(commander, decklist, profile)
+        replacements = engine.generate_replacements(cuts, additions)
+
+        global_score = round(
+            0.40 * profile.coherence_score
+            + 0.35 * profile.avg_cosine_to_commander
+            + 0.25 * max(0.0, 1.0 - dist_meta),
+            4,
+        )
+
+        elapsed = round(_time.perf_counter() - t0, 2)
+
+        # Sérialiser les clusters (top 10 pour le profil stratégique)
+        cluster_profile = [
+            {
+                "cluster_id":   cid,
+                "cluster_name": v["name"],
+                "family":       v["family"],
+                "deck_share":   round(v["share"] * 100, 1),
+                "meta_share":   round(
+                    engine.cmd_cluster_profile.get(commander, {}).get(cid, 0.0) * 100, 1
+                ),
+            }
+            for cid, v in sorted(
+                profile.cluster_distribution.items(),
+                key=lambda x: -x[1]["share"]
+            )[:10]
+        ]
+
+        # Gap analysis (clusters avec delta significatif)
+        gap_data = [
+            {
+                "cluster_id":   s.cluster_id,
+                "cluster_name": s.name,
+                "family":       s.family,
+                "deck_share":   round(s.deck_share * 100, 1),
+                "meta_share":   round(s.meta_share * 100, 1),
+                "delta":        round(s.delta * 100, 1),
+            }
+            for s in gap_summaries
+            if abs(s.delta) > 0.015
+        ][:20]
+
+        return _json_response({
+            "commander":     commander,
+            "deck_score":    global_score,
+            "deck_score_100": round(global_score * 100),
+            "coherence":     profile.coherence_score,
+            "distance_meta": dist_meta,
+            "elapsed_s":     elapsed,
+            "profile": {
+                "card_count":         profile.card_count,
+                "family_distribution": profile.family_distribution,
+                "mana_curve":         profile.mana_curve,
+                "color_distribution": profile.color_distribution,
+                "cluster_profile":    cluster_profile,
+                "missing_in_corpus":  profile.missing_in_corpus[:10],
+            },
+            "gap": gap_data,
+            "top_additions": [
+                {
+                    "rank":            i + 1,
+                    "card_name":       a.card_name,
+                    "addition_score":  a.addition_score,
+                    "score_100":       round(a.addition_score * 100),
+                    "predicted_ir":    a.predicted_ir,
+                    "cluster_name":    a.cluster_name,
+                    "cluster_family":  a.cluster_family,
+                    "gap_bonus":       a.cluster_gap_bonus,
+                    "deck_synergy":    a.deck_synergy,
+                    "explanation":     a.explanation,
+                }
+                for i, a in enumerate(additions)
+            ],
+            "top_cuts": [
+                {
+                    "rank":       i + 1,
+                    "card_name":  c.card_name,
+                    "cut_score":  c.cut_score,
+                    "score_100":  round(c.cut_score * 100),
+                    "reasons":    c.reasons,
+                }
+                for i, c in enumerate(cuts)
+            ],
+            "replacements": [
+                {
+                    "rank":            r["rank"],
+                    "cut_card":        r["cut_card"],
+                    "add_card":        r["add_card"],
+                    "gain_delta":      r["gain_delta"],
+                    "cut_reasons":     r["cut_reasons"],
+                    "add_explanation": r["add_explanation"],
+                }
+                for r in replacements
+            ],
+        })
+
+    except Exception as exc:
+        import traceback
+        return _json_response(
+            {"error": f"Erreur analyse : {exc}", "detail": traceback.format_exc()},
+            status_code=500,
+        )
+
+
+# ── GET /api/deck/explanation ─────────────────────────────────────────────────
+@app.get("/api/deck/explanation")
+async def api_deck_explanation(
+    commander: str = Query(..., description="Nom du commandant"),
+    card:      str = Query(..., description="Nom de la carte"),
+) -> JSONResponse:
+    """
+    Explication détaillée de la recommandation d'une carte pour un commandant.
+    Calcule les 4 signaux hybrides et retourne une explication en langage naturel.
+    """
+    try:
+        engine = _get_deck_engine()
+    except Exception as exc:
+        return _json_response({"error": f"Moteur indisponible : {exc}"}, status_code=503)
+
+    try:
+        commander = commander.strip()
+        card      = card.strip()
+
+        # Recalculer les signaux pour cette carte
+        td        = engine.tfidf_lookup.get((commander, card), {})
+        tfidf_n   = td.get("tfidf_norm", 0.0)
+        idf       = td.get("idf", engine.card_idf.get(card, 0.0))
+        real_ir   = td.get("inclusion_rate", 0.0)
+
+        cosine   = engine._cosine_cmd(card, commander)
+        cluster_s = engine._cluster_score(card, commander)
+        tag_s    = engine._tag_score(card, commander)
+        hybrid   = round(min(0.40*tfidf_n + 0.25*cosine + 0.20*cluster_s + 0.15*tag_s, 1.0), 4)
+        ir_pred  = engine._predict_ir(card, commander, cosine, tfidf_n, idf)
+
+        cid = engine.card_cluster.get(card)
+        ann = engine.annotations.get(cid or -1, {})
+        neighbors = engine.card_neighbors.get(card, [])[:3]
+
+        reasons = []
+        caveats = []
+
+        if real_ir > 5:
+            reasons.append(f"Jouée dans {real_ir:.0f}% des decks {commander}.")
+        elif real_ir > 0:
+            reasons.append(f"Présente dans {real_ir:.1f}% des decks {commander}.")
+        else:
+            caveats.append("Absente des decklists connues pour ce commandant.")
+
+        if cosine > 0.5:
+            reasons.append(f"Forte proximité vectorielle avec {commander} (cosine = {cosine:.3f}).")
+        elif cosine > 0.2:
+            reasons.append(f"Proximité modérée avec le style de {commander} (cosine = {cosine:.3f}).")
+
+        if cid is not None and ann:
+            family = engine.cluster_family.get(cid, "")
+            meta_w = engine.cmd_cluster_profile.get(commander, {}).get(cid, 0.0)
+            reasons.append(
+                f"Appartient au cluster « {ann.get('name','')} » ({family}) "
+                f"qui représente {meta_w*100:.0f}% du profil de {commander}."
+            )
+
+        if tag_s > 0.05:
+            reasons.append(f"Tags Scryfall cohérents avec la stratégie (score tags : {tag_s:.3f}).")
+
+        if neighbors:
+            reasons.append(f"Proche vectoriellement de : {', '.join(neighbors)}.")
+
+        reasons.append(f"Inclusion rate prédit : {ir_pred:.0f}%.")
+
+        summary = (
+            f"« {card} » obtient un score de recommandation de {hybrid:.3f}/1.000 "
+            f"pour {commander}. Inclusion rate prédit : {ir_pred:.0f}%."
+        )
+
+        return _json_response({
+            "commander":     commander,
+            "card_name":     card,
+            "hybrid_score":  hybrid,
+            "predicted_ir":  round(ir_pred, 1),
+            "real_ir":       round(real_ir, 1),
+            "cluster":       ann.get("name", "—") if ann else "—",
+            "cluster_family": engine.cluster_family.get(cid or -1, "—") if cid else "—",
+            "summary":       summary,
+            "reasons":       reasons,
+            "caveats":       caveats,
+        })
+    except Exception as exc:
+        return _json_response({"error": str(exc)}, status_code=500)
 
 
 # ── API recherche de cartes ───────────────────────────────────────────────────

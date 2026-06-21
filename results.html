@@ -480,7 +480,104 @@
   }
   .v2-profile-row .pv { color: var(--text-dim); line-height: 1.4; font-size: 12.5px; word-break: break-word; }
 
-  /* score-detail supprimé — remplacé par l'animation de retournement */
+  /* ── Hybrid : score global ─────────────────────────────────────── */
+  .hybrid-score-wrap {
+    display: none; flex-direction: column; align-items: center;
+    gap: 4px; margin-bottom: 14px;
+  }
+  .hybrid-score-wrap.show { display: flex; }
+  .hybrid-score-ring {
+    position: relative; width: 88px; height: 88px;
+  }
+  .hybrid-score-ring svg { width: 88px; height: 88px; transform: rotate(-90deg); }
+  .hybrid-score-ring circle { fill: none; stroke-width: 6; }
+  .hybrid-score-ring .hs-track { stroke: rgba(212,177,95,0.15); }
+  .hybrid-score-ring .hs-bar {
+    stroke: var(--gold); stroke-linecap: round;
+    stroke-dasharray: 251; stroke-dashoffset: 251;
+    transition: stroke-dashoffset 1s cubic-bezier(.4,0,.2,1);
+    filter: drop-shadow(0 0 6px rgba(212,177,95,0.5));
+  }
+  .hybrid-score-val {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    font-family: var(--serif-cap); font-variant-numeric: tabular-nums;
+  }
+  .hybrid-score-val .hv-num {
+    font-size: 26px; color: var(--gold-bright); line-height: 1;
+  }
+  .hybrid-score-val .hv-den {
+    font-size: 9px; letter-spacing: 0.18em; color: var(--text-faint);
+  }
+  .hybrid-score-label {
+    font-family: var(--serif-cap); font-size: 9px; letter-spacing: 0.26em;
+    text-transform: uppercase; color: var(--gold); opacity: 0.8;
+  }
+  .hybrid-meta-dist {
+    font-family: var(--serif-body); font-size: 11px; color: var(--text-faint);
+    text-align: center;
+  }
+
+  /* ── Hybrid : cluster gap bars ──────────────────────────────────── */
+  .gap-row {
+    display: grid;
+    grid-template-columns: 1fr 42px 42px;
+    align-items: center;
+    gap: 4px 6px;
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .gap-row:last-child { border-bottom: none; }
+  .gap-name {
+    font-family: var(--serif-body); font-size: 10.5px; color: var(--text-dim);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .gap-val {
+    font-family: var(--serif-cap); font-size: 9px; letter-spacing: 0.08em;
+    text-align: right; font-variant-numeric: tabular-nums;
+  }
+  .gap-val.deck  { color: var(--arcane-br); }
+  .gap-val.meta  { color: var(--gold); }
+  .gap-val.under { color: var(--copper-br); }
+  .gap-val.over  { color: var(--green-br); }
+
+  /* ── Section remplacements ──────────────────────────────────────── */
+  #replacements-section {
+    display: none;
+    padding: 0 40px 56px;
+  }
+  #replacements-section.show { display: block; }
+  .repl-title {
+    font-family: var(--serif-cap); font-size: 13px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--gold);
+    border-top: 1px solid var(--panel-edge);
+    padding-top: 28px; margin-bottom: 18px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .repl-title::after {
+    content: ""; flex: 1; height: 1px; background: var(--panel-edge);
+  }
+  .repl-table {
+    width: 100%; border-collapse: collapse;
+    font-family: var(--serif-body); font-size: 13px;
+  }
+  .repl-table th {
+    font-family: var(--serif-cap); font-size: 9px; letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--text-faint);
+    text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--panel-edge);
+    font-weight: 400;
+  }
+  .repl-table td {
+    padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.04);
+    vertical-align: middle; color: var(--text-dim);
+  }
+  .repl-table tr:hover td { background: rgba(212,177,95,0.04); }
+  .repl-table td.rank { color: var(--text-faint); font-size: 11px; width: 28px; }
+  .repl-cut  { color: var(--copper-br); font-weight: 500; }
+  .repl-add  { color: var(--green-br);  font-weight: 500; }
+  .repl-gain { color: var(--gold-bright); font-family: var(--serif-cap); font-size: 12px; text-align: right; white-space: nowrap; }
+  .repl-arrow { color: var(--text-faint); text-align: center; }
 
   @media (prefers-reduced-motion: reduce) {
     * { animation: none !important; transition: none !important; }
@@ -544,10 +641,37 @@
 
         <div class="mana-id" id="manaId"></div>
 
-        <!-- Profil stratégique (V2 et V3) -->
+        <!-- Score global Deck Mentor IA -->
+        <div class="hybrid-score-wrap" id="hybridScoreWrap">
+          <div class="hybrid-score-ring">
+            <svg viewBox="0 0 88 88">
+              <circle class="hs-track" cx="44" cy="44" r="40"></circle>
+              <circle class="hs-bar" id="hsBar" cx="44" cy="44" r="40"></circle>
+            </svg>
+            <div class="hybrid-score-val">
+              <span class="hv-num" id="hsNum">—</span>
+              <span class="hv-den">/100</span>
+            </div>
+          </div>
+          <div class="hybrid-score-label">Score du deck</div>
+          <div class="hybrid-meta-dist" id="hsMetaDist"></div>
+        </div>
+
+        <!-- Profil stratégique (V2 et V3 legacy) -->
         <div class="v2-profile" id="v2Profile" style="display:none">
           <span class="label" id="v2ProfileLabel">Profil stratégique</span>
           <div id="v2ProfileContent"></div>
+        </div>
+
+        <!-- Clusters gap (Deck Mentor IA) -->
+        <div class="v2-profile" id="hybridGapPanel" style="display:none">
+          <span class="label" style="display:block;margin-bottom:8px">Clusters · Deck vs Méta</span>
+          <div style="display:grid;grid-template-columns:1fr 34px 34px;gap:0 6px;margin-bottom:4px">
+            <span style="font-family:var(--serif-cap);font-size:8px;letter-spacing:0.18em;color:var(--text-faint);text-transform:uppercase">Cluster</span>
+            <span style="font-family:var(--serif-cap);font-size:8px;letter-spacing:0.12em;color:var(--arcane-br);text-transform:uppercase;text-align:right">Deck</span>
+            <span style="font-family:var(--serif-cap);font-size:8px;letter-spacing:0.12em;color:var(--gold);text-transform:uppercase;text-align:right">Méta</span>
+          </div>
+          <div id="hybridGapContent"></div>
         </div>
 
       </aside>
@@ -560,11 +684,32 @@
           <div class="filters">
             <button class="pill active" data-f="add"><span class="dot"></span>À ajouter · <span id="pillAdd">0</span></button>
             <button class="pill" data-f="rem"><span class="dot"></span>À retirer · <span id="pillRem">0</span></button>
+            <button class="pill" data-f="repl" id="pillReplBtn" style="display:none"><span class="dot" style="background:var(--gold)"></span>Remplacements · <span id="pillRepl">0</span></button>
           </div>
         </div>
         <div class="grid" id="grid"></div>
       </section>
     </div>
+
+    <!-- Section remplacements (Deck Mentor IA uniquement) -->
+    <section id="replacements-section">
+      <div style="padding: 0 40px">
+        <div class="repl-title">Top 30 remplacements recommandés</div>
+        <table class="repl-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Retirer</th>
+              <th></th>
+              <th>Ajouter</th>
+              <th style="text-align:right">Gain</th>
+              <th>Raison du retrait</th>
+            </tr>
+          </thead>
+          <tbody id="replTableBody"></tbody>
+        </table>
+      </div>
+    </section>
   </div>
 
 <script>
@@ -606,7 +751,7 @@ Remove,Coral Merfolk,,,4
 Remove,Sea Gate Oracle,,,18
 Remove,Inspiration,,,7`;
 
-const SCRY_DELAY = 95;
+const SCRY_DELAY = 55;
 
 const $ = (s, el=document) => el.querySelector(s);
 const grid = $('#grid');
@@ -1052,9 +1197,230 @@ document.querySelectorAll('.pill').forEach(p=>{
   });
 });
 
+/* ══════════════════════════════════════════════════════════════════════════════
+   DECK MENTOR IA — rendu hybride
+   Activé quand ?algo=hybrid dans l'URL (données dans sessionStorage)
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+function renderHybridScore(score100, distMeta) {
+  const wrap = document.getElementById('hybridScoreWrap');
+  const bar  = document.getElementById('hsBar');
+  const num  = document.getElementById('hsNum');
+  const dist = document.getElementById('hsMetaDist');
+  if (!wrap) return;
+  wrap.classList.add('show');
+  num.textContent = score100;
+  const circ = 2 * Math.PI * 40;   // r=40 → C≈251.3
+  const offset = circ - (circ * score100 / 100);
+  setTimeout(() => { bar.style.strokeDashoffset = offset; }, 60);
+  dist.textContent = `Distance au méta : ${(distMeta * 100).toFixed(1)}%`;
+}
+
+function renderHybridGap(gapData) {
+  const panel = document.getElementById('hybridGapPanel');
+  const cont  = document.getElementById('hybridGapContent');
+  if (!panel || !cont) return;
+
+  // Trier : sous-représentés en premier (delta négatif = opportunité)
+  const sorted = [...gapData].sort((a, b) => a.delta - b.delta);
+
+  cont.innerHTML = sorted.slice(0, 12).map(g => {
+    const deltaSign = g.delta > 0 ? '+' : '';
+    const deltaClass = g.delta > 0 ? 'over' : 'under';
+    return `<div class="gap-row">
+      <span class="gap-name" title="${g.cluster_name}">${g.cluster_name}</span>
+      <span class="gap-val deck">${g.deck_share}%</span>
+      <span class="gap-val meta ${deltaClass}">${g.meta_share}%</span>
+    </div>`;
+  }).join('');
+
+  panel.style.display = 'block';
+}
+
+function buildHybridBack(card, isAdd, scryfallUri) {
+  if (isAdd) {
+    const pct  = v => v != null ? Math.round(v) + '%' : '—';
+    const bar  = v => {
+      const w = Math.min(100, Math.round((v || 0) * 100));
+      return `<div class="flip-bar"><div class="flip-bar-fill" style="width:${w}%"></div></div>`;
+    };
+    const moxLink = `https://moxfield.com/search/cards?q=${encodeURIComponent(card.name)}&advanced=`;
+
+    const rows = [
+      ['Score hybride',    card.hybrid_score,   (card.hybrid_score * 100).toFixed(1) + '%'],
+      ['Inclusion prédite',card.predicted_ir/100, pct(card.predicted_ir) + ' '],
+      ['Gap cluster',      card.gap_bonus,      (card.gap_bonus * 100).toFixed(0) + '%'],
+      ['Synergie deck',    card.deck_synergy,   (card.deck_synergy * 100).toFixed(0) + '%'],
+    ];
+
+    return `
+      <div class="card-back-name">${card.name}</div>
+      <div class="score-final-line">
+        <span>Score d'ajout</span>
+        <span class="score-final-val">${Math.round(card.score_100)}</span>
+      </div>
+      ${rows.map(([label, val, display]) => `
+        <div class="flip-score-row">
+          <span class="flip-sk">${label}</span>
+          <div class="flip-bar-wrap">${bar(val)}<span class="flip-sv">${display}</span></div>
+        </div>`).join('')}
+      <div class="flip-roles">${card.cluster_name || ''} · ${card.cluster_family || ''}</div>
+      ${card.explanation ? `<div class="flip-reason">${card.explanation.split('|')[0].trim()}</div>` : ''}
+      <div style="display:flex;gap:10px;justify-content:center;margin-top:8px">
+        <a class="flip-scryfall" href="${scryfallUri}" target="_blank" rel="noopener noreferrer">Scryfall ↗</a>
+        <a class="flip-scryfall" href="${moxLink}" target="_blank" rel="noopener noreferrer">Moxfield ↗</a>
+      </div>`;
+  }
+  // Face arrière coupe : raisons
+  const moxLink = `https://moxfield.com/search/cards?q=${encodeURIComponent(card.name)}&advanced=`;
+  const reasonsHtml = (card.reasons || []).slice(0, 2)
+    .map(r => `<div class="flip-reason">${r}</div>`).join('');
+  return `
+    <div class="card-back-name">${card.name}</div>
+    <div class="score-final-line">
+      <span>Score de coupe</span>
+      <span class="score-final-val">${Math.round(card.score_100)}</span>
+    </div>
+    ${reasonsHtml}
+    <div style="flex:1;display:flex;align-items:flex-end;justify-content:center;gap:10px;padding-bottom:6px">
+      <a class="flip-scryfall" href="${scryfallUri}" target="_blank" rel="noopener noreferrer">Scryfall ↗</a>
+      <a class="flip-scryfall" href="${moxLink}" target="_blank" rel="noopener noreferrer">Moxfield ↗</a>
+    </div>`;
+}
+
+function renderHybridReplacements(replacements) {
+  const section = document.getElementById('replacements-section');
+  const tbody   = document.getElementById('replTableBody');
+  const pillBtn = document.getElementById('pillReplBtn');
+  const pillCnt = document.getElementById('pillRepl');
+  if (!section || !tbody) return;
+
+  section.classList.add('show');
+  if (pillBtn)  pillBtn.style.display = '';
+  if (pillCnt) pillCnt.textContent = replacements.length;
+
+  tbody.innerHTML = replacements.slice(0, 30).map(r => `
+    <tr>
+      <td class="rank">${r.rank}</td>
+      <td class="repl-cut">${r.cut_card}</td>
+      <td class="repl-arrow">→</td>
+      <td class="repl-add">${r.add_card}</td>
+      <td class="repl-gain" style="${r.gain_delta < 0 ? 'color:var(--remove-col,#e07070)' : ''}">${r.gain_delta >= 0 ? '+' : ''}${r.gain_delta.toFixed(1)}</td>
+      <td style="color:var(--text-faint);font-size:11px">${(r.cut_reasons || '').slice(0, 60)}</td>
+    </tr>`).join('');
+}
+
+async function bootHybrid(data) {
+  // Commander
+  state.commander = { name: data.commander };
+  await renderCommander();
+
+  // Score global
+  renderHybridScore(data.deck_score_100, data.distance_meta);
+
+  // Gap clusters dans le panneau gauche
+  if (data.gap && data.gap.length) {
+    renderHybridGap(data.gap);
+  }
+
+  // Construire les listes add/rem dans state (format compatible hydrate)
+  state.add = (data.top_additions || []).map(a => ({
+    name:           a.card_name,
+    score:          a.score_100,
+    score_100:      a.score_100,
+    hybrid_score:   a.addition_score,
+    predicted_ir:   a.predicted_ir,
+    gap_bonus:      a.gap_bonus,
+    deck_synergy:   a.deck_synergy,
+    cluster_name:   a.cluster_name,
+    cluster_family: a.cluster_family,
+    explanation:    a.explanation,
+    isHybrid:       true,
+  }));
+  state.rem = (data.top_cuts || []).map(c => ({
+    name:     c.card_name,
+    score_100: c.score_100,
+    reasons:  c.reasons,
+    isHybrid: true,
+  }));
+
+  // Comptes
+  document.getElementById('pillAdd').textContent = state.add.length;
+  document.getElementById('pillRem').textContent = state.rem.length;
+
+  // Galerie cartes (ajouts par défaut)
+  renderGallery();
+
+  // Pre-fetch Scryfall pour les coupes en arrière-plan (sans attendre)
+  // → les images seront dans le cache quand l'utilisateur clique "À retirer"
+  Promise.all(state.rem.map(c => scryfall(c.name))).catch(() => {});
+
+  // Section remplacements
+  if (data.replacements && data.replacements.length) {
+    renderHybridReplacements(data.replacements);
+  }
+}
+
+// Surcharge de buildBack pour les cartes hybrides
+const _origHydrate = hydrate;
+async function hydrate(el, c, isAdd) {
+  if (!c.isHybrid) { return _origHydrate(el, c, isAdd); }
+
+  const data = await scryfall(c.name);
+  const full = data ? (isAdd ? (data.normal || data.art) : (data.cheap || data.normal || data.art)) : null;
+  const price = data ? fmtEur(data.eur) : null;
+  const priceHtml = price ? `<span class="price">${price}</span>` : `<span class="price na">N/A</span>`;
+  const scryfallUri = data?.scryfall_uri || `https://scryfall.com/search?q=!"${encodeURIComponent(c.name)}"`;
+  const artHtml = full
+    ? `<img alt="${c.name}" src="${full}" />`
+    : `<div class="art-fallback">${c.name}</div>`;
+  const moxLink = `https://moxfield.com/search/cards?q=${encodeURIComponent(c.name)}&advanced=`;
+  const cardmarket_url = `https://www.cardmarket.com/en/Magic/Products/Search?category=-1&searchString=${encodeURIComponent(c.name)}&searchMode=v2`;
+  const btnLabel = isAdd ? 'Acheter ↗' : 'Vendre ↗';
+
+  el.innerHTML = `
+    <div class="card-inner">
+      <div class="card-flip">
+        <div class="card-front">${artHtml}</div>
+        <div class="card-back">${buildHybridBack(c, isAdd, scryfallUri)}</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="card-foot">
+        ${priceHtml}
+        <a class="buy ${isAdd ? '' : ''}" href="${cardmarket_url}" target="_blank" rel="noopener noreferrer">${btnLabel}</a>
+      </div>
+      <div class="card-links">
+        <a class="scryfall-link" href="${scryfallUri}" target="_blank" rel="noopener noreferrer">Scryfall ↗</a>
+        <a class="moxfield-link" href="${moxLink}" target="_blank" rel="noopener noreferrer">Moxfield ↗</a>
+      </div>
+    </div>`;
+}
+
 /* ── Boot ─────────────────────────────────────────────────────────────────── */
 async function boot(){
   const algo = new URLSearchParams(location.search).get('algo');
+
+  // ── Mode Deck Mentor IA ───────────────────────────────────────────────────
+  if (algo === 'hybrid') {
+    const raw = sessionStorage.getItem('deckMentorResult');
+    if (!raw) {
+      grid.innerHTML = `<div class="notice"><span class="label">Session expirée</span>
+        <h3>Données introuvables</h3>
+        <p>Le résultat de l'analyse a expiré. <a href="/" style="color:var(--gold)">Recharge ta decklist</a>.</p></div>`;
+      return;
+    }
+    let data;
+    try { data = JSON.parse(raw); } catch(e) {
+      grid.innerHTML = `<div class="notice"><h3>Erreur de lecture</h3><p>Données corrompues.</p></div>`;
+      return;
+    }
+    sessionStorage.removeItem('deckMentorResult');
+    await bootHybrid(data);
+    return;
+  }
+
+  // ── Modes legacy (V1, V2, V3) ─────────────────────────────────────────────
   const algoLabels = {
     v2: 'Algorithme V2 — score hybride',
     v3: 'Moteur hybride V2 — rôles · decklists · vectoriel',

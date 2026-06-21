@@ -689,10 +689,9 @@
                       <span class="algo-card-desc">Recommandations issues des stats de 36 000 decks</span>
                       <span class="algo-soon">Bientôt disponible</span>
                     </button>
-                    <button class="algo-card" disabled>
-                      <span class="algo-card-name">En développement</span>
-                      <span class="algo-card-desc">Nouvelle approche en cours de conception</span>
-                      <span class="algo-soon">Bientôt disponible</span>
+                    <button class="algo-card" data-algo="hybrid">
+                      <span class="algo-card-name">Deck Mentor IA</span>
+                      <span class="algo-card-desc">Score, clusters, top 30 ajouts/retraits et remplacements</span>
                     </button>
                   </div>
                   <button class="btn-analyse" id="analyseBtn">Analyser le deck ↗</button>
@@ -811,22 +810,81 @@
       // Attendre que l'utilisateur choisisse un algo et clique "Analyser"
     }
 
+    // Parse la decklist depuis le texte brut (format Moxfield/Archidekt)
+    function parseDecklistText(text) {
+      const lines = text.split(/\r?\n/);
+      const sections = [];
+      let cur = [];
+      for (const line of lines) {
+        const t = line.trim();
+        if (!t) { if (cur.length) { sections.push(cur); cur = []; } }
+        else cur.push(t);
+      }
+      if (cur.length) sections.push(cur);
+
+      const cards = [];
+      // Toutes les sections sauf la dernière (commandant) → cartes du deck
+      const deckSections = sections.length >= 2 ? sections.slice(0, -1) : sections;
+      for (const sec of deckSections) {
+        for (const line of sec) {
+          if (line.startsWith("#") || line.startsWith("//")) continue;
+          const m = line.match(/^(\d+)[xX]?\s+(.+)$/);
+          const name = m ? m[2].trim() : line.trim();
+          if (name) cards.push(name);
+        }
+      }
+      return cards;
+    }
+
     async function startUpload() {
       const file = pendingFile;
       if (!file) return;
 
-      // Passer à la phase progression
       algoSection.style.display = "none";
       progressWrap.classList.add("show");
 
       try {
+        // ── Deck Mentor IA (moteur hybride) ──────────────────────────────────
+        if (selectedAlgo === "hybrid") {
+          const text = await file.text();
+          const commander = extractCommander(text);
+          if (!commander) throw new Error("Commandant introuvable dans la decklist.");
+          const decklist = parseDecklistText(text);
+          if (!decklist.length) throw new Error("Decklist vide ou format non reconnu.");
+
+          setProgress(20, "Envoi au Mentor IA…");
+
+          const res = await fetch("/api/deck/analyze", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ commander, decklist }),
+          });
+
+          setProgress(60, "Calcul des recommandations…");
+
+          if (!res.ok) {
+            const errBody = await res.json().catch(() => ({}));
+            throw new Error(errBody.error || "Erreur serveur");
+          }
+
+          const data = await res.json();
+          setProgress(100, "Analyse prête !");
+
+          // Stocker le résultat dans sessionStorage pour results.html
+          sessionStorage.setItem("deckMentorResult", JSON.stringify(data));
+
+          setTimeout(() => {
+            window.location.href = "/results?algo=hybrid";
+          }, 400);
+          return;
+        }
+
+        // ── Algorithmes V1 / V3 (legacy) ─────────────────────────────────────
         const fd = new FormData();
         fd.append("deckfile", file);
 
         let endpoint = "/upload-deck";
-
         if (selectedAlgo === "v3") {
-          // Moteur hybride V2 : route dédiée
           endpoint = "/upload-deck-v2";
           setProgress(20, "Envoi du deck…");
         } else {
