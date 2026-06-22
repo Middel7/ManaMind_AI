@@ -651,6 +651,187 @@ def search_cards(
         )
 
 
+@app.get("/api/cards/image")
+async def card_image(
+    name: str = Query(..., description="Nom exact ou approché de la carte"),
+) -> JSONResponse:
+    """
+    Retourne l'URL de l'image normale d'une carte.
+    Cherche d'abord dans la DB locale, puis appelle Scryfall côté serveur (pas de CORS).
+    """
+    import httpx
+
+    name = name.strip()
+
+    # 1. DB locale — recherche exacte sur le nom normalisé
+    if _DB_AVAILABLE:
+        try:
+            with SessionLocal() as session:
+                from sqlalchemy import func as _func
+                stmt = (
+                    select(CardPrinting.image_normal)
+                    .join(Card, Card.id == CardPrinting.card_id)
+                    .where(
+                        Card.name.ilike(name),
+                        CardPrinting.image_normal.isnot(None),
+                        CardPrinting.lang == "en",
+                    )
+                    .limit(1)
+                )
+                row = session.execute(stmt).first()
+                if row and row[0]:
+                    return _json_response({"url": row[0]})
+        except Exception:
+            pass
+
+    # 2. Fallback Scryfall (requête serveur → pas de CORS)
+    try:
+        async with httpx.AsyncClient(timeout=6) as client:
+            resp = await client.get(
+                "https://api.scryfall.com/cards/named",
+                params={"fuzzy": name},
+                headers={"Accept": "application/json"},
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                url = (
+                    data.get("image_uris", {}).get("normal")
+                    or (data.get("card_faces") or [{}])[0].get("image_uris", {}).get("normal")
+                )
+                if url:
+                    return _json_response({"url": url})
+    except Exception:
+        pass
+
+    return _json_response({"url": None}, status_code=404)
+
+
+@app.get("/api/cards/autocomplete")
+def autocomplete_cards(
+    q: str = Query(default="", description="Préfixe à rechercher"),
+    limit: int = Query(default=8, ge=1, le=20),
+) -> JSONResponse:
+    """
+    Autocomplete sur les noms de cartes (starts-with, case-insensitive).
+    Cherche dans Card.name (anglais) ET CardPrinting.printed_name (toutes langues).
+    Retourne les noms anglais canoniques dédupliqués.
+    """
+    if not _DB_AVAILABLE:
+        return _json_response({"names": []})
+
+    q = q.strip()
+    if len(q) < 2:
+        return _json_response({"names": []})
+
+    try:
+        with SessionLocal() as session:
+            # Noms anglais commençant par q
+            en_stmt = (
+                select(Card.name)
+                .where(Card.name.ilike(f"{q}%"))
+                .order_by(Card.edhrec_rank.asc().nulls_last(), Card.name)
+                .limit(limit)
+            )
+            en_names = [row[0] for row in session.execute(en_stmt).all()]
+
+            # Noms traduits commençant par q → récupérer le nom anglais canonique
+            tr_stmt = (
+                select(Card.name)
+                .join(CardPrinting, Card.id == CardPrinting.card_id)
+                .where(
+                    CardPrinting.printed_name.isnot(None),
+                    CardPrinting.printed_name.ilike(f"{q}%"),
+                )
+                .order_by(Card.edhrec_rank.asc().nulls_last(), Card.name)
+                .limit(limit)
+            )
+            tr_names = [row[0] for row in session.execute(tr_stmt).all()]
+
+            # Fusionner en conservant l'ordre et dédupliquer
+            seen: set[str] = set()
+            names: list[str] = []
+            for name in en_names + tr_names:
+                if name not in seen:
+                    seen.add(name)
+                    names.append(name)
+                if len(names) >= limit:
+                    break
+
+            return _json_response({"names": names})
+
+    except Exception as exc:
+        return _json_response({"names": [], "error": str(exc)})
+
+
+@app.get("/deck-suggest")
+def deck_suggest_page() -> FileResponse:
+    return FileResponse(
+        ROOT / "deck_suggest.html",
+        media_type="text/html",
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+    )
+
+
+@app.post("/api/deck-suggest")
+async def api_deck_suggest(request: Request) -> JSONResponse:
+    """
+    Détecte le commandant le plus probable depuis une liste de cartes et retourne
+    les 20 cartes absentes de la liste avec le meilleur taux d'inclusion.
+
+    Body JSON : { "cards": ["Sol Ring", "Cultivate", ...] }
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        return _json_response({"error": "JSON invalide"}, status_code=400)
+
+    cards = body.get("cards") or []
+    if not isinstance(cards, list) or len(cards) == 0:
+        return _json_response({"error": "Liste de cartes vide ou invalide"}, status_code=400)
+
+    import re as _re
+    def _parse_card_name(raw: str) -> str:
+        # Retire " (SET) #num" (format Moxfield)
+        raw = _re.sub(r'\s*\([A-Z0-9]+\)\s*#\S+$', '', raw.strip())
+        # Retire quantité en début "1x " ou "2 "
+        raw = _re.sub(r'^\d+[xX]?\s+', '', raw)
+        return raw.strip()
+
+    cards = [_parse_card_name(str(c)) for c in cards if _parse_card_name(str(c))]
+
+    from manamind.card_commander_matcher import suggest_additions
+    result = suggest_additions(cards, top_n=20)
+    return _json_response(result)
+
+
+@app.get("/commander-suggest")
+def commander_suggest_page() -> FileResponse:
+    return FileResponse(
+        ROOT / "commander_suggest.html",
+        media_type="text/html",
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+    )
+
+
+@app.get("/api/commander-suggest")
+def api_commander_suggest(
+    card: str = Query(..., description="Nom de la carte à rechercher"),
+    top: int = Query(default=3, ge=1, le=10),
+) -> JSONResponse:
+    """
+    Retourne les commandants (parmi data/commanders.txt) qui jouent le plus souvent
+    la carte donnée, triés par taux d'inclusion décroissant.
+    """
+    from manamind.card_commander_matcher import suggest_commanders
+
+    card = card.strip()
+    if not card:
+        return _json_response({"error": "Paramètre 'card' manquant"}, status_code=400)
+
+    results = suggest_commanders(card, top_n=top)
+    return _json_response({"card": card, "suggestions": results})
+
+
 @app.get("/{filename:path}")
 def static_file(filename: str) -> FileResponse:
     file_path = ROOT / filename
@@ -661,4 +842,4 @@ def static_file(filename: str) -> FileResponse:
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("server:app", host="0.0.0.0", port=8080, reload=True)

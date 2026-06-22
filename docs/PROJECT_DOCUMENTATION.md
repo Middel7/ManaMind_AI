@@ -3,6 +3,9 @@
 > Source unique de vérité pour le projet. Mise à jour obligatoire à chaque changement d'architecture.  
 > Utilisable directement comme contexte pour tout assistant externe (ChatGPT, Claude, etc.).  
 > Dernière mise à jour : 2026-06-20 (Card2Vec pipeline)
+```powershell
+uv run python server.py
+# → http://localhost:8080
 
 ---
 
@@ -156,7 +159,7 @@ Fichier à créer : `src/manamind/recommandation_collaborative.py`
 
 ```powershell
 uv run python server.py
-# → http://localhost:8000
+# → http://localhost:8080
 ```
 
 ### Routes

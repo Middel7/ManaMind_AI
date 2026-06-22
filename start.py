@@ -15,7 +15,7 @@ import webbrowser
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-URL = "http://localhost:8000"
+URL = "http://localhost:8080"
 
 
 def open_browser(delay: float = 1.5) -> None:
@@ -27,7 +27,7 @@ def open_browser(delay: float = 1.5) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Lance le serveur ManaMind")
     parser.add_argument("--no-browser", action="store_true", help="Ne pas ouvrir le navigateur")
-    parser.add_argument("--port", type=int, default=8000, help="Port (défaut : 8000)")
+    parser.add_argument("--port", type=int, default=8080, help="Port (défaut : 8080)")
     args = parser.parse_args()
 
     print("=" * 50)
