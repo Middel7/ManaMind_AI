@@ -751,8 +751,6 @@ Remove,Coral Merfolk,,,4
 Remove,Sea Gate Oracle,,,18
 Remove,Inspiration,,,7`;
 
-const SCRY_DELAY = 55;
-
 const $ = (s, el=document) => el.querySelector(s);
 const grid = $('#grid');
 let state = { commander:null, add:[], rem:[], filter:'add' };
@@ -883,82 +881,25 @@ function ingest(rows){
   state.rem=rem.slice(0,25);
 }
 
-/* ── Scryfall lookup with cache + throttle ────────────────────────────────── */
-// Une seule requête /cards/search?unique=prints pour avoir toutes les éditions.
-// → image : édition avec le prix EUR le plus ÉLEVÉ (meilleur visuel premium)
-// → eur   : prix EUR le plus BAS toutes éditions confondues (meilleur achat)
-const cache=new Map(); let queue=Promise.resolve();
-async function fetchWithRetry(url, retries=3, delay=500){
-  for (let i=0; i<retries; i++){
-    const r = await fetch(url);
-    if (r.ok) return r.json();
-    if (r.status === 429){
-      await new Promise(res=>setTimeout(res, delay * (i+1)));
-      continue;
-    }
-    return null;
-  }
-  return null;
-}
-function scryfall(name){
+/* ── Lookup via endpoints locaux (image + prix) ───────────────────────────── */
+const cache = new Map();
+function scryfall(name) {
   if (cache.has(name)) return cache.get(name);
-  const url = 'https://api.scryfall.com/cards/search?q=!'
-    + encodeURIComponent('"'+name+'"')
-    + '&unique=prints&order=eur&dir=desc';
-  const p = queue
-    .then(()=> new Promise(res=>setTimeout(res, SCRY_DELAY)))
-    .then(()=> fetchWithRetry(url))
-    .then(data=>{
-      if (!data || !data.data || !data.data.length) return null;
-
-      // Exclure les variantes numérotées (collector number terminant par z)
-      // ex: #414z doublerainbow, galaxy foil, etc.
-      const prints = data.data.filter(p =>
-        !p.collector_number || !p.collector_number.endsWith('z')
-      );
-
-      if (!prints.length) return null;
-
-      // Prix le plus bas (ignorer null/undefined)
-      let minEur = null;
-      for (const p of prints){
-        const v = p.prices && p.prices.eur ? parseFloat(p.prices.eur) : null;
-        if (v !== null && (minEur === null || v < minEur)) minEur = v;
-      }
-
-      // Édition avec le prix le plus élevé → image "premium"
-      // On cherche d'abord parmi les impressions avec un prix EUR, puis en fallback toute impression
-      const getImg = p => {
-        const face = p.image_uris ? p
-          : (p.card_faces && p.card_faces[0] && p.card_faces[0].image_uris ? p.card_faces[0] : null);
-        const iu = face && face.image_uris ? face.image_uris : {};
-        return iu.normal || iu.large || null;
-      };
-      const printsWithPrice = prints.filter(p => p.prices && p.prices.eur);
-      let imgExpensive = null;
-      for (const p of printsWithPrice){ const img=getImg(p); if(img){imgExpensive=img;break;} }
-      if (!imgExpensive){ for (const p of prints){ const img=getImg(p); if(img){imgExpensive=img;break;} } }
-
-      // Édition avec le prix le plus bas → image "budget"
-      const printsByAsc = [...prints].sort((a,b)=>{
-        const va = a.prices && a.prices.eur ? parseFloat(a.prices.eur) : Infinity;
-        const vb = b.prices && b.prices.eur ? parseFloat(b.prices.eur) : Infinity;
-        return va - vb;
-      });
-      let imgCheap = null;
-      for (const p of printsByAsc){ const img=getImg(p); if(img){imgCheap=img;break;} }
-
-      const ref = prints[0];
-      return {
-        art:          imgExpensive,
-        normal:       imgExpensive,  // cartes à ajouter → édition premium
-        cheap:        imgCheap,      // cartes à retirer → édition la moins chère
-        eur:          minEur !== null ? String(minEur.toFixed(2)) : null,
-        colors:       ref.color_identity || [],
-        scryfall_uri: ref.scryfall_uri || null,
-      };
-    }).catch(()=>null);
-  queue = p.catch(()=>{});
+  const p = Promise.all([
+    fetch(`/api/cards/image?name=${encodeURIComponent(name)}`).then(r => r.ok ? r.json() : null).catch(() => null),
+    fetch(`/api/cards/price?name=${encodeURIComponent(name)}`).then(r => r.ok ? r.json() : null).catch(() => null),
+  ]).then(([imgData, priceData]) => {
+    const url = imgData?.url || null;
+    const eur = priceData?.price != null ? String(Number(priceData.price).toFixed(2)) : null;
+    return {
+      art:          url,
+      normal:       url,
+      cheap:        url,
+      eur:          eur,
+      colors:       [],
+      scryfall_uri: null,
+    };
+  });
   cache.set(name, p);
   return p;
 }
@@ -1061,7 +1002,13 @@ function renderGallery(){
 }
 
 async function hydrate(el, c, isAdd){
-  const data = await scryfall(c.name);
+  let data;
+  try {
+    data = await scryfall(c.name);
+  } catch(e) {
+    el.innerHTML = `<div class="art-fallback" style="color:#e07b7b">${c.name}<br><small>${e.message}</small></div>`;
+    return;
+  }
   // Cartes à ajouter → édition la plus chère (premium)
   // Cartes à retirer → édition la moins chère (budget)
   const full = data ? (isAdd ? (data.normal || data.art) : (data.cheap || data.normal || data.art)) : null;

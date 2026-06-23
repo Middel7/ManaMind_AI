@@ -706,6 +706,37 @@ async def card_image(
     return _json_response({"url": None}, status_code=404)
 
 
+@app.get("/api/cards/price")
+def get_card_price(
+    name: str = Query(..., description="Nom exact de la carte (anglais)"),
+) -> JSONResponse:
+    """
+    Retourne le prix EUR minimum (regular) de la carte parmi toutes ses impressions.
+    Cherche d'abord en DB, puis fallback Scryfall.
+    """
+    if _DB_AVAILABLE:
+        try:
+            with SessionLocal() as session:
+                stmt = (
+                    select(func.min(CardPrice.price))
+                    .join(CardPrinting, CardPrinting.id == CardPrice.printing_id)
+                    .join(Card, Card.id == CardPrinting.card_id)
+                    .where(
+                        Card.name.ilike(name),
+                        CardPrice.currency == "eur",
+                        CardPrice.price_type == "regular",
+                        CardPrice.price > 0,
+                    )
+                )
+                row = session.execute(stmt).first()
+                if row and row[0] is not None:
+                    return _json_response({"price": float(row[0]), "currency": "EUR"})
+        except Exception:
+            pass
+
+    return _json_response({"price": None, "currency": "EUR"})
+
+
 @app.get("/api/cards/autocomplete")
 def autocomplete_cards(
     q: str = Query(default="", description="Préfixe à rechercher"),
@@ -763,10 +794,114 @@ def autocomplete_cards(
         return _json_response({"names": [], "error": str(exc)})
 
 
+@app.get("/collection-suggest")
+def collection_suggest_page() -> FileResponse:
+    return FileResponse(
+        ROOT / "collection_suggest.html",
+        media_type="text/html",
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+    )
+
+
+@app.get("/api/collection-suggest")
+def api_collection_suggest(
+    top: int = Query(default=40, ge=1, le=100),
+    commander: str | None = Query(default=None),
+) -> JSONResponse:
+    """
+    Analyse la collection (Ma collection.txt), les decks existants (data/My decks/)
+    et retourne les cartes disponibles ayant le meilleur taux d'inclusion
+    dans les commandants de My_commanders.txt.
+    Si commander est fourni, limite l'analyse à ce commandant.
+    """
+    from manamind.collection_advisor import suggest_from_collection
+    result = suggest_from_collection(top_n=top, commander_filter=commander or None)
+    return _json_response(result)
+
+
+@app.get("/deck-moves")
+def deck_moves_page() -> FileResponse:
+    return FileResponse(
+        ROOT / "deck_moves.html",
+        media_type="text/html",
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+    )
+
+
+@app.get("/api/deck-moves")
+def api_deck_moves(
+    top: int = Query(default=60, ge=1, le=100),
+) -> JSONResponse:
+    """
+    Retourne les cartes présentes dans un deck mais qui auraient un meilleur taux
+    d'inclusion dans un autre deck du même joueur, classées par gain décroissant.
+    """
+    from manamind.collection_advisor import suggest_moves
+    result = suggest_moves(top_n=top)
+    return _json_response(result)
+
+
+@app.get("/deck-trim")
+def deck_trim_page() -> FileResponse:
+    return FileResponse(
+        ROOT / "deck_trim.html",
+        media_type="text/html",
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+    )
+
+
+@app.get("/api/deck-trim")
+def api_deck_trim(
+    commander: str = Query(..., description="Nom exact du commandant"),
+) -> JSONResponse:
+    """
+    Retourne les cartes du deck du commandant triées par inclusion_rate croissant.
+    Les candidates à la coupe sont en tête de liste.
+    """
+    from manamind.collection_advisor import suggest_cuts
+    result = suggest_cuts(commander_name=commander)
+    return _json_response(result)
+
+
+@app.get("/api/my-decks")
+def api_my_decks() -> JSONResponse:
+    """
+    Retourne la liste des decks personnels (data/My decks/) avec leur nom de commandant
+    et leur contenu (lignes brutes) pour pré-remplir le textarea de deck-suggest.
+    """
+    from manamind.collection_advisor import MY_DECKS_DIR, load_allowed_commanders, _find_deck_file
+
+    commanders = load_allowed_commanders()  # {norm: display}
+    # Construire mapping fichier -> commandant display
+    file_to_cmd: dict[str, str] = {}
+    for cmd_norm, cmd_display in commanders.items():
+        f = _find_deck_file(cmd_display)
+        if f:
+            file_to_cmd[f.name] = cmd_display
+
+    decks = []
+    if MY_DECKS_DIR.exists():
+        for f in sorted(MY_DECKS_DIR.glob("*.txt")):
+            commander = file_to_cmd.get(f.name, f.stem)
+            content = f.read_text(encoding="utf-8", errors="replace")
+            decks.append({"commander": commander, "filename": f.name, "content": content})
+
+    return _json_response({"decks": decks})
+
+
 @app.get("/deck-suggest")
 def deck_suggest_page() -> FileResponse:
     return FileResponse(
         ROOT / "deck_suggest.html",
+        media_type="text/html",
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+    )
+
+
+@app.get("/deck-build")
+def deck_build_page() -> FileResponse:
+    return FileResponse(
+        ROOT / "deck_build.html",
         media_type="text/html",
         headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
     )

@@ -5,7 +5,7 @@ import unicodedata
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-COMMANDERS_FILE = ROOT / "data" / "commanders.txt"
+COMMANDERS_FILE = ROOT / "data" / "My_commanders.txt"
 FREQUENCY_CSV = ROOT / "data" / "stats" / "commander_frequency.csv"
 SUMMARY_CSV = ROOT / "data" / "stats" / "commander_summary.csv"
 

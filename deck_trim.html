@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<title>ManaMind — Cartes à retirer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink-900: #0c0910; --ink-850: #120c1a; --ink-800: #17101f; --ink-700: #1d1529;
+    --ink-panel: rgba(20, 13, 28, 0.62);
+    --parch-100: #efe6d6; --parch-300: #cdbfa8; --parch-500: #9c8e79; --parch-600: #7c715f;
+    --arcane: #a07be0; --arcane-deep: #6c4bb0; --arcane-glow: rgba(160, 123, 224, 0.55);
+    --gold: #c9a45c; --gold-soft: #d8bd83; --gold-line: rgba(201, 164, 92, 0.42); --gold-faint: rgba(201, 164, 92, 0.16);
+    --danger: #e07b7b; --danger-faint: rgba(224, 123, 123, 0.10);
+    --serif-display: "Cormorant Garamond", Georgia, serif;
+    --serif-engraved: "Cinzel", Georgia, serif;
+    --serif-body: "Spectral", Georgia, serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body { color: var(--parch-100); font-family: var(--serif-body); background: var(--ink-900); min-height: 100vh; }
+
+  #scene {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      radial-gradient(120% 80% at 50% 0%, rgba(12,9,16,0.30), rgba(12,9,16,0.86) 62%, rgba(12,9,16,0.97) 100%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
+    background-color: var(--ink-900);
+  }
+  #particles { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .particle { position: absolute; border-radius: 50%; background: var(--danger); opacity: 0; animation: float linear infinite; }
+  @keyframes float { 0% { transform: translateY(100vh) scale(0); opacity: 0; } 10% { opacity: 0.4; } 90% { opacity: 0.2; } 100% { transform: translateY(-10vh) scale(1.2); opacity: 0; } }
+
+  #app {
+    position: relative; z-index: 1;
+    max-width: 1600px; margin: 0 auto;
+    padding: 48px 40px 80px;
+    display: flex; flex-direction: column; gap: 24px;
+  }
+
+  /* ── Header ── */
+  .site-header { display: flex; align-items: center; justify-content: space-between; }
+  .back-link { font-family: var(--serif-engraved); font-size: 0.72rem; letter-spacing: 0.12em; color: var(--gold); text-decoration: none; opacity: 0.8; transition: opacity 0.2s; }
+  .back-link:hover { opacity: 1; }
+
+  /* ── Hero compact ── */
+  .page-hero {
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .hero-label { font-family: var(--serif-engraved); font-size: 0.6rem; letter-spacing: 0.25em; color: var(--danger); text-transform: uppercase; }
+  .hero-title { font-family: var(--serif-display); font-size: clamp(1.6rem, 4vw, 2.6rem); font-weight: 600; color: var(--parch-100); margin: 0; line-height: 1.1; }
+  .hero-commander { font-family: var(--serif-display); font-size: clamp(1rem, 2vw, 1.4rem); color: var(--gold-soft); font-style: italic; margin: 0; }
+
+  /* ── Bandeau d'info ── */
+  .info-banner {
+    background: var(--danger-faint); border: 1px solid rgba(224,123,123,0.25);
+    border-radius: 10px; padding: 12px 20px;
+    font-size: 0.85rem; color: var(--parch-500); font-style: italic; line-height: 1.6;
+  }
+  .info-banner strong { color: var(--parch-300); font-style: normal; }
+
+  /* ── Stats ── */
+  .stats-banner { display: flex; gap: 16px; flex-wrap: wrap; }
+  .stat-chip {
+    background: var(--gold-faint); border: 1px solid var(--gold-line); border-radius: 8px;
+    padding: 8px 16px; display: flex; flex-direction: column; gap: 2px;
+  }
+  .stat-chip-label { font-family: var(--serif-engraved); font-size: 0.55rem; letter-spacing: 0.2em; color: var(--gold); text-transform: uppercase; }
+  .stat-chip-value { font-family: var(--serif-display); font-size: 1.3rem; font-weight: 600; color: var(--parch-100); }
+
+  /* ── Section title ── */
+  .section-title {
+    font-family: var(--serif-engraved); font-size: 0.68rem; letter-spacing: 0.22em;
+    color: var(--gold); text-transform: uppercase; text-align: center; margin: 0;
+  }
+
+  /* ── Grille ── */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(213px, 1fr));
+    gap: 20px;
+  }
+
+  .card-tile {
+    display: flex; flex-direction: column; gap: 10px;
+    animation: fadeUp 0.35s ease both;
+  }
+
+  .card-img-wrap {
+    position: relative; border-radius: 10px; overflow: hidden;
+    aspect-ratio: 488/680;
+    background: rgba(20,13,28,0.8);
+    border: 1px solid var(--gold-line);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .card-tile:hover .card-img-wrap {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.6), 0 0 0 2px rgba(224,123,123,0.45);
+  }
+  .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  /* Badge de rang avec couleur variable selon la popularité */
+  .heat-badge {
+    position: absolute; top: 8px; right: 8px;
+    font-family: var(--serif-engraved); font-size: 0.62rem; font-weight: 700;
+    color: #fff; padding: 3px 8px; border-radius: 20px; letter-spacing: 0.06em;
+  }
+
+  .card-meta { display: flex; flex-direction: column; gap: 3px; }
+  .card-meta-name {
+    font-family: var(--serif-display); font-size: 0.95rem; font-weight: 600;
+    color: var(--parch-100); line-height: 1.2;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .card-meta-sub { font-size: 0.7rem; color: var(--parch-600); }
+
+  .img-placeholder {
+    width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+    color: var(--parch-600); font-size: 0.75rem; font-style: italic; text-align: center; padding: 8px;
+  }
+
+  /* Cartes inconnues */
+  .unknown-panel {
+    background: rgba(160,123,224,0.06); border: 1px solid rgba(160,123,224,0.2);
+    border-radius: 8px; padding: 14px 18px;
+  }
+  .unknown-label { font-family: var(--serif-engraved); font-size: 0.6rem; letter-spacing: 0.18em; color: var(--arcane); text-transform: uppercase; margin-bottom: 8px; }
+  .unknown-list { font-size: 0.82rem; color: var(--parch-600); font-style: italic; line-height: 1.8; }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .state-msg { text-align: center; padding: 32px; color: var(--parch-500); font-style: italic; font-size: 0.95rem; }
+  .state-msg.error { color: var(--danger); }
+  .spinner { width: 32px; height: 32px; border: 3px solid var(--gold-faint); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 24px auto; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div id="scene"></div>
+<div id="particles"></div>
+
+<div id="app">
+
+  <header class="site-header">
+    <a href="#" onclick="history.back(); return false;" class="back-link">← Retour</a>
+    <span style="font-family:var(--serif-engraved);font-size:0.7rem;letter-spacing:0.2em;color:var(--gold);opacity:0.5;">MANAMIND</span>
+    <nav style="display:flex;gap:20px;">
+      <a href="/commander-suggest" class="back-link">Trouver un commandant</a>
+      <a href="/deck-suggest" class="back-link">Suggestions d'ajouts</a>
+      <a href="/deck-build" class="back-link">Ajouts depuis ma collection</a>
+      <a href="/deck-moves" class="back-link">Déplacements</a>
+    </nav>
+  </header>
+
+  <div class="page-hero" id="pageHero">
+    <span class="hero-label">Optimisation du deck</span>
+    <h1 class="hero-title">Cartes à retirer</h1>
+    <p style="font-size:0.78rem;color:var(--parch-600);font-style:italic;line-height:1.5;margin:4px 0 0;opacity:0.85;">Les cartes de ce deck classées par popularité croissante — celles en tête sont les moins jouées et les meilleures candidates à être retirées.</p>
+    <p class="hero-commander" id="heroCommander">…</p>
+  </div>
+
+  <div class="info-banner">
+    Les cartes ci-dessous sont classées par <strong>taux d'inclusion croissant</strong> dans les decks
+    du même commandant sur EDHREC. Celles en tête de liste sont les moins populaires dans la méta
+    et sont les meilleures candidates à être retirées.
+  </div>
+
+  <div id="statsBar" class="stats-banner" style="display:none;">
+    <div class="stat-chip">
+      <span class="stat-chip-label">Cartes dans le deck</span>
+      <span class="stat-chip-value" id="statDeck">—</span>
+    </div>
+    <div class="stat-chip">
+      <span class="stat-chip-label">Analysées</span>
+      <span class="stat-chip-value" id="statAnalyzed">—</span>
+    </div>
+    <div class="stat-chip">
+      <span class="stat-chip-label">Non trouvées</span>
+      <span class="stat-chip-value" id="statUnknown">—</span>
+    </div>
+  </div>
+
+  <div id="results"><div class="spinner"></div></div>
+
+</div>
+
+<script>
+  // ── Particules ────────────────────────────────────────────────────────────
+  (function () {
+    const c = document.getElementById('particles');
+    for (let i = 0; i < 14; i++) {
+      const p = document.createElement('div'); p.className = 'particle';
+      const s = Math.random() * 3 + 1;
+      p.style.cssText = `width:${s}px;height:${s}px;left:${Math.random()*100}%;animation-duration:${10+Math.random()*16}s;animation-delay:${Math.random()*14}s`;
+      c.appendChild(p);
+    }
+  })();
+
+  // ── Lecture du commandant depuis l'URL ────────────────────────────────────
+  const params     = new URLSearchParams(window.location.search);
+  const commander  = params.get('commander') || '';
+  const zone       = document.getElementById('results');
+  const statsBar   = document.getElementById('statsBar');
+
+  if (!commander) {
+    zone.innerHTML = `<p class="state-msg error">Aucun commandant spécifié dans l'URL.</p>`;
+  } else {
+    document.getElementById('heroCommander').textContent = commander;
+    document.title = `ManaMind — ${commander}`;
+    loadData();
+  }
+
+  async function loadData() {
+    try {
+      const res  = await fetch(`/api/deck-trim?commander=${encodeURIComponent(commander)}`);
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        zone.innerHTML = `<p class="state-msg error">Erreur : ${escHtml(data.error || 'Réponse invalide')}</p>`;
+        return;
+      }
+
+      renderStats(data);
+      renderResults(data);
+
+    } catch (err) {
+      zone.innerHTML = `<p class="state-msg error">Erreur réseau : ${escHtml(err.message)}</p>`;
+    }
+  }
+
+  function renderStats(data) {
+    const total    = (data.results || []).length + (data.unknown || []).length;
+    const analyzed = (data.results || []).length;
+    const unknown  = (data.unknown || []).length;
+    document.getElementById('statDeck').textContent     = total;
+    document.getElementById('statAnalyzed').textContent = analyzed;
+    document.getElementById('statUnknown').textContent  = unknown;
+    statsBar.style.display = 'flex';
+  }
+
+  function renderResults(data) {
+    const rows    = data.results || [];
+    const unknown = data.unknown || [];
+
+    if (!rows.length && !unknown.length) {
+      zone.innerHTML = `<p class="state-msg">Aucune carte trouvée dans ce deck.</p>`;
+      return;
+    }
+
+    let html = `<p class="section-title">Classées par popularité croissante — les premières sont les plus candidates à être retirées</p>`;
+    html += `<div class="cards-grid" id="cardsGrid">`;
+
+    rows.forEach((r, i) => {
+      const delay = (i * 0.03).toFixed(2);
+      const pct   = r.inclusion_rate != null ? r.inclusion_rate : null;
+      const badge = pct != null ? `${pct.toFixed(1)}%` : '?';
+
+      // Couleur du badge : rouge si < 20%, orange < 40%, vert si ≥ 60%
+      let badgeColor = '#888';
+      if (pct != null) {
+        if (pct < 20)       badgeColor = '#e07b7b';
+        else if (pct < 40)  badgeColor = '#e0a97b';
+        else if (pct < 60)  badgeColor = '#c9a45c';
+        else                badgeColor = '#7bc47b';
+      }
+
+      const subText = pct != null
+        ? `${r.decks_with_card} / ${r.total_decks} decks · ${pct.toFixed(1)}%`
+        : 'Absent des données EDHREC';
+
+      html += `
+        <div class="card-tile" style="animation-delay:${delay}s">
+          <div class="card-img-wrap" id="wrap-${i}" style="cursor:pointer" title="Rechercher sur Cardmarket" onclick="openCardmarket('${escHtml(r.card_name).replace(/'/g,"\\'")}')">
+            <div class="img-placeholder" id="ph-${i}">${escHtml(r.card_name)}</div>
+            <span class="heat-badge" style="background:${badgeColor}">${badge}</span>
+          </div>
+          <div class="card-meta">
+            <div class="card-meta-name" title="${escHtml(r.card_name)}">${escHtml(r.card_name)}</div>
+            <div class="card-meta-sub">${subText}</div>
+            <div class="card-meta-sub" id="price-${i}" style="color:var(--gold-soft);">…</div>
+          </div>
+        </div>`;
+    });
+
+    html += `</div>`;
+
+    if (unknown.length) {
+      html += `
+        <div class="unknown-panel">
+          <div class="unknown-label">Hors données EDHREC (${unknown.length})</div>
+          <div class="unknown-list">${unknown.map(escHtml).join(' · ')}</div>
+        </div>`;
+    }
+
+    zone.innerHTML = html;
+    loadImages(rows);
+    loadPrices(rows);
+  }
+
+  async function loadImages(rows) {
+    const BATCH = 4;
+    for (let i = 0; i < rows.length; i += BATCH) {
+      const batch = rows.slice(i, i + BATCH);
+      await Promise.all(batch.map((r, j) => fetchCardImage(r.card_name, i + j)));
+    }
+  }
+
+  async function loadPrices(rows) {
+    const BATCH = 6;
+    for (let i = 0; i < rows.length; i += BATCH) {
+      const batch = rows.slice(i, i + BATCH);
+      await Promise.all(batch.map((r, j) => fetchCardPrice(r.card_name, i + j)));
+    }
+  }
+
+  async function fetchCardPrice(name, idx) {
+    const el = document.getElementById(`price-${idx}`);
+    if (!el) return;
+    try {
+      const res  = await fetch(`/api/cards/price?name=${encodeURIComponent(name)}`);
+      const data = await res.json();
+      el.textContent = data.price != null ? `${data.price.toFixed(2)} €` : '— €';
+    } catch {
+      el.textContent = '— €';
+    }
+  }
+
+  async function fetchCardImage(name, idx) {
+    const wrap = document.getElementById(`wrap-${idx}`);
+    if (!wrap) return;
+    try {
+      const res = await fetch(`/api/cards/image?name=${encodeURIComponent(name)}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data.url) return;
+
+      const img = document.createElement('img');
+      img.alt = name;
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;opacity:0;transition:opacity 0.4s';
+      img.onload = () => { img.style.opacity = '1'; };
+      img.src = data.url;
+
+      const ph = document.getElementById(`ph-${idx}`);
+      if (ph) ph.replaceWith(img);
+    } catch {}
+  }
+
+  function openCardmarket(name) {
+    const url = `https://www.cardmarket.com/fr/Magic/Products/Search?category=-1&searchString=${encodeURIComponent(name)}&searchMode=v2`;
+    window.open(url, '_blank');
+  }
+
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+</body>
+</html>

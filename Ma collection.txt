@@ -1,0 +1,2158 @@
+1 Restoration Angel (AVR) #32
+1 Court of Ardenvale (WOC) #21
+2 Devastating Mastery (STX) #14
+1 Spark Rupture (MAT) #229 *F*
+1 Eidolon of Obstruction (THB) #12
+1 Archon of the Wild Rose (WOE) #1
+1 Pollen-Shield Hare // Hare Raising (PWOE) #233p
+2 Heartflame Duelist // Heartflame Slash (WOE) #228
+2 A Tale for the Ages (WOE) #34
+1 Heartflame Duelist // Heartflame Slash (WOE) #290
+1 Pollen-Shield Hare // Hare Raising (WOE) #233
+1 Pack Leader (M21) #29
+2 Kemba, Kha Enduring (ONE) #19
+1 Leonin Lightscribe (STX) #20
+1 Regal Bunnicorn (WOE) #25
+1 Regal Bunnicorn (PWOE) #25p
+1 Twilight Drover (DDK) #9
+6 Sigrid, God-Favored (KHM) #29
+1 Kyodai, Soul of Kamigawa (NEO) #23
+1 Pulmonic Sliver (TSP) #36
+1 Timeless Dragon (MH2) #388
+1 Declaration in Stone (NCC) #196
+1 Academic Probation (STX) #7
+1 Runed Halo (M21) #32
+1 Squad Commander (ZNR) #41
+1 Sparring Regimen (STX) #29
+1 Field of Souls (DDK) #30
+1 Opal Guardian (TSP) #30
+1 Dismantling Wave (C20) #25
+1 Sanguine Sacrament (PLST) #XLN-33
+2 Mysterious Limousine (SNC) #22
+1 Kutzil's Flanker (LCI) #20
+1 Fortune, Loyal Steed (OTJ) #12
+1 Lavabrink Venturer (IKO) #19
+1 Semester's End (STX) #27
+1 Aerial Extortionist (MKC) #54
+1 Serene Sleuth (MKC) #14
+1 Search the Premises (MKC) #81
+1 Noble Heritage (CLB) #35
+1 Haunted Library (VOC) #44
+1 Grasp of Fate (CMM) #823
+1 White Plume Adventurer (CLB) #49
+1 Dust Animus (OTJ) #9
+1 Nykthos Paragon (MH2) #22
+1 Hoofprints of the Stag (NCC) #203
+1 Trove Warden (ZNC) #3
+1 Dearly Departed (MIC) #84
+1 Citadel Siege (MIC) #81
+1 Curse of Conformity (MIC) #6
+1 Custodi Soulbinders (VOC) #82
+1 Riders of Gavony (C20) #98
+1 Moorland Rescuer (MIC) #7
+1 Benalish Marshal (GNT) #8
+1 Giant Killer // Chop Down (ELD) #14
+1 Victory's Envoy (MIC) #96
+1 Charming Prince (FDN) #568
+1 Guardian Scalelord (MOC) #16
+1 Planar Outburst (ZNC) #19
+1 Hour of Revelation (ZNC) #17
+1 Paladin Class (AFR) #29
+1 Summoner's Sending (FIC) #29
+1 Scholar of New Horizons (FIC) #252
+1 Lord Jyscal Guado (FIC) #23
+1 Sunscorch Regent (FIC) #255
+1 Avenging Huntbonder (NCC) #194
+1 No Witnesses (MKM) #27
+1 Doorkeeper Thrull (MKM) #13
+1 Tenth District Hero (MKM) #34
+1 South Pole Voyager (TLA) #35
+1 Sungold Sentinel (MID) #37
+1 Winnowing (ECL) #43
+1 Doomskar (KHM) #9
+1 Spear of Heliod (THS) #33
+1 Leyline of Anticipation (CLB) #726
+2 Leyline of Anticipation (WOT) #23
+1 Confront the Past (STX) #67
+1 Confront the Past (PSTX) #67p
+1 Poet's Quill (STX) #82
+1 Gumdrop Poisoner // Tempt with Treats (WOE) #93
+1 Demonic Bargain (PLST) #VOW-103
+1 Witch's Vengeance (ELD) #111
+1 Murderous Rider // Swift End (MOC) #258
+1 Damnable Pact (C21) #139
+1 Woe Strider (THB) #123
+1 Doom Blade (STA) #28
+1 Treacherous Blessing (THB) #117
+2 Baleful Mastery (STX) #64
+1 Dreadfeast Demon (VOW) #108
+1 Cultist of the Absolute (CLB) #123
+2 Lord Skitter's Blessing (WOE) #98
+1 Fateful Handoff (BRO) #94
+1 Xathrid Gorgon (M13) #118
+1 Nihilith (CLB) #765
+1 Dark Hatchling (CLB) #747
+1 Clackbridge Troll (ELD) #84
+1 Ogre Slumlord (ZNC) #50
+1 Dross Harvester (CLB) #750
+1 Plague Reaver (CMR) #143
+1 Gelatinous Cube (AFR) #105
+1 Kaervek, the Spiteful (M21) #106
+1 Callous Bloodmage (STX) #66
+1 Voldaren Bloodcaster // Bloodbat Summoner (VOW) #137
+1 Misery's Shadow (BRO) #107
+1 Painful Truths (MOC) #262
+2 Pitiless Carnage (OTJ) #98
+1 Serpent's Soul-Jar (KHC) #11
+1 Specter of Mortality (WOE) #107
+2 Thieves' Guild Enforcer (M21) #125
+1 Valentin, Dean of the Vein // Lisette, Dean of the Root (STX) #161
+1 Pestilent Cauldron // Restorative Burst (STX) #154
+1 Egon, God of Death // Throne of Death (KHM) #92
+1 Sanguine Spy (SNC) #93
+1 Oriq Loremage (STX) #80
+1 Eldritch Pact (CLB) #126
+1 Szat's Will (CMR) #152
+1 Coveted Prize (ZNR) #95
+1 Hex (CLB) #757
+1 In Garruk's Wake (CLB) #759
+1 Fated Return (ZNC) #42
+1 Silence the Believers (JOU) #82
+1 Demonic Embrace (M21) #95
+1 Ancient Craving (DDK) #28
+1 Demonic Bargain (VOW) #103
+1 Whispersteel Dagger (PLST) #ZNC-5
+1 Archpriest of Shadows (MOM) #89
+1 Oathsworn Knight (ELD) #98
+1 Pain Seer (BNG) #80
+1 Kinzu of the Bleak Coven (ONE) #406
+2 Bloodvial Purveyor (VOW) #98
+2 The End (PWOE) #87p
+1 Sorin's Vengeance (M12) #111
+1 Deathmark (10E) #134
+1 Seizan, Perverter of Truth (MUL) #15
+1 Terror of Towashi (MOM) #331
+1 Liliana's Talent (MOC) #76
+2 Bloated Processor (MOM) #93
+2 Eat to Extinction (THB) #90
+1 Devouring Sugarmaw // Have for Dinner (WOE) #224
+1 Netherborn Altar (PLST) #C20-45
+1 Kels, Fight Fixer (PLST) #JMP-15
+1 Ayara, Widow of the Realm // Ayara, Furnace Queen (MOM) #90
+1 Cruel Somnophage // Can't Wake Up (PWOE) #222p
+1 Cruel Somnophage // Can't Wake Up (WOE) #222
+1 The End (WOE) #87
+1 Curse of Leeches // Leeching Lurker (MID) #94
+1 Damn (MH2) #80
+1 Abyssal Harvester (FDN) #54
+1 Cursecloth Wrappings (DFT) #81
+1 Magmatic Channeler (ZNR) #148
+1 Flamescroll Celebrant // Revel in Silence (STX) #150
+1 Plargg, Dean of Chaos // Augusta, Dean of Order (STX) #155
+1 Irencrag Pyromancer (ELD) #128
+1 Retriever Phoenix (STX) #113
+1 Efreet Flamepainter (STX) #98
+1 Calamity Bearer (PKHM) #125★ *F*
+1 Subira, Tulzidi Caravanner (M21) #162
+1 Dominating Vampire (VOW) #154
+2 Ill-Tempered Loner // Howlpack Avenger (VOW) #162
+1 Shatterskull Charger (ZNR) #159
+1 Glóin, Dwarf Emissary (LTR) #132
+1 Change of Fortune (VOW) #150
+1 Change of Fortune (PVOW) #150s *F*
+1 Ember Swallower (THS) #120
+1 Yidaro, Wandering Monster (IKO) #141
+1 Chandra's Incinerator (M21) #302
+1 Firbolg Flutist (CLB) #174
+1 Olivia's Attendants (PVOW) #172s *F*
+2 Aurora Phoenix (CMR) #161
+1 Sulfuric Vortex (DDK) #68
+1 Irencrag Feat (ELD) #127
+1 Alchemist's Gambit (VOW) #140
+1 Hoard Hauler (SNC) #109
+1 Stensia Uprising (VOW) #178
+1 Illuminate History (STX) #108
+3 Calibrated Blast (MH2) #118
+1 Wand of Wonder (CLB) #204
+1 Tundra Fumarole (KHM) #156
+1 Reckless Crew (KHM) #146
+1 Geistflame Reservoir (MID) #142
+1 The Akroan War (THB) #124
+1 Visions of Phyrexia (BRO) #156
+2 Red Sun's Twilight (ONE) #145
+1 Temporal Firestorm (DMU) #147
+1 Sundering Stroke (ELD) #144
+1 Chaotic Transformation (DMU) #117
+1 Court of Ire (CMR) #170
+1 Mythos of Vadrok (IKO) #127
+1 Volcanic Salvo (M21) #172
+1 Double Vision (M21) #142
+1 Rampaging Raptor (MOM) #160
+1 Loot Dispute (CLB) #677
+1 The Akroan War (CLB) #777
+2 Popular Entertainer (CLB) #192
+1 Death Kiss (CLB) #675
+1 Spectacular Showdown (CLB) #679
+1 Avatar of Slaughter (CLB) #779
+1 Plargg and Nassari (MAT) #18
+1 Tectonic Giant (THB) #158
+1 Storm Herald (THB) #156
+2 Defiler of Instinct (DMU) #119
+1 Scalding Viper // Steam Clean (WOE) #235
+1 Raging Battle Mouse (WOE) #143
+2 Rotisserie Elemental (WOE) #148
+1 Lavaborn Muse (PLST) #DDK-50
+1 Leyline of Lightning (WOT) #45
+2 Decadent Dragon // Expensive Taste (WOE) #223
+1 Song of Totentanz (WOE) #150
+5 Redcap Gutter-Dweller (WOE) #146
+1 Goblin Bombardment (WOT) #43
+1 Skullcrack (OTP) #27
+1 Shivan Dragon (M15) #281
+1 Aisha of Sparks and Smoke (SLX) #12
+1 Smoldering Egg // Ashmouth Dragon (MID) #159
+1 Jaxis, the Troublemaker (SNC) #112
+1 Conspiracy Theorist (STX) #94
+1 Shifting Shadow (NEC) #109
+1 Kami of Celebration (NEC) #20
+1 Elemental Mastery (NEC) #105
+1 Collision of Realms (NEC) #19
+1 Agitator Ant (C20) #49
+1 Ox of Agonas (NEC) #108
+1 Komainu Battle Armor (NEC) #21
+1 Soul of Shandalar (PLST) #M15-163
+1 Storm's Wrath (PTHB) #157s *F*
+1 Storm's Wrath (THB) #157
+1 Electroduplicate (FDN) #85
+1 Kellan, Planar Trailblazer (FDN) #91
+1 Charming Scoundrel (WOE) #124
+1 Goddric, Cloaked Reveler (WOE) #132
+1 Squee, Dubious Monarch (DMU) #146
+1 Goblin Razerunners (NEC) #106
+1 Chain Reaction (C18) #121
+1 March of Reckless Joy (PNEO) #154s *F*
+1 Fervent Mastery (PSTX) #101s *F*
+2 Scrap Welder (PNEO) #159s *F*
+1 Brass's Tunnel-Grinder // Tecutlan, the Searing Rift (LCI) #135
+1 Stolen by the Fae (ELD) #66
+1 Curse of Surveillance (MID) #46
+1 Enigma Thief (ZNC) #4
+1 Scourge of Fleets (ZNC) #35
+1 Shield Broker (NCC) #29
+1 Stormtide Leviathan (M13) #70
+3 Confounding Conundrum (ZNR) #53
+1 The Temporal Anchor (BRO) #82
+1 Invasion of Arcavios // Invocation of the Founders (MOM) #61
+1 Diluvian Primordial (C21) #120
+1 Mindlink Mech (PNEO) #62s *F*
+1 Storm of Forms (NCC) #32
+2 Extraordinary Journey (WOE) #48
+1 Farsight Ritual (WOE) #49
+1 Scroll of Isildur (LTR) #69
+1 Interdisciplinary Mascot (MOM) #326
+3 Forced Fruition (WOT) #18
+2 Copy Enchantment (WOT) #16
+1 As Foretold (WOT) #14
+1 Errant, Street Artist (SNC) #41
+1 Errant, Street Artist (SNC) #344
+2 Ascendant Spirit (KHM) #43
+4 Seafloor Oracle (RIX) #51
+4 Tidebinder Mage (M14) #73
+1 Gale's Redirection (CLB) #73
+3 Entrancing Melody (SOC) #196
+1 Entrancing Melody (XLN) #55
+1 Graven Lore (KHM) #61
+1 Ingenious Mastery (STX) #44
+1 Hurkyl's Final Meditation (BRO) #52
+1 Multiple Choice (STX) #48
+1 Urza's Command (BRO) #70
+2 Grasping Current (XLN) #282
+1 Stolen Identity (ZNC) #37
+1 Path of the Enigma (MOC) #23
+1 Chasm Skulker (M15) #46
+1 Ingenious Prodigy (WOE) #56
+1 Tezzeret's Gambit (STA) #21
+1 Talrand, Sky Summoner (TSR) #318
+1 Tiger-Seal (TLA) #75
+1 Reenact the Crime (MKM) #70
+1 Cryptic Coat (MKM) #50
+1 Lost in the Maze (MKM) #64
+1 Coveted Falcon (MKM) #48
+1 Lunar Insight (FDN) #46
+1 Conspiracy Unraveler (MKM) #47
+1 Pull from Tomorrow (FIC) #269
+1 Summon: Valefor (FIC) #42
+1 Rise and Shine (MH2) #58
+1 Arbiter of the Ideal (BNG) #31
+2 Curse of the Swine (THS) #46
+1 Threads of Disloyalty (SS1) #8
+1 Hypnotic Siren (JOU) #42
+1 Torrent Sculptor // Flamethrower Sonata (STX) #159
+1 Grazilaxx, Illithid Scholar (PAFR) #60s *F*
+1 The Mirari Conjecture (PLST) #DOM-57
+2 The Mirari Conjecture (DOM) #57
+1 Dreamshackle Geist (VOW) #58
+1 Reservoir Kraken (SNC) #56
+1 Dream Strix (STX) #42
+1 Gale, Waterdeep Prodigy (CLB) #383
+1 Cosmos Charger (KHM) #51
+1 Grafted Identity (MID) #57
+1 Inspired Idea (VOW) #64
+1 Tempted by the Oriq (STX) #58
+1 Sakashima's Will (CMR) #91
+1 Winged Portent (VOW) #89
+1 Inventive Iteration // Living Breakthrough (NEO) #57
+1 Teachings of the Archaics (STX) #57
+1 Encroaching Mycosynth (ONE) #47
+1 Shameless Charlatan (CLB) #488 *F*
+1 Shameless Charlatan (CLB) #96
+1 Fleet Swallower (XLN) #57
+2 Pursued Whale (M21) #60
+1 Defiler of Dreams (DMU) #46
+1 Elusive Otter // Grove's Bounty (WOE) #289
+3 Elusive Otter // Grove's Bounty (WOE) #225
+1 Follow the Bodies (MKC) #23
+1 Serum Sovereign (ONE) #405
+2 Nimble Trapfinder (ZNR) #72
+4 Sphinx of Foresight (RNA) #55
+6 Dragon Turtle (AFR) #56
+1 Gnarled Professor (STX) #133
+1 Accomplished Alchemist (STX) #119
+1 Masked Admirers (C20) #183
+1 Kianne, Dean of Substance // Imbraham, Dean of Theory (STX) #152
+1 Sporeweb Weaver (PM21) #208s *F*
+1 Baru, Wurmspeaker (DMC) #26
+1 Troll Ascetic (DDL) #50
+2 Tovolar's Huntmaster // Tovolar's Packleader (MID) #204
+1 Cragplate Baloth (ZNR) #183
+1 Sweet-Gum Recluse (CLB) #835
+1 Spring-Leaf Avenger (NEO) #349
+1 Arbor Colossus (THS) #150
+2 Silklash Spider (M13) #191
+1 Basic Conjuration (STX) #120
+1 Kamahl's Will (CMR) #238
+1 Mythos of Brokkos (IKO) #168
+1 Rites of Flourishing (ZNC) #80
+1 Abundance (ZNC) #58
+1 Nissa's Renewal (ZNC) #76
+1 Verdant Mastery (STX) #146
+1 Cosmium Confluence (LCI) #181
+1 Wicked Wolf (ELD) #181
+1 Augmenter Pugilist // Echoing Equation (STX) #147
+1 Waker of the Wilds (ZNC) #86
+1 The Great Aurora (PLST) #ORI-179
+2 Fangorn, Tree Shepherd (LTR) #166
+1 Fangorn, Tree Shepherd (PLTR) #166s *F*
+1 Vivien's Talent (MOC) #78
+1 Mouth // Feed (AKH) #214
+2 Tangleweave Armor (ONC) #26
+1 Sentinel of Lost Lore (WOE) #184
+1 Deeproot Wayfinder (MOM) #184
+1 Goliath Hatchery (ONE) #408
+1 Dragonsguard Elite (PSTX) #127s *F*
+1 Dragonsguard Elite (STX) #127
+1 Innocuous Researcher (MKC) #38
+1 Tanuki Transplanter (NEC) #30
+2 Spearbreaker Behemoth (NEC) #132
+1 Kosei, Penitent Warlord (NEC) #26
+1 Genesis Hydra (NEC) #118
+1 Whiptongue Hydra (NEC) #134
+2 Gruff Triplets (WOE) #172
+2 Bramble Familiar // Fetch Quest (WOE) #164
+1 The Mending of Dominaria (CMM) #902
+1 The Mending of Dominaria (ZNC) #74
+1 Polukranos Reborn // Polukranos, Engine of Ruin (MOM) #300
+1 Dawnglade Regent (CMR) #222
+1 Boxing Ring (NCC) #91
+1 Primordial Sage (RAV) #177
+1 Genesis Hydra (M15) #176
+1 The First Iroan Games (THB) #170
+1 Kessig Cagebreakers (MIC) #142
+1 Celebrate the Harvest (MIC) #24
+1 Ruinous Intrusion (MIC) #28
+1 Kurbis, Harvest Celebrant (MIC) #27
+2 Death's Presence (MIC) #137
+2 Curse of Clinging Webs (MIC) #25
+1 Somberwald Sage (MIC) #144
+1 Wild Beastmaster (MIC) #146
+1 Somberwald Beastmaster (MIC) #30
+2 Slippery Bogbonder (NCC) #312
+1 Tovolar's Huntmaster // Tovolar's Packleader (PLST) #MID-204
+1 Fight Rigging (SNC) #145
+1 Exponential Growth (STX) #130
+1 Ezuri's Predation (CLB) #824
+1 Awakening of Vitu-Ghazi (WAR) #152
+1 Wildborn Preserver (ELD) #182
+1 Verdurous Gearhulk (MIC) #145
+2 Scavenging Ooze (FDN) #232
+1 Forgotten Ancient (NCC) #291
+2 Rishkar's Expertise (LCC) #254
+1 Forgotten Ancient (SOC) #267
+2 Elvish Archivist (WOE) #168
+1 Steelbane Hydra (NCC) #313
+1 Hornet Queen (P30A) #19 *F*
+1 Family's Favor (NCC) #59
+1 Bramble Familiar // Fetch Quest (WOE) #283
+1 Rampant Rejuvenator (NEC) #28
+1 Bribe Taker (NCC) #55
+1 Feral Encounter (WOE) #169
+1 Threats Undetected (DMU) #185
+1 Yedora, Grave Gardener (MUL) #30
+1 Yuna's Whistle (FIC) #75
+1 Summon: Magus Sisters (FIC) #71
+2 Yuna's Decision (FIC) #74
+1 Generous Patron (FIC) #305
+1 Rampant Rejuvenator (FIC) #314
+1 Path of Discovery (FIC) #312
+1 Verdant Sun's Avatar (CMR) #439
+1 Audience with Trostani (MKM) #152
+2 Genesis Wave (FDN) #221
+1 Diligent Zookeeper (TLA) #171
+1 Avatar Destiny (TLA) #165
+1 Temple of Mystery (TDC) #404
+4 Temple of Deceit (FDN) #697
+1 Temple of Plenty (FDN) #703
+1 Calix, Destiny's Hand (CMM) #918
+1 Radiant Scrollwielder (STX) #221
+1 Aryel, Knight of Windgrace (MOC) #318
+5 Dream Trawler (THB) #214
+1 Riku of Many Paths (OTJ) #227
+1 Bruse Tarl, Roving Rancher (OTJ) #198
+1 Gluntch, the Bestower (CLB) #275
+2 Elemental Expressionist (STX) #181
+1 Archelos, Lagoon Mystic (CMR) #268
+1 Astor, Bearer of Blades (DMU) #293
+1 Frondland Felidar (IKO) #186
+1 Ghen, Arcanum Weaver (CMR) #275
+2 Slitherwisp (IKO) #208
+1 Bell Borca, Spectral Sergeant (CMR) #271
+2 Dennick, Pious Apprentice // Dennick, Pious Apparition (MID) #217
+1 Ivy, Gleeful Spellthief (DMU) #201
+1 Consuming Aberration (CLB) #840
+1 Gor Muldrak, Amphinologist (CMR) #277
+1 Casualties of War (WAR) #187
+1 Silumgar's Command (ZNC) #99
+1 Banon, the Returners' Leader (FIC) #165
+1 Sin, Unending Cataclysm (FIC) #95
+1 Endless Detour (FIC) #324
+1 Altered Ego (FIC) #317
+2 Kaza, Roil Chaser (ZNR) #225
+1 Stormfist Crusader (ELD) #203
+1 Ulasht, the Hate Seed (NEC) #143
+1 Decimate (NEC) #137
+2 Corpse Explosion (SNC) #179
+1 Hostile Takeover (SNC) #191
+1 Waking the Trolls (KHM) #234
+1 Offspring's Revenge (IKO) #198
+1 Wake to Slaughter (MID) #250
+1 Battle of Frost and Fire (KHM) #204
+1 Harness Infinity (STX) #191
+1 Reap the Past (MH1) #211
+1 Dance of the Manse (PELD) #186p
+1 Dance of the Manse (ELD) #186
+1 Admiral Beckett Brass (PLST) #XLN-217
+1 Sidisi, Brood Tyrant (2X2) #276
+1 Consuming Aberration (ZNC) #89
+1 Teysa, Envoy of Ghosts (DGM) #108
+1 Moira and Teshar (MOC) #7
+1 Astor, Bearer of Blades (DMU) #194
+1 Jan Jansen, Chaos Crafter (CLB) #277
+1 Meria, Scholar of Antiquity (DMU) #206
+1 Gorion, Wise Mentor (CLB) #423
+2 Cold-Eyed Selkie (LCC) #266
+1 Cold-Eyed Selkie (DDT) #25
+1 Deus of Calamity (DDL) #54
+1 Rushed Rebirth (STX) #228
+1 Phyrexian Tyranny (2X2) #262
+1 Mayael's Aria (2X2) #253
+1 Unleash the Inferno (SNC) #229
+1 Incandescent Aria (SNC) #192
+1 Maestros Ascendancy (SNC) #198
+1 Fires of Yavimaya (DDL) #70
+1 Silverquill Command (STX) #232
+1 Croaking Counterpart (MID) #215
+1 Riveteers Ascendancy (SNC) #216
+1 Titans' Nest (IKO) #212
+1 The Bloodsky Massacre (KHM) #207
+1 Song of Creation (IKO) #210
+2 Kethek, Crucible Goliath (ONE) #206
+1 Malcator, Purity Overseer (ONE) #208
+1 Maarika, Brutal Gladiator (SLX) #15
+2 Nine-Fingers Keene (CLB) #289
+1 Jolene, the Plunder Queen (NCC) #73
+1 Anax and Cymede (DDL) #11
+1 Raggadragga, Goreguts Boss (PCLB) #291s *F*
+1 Dennick, Pious Apprentice // Dennick, Pious Apparition (PMID) #217s *F*
+1 Stenn, Paranoid Partisan (DMU) #320
+1 Ria Ivor, Bane of Bladehold (ONE) #214
+1 Hans Eriksson (CMR) #279
+1 Living Twister (ZNC) #93
+1 Mina and Denn, Wildborn (PLST) #OGW-156
+2 The Goose Mother (WOE) #204
+1 Wavesifter (MKC) #220
+1 Figure of Destiny (DDL) #3
+1 Dorothea, Vengeful Victim // Dorothea's Retribution (VOW) #322
+1 Arcee, Sharpshooter // Arcee, Acrobatic Coupe (BOT) #7
+1 Rigo, Streetwise Mentor (SNC) #215
+1 Ognis, the Dragon's Lash (SNC) #325
+1 Judith, the Scourge Diva (RNA) #185
+1 Dalakos, Crafter of Wonders (THB) #212
+1 Venerable Warsinger (STX) #246
+1 Soul of Emancipation (SNC) #223
+2 Rankle and Torbran (MOM) #252
+1 Doors of Durin (LTR) #199
+2 Aven Heartstabber (SNC) #166
+1 Haktos the Unscarred (THB) #218
+1 Allure of the Unknown (THB) #207
+1 Rocco, Street Chef (MAT) #44
+1 Urza, Prince of Kroog (BRO) #226
+1 The Apprentice's Folly (WOE) #200
+1 Invasion of Alara // Awaken the Maelstrom (MOM) #230
+1 Daemogoth Titan (STX) #174
+2 Angelfire Ignition (MID) #209
+1 Jhoira, Ageless Innovator (DMU) #202
+1 Kwain, Itinerant Meddler (BLC) #254
+1 Aven Mimeomancer (NCC) #329
+1 Whirlwind of Thought (IKO) #215
+1 Knowledge Is Power (MKC) #42
+1 Gisa and Geralf (PLST) #EMN-183
+1 Labyrinth Raptor (IKO) #193
+1 Bjorna, Nightfall Alchemist (SLX) #2
+1 Park Heights Pegasus (SNC) #211
+1 Venser, Corpse Puppet (ONE) #324
+1 Gyruda, Doom of Depths (IKO) #221
+1 Time Wipe (MOC) #340
+1 Vazi, Keen Negotiator (NCC) #92
+1 Evelyn, the Covetous (SNC) #184
+1 Colfenor, the Last Yew (CMR) #274
+1 Nymris, Oona's Trickster (CMR) #288
+1 Hydroid Krasis (SOC) #315
+1 Vorel of the Hull Clade (NCC) #357
+1 Roalesk, Apex Hybrid (NCC) #349
+1 Fathom Mage (NCC) #339
+1 Quandrix Command (STX) #217
+1 Faunsbane Troll (WOE) #203
+1 Absorb (DMR) #186
+1 Etchings of the Chosen (H1R) #25 *F*
+1 Old Rutstein (VOW) #244
+1 The Swarmweaver (DSK) #301
+1 Yarus, Roar of the Old Gods (MKM) #245
+1 Urgent Necropsy (MKM) #240
+1 Judith, Carnage Connoisseur (MKM) #210
+1 Kylox's Voltstrider (MKM) #215
+1 Kylox's Voltstrider (PMKM) #215s *F*
+1 Consuming Aberration (FDN) #238
+1 Torens, Fist of the Angels (INR) #250
+1 Relive the Past (MKM) #226
+1 Ashroot Animist (FDN) #117
+1 Anthem of Champions (FDN) #116
+1 Swiftblade Vindicator (FDN) #246
+1 Figure of Fable (ECL) #224
+1 Iroh, Grand Lotus (PTLA) #227s *F*
+1 Duke Ulder Ravengard (CLB) #272
+1 Old Stickfingers (MID) #234
+1 Spinal Embrace (ZNC) #101
+1 Neera, Wild Mage (CLB) #288
+3 Rem Karolus, Stalwart Slayer (MID) #235
+1 Ziatora's Envoy (SNC) #232
+1 Vadrik, Astral Archmage (MID) #248
+1 Anje, Maid of Dishonor (VOW) #231
+2 Slogurk, the Overslime (MID) #242
+1 Jon Irenicus, Shattered One (CLB) #278
+2 Cabaretti Ascendancy (SNC) #172
+1 Eruth, Tormented Prophet (DBL) #504
+1 Lonis, Cryptozoologist (PLST) #MH2-204
+1 Aether Gale (CLB) #712
+1 The Unagi of Kyoshi Island (TLA) #77
+1 The Reality Chip (NEO) #74
+1 Memories Returning (FIN) #63
+1 Spark Double (RVR) #421
+1 Undercover Operative (SNC) #414
+1 Alandra, Sky Dreamer (MKC) #94
+1 Stiltzkin, Moogle Merchant (FIN) #34
+1 Lindblum, Industrial Regency // Mage Siege (FIN) #285
+1 Triple Triad (FIN) #166
+2 Edgar, King of Figaro (FIN) #51
+1 Serah Farron // Crystallized Serah (FIN) #240
+1 Golbez, Crystal Collector (FIN) #225
+1 A Realm Reborn (FIN) #196
+1 Ultima (FIN) #38
+1 Ishgard, the Holy See // Faith & Grief (FIN) #283
+1 Dark Confidant (FIN) #94
+1 Balthier and Fran (FIN) #213
+1 Midgar, City of Mako // Reactor Raid (FIN) #286
+1 Cecil, Dark Knight // Cecil, Redeemed Paladin (FIN) #91
+1 The Masamune (FIN) #264
+1 Kuja, Genome Sorcerer // Trance Kuja, Fate Defied (FIN) #232
+1 The Darkness Crystal (FIN) #96
+1 Matoya, Archon Elder (FIN) #62
+1 Kain, Traitorous Dragoon (FIN) #105
+1 Venat, Heart of Hydaelyn // Hydaelyn, the Mothercrystal (FIN) #39
+1 Time Stop (FDN) #166
+1 Chainsaw (DSK) #128
+1 Mangara, the Diplomat (TDC) #124
+1 Aerith Gainsborough (FIN) #4
+1 Skrelv, Defector Mite (ONE) #301
+1 Cosmic Rebirth (MAT) #28
+1 Panharmonicon (TSR) #399
+1 Mazemind Tome (BRR) #30
+1 Fateful Absence (PMID) #18s *F*
+1 Fateful Absence (MID) #18
+1 Avabruck Caretaker // Hollowhenge Huntmaster (VOW) #187
+1 Teleportation Circle (AFR) #364
+1 Duelist's Heritage (NCC) #197
+1 Resurgent Belief (MH2) #385
+1 The Earth Crystal (FIN) #184
+1 Nykthos, Shrine to Nyx (THS) #223
+1 Skullclamp (C17) #222
+1 Upheaval (MH2) #270
+1 Terra, Magical Adept // Esper Terra (FIN) #245
+1 Hope Estheim (FIN) #396
+1 Karmic Justice (WOT) #65
+1 Skycloud Expanse (NCC) #427
+1 Nissa, Worldwaker (E01) #68
+1 Crawling Barrens (ZNR) #262
+1 Elvish Archdruid (FDN) #219
+1 Nissa, Who Shakes the World (WAR) #169
+1 Sovereign Okinec Ahau (LCI) #240
+1 Omniscience (FDN) #161
+1 Terra Eternal (WWK) #22
+1 Voice of the Blessed (VOW) #44
+1 Charismatic Conqueror (LCC) #70
+2 Court of Garenbrig (WOC) #25
+1 Astral Cornucopia (BRR) #68
+1 Shalai, Voice of Plenty (PDOM) #35s *F*
+1 Descend upon the Sinful (SOI) #13
+1 Day of Judgment (FDN) #140
+5 Legion Angel (ZNR) #23
+1 Kianne, Corrupted Memory (DSC) #2
+1 Drannith Ruins (MAT) #50
+1 Nesting Grounds (ECC) #155
+1 Flooded Grove (NCC) #402
+1 Karn's Bastion (NCC) #410
+1 Temple of Mystery (CP1) #6 *F*
+1 Mazemind Tome (M21) #232
+1 Midnight Clock (NCC) #226
+1 Deepfathom Echo (LCI) #228
+1 Kasmina, Enigma Sage (STX) #196
+1 Glacial Fortress (DRC) #159
+1 Voracious Greatshark (IKO) #70
+1 Curious Colossus (ECL) #12
+1 Zoraline, Cosmos Caller (BLB) #242 *F*
+1 Pelt Collector (GRN) #141
+1 Bruse Tarl, Boorish Herder (FCA) #50
+1 Tymna the Weaver (FCA) #18
+2 Varragoth, Bloodsky Sire (FCA) #37
+1 Deserted Beach (MID) #281 *F*
+1 Necroduality (VOW) #70
+1 Spinerock Tyrant (ECL) #159
+3 Kopala, Warden of Waves (XLN) #61
+1 Vodalian Hexcatcher (DMU) #75
+2 Deeproot Elite (RIX) #127
+2 Jadelight Ranger (J25) #676
+1 Vodalian Mindsinger (DMU) #76
+1 Soaring Thought-Thief (ZNR) #236
+3 Vantress Gargoyle (ELD) #71
+3 Nighthawk Scavenger (CLB) #763
+4 Thieves' Guild Enforcer (J25) #493
+4 Zareth San, the Trickster (ZNR) #242
+1 March of Swirling Mist (NEO) #61
+4 Haughty Djinn (DMU) #52
+1 Island (XLN) #266
+1 Island (XLN) #265
+1 The Legend of Kuruk // Avatar Kuruk (TLA) #355
+1 Progenitus (FDN) #244
+1 Dramatic Finale (STX) #341
+1 Crystal Barricade (FDN) #296
+1 Toph, the First Metalbender (TLA) #353
+1 Malcolm, Alluring Scoundrel (LCI) #293
+1 Koma, Cosmos Serpent (KHM) #221
+1 Loot, Exuberant Explorer (FDN) #106
+1 Genesis Wave (FDN) #334
+1 Koma, World-Eater (FDN) #121
+1 Kiora, the Rising Tide (FDN) #45
+1 Necroduality (DBL) #337
+1 Lathril, Blade of the Elves (FDN) #242
+2 Grub's Command (ECL) #228
+1 Mornsong Aria (ECL) #111
+1 Jasmine Dragon Tea Shop (TLA) #270
+1 All-Seeing Arbiter (SNC) #34
+2 Iymrith, Desert Doom (AFR) #62
+1 Jadzi, Oracle of Arcavios // Journey to the Oracle (STX) #151
+1 Alrund, God of the Cosmos // Hakka, Whispering Raven (KHM) #302
+1 Thought Monitor (MH2) #71
+1 Eligeth, Crossroads Augur (CMR) #556 *F*
+1 Suspend (MH2) #68
+1 Maeve, Insidious Singer (GN3) #2 *F*
+1 Perplexing Chimera (BNG) #48
+1 Aether Channeler (PDMU) #42p *F*
+1 Mirrorhall Mimic // Ghastly Mimicry (VOW) #68
+1 Svyelun of Sea and Sky (MH2) #310
+1 Undercover Operative (SNC) #63
+2 Rankle, Master of Pranks (ELD) #101
+1 Master of the Pearl Trident (TSR) #310
+1 Shacklegeist (M21) #70
+1 Spectral Adversary (MID) #341
+1 True Conviction (SCD) #38
+1 Planar Outburst (NCC) #209
+1 The Circle of Loyalty (ELD) #9
+1 Approach of the Second Sun (STA) #1
+1 Promise of Loyalty (FIC) #249
+1 Sudden Salvation (VOC) #48
+1 Historian's Boon (DMC) #21
+1 Temporary Lockdown (DMU) #36
+1 Sevinne's Reclamation (MH3) #267
+1 Solitary Confinement (JUD) #24
+1 The Restoration of Eiganjo // Architect of Restoration (PNEO) #34s *F*
+1 Nine Lives (M21) #28
+1 Leyline of Sanctity (WOT) #10
+1 Wedding Announcement // Wedding Festivity (VOW) #45 *F*
+1 Resourceful Defense (NCC) #19
+1 Paladin Class (AFR) #29
+1 March of Otherworldly Light (NEO) #28
+1 Blind Obedience (WOT) #1
+1 Rest in Peace (WOT) #12
+1 Illustrious Wanderglyph (LCC) #21
+1 Steel Seraph (BRO) #38
+1 Danitha, Benalia's Hope (DMU) #287
+1 Elite Spellbinder (STX) #289
+1 Summon: Ixion (FIC) #27
+1 Baldin, Century Herdmaster (SLX) #10
+1 Captain of the Watch (M13) #8
+1 Myojin of Blooming Dawn (NEC) #31
+1 Angel of Glory's Rise (MIC) #79
+1 Heliod, the Radiant Dawn // Heliod, the Warped Eclipse (MOM) #17
+1 Cubwarden (IKO) #279
+1 Mavinda, Students' Advocate (STX) #21
+1 Zeriam, Golden Wind (DMC) #5
+1 Emiel the Blessed (J22) #180
+1 Lieutenant Kirtar (DMR) #265
+1 Aven Interrupter (POTJ) #4p *F*
+1 Fey Steed (AFC) #274
+2 Monastery Mentor (MOM) #28
+1 Mila, Crafty Companion // Lukka, Wayward Bonder (STX) #153 *F*
+1 Vexilus Praetor (40K) #19
+1 Faithbound Judge // Sinner's Judgment (PVOW) #12s *F*
+1 Ranger of Eos (PLST) #ALA-21
+1 Lae'zel, Vlaakith's Champion (CLB) #378
+1 Charming Prince (ELD) #8
+1 Thalia's Lieutenant (PLST) #SOI-43
+1 Tocatli Honor Guard (PXLN) #42s *F*
+1 Flumph (AFR) #361
+1 Dusk Legion Duelist (MOM) #11
+1 Hushbringer (ELD) #18
+1 Kataki, War's Wage (PLST) #SOK-14
+1 Sram, Senior Edificer (TSR) #303
+1 Loyal Warhound (PAFR) #23s *F*
+2 Loyal Warhound (AFR) #23
+1 Calix, Destiny's Hand (CMM) #918
+1 Oko, the Trickster (ELD) #309
+1 Ral Zarek (DGM) #94
+1 Nissa of Shadowed Boughs (ZNR) #231
+1 Kaya, Intangible Slayer (ONE) #341
+1 Professor Onyx (STX) #83
+1 Kaya, Geist Hunter (VOW) #240
+1 The Royal Scions (PLST) #ELD-199
+1 Koth, Fire of Resistance (ONE) #338
+1 Gideon, Ally of Zendikar (BFZ) #29
+1 Tamiyo, Compleated Sage (NEO) #238
+1 Tasha, the Witch Queen (CLB) #294
+1 The Royal Scions (ELD) #199
+1 Nahiri, the Unforgiving (ONE) #329
+1 Nahiri, the Unforgiving (ONE) #472 *F*
+1 Narset of the Ancient Way (IKO) #278
+1 Elminster (CLB) #362
+1 The Eternal Wanderer (ONE) #335
+1 Elspeth, Sun's Nemesis (THB) #14
+1 Vraska, Betrayal's Sting (ONE) #115
+1 Prognostic Sphinx (CP1) #1 *F*
+1 Prognostic Sphinx (CP1) #1 *F*
+1 Omniscience (M13) #63
+1 One with the Multiverse (BRO) #59
+1 Memory Deluge (MID) #62
+1 Tezzeret's Gambit (STA) #21
+1 Day's Undoing (PLST) #ORI-51
+1 Pull from Tomorrow (DRC) #81
+1 Brainstorm (SS1) #3
+1 Repeal (TSR) #317
+1 Subterranean Schooner (LCI) #80
+1 Jwari Disruption // Jwari Ruins (ZNR) #64
+1 Blue Elemental Blast (SS1) #2
+1 Deeproot Pilgrimage (LCI) #52
+1 Training Grounds (MAT) #9
+1 The Blackstaff of Waterdeep (AFR) #365
+1 Remand (TSR) #316
+1 Memory Lapse (STA) #16
+1 Borne Upon a Wind (LTR) #44
+1 Jin-Gitaxias, Core Augur (MUL) #76 *F*
+1 From the Catacombs (CLB) #671
+1 Invoke Despair (NEO) #101
+1 Necromentia (M21) #116
+1 Tendrils of Agony (STA) #34
+1 Crippling Fear (KHM) #82
+1 Altar of Bhaal // Bone Offering (CLB) #109
+1 March of Wretched Sorrow (NEO) #111
+1 Confront the Past (STX) #67
+1 Sepulchral Primordial (ZNC) #54
+1 Vogar, Necropolis Tyrant (GN3) #3 *F*
+1 Nightmare (W16) #8
+1 Gray Merchant of Asphodel (SCD) #80
+1 Nefarox, Overlord of Grixis (M13) #103
+1 Angel of Suffering (SNC) #67
+1 Egon, God of Death // Throne of Death (PKHM) #92s *F*
+1 Graveyard Trespasser // Graveyard Glutton (PMID) #104s *F*
+1 Headless Rider (VOW) #118
+1 Eradicator Valkyrie (KHM) #94
+1 Falkenrath Forebear (VOW) #291
+1 Ayara, First of Locthwain (ELD) #75
+1 Ashnod, Flesh Mechanist (BRO) #323
+1 Scourge of the Skyclaves (ZNR) #122
+1 Champion of the Perished (PMID) #91s *F*
+1 Champion of the Perished (DBL) #91
+1 Linvala, Keeper of Silence (ROE) #33
+1 Prismatic Ending (SOA) #7
+1 Dreamroot Cascade (SOS) #254
+1 Sundown Pass (SOS) #264
+1 Scheming Silvertongue // Sign in Blood (SOS) #99
+1 Improvisation Capstone (SOS) #120
+1 Adrix and Nev, Twincasters (SPG) #156
+1 Tireless Tracker (MOC) #314
+1 Enchantress's Presence (MH2) #283
+1 Tireless Tracker (FIC) #316
+1 Arasta of the Endless Web (CLB) #817
+1 Evolved Spinoderm (ONE) #166
+1 Forgotten Ancient (FIC) #304
+1 Scavenging Ooze (PM21) #204s *F*
+1 Gilded Goose (ELD) #160
+1 Obliterate (PLST) #INV-156
+1 Starstorm (C14) #182
+1 Devil's Play (DDK) #72
+1 All Will Be One (ONE) #118
+1 Crackle with Power (PSTX) #95s *F*
+1 Hell to Pay (OTJ) #126
+1 Chaotic Transformation (DMU) #117
+1 Komainu Battle Armor (NEC) #21
+1 Rowan's Talent (MOC) #85
+1 Mana Flare (WOT) #46
+1 Breaking Point (DDK) #67
+1 Roiling Vortex (ZNR) #156
+1 Popular Entertainer (CLB) #509 *F*
+1 Crater Hellion (DDL) #56
+1 Skarrgan Firebird (DDL) #57
+1 Conquering Manticore (DDL) #55
+1 Quakebringer (KHM) #297
+1 Kamahl, Pit Fighter (DDL) #16
+1 Geode Rager (CLB) #794
+1 Arni Brokenbrow (KHM) #120
+1 Taurean Mauler (TDC) #238
+1 Reckless Stormseeker // Storm-Charged Slasher (PMID) #157s *F*
+1 Hellrider (DDK) #52
+1 Lavaborn Muse (DDK) #50
+1 Caves of Chaos Adventurer (CLB) #167
+1 Bonecrusher Giant // Stomp (ELD) #115
+1 Emberwilde Captain (CMR) #175
+1 Robber of the Rich (ELD) #138
+1 Smoldering Egg // Ashmouth Dragon (MID) #159
+1 Blex, Vexing Pest // Search for Blex (PSTX) #148s *F*
+1 The Mycotyrant (LCI) #235
+1 General Kudro of Drannith (PLST) #IKO-187
+1 Risona, Asari Commander (NEO) #330
+1 Elmar, Ulvenwald Informant (SLX) #4
+1 Fleetfoot Dancer (SNC) #188
+2 Slogurk, the Overslime (MID) #324
+1 Gluntch, the Bestower (CLB) #533 *F*
+1 Extus, Oriq Overlord // Awaken the Blood Avatar (STX) #149
+1 Ramses, Assassin Lord (DMC) #39
+1 Florian, Voldaren Scion (DSC) #217
+1 Toluz, Clever Conductor (SNC) #336
+1 Yore-Tiller Nephilim (PLST) #GPT-140
+1 Perrie, the Pulverizer (NCC) #5
+1 Vadrok, Apex of Thunder (IKO) #214
+1 Henzie "Toolbox" Torre (NCC) #102
+1 Kros, Defense Contractor (NCC) #7
+1 Manifestation Sage (STX) #205
+1 Rielle, the Everwise (IKO) #203
+1 Zirda, the Dawnwaker (IKO) #233
+1 Satoru Umezawa (NEO) #507 *F*
+1 Dust Stalker (BFZ) #202
+1 Soul of Windgrace (DMU) #220
+1 Gorion, Wise Mentor (CLB) #534 *F*
+1 Hinata, Dawn-Crowned (NEO) #222
+1 Oji, the Exquisite Blade (CLB) #547 *F*
+1 Helga, Skittish Seer (BLB) #217
+1 Deepfathom Echo (LCI) #228
+1 Melira, the Living Cure (ONE) #469 *F*
+1 Thrasios, Triton Hero (CMR) #538 *F*
+1 Urborg Lhurgoyf (DMU) #186
+1 Park Heights Pegasus (SNC) #211
+1 Lonis, Cryptozoologist (MKC) #215
+1 Jor Kadeen, First Goldwarden (ONE) #203
+1 Soul's Majesty (NEC) #131
+1 Colossification (IKO) #148
+1 Open the Way (MAT) #73
+1 Ecological Appreciation (STX) #128
+1 Genesis Wave (SOM) #122
+1 Traverse the Outlands (CLB) #258
+1 Predatory Rampage (M13) #180
+2 Life's Legacy (NCC) #300
+1 March of Burgeoning Life (NEO) #393
+1 Hornet Queen (MKC) #172
+1 Heroes' Bane (JOU) #126
+1 Fated Intervention (CP1) #2 *F*
+1 Anthousa, Setessan Hero (THS) #149
+1 Realm Seekers (CNS) #38
+1 Terra Stomper (M15) #284
+1 Gruff Triplets (WOE) #172
+1 Edgar, Charmed Groom // Edgar Markov's Coffin (VOW) #236
+1 Prophet of Kruphix (CP1) #5 *F*
+1 Illuna, Apex of Wishes (IKO) #190
+1 Brokkos, Apex of Forever (IKO) #179
+1 Liesa, Forgotten Archangel (MID) #232
+1 Brokkos, Apex of Forever (IKO) #299
+1 Sol'Kanar the Tainted (DMU) #219
+1 Roon of the Hidden Realm (PLST) #CMA-190
+1 Rith, Liberated Primeval (DMU) #313
+1 Zur the Enchanter (DMR) #206
+1 Kaheera, the Orphanguard (MUL) #47
+1 Bioessence Hydra (WAR) #186
+1 Astral Cornucopia (C16) #243
+1 Keening Stone (BRR) #89
+1 Mascot Exhibition (STX) #5
+1 Fist of Suns (C17) #211
+2 Cosmos Elixir (KHM) #237
+1 Maskwood Nexus (KHM) #369
+1 Helvault (PLST) #DKA-151
+1 Vexing Puzzlebox (CLB) #343
+1 Nevinyrral's Disk (C17) #217
+2 Key to the City (BRR) #27
+1 The Stone Brain (BRO) #247
+1 Blackblade Reforged (PDOM) #211s *F*
+1 Reckoner Bankbuster (NEO) #255
+1 Runechanter's Pike (BRR) #48
+1 Soul-Guide Lantern (BRR) #54
+1 Ichor Wellspring (BRR) #84
+1 Phyrexian Colossus (PLST) #USG-305
+1 Wandering Archaic // Explore the Vastlands (STX) #6
+1 Precursor Golem (BRR) #42
+1 Crystalline Giant (NCC) #364
+1 Emergent Ultimatum (IKO) #185
+1 Culmination of Studies (PSTX) #173p
+1 Body of Research (STX) #168
+1 Brokers Confluence (NCC) #68
+1 Lorehold Command (STX) #199
+1 Jorn, God of Winter // Kaldring, the Rimestaff (KHM) #179
+1 Absorb (PRNA) #151p
+1 Supreme Verdict (LTC) #272
+1 Electrolyze (STA) #60
+2 Brokers Ascendancy (SNC) #170
+1 Showdown of the Skalds (KHM) #229
+1 Growth Spiral (STA) #61
+1 Pillage the Bog (OTJ) #224
+1 Galvanic Iteration (MID) #224
+1 Witherbloom Command (STX) #248
+1 Weather the Storm (STA) #58
+1 Double Major (STX) #179
+1 Verazol, the Split Current (PZNR) #239p
+1 Niv-Mizzet, Parun (GRN) #192
+1 Kiora, Sovereign of the Deep (MAT) #35
+1 Keruga, the Macrosage (MUL) #48
+1 Gyruda, Doom of Depths (MUL) #42
+1 Jegantha, the Wellspring (MUL) #174 *F*
+1 Yorion, Sky Nomad (IKO) #232
+1 Yorion, Sky Nomad (MUL) #64
+1 Borborygmos and Fblthp (PMOM) #219s *F*
+1 Optimus Prime, Hero // Optimus Prime, Autobot Leader (BOT) #13
+1 Ultra Magnus, Tactician // Ultra Magnus, Armored Carrier (BOT) #15
+1 Yargle and Multani (MOM) #256
+1 The Mimeoplasm (2X2) #383
+1 Tsabo Tavoc (PLST) #INV-281
+1 Enigma Sphinx (ARB) #106
+1 Velomachus Lorehold (TDC) #309
+1 Muldrotha, the Gravetide (FDN) #243
+1 Cromat (APC) #94
+1 Balefire Liege (2X2) #180
+1 Sulfur Falls (DMR) #258
+1 Labyrinth of Skophos (THB) #243
+1 Swarmyard (PTSR) #284p
+2 Fortified Beachhead (BRO) #262
+1 Temple of Mystery (LCC) #357
+1 Shivan Reef (M15) #246
+1 Restless Spire (WOE) #306
+1 Castle Embereth (ONC) #150
+1 The Seedcore (ONE) #259
+1 The Monumental Facade (ONE) #255
+1 Restless Bivouac (WOE) #257
+1 Shivan Reef (DMU) #380
+1 The Biblioplex (STX) #264
+1 Frostboil Snarl (DRC) #158
+2 Stormcarved Coast (VOW) #265
+1 Crawling Barrens (FDN) #685
+1 Mishra's Foundry (BRO) #265
+1 Battlefield Forge (APC) #139
+1 Sulfur Falls (DMR) #400
+3 Faceless Haven (KHM) #255
+1 Myriad Landscape (WOC) #164
+1 The World Tree (KHM) #275
+1 Temple of Epiphany (FDN) #699
+1 Temple of Enlightenment (MOC) #432
+1 Animal Sanctuary (M21) #242
+1 Stormcarved Coast (DBL) #532
+1 Stirring Wildwood (WWK) #144
+1 Blinkmoth Nexus (2XM) #311
+1 Drownyard Temple (CLB) #892
+1 Temple of Mystery (MKC) #303
+2 Shipwreck Marsh (MID) #267
+1 Castle Vantress (ELD) #242
+1 Castle Garenbrig (ELD) #240
+1 Baldur's Gate (CLB) #600
+2 Petrified Hamlet (SOS) #259
+2 Flashback (SOS) #115
+2 Mana Sculpt (SOS) #57
+2 Studious First-Year // Rampant Growth (SOS) #162
+1 Silverquill, the Disputant (SOS) #226
+1 Ambitious Augmenter (SOS) #140
+1 Conciliator's Duelist (SOS) #182
+1 Decorum Dissertation (SOS) #292
+1 Spell Pierce (SOA) #23
+1 Pensive Professor (SOS) #63
+1 Mind into Matter (SOS) #202
+1 Monstrous Rage (SOA) #45
+1 Magmablood Archaic (SOS) #295
+1 Slumbering Trudge (SOS) #160
+1 Lorehold, the Historian (SOS) #201
+1 Vicious Rivalry (SOS) #241
+1 Joined Researchers // Secret Rendezvous (SOS) #23
+1 Erode (SOS) #15
+1 Triumph of the Hordes (SOA) #59
+1 Stormcarved Coast (SOS) #263
+1 Nita, Forum Conciliator (SOS) #206
+1 Practiced Offense (SOS) #25
+1 Maelstrom Artisan // Rocket Volley (SOS) #122
+1 Pox Plague (SOS) #94
+1 Dismember (SOA) #28
+1 Great Hall of the Biblioplex (SOS) #257
+1 Germination Practicum (SOS) #149
+1 Berta, Wise Extrapolator (SOS) #175
+1 Geometer's Arthropod (SOS) #191
+1 Mathemagics (SOS) #58
+1 Ark of Hunger (SOS) #173
+1 Traumatic Critique (SOS) #239
+1 Hop to It (SOA) #6
+1 Together as One (SOS) #4
+1 Library of Leng (SPG) #158
+1 Vastlands Scavenger // Bind to Life (SOS) #166
+1 Antiquities on the Loose (SOS) #7
+1 Planar Engineering (SOS) #158
+1 Colorstorm Stallion (SOS) #180
+1 Wisdom of Ages (SOS) #71
+1 Deathcap Glade (SOS) #253 *F*
+1 Emeritus of Abundance // Regrowth (SOS) #145
+1 Deflecting Palm (SOA) #63
+1 Hardened Academic (SOS) #194
+1 Deathcap Glade (SOS) #253
+1 Postmortem Professor (SOS) #93
+1 Steal the Show (SOS) #336
+1 Angel's Grace (SOA) #2
+1 Library of Leng (SPG) #158
+1 Zellix, Sanity Flayer (CLB) #652 *F*
+1 The Meathook Massacre (MID) #112
+1 Rhystic Study (J22) #114
+2 Misty Rainforest (PMH2) #250s *F*
+1 Arid Mesa (PMH2) #244s *F*
+1 Prismatic Vista (ZNE) #27
+1 Cavern of Souls (2X2) #320
+3 Akroma's Will (CMR) #3
+2 Bitterblossom (2X2) #69
+1 Crucible of Worlds (2X2) #303
+2 Worthy Knight (MOC) #217
+2 Strict Proctor (STX) #33
+2 Myrkul, Lord of Bones (CLB) #287
+4 Three Blind Mice (WOE) #35
+1 Abhorrent Oculus (DSK) #42
+1 Aboleth Spawn (CLB) #612
+1 Abundance (CMM) #884
+1 Abzan Falconer (MOC) #165
+1 Academy Manufactor (BLC) #264
+1 Acclaimed Contender (MOC) #166
+2 Adeline, Resplendent Cathar (FCA) #1
+1 Adept Watershaper (ECL) #297
+1 Adrix and Nev, Twincasters (MKC) #198
+1 Aetherflux Reservoir (BRR) #2
+1 Aetherize (FDN) #151
+1 Aetherspouts (MIC) #97
+1 Agent's Toolkit (NCC) #66
+1 Akroma, Vision of Ixidor (CMR) #2
+1 Al Bhed Salvagers (FIN) #88
+1 Alandra, Sky Dreamer (MKC) #94
+1 Alrund's Epiphany (KHM) #41
+1 Alseid of Life's Bounty (J22) #143
+1 Amalia Benavides Aguirre (LCI) #221
+4 An Offer You Can't Refuse (FIC) #267
+1 Angel of Destiny (PLST) #ZNR-2 *F*
+1 Angel of Glory's Rise (MIC) #79
+1 Angel of Invention (TDC) #109
+1 Angel of the Dire Hour (PLST) #C14-1
+1 Angelic Arbiter (JMP) #86
+1 Angelic Sleuth (ASNC) #48
+1 Anguished Unmaking (SOC) #293
+1 Anikthea, Hand of Erebos (CMM) #773
+1 Anim Pakal, Thousandth Moon (LCI) #223
+1 Anowon, the Ruin Thief (AZNR) #75
+1 Anthem of Champions (MAR) #85
+1 Aphemia, the Cacophony (THB) #84
+1 Aragorn, the Uniter (ALTR) #46
+2 Arasta of the Endless Web (MAR) #32
+1 Arbor Elf (LTC) #232
+2 Arcane Denial (MSC) #147
+1 Arcane Sanctum (FIC) #373
+6 Arcane Signet (HOC) #95
+1 Archdruid's Charm (MKM) #151
+1 Archivist of Oghma (CLB) #553
+1 Archmage Emeritus (SOC) #188
+1 Archmage's Charm (OTP) #8
+1 Archon of Emeria (MB2) #4
+2 Archon of Sun's Grace (SOC) #137
+1 Armed with Proof (MKC) #9
+1 Armored Scrapgorger (ONE) #158
+1 Arwen, Mortal Queen (PLTR) #193s *F*
+2 Ash Barrens (TMC) #60
+1 Ashaya, Soul of the Wild (DSC) #170
+1 Asmoranomardicadaistinaculdacar (MH2) #186
+1 Assassin's Trophy (SOC) #294
+1 Attended Healer (J22) #152
+1 Augur of Autumn (EOC) #92
+1 Aura Shards (PLST) #CMD-182
+1 Aurelia, Exemplar of Justice (RVR) #164
+1 Aurelia, the Warleader (FDN) #651
+1 Auron, Venerated Guardian (FIC) #130
+2 Austere Command (MSC) #294
+1 Authority of the Consuls (FIC) #232
+1 Avacyn's Memorial (MIC) #31
+1 Avacyn's Pilgrim (PF25) #1F
+1 Aven Courier (NCC) #22
+2 Avenger of Zendikar (ECC) #98
+1 Awaken the Woods (SOA) #114
+1 Ayara, First of Locthwain (MUL) #13
+1 Azorius Chancery (DSC) #261
+2 Azorius Signet (TDC) #312
+2 Azusa, Lost but Seeking (FCA) #15
+1 Bala Ged Recovery // Bala Ged Sanctuary (PLST) #ZNR-180
+1 Baldin, Century Herdmaster (TDC) #110
+1 Balefire Liege (SOC) #295
+2 Baleful Strix (FIC) #318
+2 Bane of Progress (ECC) #99
+1 Banner of Kinship (FDN) #127
+1 Bant Panorama (NCC) #387
+1 Bastion of Remembrance (TLE) #160
+1 Bastion Protector (MSC) #122
+1 Battle at the Helvault (CMM) #719
+1 Battle for Bretagard (CMM) #916
+1 Battlefield Forge (SOC) #362
+2 Beast Whisperer (CLU) #158
+4 Beast Within (MSC) #169
+1 Beledros Witherbloom (SOC) #296
+1 Bennie Bracks, Zoologist (MKC) #57
+1 Bident of Thassa (BLC) #162
+2 Binding the Old Gods (ECC) #120
+1 Birds of Paradise (MSC) #170
+1 Bishop of Rebirth (XLN) #5
+1 Black Market (PIP) #183
+1 Black Sun's Twilight (ONE) #84
+2 Blackblade Reforged (ABRO) #56
+1 Blackbloom Rogue // Blackbloom Bog (ZNR) #91
+1 Blacksmith's Skill (MH2) #6
+1 Blade Historian (STX) #165
+1 Blade Juggler (CLU) #106
+2 Blasphemous Act (MSC) #163
+1 Blighted Woodland (CLB) #881
+1 Blind Obedience (RVR) #9
+1 Blinding Angel (SLD) #1379
+1 Blitzball Stadium (FIC) #111
+1 Bloodforged Battle-Axe (PIP) #226
+1 Bloodghast (SOC) #210
+1 Bloodline Bidding (ECL) #91
+1 Bloom Tender (ECL) #166
+1 Blot Out the Sky (STX) #167
+1 Bojuka Bog (SOC) #363
+1 Boon of the Spirit Realm (CMM) #720
+1 Boon-Bringer Valkyrie (MOM) #9
+1 Boros Garrison (CLU) #231
+1 Boros Signet (TDC) #314
+1 Boseiju Reaches Skyward // Branch of Boseiju (NEO) #177
+1 Botanical Sanctum (OTJ) #267
+1 Bountiful Promenade (MSC) #226
+1 Bounty of Skemfar (J25) #638
+1 Braids's Frightful Return (DMU) #85
+1 Brainstealer Dragon (OTC) #127
+1 Brainstorm (PZA) #4
+1 Bred for the Hunt (FIC) #321
+1 Bristlebud Farmer (BIG) #17
+1 Brushland (FIC) #377
+1 Bushwhack (FDN) #215
+1 Cabaretti Courtyard (EOC) #151
+1 Cacophony Unleashed (CMM) #730
+1 Canopy Tactician (KHM) #378
+5 Canopy Vista (MSC) #227
+1 Captain N'ghathrod (CLB) #640
+1 Carnivorous Canopy (ONE) #162
+1 Case of the Locked Hothouse (MKM) #155
+1 Cast Out (DRC) #64
+1 Castle Embereth (TDC) #347
+1 Castle Garenbrig (PLST) #ELD-240
+1 Castle Locthwain (CLB) #884
+2 Castle Vantress (DSC) #267
+1 Cathar Commando (INR) #15
+1 Cavalier of Dawn (SPG) #84
+1 Cavalier of Gales (J25) #296
+1 Cavalier of Night (PLST) #M20-94
+1 Cave of the Frost Dragon (AFR) #253
+2 Caves of Koilos (SOC) #365
+1 Cephalopod Sentry (ONE) #198
+2 Champion of Lambholt (MOC) #293
+1 Champion's Helm (FIC) #337
+1 Changeling Outcast (OTC) #128
+1 Chaos Warp (MSC) #164
+1 Charcoal Diamond (CLB) #305
+3 Chasm Skulker (FIC) #262
+1 Chivalric Alliance (MOC) #11
+1 Chocobo Knights (FIC) #12
+2 Choked Estuary (MSC) #229
+1 Chrome Host Seedshark (EOC) #68
+1 Chulane, Teller of Tales (MKC) #202
+1 Cinder Glade (MSC) #230
+1 Circle of Dreams Druid (AFR) #176
+1 Cleansing Nova (MSC) #297
+1 Clearwater Pathway // Murkwater Pathway (PLST) #ZNR-260
+1 Cleric of Life's Bond (ZNR) #222
+1 Clifftop Retreat (MSC) #231
+1 Cloak and Dagger (MOR) #141
+1 Cloudsteel Kirin (NEO) #8
+1 Collective Effort (MSC) #126
+8 Command Tower (MSC) #233
+3 Commander's Sphere (ECC) #139
+1 Composer of Spring (CMM) #769
+1 Compulsive Research (TDC) #147
+1 Conduit Pylons (OTJ) #254
+1 Confirm Suspicions (MKC) #97
+1 Conjurer's Closet (DRC) #126
+1 Conjurer's Mantle (MOC) #12
+1 Consuming Aberration (TDC) #283
+1 Containment Priest (MB2) #7
+1 Contractual Safeguard (ASNC) #50
+1 Coppercoat Vanguard (MAT) #1
+1 Copperline Gorge (BLC) #301
+1 Corpse Knight (DRC) #50
+1 Cosmos Elixir (KHM) #237
+1 Counterspell (PF26) #5 *F*
+1 Countersquall (PLST) #DDH-59
+3 Courser of Kruphix (CMM) #888
+1 Court of Cunning (CMR) #63
+1 Craterhoof Behemoth (TDM) #138
+1 Crawling Barrens (FDN) #685
+1 Creeping Tar Pit (EOS) #9
+1 Crested Sunmare (PLST) #HOU-6
+1 Crippling Fear (PW24) #17
+1 Crusader of Odric (INR) #18
+2 Culling Ritual (SOA) #127
+1 Cultivate (MSC) #172
+1 Cultivator Colossus (INR) #190
+1 Cultivator's Caravan (DRC) #127
+1 Cunning Rhetoric (OTC) #129
+1 Cursed Mirror (SOC) #242
+1 Curtains' Call (OTC) #130
+2 Damning Verdict (FIC) #239
+1 Darkbore Pathway // Slitherbore Pathway (KHM) #254
+1 Darkslick Shores (OTC) #281
+1 Darkwater Catacombs (FIC) #384
+1 Dauthi Voidwalker (MAR) #63
+1 Dawn of a New Age (PLTR) #5s *F*
+1 Dawnbringer Cleric (CLB) #15
+1 Deathcap Glade (SOS) #253
+1 Death's Oasis (IKO) #182
+1 Deduce (SOA) #16
+1 Defense of the Heart (MAR) #76
+1 Delighted Halfling (PLTR) #158s *F*
+1 Demilich (AFR) #53
+1 Demon of Fate's Design (DSC) #137
+1 Demon's Disciple (CMM) #149
+1 Denry Klin, Editor in Chief (NCC) #71
+1 Derevi, Empyrial Tactician (BLC) #87
+1 Deserted Beach (INR) #276
+1 Destiny Spinner (WOC) #123
+1 Destroy Evil (MSC) #128
+1 Detective of the Month (MKC) #21
+1 Didn't Say Please (ELD) #42
+1 Dig Through Time (SOC) #195
+3 Dimir Aqueduct (DSC) #270
+1 Dimir Keyrune (CLB) #856
+1 Dimir Locket (ZNC) #111
+1 Dimir Signet (DRC) #129
+2 Dina, Soul Steeper (SOC) #305
+1 Disdainful Stroke (SOA) #17
+1 Dismal Backwater (TDM) #254
+1 Disorder in the Court (MKC) #209
+1 Distant Melody (ECC) #45
+1 Dodgy Jalopy (NCC) #58
+1 Dollhouse of Horrors (DBL) #522
+1 Doom Foretold (ELD) #187
+1 Doom Weaver (VOC) #34
+1 Doomskar (KHM) #334
+1 Doomwake Giant (SOC) #212
+1 Doubling Season (PZA) #11
+1 Dovin's Veto (FCA) #51
+1 Drafna, Founder of Lat-Nam (BRO) #47
+1 Dramatic Finale (STX) #180
+1 Drannith Magistrate (TLE) #2
+1 Dreadship Reef (TSR) #276
+1 Dream Devourer (KHM) #90
+1 Dreamroot Cascade (SOS) #254
+1 Drown in the Loch (SPG) #27
+1 Drowned Catacomb (MSC) #239
+1 Dryad Arbor (DSC) #273
+1 Dryad of the Ilysian Grove (M3C) #225
+1 Duelist's Heritage (TLE) #153
+1 Duskshell Crawler (FIC) #301
+2 Dwynen, Gilt-Leaf Daen (FDN) #217
+1 Dwynen's Elite (FDN) #218
+1 Eidolon of Blossoms (WOC) #124
+1 Eiganjo, Seat of the Empire (NEO) #268
+1 Eladamri's Call (TLE) #48
+1 Elas il-Kor, Sadistic Pilgrim (DMU) #198
+1 Elder Brain (CLB) #125
+1 Elder Gargaroth (DRC) #111
+1 Elderfang Disciple (J25) #432
+1 Elderfang Venom (KHC) #15
+1 Elenda and Azor (MOC) #6
+1 Elesh Norn, Grand Cenobite (MUL) #3
+1 Elesh Norn, Mother of Machines (ONE) #10
+1 Elite Scaleguard (CMM) #22
+1 Elrond, Master of Healing (PLTR) #200s *F*
+1 Elspeth Conquers Death (PLST) #THB-13
+1 Eluge, the Shoreless Sea (BLB) #49
+1 Elven Chorus (PLTR) #160s *F*
+2 Elvish Archdruid (FDN) #219
+3 Elvish Mystic (SOC) #266
+1 Elvish Warmaster (LTC) #241
+1 Embercleave (SPG) #77
+1 Emerald Medallion (MH3) #291
+1 Emeria Angel (TDC) #114
+1 Emeria Shepherd (PLST) #BFZ-22 *F*
+1 Emeria's Call // Emeria, Shattered Skyclave (ZNR) #317
+1 Enchantress's Presence (WOC) #125
+1 Endless Evil (CLB) #615
+2 End-Raze Forerunners (BLC) #214
+1 Enduring Angel // Angelic Enforcer (DBL) #17
+1 Ephemerate (MAR) #44
+1 Erdwal Illuminator (MKC) #104
+1 Erebos, Bleak-Hearted (CMM) #868
+1 Ertai Resurrected (DMU) #199
+1 Ertai's Scorn (DMU) #48
+2 Esper Sentinel (H2R) #2
+1 Eternal Witness (M3C) #227
+1 Ethereal Investigator (MKC) #105
+1 Ethersworn Adjudicator (MOC) #222
+2 Everflowing Chalice (EOC) #137
+2 Evolution Sage (ECC) #105
+2 Evolving Wilds (MSC) #240
+1 Exemplar of Light (FDN) #11
+9 Exotic Orchard (MSC) #470
+1 Expel the Interlopers (TDC) #115
+1 Explore (TLE) #259
+1 Exquisite Archangel (AER) #18
+1 Exsanguinator Cavalry (MOC) #26
+1 Extinction Event (MAR) #65
+1 Extinguish All Hope (CMM) #157
+1 Extract from Darkness (LTC) #266
+1 Extraction Specialist (SNC) #12
+1 Ezuri, Renegade Leader (PLST) #C14-195
+1 Ezuri, Stalker of Spheres (ONE) #317
+4 Fabled Passage (MSC) #242
+1 Fact or Fiction (WOC) #90
+1 Faeburrow Elder (AECL) #51
+1 Faerie Vandal (J25) #311
+1 Fallen Shinobi (OTC) #226
+1 Far Wanderings (PLST) #TOR-125
+2 Farewell (AFIN) #31
+1 Farhaven Elf (PW26) #2
+2 Farseek (MSC) #815
+1 Fathom Mage (FIC) #325
+2 Fauna Shaman (SLP) #41
+1 Faunsbane Troll (WOE) #203
+1 Feasting Troll King (ELD) #152
+2 Feed the Swarm (SOA) #29
+1 Felidar Retreat (FDN) #574
+1 Fell the Mighty (OTP) #1
+3 Fellwar Stone (MSC) #285
+1 Feral Encounter (WOE) #169
+1 Field of Ruin (ALTR) #77
+1 Fight Rigging (FIC) #303
+1 Finale of Revelation (FDN) #589
+1 Fire Diamond (CLB) #313
+1 Firemane Commando (SOC) #145
+1 Firja, Judge of Valor (MUL) #40
+1 Five Hundred Year Diary (WHO) #42
+1 Flooded Grove (SOC) #373
+1 Flooded Strand (MH3) #464
+1 Flow of Knowledge (BRO) #49
+1 Flowering of the White Tree (PLTR) #15s *F*
+1 Fomori Vault (PBIG) #29p
+1 Font of Fertility (CMM) #895
+9 Forest (HOB) #198
+1 Forge Anew (PLTR) #17s *F*
+1 Forge of Heroes (FIC) #395
+1 Forgotten Ancient (SOC) #267
+1 Forgotten Creation (DRC) #77
+1 Forsaken Monument (M3C) #293
+3 Fortified Village (MSC) #245
+1 Fractured Sanity (CLB) #722
+1 Froghemoth (AFR) #184
+1 Frogtosser Banneret (ZNC) #43
+1 Frontline Medic (LTC) #169
+1 Fumigate (EOC) #65
+1 Fury (ECC) #50
+1 Furycalm Snarl (MSC) #247
+1 Fyndhorn Elves (PF26) #2
+1 Gala Greeters (SNC) #148
+1 Galadriel, Light of Valinor (ALTC) #8
+1 Garruk's Harbinger (M21) #185
+1 Garruk's Uprising (ECC) #109
+1 Gatta and Luzzu (FIC) #134
+1 Gavel of the Righteous (EOC) #55
+1 Gavony Township (MOC) #406
+1 General Kudro of Drannith (PLST) #IKO-187
+1 General's Enforcer (PIP) #217
+1 Geode Rager (SCD) #144
+1 Ghalta, Primal Hunger (FDN) #222
+1 Ghostly Pilferer (OTC) #98
+1 Ghoulish Impetus (SOC) #214
+1 Giada, Font of Hope (FDN) #141
+1 Gift of Estates (STA) #6
+1 Gifts Ungiven (2X2) #51
+1 Gigantosaurus (FDN) #718 *F*
+1 Gisa, Glorious Resurrector (DBL) #103
+1 Gisela, Blade of Goldnight (MKC) #211
+1 Gixian Puppeteer (BRO) #99
+1 Glacial Fortress (MSC) #248
+1 Glasspool Mimic // Glasspool Shore (ZNR) #60
+2 Glissa Sunslayer (ECC) #122
+1 Gloom Ripper (ECL) #102
+1 Glorious Protector (CLB) #695
+1 Godo, Bandit Warlord (FCA) #13
+1 Gods Willing (CLU) #63
+3 Golgari Rot Farm (ECC) #151
+1 Gonti, Lord of Luxury (OTC) #135
+1 Grand Abolisher (PBIG) #2p
+1 Grand Arbiter Augustin IV (2X2) #221
+1 Grasp of Fate (WHO) #208
+1 Grateful Apparition (FIC) #244
+1 Grave Pact (WOT) #29
+1 Gray Merchant of Asphodel (DSC) #142
+1 Grazilaxx, Illithid Scholar (CLB) #723
+1 Greedy Freebooter (LCI) #109
+1 Grell Philosopher (CLB) #616
+1 Gruul Turf (ECC) #152
+2 Guardian of Faith (SOC) #148
+1 Guiltfeeder (CLB) #756
+1 Gyre Sage (FIC) #306
+1 Haakon, Stromgald Scourge (MOC) #252
+1 Hajar, Loyal Bodyguard (BRO) #211
+1 Halana and Alena, Partners (FDN) #659
+1 Hall of Storm Giants (AFR) #257
+1 Hallowed Haunting (SPG) #64
+1 Halo Forager (WOC) #139
+1 Hamlet Vanguard (DBL) #468
+1 Harald, King of Skemfar (KHM) #212
+2 Hardened Scales (SOC) #272
+1 Harrow (EOC) #98
+1 Haunted One (CLB) #624
+1 Haunting Voyage (ECC) #75
+1 Heliod, Sun-Crowned (CMM) #29
+1 Heliod's Intervention (OTC) #81
+1 Helm of the Host (MSC) #200
+1 Helping Hand (SOA) #70
+1 Herald of Eternal Dawn (FDN) #17
+1 Herald of Hoofbeats (MOC) #22
+2 Herald of Secret Streams (LCC) #158
+1 Herald of the Pantheon (CMM) #898
+1 Herald of War (J25) #207
+1 Herald's Horn (MSC) #287
+1 Hero of Bladehold (TDC) #119
+1 Heroic Intervention (TLE) #43
+1 Heronblade Elite (MIC) #26
+2 Hinterland Harbor (MSC) #250
+1 Hofri Ghostforge (SOC) #314
+1 Holy Cow (OTJ) #16
+1 Hopeful Initiate (INR) #27
+1 Horn of the Mark (PLTR) #241s *F*
+2 Hullbreaker Horror (INR) #68
+1 Hunter's Insight (MAR) #35
+1 Hylda's Crown of Winter (WOE) #247
+1 Icon of Ancestry (LCC) #305
+1 Idol of Oblivion (TDC) #319
+1 Idyllic Tutor (SPG) #129
+1 Illithid Harvester // Plant Tadpoles (CLB) #76
+1 Imaryll, Elfhame Elite (GN3) #5 *F*
+1 Imperial Recruiter (MH2) #281
+1 Imperious Mindbreaker (VOC) #33
+2 Imperious Perfect (FDN) #719 *F*
+1 In Search of Greatness (KHM) #177
+2 Incubation Druid (FIC) #309
+1 Inexorable Tide (FIC) #265
+1 Infestation Sage (FDN) #64
+1 Inga and Esika (MOM) #310
+1 Inkfathom Infiltrator (PLST) #SHM-167
+1 Inscription of Abundance (DSC) #186
+1 Inspiring Call (TLE) #168
+2 Inspiring Overseer (FDN) #496
+1 Inspiring Statuary (FIC) #347
+1 Inspiring Vantage (OTJ) #269
+1 Intrepid Adversary (DBL) #25
+1 Invasion of Dominaria // Serra Faithkeeper (MOM) #21
+1 Invasion of New Capenna // Holy Frazzle-Cannon (MOM) #238
+1 Invasion of New Phyrexia // Teferi Akosa of Zhalfir (MOM) #239
+1 Invasion of Zendikar // Awakened Skyclave (MOM) #194
+1 Investigator's Journal (CMM) #956
+1 Invisible Stalker (PLST) #ISD-60
+1 Invoke Justice (NEO) #21
+1 Invoke the Winds (NEO) #58
+1 Irrigated Farmland (MSC) #251
+7 Island (HOB) #195
+1 Jace, Memory Adept (M14) #60
+2 Jaheira, Friend of the Forest (CLB) #237
+1 Jodah, the Unifier (FCA) #17
+2 Jolrael, Mwonvuli Recluse (BLC) #225
+1 Jolrael, Voice of Zhalfir (MAT) #168
+1 Jukai Naturalist (WOC) #140
+1 Jungle Hollow (TDM) #258
+1 Junk Winder (BLC) #169
+1 Jwari Disruption // Jwari Ruins (ZNR) #64
+1 Kabira Takedown // Kabira Plateau (ZNR) #19
+1 Kaito, Dancing Shadow (ONE) #340
+1 Kami of Transience (NEO) #391
+1 Kami of Whispered Hopes (SOC) #273
+2 Kappa Cannoneer (EOC) #74
+1 Karlach, Fury of Avernus (CLB) #186
+1 Karmic Guide (SOC) #151
+1 Karn, Living Legacy (DMU) #1
+1 Katilda and Lier (MOC) #446
+1 Katilda, Dawnhart Martyr // Katilda's Rising Dawn (DBL) #288
+1 Katilda, Dawnhart Prime (DBL) #230
+1 Kaya the Inexorable (KHM) #218
+1 Kazandu Mammoth // Kazandu Valley (ZNR) #189
+1 Keleth, Sunmane Familiar (CMM) #33
+1 Kellan, Inquisitive Prodigy // Tail the Suspect (MKM) #334
+1 Kellan, the Fae-Blooded // Birthright Boon (WOE) #230
+3 Kenrith's Transformation (WOC) #128
+1 Keruga, the Macrosage (MB2) #84
+1 Ketria Triome (PLST) #IKO-250
+1 Khalni Ambush // Khalni Territory (ZNR) #192
+2 Khalni Heart Expedition (CMM) #899
+1 Killer Service (MKC) #174
+1 Kimahri, Valiant Guardian (AFIN) #29
+2 Kindred Discovery (MSC) #150
+1 King Darien XLVIII (DMU) #204
+1 Kiora's Follower (LCC) #273
+1 Knight Exemplar (MOC) #192
+2 Knight of the White Orchid (MOC) #193
+1 Knights' Charge (MOC) #333
+1 Kodama of the West Tree (J25) #78
+1 Kodama's Reach (ECC) #113
+1 Kolvori, God of Kinship // The Ringhart Crest (KHM) #181
+1 Koma, Cosmos Serpent (TLE) #51
+2 Krosan Verge (OTC) #304
+1 Kunoros, Hound of Athreos (THB) #222
+1 Kura, the Boundless Sky (NEO) #200
+1 Kutzil, Malamet Exemplar (LCI) #304
+1 Kyler, Sigardian Emissary (MIC) #4
+1 Lae'zel, Vlaakith's Champion (CLB) #29
+1 Last March of the Ents (PLTR) #172s *F*
+1 Latchkey Faerie (PLST) #MOR-39
+1 Lathril, Blade of the Elves (FDN) #242
+1 Lazav, Dimir Mastermind (ZNC) #92
+1 Leaf Gilder (JMP) #408
+1 Ledger Shredder (SPG) #55
+1 Leinore, Autumn Sovereign (MIC) #1
+1 Lich-Knights' Conquest (WOE) #96
+1 Lier, Disciple of the Drowned (TDC) #157
+1 Liesa, Shroud of Dusk (CMR) #286
+1 Lightning Greaves (MSC) #202
+1 Linvala, Keeper of Silence (JMP) #119
+1 Linvala, Shield of Sea Gate (PLST) #ZNR-226
+1 Linvala, the Preserver (OGW) #25
+1 Llanowar Elves (FDN) #227
+2 Llanowar Loamspeaker (BLC) #228
+1 Llanowar Visionary (J25) #684
+1 Locthwain Lancer (MOC) #27
+1 Lonely Sandbar (EOC) #166
+1 Lonis, Cryptozoologist (MKC) #215
+1 Loot, Exuberant Explorer (FDN) #106
+1 Looter il-Kor (CMM) #102
+1 Lorehold Campus (SOC) #384
+1 Love Song of Night and Day (CMM) #827
+1 Lovestruck Beast // Heart's Desire (CLB) #827
+1 Lulu, Stern Guardian (FIC) #143
+1 Luminarch Aspirant (NCC) #205
+2 Luminous Broodmoth (FIC) #246
+1 Lunarch Veteran // Luminous Phantom (INR) #32
+1 Lurrus of the Dream-Den (AMOM) #81
+1 Lys Alana Huntmaster (J22) #686
+1 Maddening Cacophony (ZNR) #330
+1 Maester Seymour (FIC) #160
+1 Magda, Brazen Outlaw (KHM) #142
+1 Magus of the Order (CMR) #242
+1 Makindi Stampede // Makindi Mesas (ZNR) #26
+1 Malakir Rebirth // Malakir Mire (ZNR) #111
+1 Malevolent Hermit // Benevolent Geist (DBL) #61
+1 Malignus (PLST) #AVR-148
+1 Managorger Hydra (BLC) #230
+1 Mangara, the Diplomat (SOC) #155
+1 Marang River Prowler (ZNC) #29
+1 Marauding Blight-Priest (FDN) #178
+2 Marble Diamond (CLB) #320
+1 March of Swirling Mist (NEO) #61
+1 Markov Purifier (DBL) #508
+1 Marsh Flitter (PLST) #LRW-125
+1 Marshal of Zhalfir (MOM) #246
+2 Marwyn, the Nurturer (J25) #687
+1 Master Thief (ZNC) #30
+2 Maul of the Skyclaves (J25) #223
+1 Mazemind Tome (FDN) #676
+1 Mechanized Production (MAR) #57
+1 Memory Plunder (CLB) #849
+1 Mentor of the Meek (INR) #34
+1 Merfolk Windrobber (ZNR) #70
+1 Merry, Esquire of Rohan (ALTR) #50
+1 Mesa Enchantress (DSC) #68
+2 Mesmeric Orb (BRR) #31
+1 Meteor Golem (MSC) #205
+1 Meticulous Archive (MKM) #264
+1 Miara, Thorn of the Glade (KHC) #51
+2 Midnight Clock (DRC) #79
+1 Midnight Reaper (DRC) #44
+1 Mighty Servant of Leuk-o (CLB) #324
+1 Mikaeus, the Lunarch (J25) #225
+1 Military Intelligence (J22) #322
+1 Millikin (SOC) #351
+1 Mina and Denn, Wildborn (PLST) #OGW-156
+3 Minas Tirith (ALTR) #55
+1 Mind Flayer (CLB) #728
+5 Mind Stone (SOC) #352
+1 Mindcrank (CLB) #866
+1 Minions' Murmurs (TSR) #124
+1 Minn, Wily Illusionist (AFC) #16
+1 Mirari's Wake (CMM) #928
+1 Mirrex (ONE) #254
+1 Mirror Entity (OTC) #83
+1 Mischievous Mystic (FDN) #47
+1 Mishra's Bauble (MB2) #97
+1 Mishra's Factory (DMR) #251
+1 Mishra's Self-Replicator (PLST) #DOM-223
+1 Mithril Coat (PLTR) #245s *F*
+1 Momo, Friendly Flier (TLA) #29
+1 Mondrak, Glory Dominus (ONE) #299
+1 Monumental Corruption (ONC) #24
+1 Moonshaker Cavalry (SOC) #110
+2 Morbid Opportunist (SOC) #219
+1 Morcant's Loyalist (ECL) #236
+1 Morska, Undersea Sleuth (MKC) #317
+1 Mossborn Hydra (FDN) #107
+1 Mosswort Bridge (TDC) #379
+1 Mother of Runes (CLB) #702
+3 Mountain (HOB) #197
+1 Multani, Yavimaya's Avatar (EOC) #100
+1 Muraganda Raceway (DFT) #257
+1 Murasa Rootgrazer (ZNR) #229
+1 Murder (J25) #467
+1 Murmuring Mystic (J25) #107
+1 Mutable Explorer (ECL) #186
+1 Myrel, Shield of Argive (BRO) #18
+3 Myriad Landscape (EOC) #169
+1 Mystic Confluence (MAR) #12
+1 Mystic Remora (TLE) #16
+1 Mystical Tutor (TLE) #308
+1 Mythos of Nethroi (IKO) #97
+1 Nadir Kraken (J25) #332
+1 Nahiri's Lithoforming (ZNR) #151
+1 Narci, Fable Singer (CMM) #775
+1 Narset, Parter of Veils (MB2) #32
+2 Nature's Lore (MSC) #177
+1 Nature's Will (WOT) #57
+1 Naya Panorama (NCC) #417
+2 Necroblossom Snarl (SOC) #389
+1 Necromantic Selection (TDC) #189
+4 Negate (TMT) #47
+1 Nemesis of Reason (CLB) #850
+1 Nephalia Drownyard (LCC) #344
+1 Nessian Wanderer (CMM) #905
+1 Nesting Grounds (ECC) #155
+1 Nettlecyst (MKC) #233
+1 Niambi, Esteemed Speaker (M21) #222
+1 Nighthawk Scavenger (OTC) #144
+1 Nighthowler (CLB) #764
+1 Nightmare Shepherd (DSC) #149
+1 Nightshade Stinger (JMP) #258
+1 Nightveil Sprite (J25) #335
+1 Nine-Lives Familiar (FDN) #321
+1 Nissa, Ascended Animist (ONE) #327
+1 Nissa, Resurgent Animist (PMAT) #22p
+1 Nobilis of War (MM2) #195
+1 Noble Hierarch (PLST) #MM2-151
+1 Notion Thief (SPG) #36
+1 Notorious Throng (ZNC) #33
+1 Nykthos, Shrine to Nyx (PLST) #THS-223
+1 Nyx Weaver (TDC) #298
+1 Nyxbloom Ancient (FCA) #16
+1 Nyxborn Behemoth (CMM) #742
+1 O'aka, Traveling Merchant (FIC) #144
+1 Oakhame Adversary (PLST) #ELD-167
+1 Obelisk of Urd (ZNC) #115
+1 Obscura Storefront (DSC) #291
+1 Obuun, Mul Daya Ancestor (ZNC) #8
+1 Ochre Jelly (AFR) #196
+2 Odric, Master Tactician (CMM) #46
+1 Oko, Thief of Crowns (OTP) #50
+1 Omen of the Hunt (CMM) #906
+2 Ominous Seas (PLST) #IKO-61
+1 Omnath, Locus of Rage (ECC) #129
+1 On the Trail (MKC) #349
+1 O-Naginata (PLST) #SOK-157
+1 Ondu Spiritdancer (DSC) #101
+1 Oona, Queen of the Fae (WOC) #142
+1 Oona's Blackguard (ZNC) #51
+1 Oracle of Mul Daya (EOC) #102
+1 Orah, Skyclave Hierophant (ZNR) #233
+1 Organic Extinction (EOC) #66
+1 Ornithopter (DMR) #233
+1 Orzhov Basilica (DRC) #164
+1 Orzhov Signet (TDC) #323
+1 Outcaster Trailblazer (OTJ) #173
+1 Overcharged Amalgam (INR) #80
+1 Overflowing Basin (SOC) #392
+1 Overgrown Farmland (TDC) #381
+1 Overrun (FDN) #230
+1 Oversold Cemetery (WOT) #33
+1 Ozolith, the Shattered Spire (SOC) #281
+1 Pact of Negation (MB2) #169
+1 Pact of the Serpent (LCC) #206
+1 Padeem, Consul of Innovation (J25) #62
+1 Painful Quandary (FDN) #179
+1 Palladium Myr (PW25) #6
+1 Park Heights Maverick (NCC) #63
+1 Patchwork Automaton (J25) #757
+7 Path of Ancestry (MSC) #254
+3 Path to Exile (MSC) #141
+1 Patriarch's Bidding (MH2) #275
+1 Pelakka Predation // Pelakka Caverns (ZNR) #120
+1 Peregrin Took (LTR) #181
+1 Perplexing Chimera (BNG) #48
+1 Persist (ECC) #83
+1 Phenax, God of Deception (PLST) #BNG-152
+1 Phylath, World Sculptor (ZNR) #234
+1 Phyrexian Revoker (BRR) #40
+1 Pile On (MKC) #134
+1 Pilfered Plans (SCD) #238
+1 Pippin, Guard of the Citadel (ALTR) #51
+11 Plains (HOB) #194
+1 Planar Incision (NEO) #72
+1 Plated Onslaught (ONE) #29
+1 Platinum Angel (ABRO) #71
+1 Plaza of Heroes (MSC) #483
+1 Polukranos, World Eater (PLST) #THS-172
+1 Ponder (MAR) #13
+1 Port Razer (SPG) #33
+1 Port Town (MSC) #484
+1 Portal to Phyrexia (BRO) #240
+4 Prairie Stream (MSC) #485
+1 Preacher of the Schism (LCI) #113
+1 Pride of the Perfect (KHC) #52
+1 Primal Might (SOC) #283
+1 Primeval Protector (NEC) #124
+1 Professional Face-Breaker (FIC) #296
+1 Progenitor Exarch (MOM) #32
+1 Promise of Loyalty (MSC) #319
+1 Prosperous Thief (J25) #346
+1 Protection Magic (FIC) #107
+1 Prowess of the Fair (KHC) #53
+1 Psionic Ritual (CLB) #618
+1 Psychic Corrosion (PLST) #M19-68
+2 Psychosis Crawler (BLC) #282
+1 Puresteel Paladin (FIC) #250
+1 Pyre of Heroes (KHM) #241
+1 Quandrix Cultivator (STX) #218
+1 Questing Beast (SLC) #17
+1 Quirion Beastcaller (J25) #703
+1 Quirion Ranger (MH2) #285
+1 Radha, Heart of Keld (M21) #224
+1 Raffine's Tower (SNC) #353
+1 Rally the Ranks (KHM) #20
+1 Ram Through (CMM) #314
+3 Rampaging Baloths (EOC) #104
+1 Rampant Growth (FIC) #313
+1 Rankle, Master of Pranks (OTC) #148
+1 Ransom Note (MKC) #355
+1 Ratadrabik of Urborg (DMU) #213
+1 Ravenform (LCC) #167
+1 Ravenous Chupacabra (MKC) #136
+2 Razorverge Thicket (MSC) #487
+1 Reality Shift (SOC) #199
+2 Realmwalker (ECC) #114
+1 Reassembling Skeleton (TDC) #195
+1 Reckoner Bankbuster (NEO) #499
+2 Reclamation Sage (FDN) #231
+1 Reconnaissance Mission (MSC) #153
+1 Redirect Lightning (TLA) #151
+1 Reflections of Littjara (TDC) #164
+1 Refute (FDN) #48
+1 Relic of Legends (MSC) #209
+1 Relic Vial (ZNR) #250
+1 Reliquary Tower (SOC) #398
+1 Renata, Called to the Hunt (MUL) #28
+1 Renegade Doppelganger (ROE) #84
+1 Replicating Ring (MOC) #372
+1 Reshape the Earth (CMR) #249
+1 Resistance Squad (DBL) #299
+1 Resourceful Defense (EOC) #67
+1 Resplendent Angel (LCI) #32
+1 Restless Cottage (WOE) #258
+1 Restless Fortress (WOE) #259
+1 Restless Vinestalk (WOE) #261
+1 Retreat to Coralhelm (DSC) #126
+1 Return of the Wildspeaker (ECC) #115
+1 Return Upon the Tide (KHM) #106
+1 Rewind (PLST) #USG-93
+1 Reyav, Master Smith (MUL) #57
+1 Rhys the Exiled (KHC) #73
+2 Righteous Valkyrie (J25) #246
+1 Rikku, Resourceful Guardian (FIC) #145
+1 Rishkar, Peema Renegade (J25) #708
+1 Rishkar's Expertise (PW25) #1
+1 Rite of Harmony (DBL) #236
+2 Rivendell (PLTR) #259s *F*
+1 River of Tears (MKC) #283
+2 Roaming Throne (LCI) #258
+2 Rogue's Passage (SOC) #400
+1 Roiling Regrowth (EOC) #105
+1 Ruinous Ultimatum (AFIN) #33
+1 Rumor Gatherer (CLB) #705
+1 Rush of Dread (OTJ) #104
+1 Ruthless Winnower (KHC) #10
+1 Sacred Peaks (SOC) #402
+1 Sakura-Tribe Elder (SOC) #285
+1 Sanctum Weaver (WOC) #131
+1 Sandsteppe Citadel (ECC) #164
+1 Sandwurm Convergence (DSC) #195
+1 Sanguine Spy (SNC) #93
+1 Sapling Nursery (ECL) #192
+1 Sapphire Medallion (MH3) #296
+1 Sarinth Steelseeker (BRO) #189
+1 Saryth, the Viper's Fang (MKC) #185
+1 Satyr Enchanter (CMM) #936
+1 Savior of Ollenbock (DBL) #301
+1 Scattered Groves (MSC) #262
+1 Scavenger Grounds (MSC) #263
+1 Scavenging Ooze (FDN) #232
+1 Schema Thief (MOC) #24
+1 Scoured Barrens (TDM) #267
+1 Scrap Trawler (MOC) #373
+2 Scute Swarm (DSC) #197
+1 Sea of Clouds (CLB) #605
+1 Seachrome Coast (BLC) #328
+1 Search for Azcanta // Azcanta, the Sunken Ruin (PLST) #XLN-74
+3 Seaside Citadel (ECC) #166
+1 Season of Weaving (BLB) #68
+2 Secluded Courtyard (MSC) #265
+2 Secluded Steppe (EOC) #177
+1 Sejiri Shelter // Sejiri Glacier (ZNR) #37
+4 Selesnya Sanctuary (CLU) #246
+1 Selfless Glyphweaver // Deadly Vanity (STX) #157
+3 Selfless Spirit (SOC) #167
+1 Selvala, Heart of the Wilds (ECC) #116
+1 Sensei's Divining Top (MB2) #231
+1 Sephara, Sky's Blade (CMM) #54
+1 Seraphic Greatsword (CMR) #624
+1 Serra Angel (FDN) #147
+1 Serra Avenger (TSR) #41
+1 Serra Paragon (SOC) #169
+1 Serra's Emissary (MH2) #333
+1 Setessan Champion (WOC) #132
+1 Sewer Nemesis (CLB) #771
+1 Shadowfax, Lord of Horses (LTR) #227
+1 Shadowheart, Dark Justiciar (CLB) #146
+1 Shadow-Rite Priest (DMU) #106
+1 Shadowspear (PZA) #17
+1 Shaile, Dean of Radiance // Embrose, Dean of Shadow (STX) #158
+1 Shalai, Voice of Plenty (TDC) #130
+1 Shaman of the Pack (KHC) #92
+1 Shamanic Revelation (SOA) #122
+1 Shapers' Sanctuary (XLN) #206
+1 Shark Typhoon (DSC) #127
+1 Sharp-Eyed Rookie (MKM) #176
+1 Shattered Sanctum (SOS) #260
+1 Shelinda, Yevon Acolyte (FIC) #184
+2 Shigeki, Jukai Visionary (TDC) #270
+1 Shimmer Dragon (J25) #353
+2 Shineshadow Snarl (SOC) #403
+3 Shipwreck Marsh (INR) #284
+1 Shore Up (BLB) #69
+1 Sidar Jabari of Zhalfir (MOC) #97
+1 Siege Veteran (BRO) #25
+1 Sigarda, Champion of Light (DBL) #240
+1 Sigarda, Heron's Grace (MIC) #155
+1 Sigarda's Splendor (DBL) #33
+1 Sigarda's Vanguard (MIC) #8
+2 Sigardian Savior (DBL) #34
+1 Sigardian Zealot (MIC) #29
+1 Sigil of the Empty Throne (DSC) #103
+1 Silent Hallcreeper (DSK) #345
+1 Silundi Vision // Silundi Isle (ZNR) #80
+1 Silver Scrutiny (DMU) #395
+1 Silverblade Paladin (C14) #88
+1 Silver-Fur Master (NEO) #236
+1 Silverquill Silencer (STX) #234
+1 Silverwing Squadron (MOC) #207
+2 Simic Growth Chamber (DSC) #298
+1 Simic Signet (DSC) #252
+1 Skemfar Avenger (KHM) #109
+1 Skemfar Shadowsage (J25) #489
+1 Skrelv, Defector Mite (ONE) #33
+1 Skullclamp (MSC) #451
+1 Sky Diamond (SCD) #273
+1 Skyclave Cleric // Skyclave Basilica (ZNR) #40
+2 Skycloud Expanse (EOC) #181
+1 Skyhunter Strike Force (ONC) #31
+1 Slash the Ranks (CMR) #47
+1 Slip Out the Back (CLU) #99
+1 Slither Blade (OTC) #114
+1 Sludge Monster (CLB) #735
+1 Smitten Swordmaster // Curry Favor (MOC) #268
+2 Smothering Tithe (WOT) #13
+1 Smuggler's Share (MKC) #84
+1 Snakeskin Veil (TDM) #159
+1 Snowfield Sinkhole (CLB) #915
+1 Soaring Thought-Thief (ZNR) #236
+5 Sol Ring (MSC) #211
+3 Solemn Simulacrum (MSC) #453
+1 Solve the Equation (STX) #54
+1 Sophia, Dogged Detective (MKC) #319
+1 Soul Manipulation (PLST) #MM3-185
+1 Soul Transfer (NEO) #122
+1 Soul-Guide Lantern (EOC) #143
+1 Soul's Majesty (NEC) #131
+1 Soulstone Sanctuary (FDN) #133
+1 Sovereign Okinec Ahau (LCI) #240
+1 Spara's Headquarters (ASNC) #36
+1 Spark Double (MSC) #279
+2 Speaker of the Heavens (J25) #102
+1 Spectacular Spider-Man (LMAR) #2 *F*
+1 Spectator Seating (MSC) #495
+1 Spellskite (CLB) #873
+1 Spelunking (LCI) #213
+1 Sphere Grid (FIC) #70
+1 Spinner of Souls (FDN) #112
+1 Spire of Industry (EOC) #183
+1 Spirit-Sister's Call (DSC) #232
+1 Spiteful Banditry (PLTR) #149s *F*
+1 Springbloom Druid (SOC) #287
+1 Spring-Leaf Avenger (NEO) #208
+1 Starfield Mystic (SOC) #177
+1 Starfield of Nyx (CMM) #840
+1 Steamcore Scholar (MKM) #71
+1 Steel Hellkite (TDC) #327
+1 Steel Seraph (BRO) #38
+1 Stinkdrinker Bandit (ZNC) #55
+1 Strixhaven Stadium (FCA) #63
+1 Stroke of Midnight (FCA) #26
+1 Sublime Archangel (SLD) #1381
+1 Sublime Epiphany (FIC) #271
+1 Subterranean Schooner (LCI) #80
+1 Sudden Salvation (VOC) #48
+1 Sulfurous Springs (EOC) #185
+1 Summon: Fenrir (FIN) #203
+1 Summon: Yojimbo (FIC) #196
+3 Sun Titan (SOC) #178
+1 Sungold Sentinel (DBL) #37
+4 Sungrass Prairie (MSC) #497
+2 Sunken Hollow (MSC) #271
+1 Sunpetal Grove (MSC) #272
+1 Sure-Footed Infiltrator (ZNR) #83
+1 Surge of Salvation (MOM) #41
+1 Surrak, the Hunt Caller (FDN) #647
+6 Swamp (HOB) #196
+7 Swiftfoot Boots (MSC) #216
+1 Sword of Hearth and Home (TMC) #136 *F*
+2 Swords to Plowshares (MSC) #143
+1 Sygg, River Cutthroat (PLST) #ZNC-103
+1 Sylvan Anthem (MH2) #357
+1 Sylvan Messenger (GN3) #107
+4 Syr Konrad, the Grim (FCA) #10
+1 Sythis, Harvest's Hand (CMM) #938
+1 Taborax, Hope's Demise (J25) #69
+1 Tainted Field (DSC) #302
+1 Tainted Isle (DSC) #303
+1 Tainted Wood (DSC) #305
+1 Takenuma, Abandoned Mire (NEO) #278
+1 Talisman of Conviction (MSC) #217
+1 Talisman of Curiosity (SOC) #430 *F*
+1 Talisman of Dominance (MSC) #219
+1 Talisman of Hierarchy (SOC) #358
+1 Talisman of Progress (MSC) #221
+2 Talisman of Unity (MKC) #244
+1 Talrand, Sky Summoner (OTC) #116
+1 Tanazir Quandrix (SOC) #332
+1 Tangled Florahedron // Tangled Vale (ZNR) #211
+1 Tangletrove Kelp (MKC) #334
+1 Tatyova, Benthic Druid (FDN) #247
+1 Tectonic Edge (M3C) #384
+1 Teferi, Hero of Dominaria (MB2) #90
+1 Teferi, Who Slows the Sunset (DBL) #245
+2 Teferi's Ageless Insight (J25) #371
+3 Temple of Deceit (DRC) #176
+2 Temple of Enlightenment (EOC) #186
+1 Temple of Malady (SOC) #413
+2 Temple of Plenty (FIC) #437
+3 Temple of Silence (SOC) #415
+1 Terramorphic Expanse (MSC) #273
+1 Tetsuko Umezawa, Fugitive (BLC) #177
+1 Tezzeret, Betrayer of Flesh (MKC) #120
+1 Thalia, Heretic Cathar (INR) #44
+1 Thalia's Lieutenant (PLST) #SOI-43
+1 The Birth of Meletis (PLST) #THB-5
+1 The Celestus (DBL) #252
+1 The Circle of Loyalty (J22) #166
+1 The Council of Four (CLB) #271
+1 The Dragon-Kami Reborn // Dragon-Kami's Egg (NEO) #473
+1 The Dross Pits (ONE) #251
+1 The Eldest Reborn (DSC) #139
+1 The Fair Basilica (ONE) #252
+1 The Filigree Sylex (ONE) #227
+1 The First Iroan Games (THB) #170
+1 The Gitrog, Ravenous Ride (OTJ) #206
+1 The Irencrag (WOE) #248
+1 The Long Reach of Night // Animus of Night's Reach (NEO) #109
+1 The Mending of Dominaria (OTC) #197
+1 The Mycosynth Gardens (EOC) #168
+1 The Wandering Emperor (NEO) #42
+1 The World Spell (DMU) #189
+1 The World Tree (KHM) #275
+1 Thieves' Guild Enforcer (J25) #493
+1 Thieving Skydiver (OTC) #118
+1 Thing in the Ice // Awoken Horror (INR) #91
+1 Thought Monitor (EOC) #79
+1 Thought Vessel (MSC) #222
+1 Thraben Watcher (MH2) #34
+1 Thran Portal (DMU) #259
+1 Thran Spider (BRO) #254
+2 Three Visits (MSC) #181
+1 Thrummingbird (EOC) #80
+1 Thundertrap Trainer (BLB) #9
+1 Tidus, Yuna's Guardian (FIC) #5
+1 Time Stop (FDN) #166
+1 Time Warp (MSC) #788
+1 Timeless Lotus (ECC) #143
+1 Tireless Provisioner (J25) #728
+1 Tireless Tracker (EOC) #110
+1 Titania, Protector of Argoth (EOC) #111
+3 Together Forever (TMC) #44
+2 Topiary Stomper (J25) #730
+1 Torens, Fist of the Angels (INR) #250
+1 Tovolar's Huntmaster // Tovolar's Packleader (DBL) #204
+1 Tragic Arrogance (MSC) #144
+1 Tranquil Frillback (MAT) #24
+1 Tranquil Thicket (DSC) #318
+1 Traverse the Outlands (CLB) #258
+1 Treetop Village (TLE) #60
+1 Tribute to the World Tree (MOM) #211
+1 Triton Shorestalker (OTC) #121
+1 Tromell, Seymour's Butler (FIC) #162
+1 Trystan's Command (ECL) #247
+1 Turntimber Symbiosis // Turntimber, Serpentine Wood (ZNR) #215
+1 Tymaret Calls the Dead (THB) #118
+2 Tyrite Sanctum (CMM) #1049
+1 Tyvar Kell (J25) #734
+1 Tyvar, Jubilant Brawler (ONE) #218
+1 Uchuulon (CLB) #626
+1 Ulvenwald Mysteries (INR) #423
+1 Ulvenwald Oddity // Ulvenwald Behemoth (DBL) #492
+2 Unbreakable Formation (RVR) #32
+1 Uncharted Haven (FDN) #564
+1 Unclaimed Territory (MSC) #275
+1 Underground Mortuary (MKM) #271
+2 Underground River (FIC) #439
+1 Undergrowth Stadium (TMC) #80
+1 Unearth (SCH) #48
+1 Unmarked Grave (MH2) #106
+2 Unnatural Growth (MAR) #84
+1 Unyielding Gatekeeper (MKM) #35
+1 Up the Beanstalk (WOE) #195
+1 Uro, Titan of Nature's Wrath (MB2) #93
+1 Urza, Chief Artificer (BRC) #2
+1 Urza, Lord High Artificer (FCA) #5
+1 Urza, Prince of Kroog (BRO) #226
+1 Urza's Command (BRO) #70
+1 Urza's Factory (J22) #828
+1 Urza's Incubator (MH3) #297
+1 Valiant Knight (MOC) #214
+1 Valkyrie Harbinger (J25) #275
+1 Vanishing Verse (SOC) #335
+1 Vanquish the Horde (MSC) #146
+1 Vanquisher's Banner (LCC) #316
+1 Vashta Nerada (WHO) #73
+1 Vein Ripper (MKM) #110
+1 Verduran Enchantress (CMM) #915
+1 Vexilus Praetor (40K) #19
+1 Vibrance (ECL) #249
+1 Vineglimmer Snarl (SOC) #420
+1 Virtue of Loyalty // Ardenvale Fealty (WOE) #38
+1 Vito, Thorn of the Dusk Rose (J25) #71
+1 Vivid Meadow (NCC) #446
+1 Vodalian Wave-Knight (MOC) #130
+1 Voice of the Blessed (INR) #50
+1 Vona, Butcher of Magan (LCC) #293
+1 Vorpal Sword (AFR) #124
+2 Vraan, Executioner Thane (ONE) #114
+1 Wakka, Devoted Guardian (FIC) #190
+1 Walking Ballista (FIC) #371
+1 War Room (SOC) #422
+1 Wardens of the Cycle (FDN) #125
+1 Wavebreak Hippocamp (J25) #387
+2 Wayfarer's Bauble (PF26) #1F *F*
+1 Weathered Wayfarer (LTC) #183
+1 Wedding Announcement // Wedding Festivity (INR) #453
+1 Welcoming Vampire (TDC) #140
+1 Werefox Bodyguard (WOE) #39
+1 Werewolf Pack Leader (AFR) #387
+1 Wharf Infiltrator (CLB) #737
+1 Whirler Rogue (DRC) #85
+1 Whispersteel Dagger (PLST) #ZNC-5
+2 White Sun's Twilight (ONE) #38
+1 Wild Growth (PIP) #208
+1 Windbrisk Heights (TDC) #411
+1 Winds of Rath (SOC) #185
+1 Windswept Heath (MH3) #235
+1 Wintermoor Commander (MOC) #345
+1 Woe Strider (SOC) #231
+1 Wolverine Riders (J22) #743
+1 Wood Elves (HOB) #142
+1 Woodland Cemetery (SOC) #424
+1 Wrath of God (CMM) #70
+1 Wrecking Ball Arm (FIC) #128
+1 Wrenn and Realmbreaker (MOM) #217
+1 Yavimaya Coast (SOC) #425
+1 Yavimaya, Cradle of Growth (M3C) #409
+1 Yawgmoth, Thran Physician (FCA) #11
+1 Yeva, Nature's Herald (RVR) #162
+1 Yorvo, Lord of Garenbrig (ELD) #185
+1 Youthful Valkyrie (FDN) #149
+1 Yuna, Grand Summoner (AFIN) #22
+1 Zamriel, Seraph of Steel (GN3) #1 *F*
+1 Zareth San, the Trickster (ZNR) #242
+1 Zell Dincht (FIN) #170
+1 Ziatora's Proving Ground (SNC) #261
+1 Zimone and Dina (MOM) #257
+1 Zimone, All-Questioning (SOC) #340
+1 Zimone, Quandrix Prodigy (SOC) #341
+1 Zulaport Cutthroat (SOC) #233
+2 Get Lost (LCI) #14
+1 Cyclonic Rift (CMM) #84
+1 Omnath, Locus of Creation (ZNR) #232 *F*
+1 Fierce Guardianship (C20) #35

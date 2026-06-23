@@ -1,0 +1,46 @@
+Section,Card Name,Score,Support,Deck Frequency
+Commander,"Shadowfax, Lord of Horses",,,
+
+Additions,,,,
+add,Loyal Unicorn,502,,
+add,Shield Mare,493,,
+add,Diamond Mare,479,,
+add,Boros Charm,478,,
+add,Thundermare,473,,
+add,Bill the Pony,464,,
+add,Lightning Mare,460,,
+add,Rogue's Passage,419,,
+add,Taurean Mauler,417,,
+add,Generous Gift,402,,
+add,Chaos Warp,384,,
+add,Path of Ancestry,381,,
+add,Blasphemous Act,378,,
+add,Armored Warhorse,369,,
+add,Sacred Foundry,369,,
+add,Sundown Pass,359,,
+add,"Calamity, Galloping Inferno",351,,
+add,Chrome Steed,347,,
+add,"Iroas, God of Victory",340,,
+add,Mirror Entity,335,,
+
+Removals,,,,
+remove,"Kellan, the Fae-Blooded",,0,11
+remove,Wrecking Ball Arm,,0,19
+remove,Adept Watershaper,,0,102
+remove,Redirect Lightning,,0,655
+remove,Seraphic Greatsword,,1,30
+remove,Gavel of the Righteous,,2,21
+remove,Malignus,,6,11
+remove,Spiteful Banditry,,8,84
+remove,"Anim Pakal, Thousandth Moon",,9,630
+remove,Guardian of Faith,,10,445
+remove,"Reyav, Master Smith",,12,19
+remove,O-Naginata,,16,28
+remove,Kabira Takedown,,16,124
+remove,"Skrelv, Defector Mite",,19,608
+remove,Champion's Helm,,20,179
+remove,Duelist's Heritage,,20,260
+remove,Forge Anew,,27,65
+remove,Puresteel Paladin,,28,98
+remove,Scavenger Grounds,,29,622
+remove,Angel of Destiny,,30,556

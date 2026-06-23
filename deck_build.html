@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-<title>ManaMind — Suggestions d'ajouts</title>
+<title>ManaMind — Ajouts depuis ma collection</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
@@ -46,47 +46,36 @@
   .back-link { font-family: var(--serif-engraved); font-size: 0.72rem; letter-spacing: 0.12em; color: var(--gold); text-decoration: none; opacity: 0.8; transition: opacity 0.2s; }
   .back-link:hover { opacity: 1; }
 
-  /* ── Hero ── */
-  .hero { text-align: center; display: flex; flex-direction: column; gap: 12px; }
-  .hero-label { font-family: var(--serif-engraved); font-size: 0.65rem; letter-spacing: 0.25em; color: var(--gold); text-transform: uppercase; }
-  .hero-title { font-family: var(--serif-display); font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 600; line-height: 1.1; color: var(--parch-100); margin: 0; }
-  .hero-sub { font-size: 0.95rem; color: var(--parch-500); font-style: italic; margin: 0; line-height: 1.6; }
-  .divider { width: 120px; height: 1px; background: linear-gradient(90deg, transparent, var(--gold-line), transparent); margin: 0 auto; }
-
-  /* ── Barre du haut : titre + saisie côte à côte ── */
-  .top-bar {
-    display: flex; align-items: flex-start; gap: 32px;
-  }
-  .top-bar-title {
-    display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; padding-top: 4px;
+  /* ── Barre du haut ── */
+  .top-bar { display: flex; align-items: center; gap: 32px; }
+  .top-bar-title { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+  .top-bar-title .hero-label {
+    font-family: var(--serif-engraved); font-size: 0.6rem; letter-spacing: 0.25em;
+    color: var(--gold); text-transform: uppercase;
   }
   .top-bar-title .hero-title {
     font-family: var(--serif-display); font-size: clamp(1.4rem, 3vw, 2.2rem);
     font-weight: 600; color: var(--parch-100); margin: 0; line-height: 1.1; white-space: nowrap;
   }
-  .top-bar-title .hero-label {
-    font-family: var(--serif-engraved); font-size: 0.6rem; letter-spacing: 0.25em;
-    color: var(--gold); text-transform: uppercase;
-  }
 
-  /* ── Panneau saisie ── */
-  .input-panel {
+  /* ── Panneau action ── */
+  .action-panel {
     flex: 1; background: var(--ink-panel); border: 1px solid var(--gold-line); border-radius: 12px;
-    padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; backdrop-filter: blur(8px);
+    padding: 16px 24px; display: flex; align-items: center; justify-content: space-between;
+    gap: 24px; backdrop-filter: blur(8px);
   }
+  .action-panel-inner { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+  .action-panel-desc { font-size: 0.9rem; color: var(--parch-500); font-style: italic; line-height: 1.6; margin: 0; }
+  .action-panel-desc strong { color: var(--parch-300); font-style: normal; }
 
-  textarea.card-list {
-    width: 100%; height: 80px; resize: vertical;
-    padding: 10px 14px; font-family: var(--serif-body); font-size: 0.9rem;
-    color: var(--parch-100); background: rgba(12, 9, 16, 0.55);
-    border: 1px solid var(--gold-line); border-radius: 8px; outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s; line-height: 1.6;
+  .deck-select {
+    width: 100%; padding: 10px 14px; font-family: var(--serif-body); font-size: 0.9rem;
+    color: var(--parch-100); background: rgba(12,9,16,0.55);
+    border: 1px solid var(--gold-line); border-radius: 8px; outline: none; cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
   }
-  textarea.card-list::placeholder { color: var(--parch-600); }
-  textarea.card-list:focus { border-color: var(--arcane); box-shadow: 0 0 0 3px var(--arcane-glow); }
-
-  .panel-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-  .card-count { font-size: 0.78rem; color: var(--parch-600); font-style: italic; }
+  .deck-select:focus { border-color: var(--arcane); box-shadow: 0 0 0 3px var(--arcane-glow); }
+  .deck-select option { background: #17101f; color: var(--parch-100); }
 
   .submit-btn {
     padding: 12px 36px; font-family: var(--serif-engraved); font-size: 0.75rem; letter-spacing: 0.18em;
@@ -97,76 +86,59 @@
   .submit-btn:active { transform: translateY(0); }
   .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
+  /* ── Bandeau de stats ── */
+  .stats-banner { display: flex; gap: 16px; flex-wrap: wrap; }
+  .stat-chip {
+    background: var(--gold-faint); border: 1px solid var(--gold-line); border-radius: 8px;
+    padding: 8px 16px; display: flex; flex-direction: column; gap: 2px;
+  }
+  .stat-chip-label {
+    font-family: var(--serif-engraved); font-size: 0.55rem; letter-spacing: 0.2em;
+    color: var(--gold); text-transform: uppercase;
+  }
+  .stat-chip-value { font-family: var(--serif-display); font-size: 1.3rem; font-weight: 600; color: var(--parch-100); }
+
   /* ── Résultats ── */
   #results { display: flex; flex-direction: column; gap: 16px; }
-
   .section-title {
     font-family: var(--serif-engraved); font-size: 0.68rem; letter-spacing: 0.22em;
     color: var(--gold); text-transform: uppercase; text-align: center; margin: 0;
   }
 
-  /* Grille de cartes */
   .cards-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(213px, 1fr));
     gap: 20px;
   }
-
-  .card-tile {
-    display: flex; flex-direction: column; gap: 10px;
-    animation: fadeUp 0.35s ease both;
-  }
-
+  .card-tile { display: flex; flex-direction: column; gap: 10px; animation: fadeUp 0.35s ease both; }
   .card-img-wrap {
     position: relative; border-radius: 10px; overflow: hidden;
-    aspect-ratio: 488/680;
-    background: rgba(20,13,28,0.8);
-    border: 1px solid var(--gold-line);
-    transition: transform 0.2s, box-shadow 0.2s;
+    aspect-ratio: 488/680; background: rgba(20,13,28,0.8);
+    border: 1px solid var(--gold-line); transition: transform 0.2s, box-shadow 0.2s;
   }
   .card-tile:hover .card-img-wrap {
     transform: translateY(-4px);
     box-shadow: 0 12px 32px rgba(0,0,0,0.6), 0 0 0 2px rgba(201,164,92,0.5);
   }
-  .card-img-wrap img {
-    width: 100%; height: 100%; object-fit: cover; display: block;
-    transition: opacity 0.3s;
+  .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; transition: opacity 0.3s; }
+  .copies-badge {
+    position: absolute; top: 8px; right: 8px;
+    font-family: var(--serif-engraved); font-size: 0.6rem; font-weight: 700;
+    color: var(--ink-900); background: var(--arcane);
+    padding: 3px 8px; border-radius: 20px; letter-spacing: 0.06em;
   }
-  .card-img-wrap img.loading { opacity: 0; }
-
-  .rank-pill {
-    position: absolute; top: 8px; left: 8px;
-    font-family: var(--serif-engraved); font-size: 0.65rem; font-weight: 700;
-    color: var(--ink-900); background: var(--gold);
-    padding: 3px 8px; border-radius: 20px; letter-spacing: 0.08em;
-  }
-
-
   .card-meta { display: flex; flex-direction: column; gap: 3px; }
-  .card-meta-cmd {
-    font-family: var(--serif-display); font-size: 1.1rem; font-weight: 600;
+  .card-meta-name {
+    font-family: var(--serif-display); font-size: 1.05rem; font-weight: 600;
     color: var(--parch-100); line-height: 1.2;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .card-meta-sub { font-size: 0.7rem; color: var(--parch-600); }
-
-  /* Placeholder si pas d'image */
   .img-placeholder {
     width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
     color: var(--parch-600); font-size: 0.75rem; font-style: italic; text-align: center; padding: 8px;
   }
 
-  /* Cartes non trouvées */
-  .not-found-panel {
-    background: rgba(224, 123, 123, 0.06); border: 1px solid rgba(224,123,123,0.2);
-    border-radius: 8px; padding: 14px 18px;
-  }
-  .not-found-label { font-family: var(--serif-engraved); font-size: 0.6rem; letter-spacing: 0.18em; color: #e07b7b; text-transform: uppercase; margin-bottom: 8px; }
-  .not-found-list { font-size: 0.82rem; color: var(--parch-600); font-style: italic; line-height: 1.8; }
-
   @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-  /* États */
   .state-msg { text-align: center; padding: 32px; color: var(--parch-500); font-style: italic; font-size: 0.95rem; }
   .state-msg.error { color: #e07b7b; }
   .spinner { display: none; width: 32px; height: 32px; border: 3px solid var(--gold-faint); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 24px auto; }
@@ -185,8 +157,7 @@
     <a href="/" class="back-link">← Accueil</a>
     <span style="font-family:var(--serif-engraved);font-size:0.7rem;letter-spacing:0.2em;color:var(--gold);opacity:0.5;">MANAMIND</span>
     <nav style="display:flex;gap:20px;">
-      <a href="/commander-suggest" class="back-link">Trouver un commandant</a>
-      <a href="/deck-build" class="back-link">Ajouts depuis ma collection</a>
+      <a href="/deck-suggest" class="back-link">Suggestions d'ajouts</a>
       <a href="/collection-suggest" class="back-link">Ma collection</a>
       <a href="/deck-moves" class="back-link">Déplacements</a>
     </nav>
@@ -194,21 +165,29 @@
 
   <div class="top-bar">
     <div class="top-bar-title">
-      <span class="hero-label">Outil d'optimisation</span>
-      <h1 class="hero-title">Suggestions d'Ajouts</h1>
-      <p style="font-size:0.78rem;color:var(--parch-600);font-style:italic;line-height:1.5;max-width:240px;margin:0;">Pour chaque carte de ta liste, trouve le commandant où elle est le plus jouée statistiquement — une carte, un commandant.</p>
+      <span class="hero-label">Ma collection</span>
+      <h1 class="hero-title">Ajouts depuis<br>ma collection</h1>
+      <p style="font-size:0.78rem;color:var(--parch-600);font-style:italic;line-height:1.5;max-width:240px;margin:0;">Sélectionne un de tes decks pour voir quelles cartes de ta collection tu pourrais y ajouter, classées par popularité EDHREC.</p>
     </div>
-    <div class="input-panel">
-      <textarea
-        id="cardList"
-        class="card-list"
-        placeholder="Collez votre liste ici (Moxfield, Archidekt…)"
-        spellcheck="false"
-      ></textarea>
-      <div class="panel-footer">
-        <span class="card-count" id="cardCount">0 carte</span>
-        <button class="submit-btn" id="submitBtn" onclick="doAnalyze()">Analyser</button>
+    <div class="action-panel">
+      <div class="action-panel-inner">
+        <p class="action-panel-desc">Choisir un <strong>deck</strong> pour voir les cartes de ta <strong>collection</strong> non encore incluses, classées par taux d'inclusion EDHREC.</p>
+        <select id="deckSelect" class="deck-select">
+          <option value="">— Sélectionner un deck —</option>
+        </select>
       </div>
+      <button class="submit-btn" id="submitBtn" onclick="doAnalyze()">Analyser</button>
+    </div>
+  </div>
+
+  <div id="statsBar" style="display:none;" class="stats-banner">
+    <div class="stat-chip">
+      <span class="stat-chip-label">Cartes en collection</span>
+      <span class="stat-chip-value" id="statCollection">—</span>
+    </div>
+    <div class="stat-chip">
+      <span class="stat-chip-label">Cartes disponibles</span>
+      <span class="stat-chip-value" id="statAvailable">—</span>
     </div>
   </div>
 
@@ -217,7 +196,6 @@
 </div>
 
 <script>
-  // ── Particules ────────────────────────────────────────────────────────────
   (function () {
     const c = document.getElementById('particles');
     for (let i = 0; i < 18; i++) {
@@ -228,49 +206,41 @@
     }
   })();
 
-  // ── Compteur de cartes ────────────────────────────────────────────────────
-  const textarea  = document.getElementById('cardList');
-  const countEl   = document.getElementById('cardCount');
   const submitBtn = document.getElementById('submitBtn');
-  const zone      = document.getElementById('results');
+  const deckSelect = document.getElementById('deckSelect');
+  const zone = document.getElementById('results');
+  const statsBar = document.getElementById('statsBar');
 
-  textarea.addEventListener('input', updateCount);
-
-  function parseCards() {
-    return textarea.value.split('\n')
-      .map(l => {
-        l = l.trim();
-        // Format Moxfield : "1 Nom de la carte (SET) #123"  ou  "1x Nom (SET) #123"
-        l = l.replace(/\s*\([A-Z0-9]+\)\s*#\S+$/, ''); // retire " (SET) #num"
-        l = l.replace(/^\d+[xX]?\s+/, '');              // retire "1x " ou "2 "
-        return l.trim();
-      })
-      .filter(l => l.length > 0);
-  }
-
-  function updateCount() {
-    const n = parseCards().length;
-    countEl.textContent = n === 0 ? '0 carte' : n === 1 ? '1 carte' : `${n} cartes`;
-  }
-
-  textarea.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && e.ctrlKey) doAnalyze();
-  });
+  // ── Chargement des decks ──────────────────────────────────────────────────
+  (async function loadDecks() {
+    try {
+      const res  = await fetch('/api/my-decks');
+      const data = await res.json();
+      (data.decks || []).forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d.commander;
+        opt.textContent = d.commander;
+        deckSelect.appendChild(opt);
+      });
+    } catch {}
+  })();
 
   // ── Analyse ───────────────────────────────────────────────────────────────
   async function doAnalyze() {
-    const cards = parseCards();
-    if (!cards.length) return;
+    const commander = deckSelect.value;
+    if (!commander) {
+      zone.innerHTML = `<p class="state-msg">Sélectionne d'abord un deck.</p>`;
+      return;
+    }
 
     submitBtn.disabled = true;
+    statsBar.style.display = 'none';
     zone.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
 
+    const params = new URLSearchParams({ top: 40, commander });
+
     try {
-      const res = await fetch('/api/deck-suggest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cards }),
-      });
+      const res  = await fetch(`/api/collection-suggest?${params}`);
       const data = await res.json();
 
       if (!res.ok) {
@@ -279,11 +249,13 @@
       }
 
       if (!data.results || data.results.length === 0) {
-        zone.innerHTML = `<p class="state-msg">Aucune carte reconnue dans les données. Vérifiez que les noms sont en anglais.</p>`;
+        zone.innerHTML = `<p class="state-msg">Aucune carte de ta collection à ajouter pour ce commandant.</p>`;
+        renderStats(data.stats);
         return;
       }
 
-      renderResults(data);
+      renderStats(data.stats);
+      renderResults(data, commander);
 
     } catch (err) {
       zone.innerHTML = `<p class="state-msg error">Erreur réseau : ${escHtml(err.message)}</p>`;
@@ -292,52 +264,55 @@
     }
   }
 
-  function renderResults(data) {
-    const rows     = data.results   || [];
-    const notFound = data.not_found || [];
+  function renderStats(stats) {
+    if (!stats) return;
+    document.getElementById('statCollection').textContent = stats.collection_size ?? '—';
+    document.getElementById('statAvailable').textContent  = stats.available_cards  ?? '—';
+    statsBar.style.display = 'flex';
+  }
 
-    if (!rows.length) {
-      zone.innerHTML = `<p class="state-msg">Aucune carte reconnue dans les données disponibles. Vérifiez que les noms sont en anglais.</p>`;
-      return;
-    }
+  function renderResults(data, commander) {
+    const rows = data.results || [];
 
-    let html = `<p class="section-title">Top ${rows.length} — classées par taux d'inclusion</p>`;
-    html += `<div class="cards-grid" id="cardsGrid">`;
+    let html = `<p class="section-title">Top ${rows.length} — cartes à ajouter dans ${escHtml(commander)}</p>`;
+    html += `<div class="cards-grid">`;
 
     rows.forEach((r, i) => {
       const delay = (i * 0.04).toFixed(2);
+      const available = r.copies_owned - r.copies_used;
       html += `
         <div class="card-tile" style="animation-delay:${delay}s">
           <div class="card-img-wrap" id="wrap-${i}" style="cursor:pointer" title="Rechercher sur Cardmarket" onclick="openCardmarket('${escHtml(r.card_name).replace(/'/g,"\\'")}')">
             <div class="img-placeholder" id="ph-${i}">${escHtml(r.card_name)}</div>
+            <span class="copies-badge" title="Copies disponibles">${available}×</span>
           </div>
           <div class="card-meta">
-            <div class="card-meta-cmd" title="${escHtml(r.commander)}">${escHtml(r.commander)}</div>
+            <div class="card-meta-name">${escHtml(r.card_name)}</div>
             <div class="card-meta-sub">${r.decks_with_card} / ${r.total_decks} decks · ${r.inclusion_rate.toFixed(1)}%</div>
+            <div class="card-meta-sub" id="price-${i}" style="color:var(--gold-soft);">…</div>
           </div>
         </div>`;
     });
 
     html += `</div>`;
-
-    if (notFound.length) {
-      html += `
-        <div class="not-found-panel">
-          <div class="not-found-label">Cartes non trouvées dans les données (${notFound.length})</div>
-          <div class="not-found-list">${notFound.map(escHtml).join(' · ')}</div>
-        </div>`;
-    }
-
     zone.innerHTML = html;
     loadImages(rows);
+    loadPrices(rows);
   }
 
-  // Charge les images par lots de 4
   async function loadImages(rows) {
     const BATCH = 4;
     for (let i = 0; i < rows.length; i += BATCH) {
       const batch = rows.slice(i, i + BATCH);
       await Promise.all(batch.map((r, j) => fetchCardImage(r.card_name, i + j)));
+    }
+  }
+
+  async function loadPrices(rows) {
+    const BATCH = 6;
+    for (let i = 0; i < rows.length; i += BATCH) {
+      const batch = rows.slice(i, i + BATCH);
+      await Promise.all(batch.map((r, j) => fetchCardPrice(r.card_name, i + j)));
     }
   }
 
@@ -349,17 +324,26 @@
       if (!res.ok) return;
       const data = await res.json();
       if (!data.url) return;
-
       const img = document.createElement('img');
       img.alt = name;
       img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;opacity:0;transition:opacity 0.4s';
       img.onload = () => { img.style.opacity = '1'; };
       img.src = data.url;
-
-      // Remplace le placeholder par l'image
       const ph = document.getElementById(`ph-${idx}`);
       if (ph) ph.replaceWith(img);
     } catch {}
+  }
+
+  async function fetchCardPrice(name, idx) {
+    const el = document.getElementById(`price-${idx}`);
+    if (!el) return;
+    try {
+      const res  = await fetch(`/api/cards/price?name=${encodeURIComponent(name)}`);
+      const data = await res.json();
+      el.textContent = data.price != null ? `${data.price.toFixed(2)} €` : '— €';
+    } catch {
+      el.textContent = '— €';
+    }
   }
 
   function openCardmarket(name) {
