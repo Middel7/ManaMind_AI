@@ -819,6 +819,19 @@ def api_collection_suggest(
     return _json_response(result)
 
 
+@app.get("/api/deck-composition")
+def api_deck_composition(
+    commander: str = Query(...),
+) -> JSONResponse:
+    """
+    Retourne la composition par type du deck personnel et la moyenne EDHREC
+    pour le commandant donné.
+    """
+    from manamind.collection_advisor import compute_deck_composition
+    result = compute_deck_composition(commander)
+    return _json_response(result)
+
+
 @app.get("/deck-moves")
 def deck_moves_page() -> FileResponse:
     return FileResponse(
@@ -881,11 +894,12 @@ def api_my_decks() -> JSONResponse:
 
     decks = []
     if MY_DECKS_DIR.exists():
-        for f in sorted(MY_DECKS_DIR.glob("*.txt")):
+        for f in MY_DECKS_DIR.glob("*.txt"):
             commander = file_to_cmd.get(f.name, f.stem)
             content = f.read_text(encoding="utf-8", errors="replace")
             decks.append({"commander": commander, "filename": f.name, "content": content})
 
+    decks.sort(key=lambda d: d["commander"].lower())
     return _json_response({"decks": decks})
 
 

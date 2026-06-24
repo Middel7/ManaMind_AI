@@ -36,8 +36,8 @@
 
   #app {
     position: relative; z-index: 1;
-    max-width: 1600px; margin: 0 auto;
-    padding: 48px 40px 80px;
+    max-width: 1800px; margin: 0 auto;
+    padding: 32px 32px 80px;
     display: flex; flex-direction: column; gap: 24px;
   }
 
@@ -46,37 +46,56 @@
   .back-link { font-family: var(--serif-engraved); font-size: 0.72rem; letter-spacing: 0.12em; color: var(--gold); text-decoration: none; opacity: 0.8; transition: opacity 0.2s; }
   .back-link:hover { opacity: 1; }
 
-  /* ── Barre du haut ── */
-  .top-bar { display: flex; align-items: center; gap: 32px; }
-  .top-bar-title { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+  /* ── Panneau principal (portrait + contrôles + composition) ── */
+  #topPanel {
+    display: flex; gap: 0; width: 100%;
+    background: var(--ink-panel); border: 1px solid var(--gold-line);
+    border-radius: 14px; overflow: hidden; backdrop-filter: blur(8px);
+  }
+  #cmdPortrait {
+    flex: 0 0 22%; max-width: 360px; min-width: 240px;
+    background: rgba(12,9,16,0.6); align-self: stretch;
+  }
+  #cmdPortrait img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+  #cmdPortraitPlaceholder {
+    width: 100%; height: 100%; min-height: 420px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--parch-600); font-size: 0.7rem; font-style: italic;
+  }
+  #topPanelRight {
+    flex: 1; display: flex; flex-direction: column; gap: 0;
+    min-width: 0; overflow: hidden;
+  }
+  #topPanelControls {
+    display: flex; flex-direction: column; gap: 18px;
+    padding: 24px 28px 20px;
+  }
+  #topPanelComposition {
+    border-top: 1px solid var(--gold-line);
+    padding: 18px 28px 22px;
+  }
+
+  /* ── Titre ── */
+  .top-bar-title { display: flex; flex-direction: column; gap: 4px; }
   .top-bar-title .hero-label {
     font-family: var(--serif-engraved); font-size: 0.6rem; letter-spacing: 0.25em;
     color: var(--gold); text-transform: uppercase;
   }
   .top-bar-title .hero-title {
-    font-family: var(--serif-display); font-size: clamp(1.4rem, 3vw, 2.2rem);
-    font-weight: 600; color: var(--parch-100); margin: 0; line-height: 1.1; white-space: nowrap;
+    font-family: var(--serif-display); font-size: clamp(1.4rem, 2.5vw, 2rem);
+    font-weight: 600; color: var(--parch-100); margin: 0; line-height: 1.1;
   }
 
-  /* ── Panneau action ── */
-  .action-panel {
-    flex: 1; background: var(--ink-panel); border: 1px solid var(--gold-line); border-radius: 12px;
-    padding: 16px 24px; display: flex; align-items: center; justify-content: space-between;
-    gap: 24px; backdrop-filter: blur(8px);
-  }
-  .action-panel-inner { flex: 1; display: flex; flex-direction: column; gap: 10px; }
-  .action-panel-desc { font-size: 0.9rem; color: var(--parch-500); font-style: italic; line-height: 1.6; margin: 0; }
-  .action-panel-desc strong { color: var(--parch-300); font-style: normal; }
-
+  /* ── Sélecteur + bouton ── */
+  .action-row { display: flex; align-items: center; gap: 16px; }
   .deck-select {
-    width: 100%; padding: 10px 14px; font-family: var(--serif-body); font-size: 0.9rem;
+    flex: 1; padding: 10px 14px; font-family: var(--serif-body); font-size: 0.9rem;
     color: var(--parch-100); background: rgba(12,9,16,0.55);
     border: 1px solid var(--gold-line); border-radius: 8px; outline: none; cursor: pointer;
     transition: border-color 0.2s, box-shadow 0.2s;
   }
   .deck-select:focus { border-color: var(--arcane); box-shadow: 0 0 0 3px var(--arcane-glow); }
   .deck-select option { background: #17101f; color: var(--parch-100); }
-
   .submit-btn {
     padding: 12px 36px; font-family: var(--serif-engraved); font-size: 0.75rem; letter-spacing: 0.18em;
     color: var(--ink-900); background: linear-gradient(135deg, var(--gold) 0%, var(--gold-soft) 100%);
@@ -86,17 +105,17 @@
   .submit-btn:active { transform: translateY(0); }
   .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
-  /* ── Bandeau de stats ── */
-  .stats-banner { display: flex; gap: 16px; flex-wrap: wrap; }
+  /* ── Stats en grille 2 colonnes ── */
+  .stats-banner { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .stat-chip {
-    background: var(--gold-faint); border: 1px solid var(--gold-line); border-radius: 8px;
-    padding: 8px 16px; display: flex; flex-direction: column; gap: 2px;
+    background: rgba(201,164,92,0.08); border: 1px solid var(--gold-line); border-radius: 8px;
+    padding: 10px 16px; display: flex; flex-direction: column; gap: 2px;
   }
   .stat-chip-label {
-    font-family: var(--serif-engraved); font-size: 0.55rem; letter-spacing: 0.2em;
+    font-family: var(--serif-engraved); font-size: 0.52rem; letter-spacing: 0.2em;
     color: var(--gold); text-transform: uppercase;
   }
-  .stat-chip-value { font-family: var(--serif-display); font-size: 1.3rem; font-weight: 600; color: var(--parch-100); }
+  .stat-chip-value { font-family: var(--serif-display); font-size: 1.4rem; font-weight: 600; color: var(--parch-100); }
 
   /* ── Résultats ── */
   #results { display: flex; flex-direction: column; gap: 16px; }
@@ -122,7 +141,7 @@
   }
   .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; transition: opacity 0.3s; }
   .copies-badge {
-    position: absolute; top: 8px; right: 8px;
+    position: absolute; top: 38px; right: 8px;
     font-family: var(--serif-engraved); font-size: 0.6rem; font-weight: 700;
     color: var(--ink-900); background: var(--arcane);
     padding: 3px 8px; border-radius: 20px; letter-spacing: 0.06em;
@@ -144,6 +163,52 @@
   .spinner { display: none; width: 32px; height: 32px; border: 3px solid var(--gold-faint); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 24px auto; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .loading .spinner { display: block; }
+
+  /* Badge source */
+  .source-badge {
+    position: absolute; top: 38px; left: 8px;
+    font-family: var(--serif-engraved); font-size: 0.52rem; font-weight: 700; letter-spacing: 0.06em;
+    padding: 3px 7px; border-radius: 20px;
+  }
+  .source-badge.collection { color: var(--ink-900); background: var(--arcane); }
+  .source-badge.opened-sets { color: var(--ink-900); background: var(--gold); }
+
+  .comp-title {
+    font-family: var(--serif-engraved); font-size: 0.68rem; letter-spacing: 0.22em;
+    color: var(--gold); text-transform: uppercase; margin: 0 0 20px;
+  }
+  .comp-grid {
+    display: grid;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .comp-type {
+    display: flex; flex-direction: column; gap: 8px;
+    background: rgba(12,9,16,0.4); border: 1px solid var(--gold-line);
+    border-radius: 8px; padding: 10px 12px; min-width: 0;
+  }
+  .comp-type-name {
+    font-family: var(--serif-engraved); font-size: 0.6rem; letter-spacing: 0.14em;
+    color: var(--gold); text-transform: uppercase; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .comp-bars { display: flex; flex-direction: column; gap: 6px; }
+  .comp-bar-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .comp-bar-label {
+    font-size: 0.68rem; color: var(--parch-500); width: 58px; flex-shrink: 0;
+    font-family: var(--serif-body);
+  }
+  .comp-bar-track {
+    flex: 1; height: 7px; background: rgba(255,255,255,0.06);
+    border-radius: 4px; overflow: hidden; min-width: 0;
+  }
+  .comp-bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
+  .comp-bar-fill.my-deck  { background: var(--arcane); }
+  .comp-bar-fill.edhrec   { background: var(--gold); }
+  .comp-bar-val {
+    font-size: 0.82rem; font-family: var(--serif-display); font-weight: 600;
+    color: var(--parch-100); width: 30px; text-align: right; flex-shrink: 0;
+  }
 </style>
 </head>
 <body>
@@ -163,31 +228,48 @@
     </nav>
   </header>
 
-  <div class="top-bar">
-    <div class="top-bar-title">
-      <span class="hero-label">Ma collection</span>
-      <h1 class="hero-title">Ajouts depuis<br>ma collection</h1>
-      <p style="font-size:0.78rem;color:var(--parch-600);font-style:italic;line-height:1.5;max-width:240px;margin:0;">Sélectionne un de tes decks pour voir quelles cartes de ta collection tu pourrais y ajouter, classées par popularité EDHREC.</p>
+  <div id="topPanel">
+    <div id="cmdPortrait">
+      <div id="cmdPortraitPlaceholder">Sélectionne un deck</div>
+      <img id="cmdPortraitImg" alt="" style="display:none;" />
     </div>
-    <div class="action-panel">
-      <div class="action-panel-inner">
-        <p class="action-panel-desc">Choisir un <strong>deck</strong> pour voir les cartes de ta <strong>collection</strong> non encore incluses, classées par taux d'inclusion EDHREC.</p>
-        <select id="deckSelect" class="deck-select">
-          <option value="">— Sélectionner un deck —</option>
-        </select>
+    <div id="topPanelRight">
+      <div id="topPanelControls">
+        <div class="top-bar-title">
+          <span class="hero-label">Ma collection</span>
+          <h1 class="hero-title">Ajouts depuis ma collection</h1>
+        </div>
+        <div class="action-row">
+          <select id="deckSelect" class="deck-select">
+            <option value="">— Sélectionner un deck —</option>
+          </select>
+          <button class="submit-btn" id="submitBtn" onclick="doAnalyze()">Analyser</button>
+        </div>
+        <div id="statsBar" style="display:none;" class="stats-banner">
+          <div class="stat-chip">
+            <span class="stat-chip-label">Cartes en collection</span>
+            <span class="stat-chip-value" id="statCollection">—</span>
+          </div>
+          <div class="stat-chip">
+            <span class="stat-chip-label">Disponibles (collection)</span>
+            <span class="stat-chip-value" id="statAvailable">—</span>
+          </div>
+          <div class="stat-chip" id="statOpenedChip" style="display:none;">
+            <span class="stat-chip-label">Depuis boosters ouverts</span>
+            <span class="stat-chip-value" id="statOpened">—</span>
+          </div>
+        </div>
       </div>
-      <button class="submit-btn" id="submitBtn" onclick="doAnalyze()">Analyser</button>
-    </div>
-  </div>
-
-  <div id="statsBar" style="display:none;" class="stats-banner">
-    <div class="stat-chip">
-      <span class="stat-chip-label">Cartes en collection</span>
-      <span class="stat-chip-value" id="statCollection">—</span>
-    </div>
-    <div class="stat-chip">
-      <span class="stat-chip-label">Cartes disponibles</span>
-      <span class="stat-chip-value" id="statAvailable">—</span>
+      <div id="topPanelComposition" style="display:none;">
+        <p class="comp-title">Composition du deck</p>
+        <div class="comp-grid" id="compGrid"></div>
+      </div>
+      <div id="resultsHeader" style="display:none; padding:14px 28px 0; border-top:1px solid var(--gold-line);">
+        <p class="section-title" id="resultsTitle"></p>
+        <p style="text-align:center;margin:4px 0 0;">
+          <a id="trimLink" href="#" target="_blank" style="font-family:var(--serif-engraved);font-size:0.6rem;letter-spacing:0.18em;color:var(--gold);opacity:0.7;text-decoration:none;text-transform:uppercase;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7">→ Voir les cartes à retirer de ce deck</a>
+        </p>
+      </div>
     </div>
   </div>
 
@@ -222,8 +304,33 @@
         opt.textContent = d.commander;
         deckSelect.appendChild(opt);
       });
+      if (deckSelect.value) loadCommanderPortrait(deckSelect.value);
     } catch {}
   })();
+
+  // ── Portrait du commandant ────────────────────────────────────────────────
+  const cmdPortraitImg = document.getElementById('cmdPortraitImg');
+
+  deckSelect.addEventListener('change', () => loadCommanderPortrait(deckSelect.value));
+
+  const cmdPortraitPlaceholder = document.getElementById('cmdPortraitPlaceholder');
+
+  async function loadCommanderPortrait(name) {
+    cmdPortraitImg.style.display = 'none';
+    cmdPortraitPlaceholder.style.display = 'flex';
+    if (!name) return;
+    try {
+      const res = await fetch(`/api/cards/image?name=${encodeURIComponent(name)}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data.url) return;
+      cmdPortraitImg.src = data.url;
+      cmdPortraitImg.onload = () => {
+        cmdPortraitPlaceholder.style.display = 'none';
+        cmdPortraitImg.style.display = 'block';
+      };
+    } catch {}
+  }
 
   // ── Analyse ───────────────────────────────────────────────────────────────
   async function doAnalyze() {
@@ -235,7 +342,9 @@
 
     submitBtn.disabled = true;
     statsBar.style.display = 'none';
+    document.getElementById('resultsHeader').style.display = 'none';
     zone.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    loadCommanderPortrait(commander);
 
     const params = new URLSearchParams({ top: 40, commander });
 
@@ -251,11 +360,13 @@
       if (!data.results || data.results.length === 0) {
         zone.innerHTML = `<p class="state-msg">Aucune carte de ta collection à ajouter pour ce commandant.</p>`;
         renderStats(data.stats);
+        loadComposition(commander);
         return;
       }
 
       renderStats(data.stats);
       renderResults(data, commander);
+      loadComposition(commander);
 
     } catch (err) {
       zone.innerHTML = `<p class="state-msg error">Erreur réseau : ${escHtml(err.message)}</p>`;
@@ -268,23 +379,42 @@
     if (!stats) return;
     document.getElementById('statCollection').textContent = stats.collection_size ?? '—';
     document.getElementById('statAvailable').textContent  = stats.available_cards  ?? '—';
+    const openedCount = stats.opened_sets_cards ?? 0;
+    const openedChip  = document.getElementById('statOpenedChip');
+    if (openedCount > 0) {
+      document.getElementById('statOpened').textContent = openedCount;
+      openedChip.style.display = '';
+    } else {
+      openedChip.style.display = 'none';
+    }
     statsBar.style.display = 'flex';
   }
 
   function renderResults(data, commander) {
     const rows = data.results || [];
 
-    let html = `<p class="section-title">Top ${rows.length} — cartes à ajouter dans ${escHtml(commander)}</p>`;
-    html += `<div class="cards-grid">`;
+    // Titre et lien dans le panneau du haut
+    const rh = document.getElementById('resultsHeader');
+    document.getElementById('resultsTitle').textContent = `Top ${rows.length} — cartes à ajouter dans ${commander}`;
+    document.getElementById('trimLink').href = `/deck-trim?commander=${encodeURIComponent(commander)}`;
+    rh.style.display = '';
+
+    let html = `<div class="cards-grid">`;
 
     rows.forEach((r, i) => {
       const delay = (i * 0.04).toFixed(2);
-      const available = r.copies_owned - r.copies_used;
+      const isOpened = r.source === 'opened_sets';
+      const badgeClass = isOpened ? 'opened-sets' : 'collection';
+      const badgeLabel = isOpened ? 'Boosters' : 'Collection';
+      const copiesHtml = isOpened
+        ? ''
+        : `<span class="copies-badge" title="Copies disponibles">${r.copies_owned - r.copies_used}×</span>`;
       html += `
         <div class="card-tile" style="animation-delay:${delay}s">
           <div class="card-img-wrap" id="wrap-${i}" style="cursor:pointer" title="Rechercher sur Cardmarket" onclick="openCardmarket('${escHtml(r.card_name).replace(/'/g,"\\'")}')">
             <div class="img-placeholder" id="ph-${i}">${escHtml(r.card_name)}</div>
-            <span class="copies-badge" title="Copies disponibles">${available}×</span>
+            <span class="source-badge ${badgeClass}">${badgeLabel}</span>
+            ${copiesHtml}
           </div>
           <div class="card-meta">
             <div class="card-meta-name">${escHtml(r.card_name)}</div>
@@ -353,6 +483,88 @@
 
   function escHtml(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Panneau de composition ───────────────────────────────────────────────
+  const CARD_TYPES = ['Land','Creature','Instant','Sorcery','Enchantment','Artifact','Planeswalker'];
+  const TYPE_LABELS_FR = {
+    Land: 'Terrains', Creature: 'Créatures', Instant: 'Éphémères',
+    Sorcery: 'Rituels', Enchantment: 'Enchantements',
+    Artifact: 'Artefacts', Planeswalker: 'Planeswalkers',
+  };
+
+  async function loadComposition(commander) {
+    const panel = document.getElementById('topPanelComposition');
+    panel.style.display = 'none';
+    if (!commander) return;
+    try {
+      const res = await fetch(`/api/deck-composition?commander=${encodeURIComponent(commander)}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.error || !data.my_deck) return;
+      renderComposition(data);
+    } catch {}
+  }
+
+  function renderComposition(data) {
+    const panel = document.getElementById('topPanelComposition');
+    const grid  = document.getElementById('compGrid');
+
+    const my     = data.my_deck    || {};
+    const avg    = data.edhrec_avg || null;
+    const myCmc  = data.my_avg_cmc    ?? null;
+    const avgCmc = data.edhrec_avg_cmc ?? null;
+
+    const allVals = CARD_TYPES.flatMap(t => [my[t] || 0, avg ? (avg[t] || 0) : 0]);
+    const maxVal  = Math.max(...allVals, 1);
+
+    const typeCards = CARD_TYPES.map(t => {
+      const myVal  = my[t]  ?? 0;
+      const avgVal = avg ? (avg[t] ?? 0) : null;
+      const myPct  = Math.round((myVal  / maxVal) * 100);
+      const avgPct = avgVal !== null ? Math.round((avgVal / maxVal) * 100) : 0;
+
+      const myBar = `
+        <div class="comp-bar-row">
+          <span class="comp-bar-label">Mon deck</span>
+          <div class="comp-bar-track"><div class="comp-bar-fill my-deck" style="width:${myPct}%"></div></div>
+          <span class="comp-bar-val">${myVal}</span>
+        </div>`;
+      const avgBar = avgVal !== null ? `
+        <div class="comp-bar-row">
+          <span class="comp-bar-label">EDHREC</span>
+          <div class="comp-bar-track"><div class="comp-bar-fill edhrec" style="width:${avgPct}%"></div></div>
+          <span class="comp-bar-val">${avgVal.toFixed(1)}</span>
+        </div>` : '';
+
+      return `<div class="comp-type">
+          <div class="comp-type-name">${TYPE_LABELS_FR[t]}</div>
+          <div class="comp-bars">${myBar}${avgBar}</div>
+        </div>`;
+    }).join('');
+
+    // Tuile CMC moyen
+    const cmcMax   = Math.max(myCmc || 0, avgCmc || 0, 0.01);
+    const myPctCmc = myCmc  !== null ? Math.round((myCmc  / cmcMax) * 100) : 0;
+    const avgPctCmc= avgCmc !== null ? Math.round((avgCmc / cmcMax) * 100) : 0;
+    const cmcCard  = `<div class="comp-type">
+        <div class="comp-type-name">CMC moyen</div>
+        <div class="comp-bars">
+          <div class="comp-bar-row">
+            <span class="comp-bar-label">Mon deck</span>
+            <div class="comp-bar-track"><div class="comp-bar-fill my-deck" style="width:${myPctCmc}%"></div></div>
+            <span class="comp-bar-val">${myCmc !== null ? myCmc.toFixed(2) : '—'}</span>
+          </div>
+          ${avgCmc !== null ? `<div class="comp-bar-row">
+            <span class="comp-bar-label">EDHREC</span>
+            <div class="comp-bar-track"><div class="comp-bar-fill edhrec" style="width:${avgPctCmc}%"></div></div>
+            <span class="comp-bar-val">${avgCmc.toFixed(2)}</span>
+          </div>` : ''}
+        </div>
+      </div>`;
+
+    grid.innerHTML = typeCards + cmcCard;
+    panel.style.display = '';
   }
 </script>
 </body>

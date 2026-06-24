@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import unicodedata
 from pathlib import Path
@@ -9,6 +10,11 @@ COLLECTION_FILE = ROOT / "Ma collection.txt"
 MY_DECKS_DIR    = ROOT / "data" / "My decks"
 COMMANDERS_FILE = ROOT / "data" / "My_commanders.txt"
 FREQUENCY_CSV   = ROOT / "data" / "stats" / "commander_frequency.csv"
+OPENED_SETS_FILE = ROOT / "Opened.txt"
+DECKLISTS_DIR   = ROOT / "data" / "Decklists"
+TYPE_AVERAGES_CACHE = ROOT / "data" / "stats" / "deck_type_averages.json"
+
+CARD_TYPES = ["Land", "Creature", "Instant", "Sorcery", "Enchantment", "Artifact", "Planeswalker"]
 
 
 # ── Normalisation ─────────────────────────────────────────────────────────────
@@ -92,6 +98,44 @@ def load_allowed_commanders() -> dict[str, str]:
     return {_normalize(l.strip()): l.strip() for l in lines if l.strip()}
 
 
+def load_opened_set_cards() -> dict[str, str]:
+    """
+    Retourne { card_norm: card_name } pour toutes les cartes C/UC
+    appartenant aux sets listés dans Opened.txt, via la DB.
+    """
+    if not OPENED_SETS_FILE.exists():
+        return {}
+    set_codes = [
+        l.strip().lower()
+        for l in OPENED_SETS_FILE.read_text(encoding="utf-8").splitlines()
+        if l.strip()
+    ]
+    if not set_codes:
+        return {}
+    try:
+        import sys as _sys
+        _sys.path.insert(0, str(ROOT / "src"))
+        from src.manamind.db.engine import SessionLocal as _SessionLocal
+        from src.manamind.db.models.card import Card as _Card
+        from src.manamind.db.models.card_printing import CardPrinting as _CardPrinting
+        from sqlalchemy import select as _select
+        with _SessionLocal() as session:
+            stmt = (
+                _select(_Card.name, _Card.normalized_name)
+                .join(_CardPrinting, _CardPrinting.card_id == _Card.id)
+                .where(
+                    _CardPrinting.set_code.in_(set_codes),
+                    _CardPrinting.rarity.in_(["common", "uncommon"]),
+                    _CardPrinting.lang == "en",
+                )
+                .distinct()
+            )
+            rows = session.execute(stmt).all()
+            return {_normalize(name): name for name, _ in rows}
+    except Exception:
+        return {}
+
+
 def load_frequency_index() -> dict[str, dict[str, dict]]:
     """
     Charge commander_frequency.csv.
@@ -159,6 +203,7 @@ def suggest_from_collection(top_n: int = 40, commander_filter: str | None = None
     deck_usage  = load_my_decks()             # { norm: nb_decks }
     commanders  = load_allowed_commanders()   # { norm: display }
     freq_index  = load_frequency_index()      # { cmd_norm: { card_norm: {...} } }
+    opened_set_cards = load_opened_set_cards()  # { norm: name } cartes C/UC des sets ouverts
 
     # Index des cartes par deck : { cmd_norm: set[card_norm] }
     deck_cards_index: dict[str, set[str]] = {}
@@ -178,12 +223,22 @@ def suggest_from_collection(top_n: int = 40, commander_filter: str | None = None
         filter_norm = _normalize(commander_filter)
         commanders = {k: v for k, v in commanders.items() if k == filter_norm}
 
-    # Cartes disponibles : quantité > nb decks où déjà utilisée
-    available: dict[str, int] = {
-        norm: qty
+    # Cartes disponibles depuis la collection : quantité > nb decks où déjà utilisée
+    available_collection: dict[str, tuple[int, str]] = {
+        norm: (qty, "collection")
         for norm, qty in collection.items()
         if qty > deck_usage.get(norm, 0)
     }
+
+    # Cartes C/UC des sets ouverts non déjà dans la collection disponible
+    available_opened: dict[str, tuple[int, str]] = {
+        norm: (0, "opened_sets")
+        for norm, name in opened_set_cards.items()
+        if norm not in available_collection and deck_usage.get(norm, 0) == 0
+    }
+
+    # Fusionner : collection prioritaire sur sets ouverts
+    available: dict[str, tuple[int, str]] = {**available_opened, **available_collection}
 
     # Pour chaque carte disponible, trouver le meilleur commandant
     # (la carte ne doit pas déjà être dans le deck de ce commandant)
@@ -194,7 +249,7 @@ def suggest_from_collection(top_n: int = 40, commander_filter: str | None = None
             continue
         cmd_cards = freq_index[cmd_norm]
         this_deck = deck_cards_index.get(cmd_norm, set())
-        for card_norm, qty in available.items():
+        for card_norm, (qty, source) in available.items():
             if card_norm not in cmd_cards:
                 continue
             # Exclure si la carte est déjà dans ce deck
@@ -212,6 +267,7 @@ def suggest_from_collection(top_n: int = 40, commander_filter: str | None = None
                     "total_decks":     data["total_decks"],
                     "copies_owned":    qty,
                     "copies_used":     deck_usage.get(card_norm, 0),
+                    "source":          source,
                 }
 
     ranked = sorted(best_per_card.values(), key=lambda r: (-r["inclusion_rate"], r["card_name"]))
@@ -220,7 +276,8 @@ def suggest_from_collection(top_n: int = 40, commander_filter: str | None = None
         "results": [{"rank": i + 1, **r} for i, r in enumerate(ranked[:top_n])],
         "stats": {
             "collection_size":   len(collection),
-            "available_cards":   len(available),
+            "available_cards":   len(available_collection),
+            "opened_sets_cards": len(available_opened),
             "commanders_checked": len(commanders),
         },
     }
@@ -503,4 +560,259 @@ def suggest_cuts(commander_name: str) -> dict:
         "results":    [{"rank": i + 1, **r} for i, r in enumerate(results)],
         "unknown":    sorted(unknown),
         "error":      None,
+    }
+
+
+# ── Composition des decks par type ───────────────────────────────────────────
+
+def _classify_card_type(type_line: str) -> str | None:
+    """Retourne le premier type principal trouvé dans type_line, None si non classifiable."""
+    tl = type_line or ""
+    for t in CARD_TYPES:
+        if t.lower() in tl.lower():
+            return t
+    return None
+
+
+def _load_dfc_land_norms() -> set[str]:
+    """
+    Retourne tous les noms normalisés (complets et première partie) des cartes
+    dont une face est un terrain : face sans mana_cost + type_line contenant 'Land',
+    ou type_line de la carte contenant 'Land' sur l'une des parties (ex: 'Instant // Land').
+    """
+    result: set[str] = set()
+    try:
+        import sys as _sys
+        _sys.path.insert(0, str(ROOT / "src"))
+        from manamind.db.engine import SessionLocal as _SessionLocal
+        from manamind.db.models.card import Card as _Card
+        from manamind.db.models.card_face import CardFace as _CardFace
+        from sqlalchemy import select as _select, or_ as _or
+        with _SessionLocal() as session:
+            # Cartes avec une face-terrain (DFC classiques)
+            stmt = (
+                _select(_Card.normalized_name)
+                .join(_CardFace, _CardFace.card_id == _Card.id)
+                .where(
+                    _CardFace.mana_cost.is_(None),
+                    _CardFace.type_line.ilike("%Land%"),
+                )
+                .distinct()
+            )
+            for (norm,) in session.execute(stmt).all():
+                result.add(norm)
+                if "//" in norm:
+                    result.add(norm.split("//")[0].strip())
+
+            # MDFC dont le type_line global contient 'Land' sur l'une des parties
+            # ex: 'Instant // Land', 'Sorcery // Land'
+            stmt2 = (
+                _select(_Card.normalized_name)
+                .where(_Card.type_line.ilike("% // %land%"))
+                .distinct()
+            )
+            for (norm,) in session.execute(stmt2).all():
+                result.add(norm)
+                if "//" in norm:
+                    result.add(norm.split("//")[0].strip())
+    except Exception:
+        pass
+    return result
+
+
+def _load_card_type_map() -> dict[str, tuple[str, float | None]]:
+    """
+    Retourne { normalized_name: (type_principal, mana_value) } pour toutes les cartes de la DB.
+    Pour les MDFC, indexe aussi par la première partie du nom.
+    """
+    try:
+        import sys as _sys
+        _sys.path.insert(0, str(ROOT / "src"))
+        from manamind.db.engine import SessionLocal as _SessionLocal
+        from manamind.db.models.card import Card as _Card
+        from sqlalchemy import select as _select
+        with _SessionLocal() as session:
+            stmt = _select(_Card.normalized_name, _Card.type_line, _Card.mana_value)
+            rows = session.execute(stmt).all()
+            result: dict[str, tuple[str, float | None]] = {}
+            for norm, tl, mv in rows:
+                if not norm or not tl:
+                    continue
+                t = _classify_card_type(tl)
+                if t:
+                    result[norm] = (t, mv)
+                    if "//" in norm:
+                        first = norm.split("//")[0].strip()
+                        if first not in result:
+                            result[first] = (t, mv)
+            return result
+    except Exception:
+        return {}
+
+
+def _count_types_in_deck(
+    card_entries: list[tuple[str, int]],
+    type_map: dict[str, tuple[str, float | None]],
+    dfc_land_norms: set[str],
+) -> tuple[dict[str, int], float | None]:
+    """
+    Compte le nombre de cartes par type et calcule le CMC moyen (hors terrains).
+    Retourne (counts, avg_cmc).
+    """
+    counts: dict[str, int] = {t: 0 for t in CARD_TYPES}
+    cmc_total = 0.0
+    cmc_count = 0
+    for name, qty in card_entries:
+        norm = _normalize(name)
+        if norm in dfc_land_norms:
+            counts["Land"] += qty
+            continue
+        entry = type_map.get(norm)
+        if entry:
+            t, mv = entry
+            counts[t] += qty
+            if t != "Land" and mv is not None:
+                cmc_total += mv * qty
+                cmc_count += qty
+    avg_cmc = round(cmc_total / cmc_count, 2) if cmc_count > 0 else None
+    return counts, avg_cmc
+
+
+def _compute_edhrec_averages(commander_name: str, type_map: dict[str, str], dfc_land_norms: set[str]) -> dict[str, float] | None:
+    """
+    Calcule les moyennes de composition par type pour un commandant
+    à partir des CSVs dans data/Decklists/[commander]/.
+    Retourne None si aucun decklist disponible.
+    """
+    cmd_dir = DECKLISTS_DIR / commander_name
+    if not cmd_dir.exists():
+        # Essai insensible à la casse
+        try:
+            matches = [d for d in DECKLISTS_DIR.iterdir() if d.is_dir() and d.name.lower() == commander_name.lower()]
+            if matches:
+                cmd_dir = matches[0]
+            else:
+                return None
+        except Exception:
+            return None
+
+    csv_files = list(cmd_dir.glob("*.csv"))
+    if not csv_files:
+        return None
+
+    import csv as _csv
+    totals: dict[str, float] = {t: 0.0 for t in CARD_TYPES}
+    cmc_total = 0.0
+    deck_count = 0
+
+    for csv_file in csv_files:
+        try:
+            card_entries: list[tuple[str, int]] = []
+            with open(csv_file, encoding="utf-8-sig", newline="") as f:
+                reader = _csv.DictReader(f, delimiter=";")
+                for row in reader:
+                    name = (row.get("Card Name") or "").strip()
+                    if name:
+                        try:
+                            qty = int(row.get("Quantity") or 1)
+                        except (ValueError, TypeError):
+                            qty = 1
+                        card_entries.append((name, qty))
+            if not card_entries:
+                continue
+            counts, avg_cmc = _count_types_in_deck(card_entries, type_map, dfc_land_norms)
+            for t in CARD_TYPES:
+                totals[t] += counts[t]
+            if avg_cmc is not None:
+                cmc_total += avg_cmc
+            deck_count += 1
+        except Exception:
+            continue
+
+    if deck_count == 0:
+        return None
+
+    result = {t: round(totals[t] / deck_count, 1) for t in CARD_TYPES}
+    result["avg_cmc"] = round(cmc_total / deck_count, 2) if deck_count > 0 else None
+    return result
+
+
+def compute_deck_composition(commander_name: str) -> dict:
+    """
+    Retourne la composition par type du deck personnel et la moyenne EDHREC.
+
+    {
+        "commander": str,
+        "my_deck": { "Land": int, "Creature": int, ... },
+        "edhrec_avg": { "Land": float, "Creature": float, ... } | None,
+        "edhrec_deck_count": int,
+        "error": str | None,
+    }
+    """
+    deck_file = _find_deck_file(commander_name)
+    if deck_file is None:
+        return {"commander": commander_name, "my_deck": None, "edhrec_avg": None, "edhrec_deck_count": 0, "error": "Fichier deck introuvable"}
+
+    # Charger les ressources DB
+    type_map = _load_card_type_map()
+    dfc_land_norms = _load_dfc_land_norms()
+
+    # Mon deck
+    cmd_norm = _normalize(commander_name)
+    my_card_entries: list[tuple[str, int]] = []
+    for line in deck_file.read_text(encoding="utf-8", errors="replace").splitlines():
+        parsed = _parse_card_line(line)
+        if parsed:
+            name, qty = parsed
+            if _normalize(name) != cmd_norm:
+                my_card_entries.append((name, qty))
+
+    my_counts, my_avg_cmc = _count_types_in_deck(my_card_entries, type_map, dfc_land_norms)
+
+    # EDHREC averages — depuis le cache ou recalcul
+    cache_data: dict = {}
+    if TYPE_AVERAGES_CACHE.exists():
+        try:
+            cache_data = json.loads(TYPE_AVERAGES_CACHE.read_text(encoding="utf-8"))
+        except Exception:
+            cache_data = {}
+
+    cache_key = _normalize(commander_name)
+    cached_entry = cache_data.get(cache_key)
+
+    if cached_entry:
+        edhrec_avg = cached_entry.get("avg")
+        edhrec_deck_count = cached_entry.get("deck_count", 0)
+    else:
+        edhrec_avg = _compute_edhrec_averages(commander_name, type_map, dfc_land_norms)
+        # Compter les decks pour l'affichage
+        edhrec_deck_count = 0
+        if edhrec_avg is not None:
+            cmd_dir = DECKLISTS_DIR / commander_name
+            if not cmd_dir.exists():
+                try:
+                    matches = [d for d in DECKLISTS_DIR.iterdir() if d.is_dir() and d.name.lower() == commander_name.lower()]
+                    if matches:
+                        cmd_dir = matches[0]
+                except Exception:
+                    pass
+            if cmd_dir.exists():
+                edhrec_deck_count = len(list(cmd_dir.glob("*.csv")))
+
+        if edhrec_avg is not None:
+            cache_data[cache_key] = {"avg": edhrec_avg, "deck_count": edhrec_deck_count}
+            try:
+                TYPE_AVERAGES_CACHE.parent.mkdir(parents=True, exist_ok=True)
+                TYPE_AVERAGES_CACHE.write_text(json.dumps(cache_data, ensure_ascii=False, indent=2), encoding="utf-8")
+            except Exception:
+                pass
+
+    return {
+        "commander":         commander_name,
+        "my_deck":           my_counts,
+        "my_avg_cmc":        my_avg_cmc,
+        "edhrec_avg":        edhrec_avg,
+        "edhrec_avg_cmc":    edhrec_avg.get("avg_cmc") if edhrec_avg else None,
+        "edhrec_deck_count": edhrec_deck_count,
+        "error":             None,
     }
