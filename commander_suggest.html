@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-<title>ManaMind — Trouver un commandant</title>
+<title>ManaMind â€” Trouver un commandant</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
@@ -86,7 +86,7 @@
   }
   .field-label { font-family: var(--serif-engraved); font-size: 0.68rem; letter-spacing: 0.18em; color: var(--gold); display: block; margin-bottom: 8px; }
 
-  /* ── Wrapper input + dropdown ── */
+  /* â”€â”€ Wrapper input + dropdown â”€â”€ */
   .input-wrap { position: relative; }
 
   .card-input {
@@ -98,7 +98,7 @@
   .card-input::placeholder { color: var(--parch-600); }
   .card-input:focus { border-color: var(--arcane); box-shadow: 0 0 0 3px var(--arcane-glow); }
 
-  /* ── Dropdown autocomplete ── */
+  /* â”€â”€ Dropdown autocomplete â”€â”€ */
   .autocomplete-dropdown {
     position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 99999;
     background: #1a1125; border: 1px solid var(--gold-line); border-radius: 8px;
@@ -126,7 +126,7 @@
   .search-btn:active { transform: translateY(0); }
   .search-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
-  /* ── Résultats ── */
+  /* â”€â”€ RÃ©sultats â”€â”€ */
   #results { display: flex; flex-direction: column; gap: 16px; }
   .results-title { font-family: var(--serif-engraved); font-size: 0.68rem; letter-spacing: 0.2em; color: var(--gold); text-transform: uppercase; text-align: center; margin: 0 0 4px; }
 
@@ -169,22 +169,21 @@
 <div id="app">
 
   <header class="site-header">
-    <a href="/" class="back-link">← Accueil</a>
+    <a href="/" class="back-link">â† Accueil</a>
     <span style="font-family:var(--serif-engraved);font-size:0.7rem;letter-spacing:0.2em;color:var(--gold);opacity:0.5;">MANAMIND</span>
     <nav style="display:flex;gap:20px;">
-      <a href="/deck-suggest" class="back-link">Suggestions d'ajouts</a>
       <a href="/deck-build" class="back-link">Ajouts depuis ma collection</a>
-      <a href="/collection-suggest" class="back-link">Ma collection</a>
-      <a href="/deck-moves" class="back-link">Déplacements</a>
+      <a href="/deck-moves" class="back-link">DÃ©placements</a>
+      <a href="/deck-config" class="back-link">Mes decklists</a>
     </nav>
   </header>
 
   <section class="hero">
-    <p class="hero-label">Outil de sélection</p>
+    <p class="hero-label">Outil de sÃ©lection</p>
     <h1 class="hero-title">Trouver un Commandant</h1>
     <div class="divider"></div>
     <p class="hero-sub" style="font-size:0.78rem;font-style:italic;line-height:1.5;">
-      Entre le nom d'une carte pour découvrir les commandants dans lesquels elle est le plus souvent jouée statistiquement — parmi ta liste de commandants.
+      Entre le nom d'une carte pour dÃ©couvrir les commandants dans lesquels elle est le plus souvent jouÃ©e statistiquement â€” parmi ta liste de commandants.
     </p>
   </section>
 
@@ -196,7 +195,7 @@
           id="cardInput"
           class="card-input"
           type="text"
-          placeholder="Ex : Sol Ring, Cultivate, Anneau Unique…"
+          placeholder="Ex : Sol Ring, Cultivate, Anneau Uniqueâ€¦"
           autocomplete="off"
           spellcheck="false"
         />
@@ -211,7 +210,7 @@
 </div>
 
 <script>
-  // ── Particules ────────────────────────────────────────────────────────────
+  // â”€â”€ Particules â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   (function () {
     const c = document.getElementById('particles');
     for (let i = 0; i < 18; i++) {
@@ -223,13 +222,13 @@
     }
   })();
 
-  // ── Éléments ──────────────────────────────────────────────────────────────
+  // â”€â”€ Ã‰lÃ©ments â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const input    = document.getElementById('cardInput');
   const btn      = document.getElementById('searchBtn');
   const zone     = document.getElementById('results');
   const dropdown = document.getElementById('acDropdown');
 
-  // ── Autocomplete ──────────────────────────────────────────────────────────
+  // â”€â”€ Autocomplete â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   let acController = null;
   let acIndex = -1;
   let acItems = [];
@@ -323,7 +322,7 @@
     acIndex = -1;
   }
 
-  // ── Recherche principale ──────────────────────────────────────────────────
+  // â”€â”€ Recherche principale â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   async function doSearch() {
     const card = input.value.trim();
     if (!card) return;
@@ -337,20 +336,20 @@
       const data = await res.json();
 
       if (!res.ok) {
-        zone.innerHTML = `<p class="state-msg error">Erreur : ${data.error || 'Réponse invalide'}</p>`;
+        zone.innerHTML = `<p class="state-msg error">Erreur : ${data.error || 'RÃ©ponse invalide'}</p>`;
         return;
       }
 
       const suggestions = data.suggestions || [];
       if (!suggestions.length) {
-        zone.innerHTML = `<p class="state-msg">Aucun commandant trouvé pour « ${escHtml(card)} ».<br>Vérifiez l'orthographe ou essayez le nom anglais exact.</p>`;
+        zone.innerHTML = `<p class="state-msg">Aucun commandant trouvÃ© pour Â« ${escHtml(card)} Â».<br>VÃ©rifiez l'orthographe ou essayez le nom anglais exact.</p>`;
         return;
       }
 
       renderResults(card, suggestions);
 
     } catch (err) {
-      zone.innerHTML = `<p class="state-msg error">Erreur réseau : ${escHtml(err.message)}</p>`;
+      zone.innerHTML = `<p class="state-msg error">Erreur rÃ©seau : ${escHtml(err.message)}</p>`;
     } finally {
       btn.disabled = false;
     }
@@ -359,7 +358,7 @@
   function renderResults(card, suggestions) {
     const rankLabels  = ['#1', '#2', '#3'];
     const rankClasses = ['rank-1', 'rank-2', 'rank-3'];
-    let html = `<p class="results-title">Commandants pour « ${escHtml(card)} »</p>`;
+    let html = `<p class="results-title">Commandants pour Â« ${escHtml(card)} Â»</p>`;
     suggestions.forEach((s, i) => {
       const pct = s.inclusion_rate.toFixed(1);
       const bar = Math.min(s.inclusion_rate, 100);
@@ -382,6 +381,16 @@
   function escHtml(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
+
+  // â”€â”€ PrÃ©-remplissage depuis l'URL (?card=...) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  (function () {
+    const params = new URLSearchParams(window.location.search);
+    const card = params.get('card');
+    if (card) {
+      input.value = card;
+      doSearch();
+    }
+  })();
 </script>
 </body>
 </html>

@@ -563,6 +563,69 @@
   .notice.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   .notice b { color: var(--gold-soft); font-weight: 600; }
 
+  /* ── Onglets de saisie ── */
+  .page--right { gap: 0; padding-bottom: clamp(16px, 2vh, 28px); }
+  .input-tabs {
+    display: flex; gap: 4px; flex-shrink: 0;
+    margin-bottom: 14px;
+  }
+  .input-tab {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 9px 10px;
+    font-family: var(--serif-engraved); font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--parch-500); background: rgba(12,9,16,0.35);
+    border: 1px solid var(--gold-faint); border-radius: 5px; cursor: pointer;
+    transition: color .18s, border-color .18s, background .18s;
+  }
+  .input-tab:hover { color: var(--parch-300); border-color: var(--gold-line); }
+  .input-tab.active { color: var(--gold-soft); border-color: var(--gold-line); background: rgba(201,164,92,0.08); }
+
+  /* ── Panneaux ── */
+  .input-panel { display: none; flex: 1; flex-direction: column; min-height: 0; }
+  .input-panel.active { display: flex; }
+
+  /* Moxfield */
+  .mox-label {
+    font-family: var(--serif-engraved); font-size: 0.6rem; letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--parch-500); margin-bottom: 10px;
+  }
+  .mox-list { display: flex; flex-direction: column; gap: 7px; overflow-y: auto; flex: 1; scrollbar-width: thin; scrollbar-color: rgba(201,164,92,0.3) transparent; }
+  .mox-empty { color: var(--parch-600); font-size: 0.9rem; text-align: center; padding: 24px 0; }
+  .mox-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 11px 14px; border-radius: 6px; cursor: pointer;
+    background: rgba(12,9,16,0.4); border: 1px solid var(--gold-faint);
+    transition: border-color .18s, background .18s;
+  }
+  .mox-item:hover { border-color: var(--gold-line); background: rgba(201,164,92,0.06); }
+  .mox-item.selected { border-color: var(--gold-line); background: rgba(201,164,92,0.10); box-shadow: 0 0 12px rgba(201,164,92,0.10); }
+  .mox-item-name {
+    font-family: var(--serif-display); font-size: 1.0rem; font-weight: 600; color: var(--parch-100);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .mox-item-meta { font-size: 0.7rem; color: var(--parch-600); margin-top: 2px; }
+  .mox-check { color: var(--gold); font-size: 1.1rem; flex-shrink: 0; opacity: 0; }
+  .mox-item.selected .mox-check { opacity: 1; }
+
+  /* Coller */
+  .paste-area {
+    flex: 1; min-height: 0; resize: none;
+    background: rgba(12,9,16,0.5); border: 1.5px dashed var(--gold-line); border-radius: 8px;
+    color: var(--parch-100); font-family: ui-monospace, Menlo, monospace; font-size: 0.82rem; line-height: 1.6;
+    padding: 16px 18px; outline: none; margin-bottom: 12px;
+    scrollbar-width: thin; scrollbar-color: rgba(201,164,92,0.3) transparent;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .paste-area:focus { border-color: var(--arcane); box-shadow: 0 0 0 3px var(--arcane-glow); }
+  .paste-area::placeholder { color: var(--parch-600); }
+
+  /* Fichier */
+  #panel-file { padding: 0; }
+  #panel-file .dropzone { flex: 1; border-radius: 8px; }
+
+  /* Reveal en overlay sur toute la page droite */
+  .page--right { position: relative; }
+
   @media (max-width: 880px) {
     body { overflow: auto; }
     .frame { height: auto; min-height: 100vh; }
@@ -595,19 +658,9 @@
       <div class="nav-tabs">
         <a href="/" class="active">Le mentor</a>
         <span class="nav-sep"></span>
-        <a href="/cards">
-          <svg viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" stroke-width="1.6"/><path d="M15.5 15.5 L21 21" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-          Recherche de cartes
-        </a>
-        <span class="nav-sep"></span>
         <a href="/commander-suggest">
           <svg viewBox="0 0 24 24" fill="none"><path d="M12 2 L15.09 8.26 L22 9.27 L17 14.14 L18.18 21.02 L12 17.77 L5.82 21.02 L7 14.14 L2 9.27 L8.91 8.26 Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
           Trouver un commandant
-        </a>
-        <span class="nav-sep"></span>
-        <a href="/deck-suggest">
-          <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 12h8M8 8h8M8 16h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-          Suggestions d'ajouts
         </a>
         <span class="nav-sep"></span>
         <a href="/deck-build">
@@ -615,14 +668,14 @@
           Ajouts depuis ma collection
         </a>
         <span class="nav-sep"></span>
-        <a href="/collection-suggest">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18M3 12h18M3 18h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="20" cy="18" r="2.5" stroke="currentColor" stroke-width="1.6"/></svg>
-          Ma collection
-        </a>
-        <span class="nav-sep"></span>
         <a href="/deck-moves">
           <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M14 7l5 5-5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
           Déplacements
+        </a>
+        <span class="nav-sep"></span>
+        <a href="/deck-config">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          Mes decklists
         </a>
       </div>
     </nav>
@@ -671,71 +724,98 @@
 
       <!-- Page droite — agir -->
       <section class="page page--right">
-        <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Glisse ton deck .txt ici ou parcours un fichier">
-          <div class="rune-ring" aria-hidden="true">
-            <svg viewBox="0 0 340 340">
-              <g class="ring-outer">
-                <circle cx="170" cy="170" r="150" fill="none" stroke="#c9a45c" stroke-width="0.8" stroke-dasharray="2 9" opacity="0.55"/>
-                <circle cx="170" cy="170" r="134" fill="none" stroke="#a07be0" stroke-width="0.6" opacity="0.35"/>
-              </g>
-              <g class="ring-inner">
-                <circle cx="170" cy="170" r="110" fill="none" stroke="#c9a45c" stroke-width="0.6" stroke-dasharray="1 14" opacity="0.5"/>
-              </g>
-            </svg>
+
+        <!-- ── Onglets de saisie ── -->
+        <div class="input-tabs" id="inputTabs">
+          <button class="input-tab active" data-tab="moxfield">
+            <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            Deck Moxfield
+          </button>
+          <button class="input-tab" data-tab="paste">
+            <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" stroke="currentColor" stroke-width="1.6"/><rect x="9" y="3" width="6" height="4" rx="1" stroke="currentColor" stroke-width="1.6"/></svg>
+            Coller une liste
+          </button>
+          <button class="input-tab" data-tab="file">
+            <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M12 16V4M12 4L8 8M12 4l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 15v4h14v-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            Fichier .txt
+          </button>
+        </div>
+
+        <!-- ── Panneau Moxfield ── -->
+        <div class="input-panel active" id="panel-moxfield">
+          <div class="mox-label">Sélectionne un deck configuré</div>
+          <div class="mox-list" id="moxList">
+            <div class="mox-empty">Chargement…</div>
           </div>
+        </div>
 
-          <div class="dz-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none"><path d="M12 16 V4 M12 4 L8 8 M12 4 L16 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 15 V19 H19 V15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <!-- ── Panneau Coller ── -->
+        <div class="input-panel" id="panel-paste">
+          <textarea id="pasteArea" class="paste-area" placeholder="Colle ta decklist ici (format Moxfield / Archidekt)&#10;&#10;1 Sol Ring&#10;1 Cultivate&#10;…&#10;&#10;1 Commandant"></textarea>
+          <button class="btn-browse" id="pasteLoadBtn" type="button">Charger cette liste</button>
+        </div>
+
+        <!-- ── Panneau Fichier ── -->
+        <div class="input-panel" id="panel-file">
+          <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Glisse ton deck .txt ici ou parcours un fichier">
+            <div class="rune-ring" aria-hidden="true">
+              <svg viewBox="0 0 340 340">
+                <g class="ring-outer">
+                  <circle cx="170" cy="170" r="150" fill="none" stroke="#c9a45c" stroke-width="0.8" stroke-dasharray="2 9" opacity="0.55"/>
+                  <circle cx="170" cy="170" r="134" fill="none" stroke="#a07be0" stroke-width="0.6" opacity="0.35"/>
+                </g>
+                <g class="ring-inner">
+                  <circle cx="170" cy="170" r="110" fill="none" stroke="#c9a45c" stroke-width="0.6" stroke-dasharray="1 14" opacity="0.5"/>
+                </g>
+              </svg>
+            </div>
+            <div class="dz-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M12 16 V4 M12 4 L8 8 M12 4 L16 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 15 V19 H19 V15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            </div>
+            <div class="dz-title">Glisse ton deck <code>.txt</code></div>
+            <div class="dz-sub">dépose-le ici, ou clique pour ouvrir le grimoire</div>
+            <button class="btn-browse" id="browseBtn" type="button">Parcourir un fichier</button>
+            <input type="file" id="fileInput" accept=".txt" />
           </div>
-          <div class="dz-title">Glisse ton deck <code>.txt</code></div>
-          <div class="dz-sub">dépose-le ici, ou clique pour ouvrir le grimoire</div>
-          <button class="btn-browse" id="browseBtn" type="button">Parcourir un fichier</button>
+        </div>
 
-          <!-- Révélation commandant + sélection algo + progression -->
-          <div class="commander-reveal" id="commanderReveal">
-            <div class="cmd-eyebrow">Commandant détecté</div>
-
-            <div class="reveal-body">
-              <img id="commanderImg" alt="Carte du commandant" />
-
-              <div class="reveal-info">
-                <div class="cmd-name" id="commanderName">—</div>
-
-                <!-- Phase 1 : choix de l'algorithme -->
-                <div class="algo-section" id="algoSection">
-                  <div class="algo-label">Algorithme d'optimisation</div>
-                  <div class="algo-options">
-                    <button class="algo-card selected" data-algo="v1">
-                      <span class="algo-card-name">Analyse Populaire</span>
-                      <span class="algo-card-desc">Popularité sur les decks cEDH existants</span>
-                    </button>
-                    <button class="algo-card" disabled>
-                      <span class="algo-card-name">Filtrage Collaboratif</span>
-                      <span class="algo-card-desc">Recommandations issues des stats de 36 000 decks</span>
-                      <span class="algo-soon">Bientôt disponible</span>
-                    </button>
-                    <button class="algo-card" data-algo="hybrid">
-                      <span class="algo-card-name">Deck Mentor IA</span>
-                      <span class="algo-card-desc">Score, clusters, top 30 ajouts/retraits et remplacements</span>
-                    </button>
-                  </div>
-                  <button class="btn-analyse" id="analyseBtn">Analyser le deck ↗</button>
+        <!-- ── Révélation commandant + sélection algo + progression ── -->
+        <div class="commander-reveal" id="commanderReveal">
+          <div class="cmd-eyebrow">Commandant détecté</div>
+          <div class="reveal-body">
+            <img id="commanderImg" alt="Carte du commandant" />
+            <div class="reveal-info">
+              <div class="cmd-name" id="commanderName">—</div>
+              <div class="algo-section" id="algoSection">
+                <div class="algo-label">Algorithme d'optimisation</div>
+                <div class="algo-options">
+                  <button class="algo-card selected" data-algo="v1">
+                    <span class="algo-card-name">Analyse Populaire</span>
+                    <span class="algo-card-desc">Popularité sur les decks cEDH existants</span>
+                  </button>
+                  <button class="algo-card" disabled>
+                    <span class="algo-card-name">Filtrage Collaboratif</span>
+                    <span class="algo-card-desc">Recommandations issues des stats de 36 000 decks</span>
+                    <span class="algo-soon">Bientôt disponible</span>
+                  </button>
+                  <button class="algo-card" data-algo="hybrid">
+                    <span class="algo-card-name">Deck Mentor IA</span>
+                    <span class="algo-card-desc">Score, clusters, top 30 ajouts/retraits et remplacements</span>
+                  </button>
                 </div>
-
-                <!-- Phase 2 : progression (affiché après clic "Analyser") -->
-                <div class="progress-wrap" id="progressWrap">
-                  <svg class="progress-ring" viewBox="0 0 56 56">
-                    <circle class="track" cx="28" cy="28" r="24"></circle>
-                    <circle class="bar" id="progressBar" cx="28" cy="28" r="24"></circle>
-                  </svg>
-                  <div class="progress-label" id="progressLabel">Analyse du deck</div>
-                </div>
+                <button class="btn-analyse" id="analyseBtn">Analyser le deck ↗</button>
+              </div>
+              <div class="progress-wrap" id="progressWrap">
+                <svg class="progress-ring" viewBox="0 0 56 56">
+                  <circle class="track" cx="28" cy="28" r="24"></circle>
+                  <circle class="bar" id="progressBar" cx="28" cy="28" r="24"></circle>
+                </svg>
+                <div class="progress-label" id="progressLabel">Analyse du deck</div>
               </div>
             </div>
           </div>
-
-          <input type="file" id="fileInput" accept=".txt" />
         </div>
+
       </section>
     </div>
   </div>
@@ -758,9 +838,80 @@
     const analyseBtn      = $("analyseBtn");
     const notice          = $("notice");
 
-    let pendingFile = null;
+    // pendingText : texte brut de la decklist chargée (toutes sources)
+    let pendingText = null;
     let selectedAlgo = "v1";
 
+    // ── Onglets ────────────────────────────────────────────────────────────────
+    document.querySelectorAll(".input-tab").forEach(tab => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".input-tab").forEach(t => t.classList.remove("active"));
+        document.querySelectorAll(".input-panel").forEach(p => p.classList.remove("active"));
+        tab.classList.add("active");
+        $("panel-" + tab.dataset.tab).classList.add("active");
+      });
+    });
+
+    // ── Deck Moxfield — chargement ─────────────────────────────────────────────
+    async function loadMoxDecks() {
+      const list = $("moxList");
+      try {
+        const res  = await fetch("/api/moxfield-decks");
+        const data = await res.json();
+        const decks = (data.decks || []).sort((a, b) => (a.commander || "").localeCompare(b.commander || ""));
+        if (!decks.length) {
+          list.innerHTML = `<div class="mox-empty">Aucun deck configuré — <a href="/deck-config" style="color:var(--gold)">Configurer</a></div>`;
+          return;
+        }
+        list.innerHTML = decks.map(d => `
+          <div class="mox-item" data-id="${d.deck_id}" onclick="selectMoxDeck(this,'${escJs(d.deck_id)}','${escJs(d.commander || '')}')">
+            <div style="min-width:0">
+              <div class="mox-item-name">${escHtml(d.commander || "Commandant inconnu")}</div>
+              <div class="mox-item-meta">${escHtml(d.name || d.deck_id)}</div>
+            </div>
+            <span class="mox-check">✓</span>
+          </div>`).join("");
+      } catch { list.innerHTML = `<div class="mox-empty">Erreur de chargement.</div>`; }
+    }
+
+    function escHtml(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+    function escJs(s)   { return String(s).replace(/\\/g,"\\\\").replace(/'/g,"\\'"); }
+
+    async function selectMoxDeck(el, deckId, commander) {
+      document.querySelectorAll(".mox-item").forEach(i => i.classList.remove("selected"));
+      el.classList.add("selected");
+      showNotice(`Chargement de <b>${escHtml(commander)}</b>…`);
+      try {
+        const res  = await fetch(`/api/deck-txt/${deckId}`);
+        const data = await res.json();
+        if (!data.content) throw new Error("Contenu vide");
+        pendingText = data.content;
+        await revealCommander(commander);
+      } catch (e) {
+        showNotice(`<b>Erreur :</b> ${e.message}`);
+      }
+    }
+
+    // ── Coller une liste ───────────────────────────────────────────────────────
+    $("pasteLoadBtn").addEventListener("click", async () => {
+      const text = $("pasteArea").value.trim();
+      if (!text) { showNotice("Colle d'abord ta decklist."); return; }
+      pendingText = text;
+      const commander = extractCommander(text);
+      if (commander) await revealCommander(commander);
+      else { commanderReveal.classList.add("show"); commanderName.textContent = "Deck chargé"; }
+    });
+
+    // ── Fichier .txt ───────────────────────────────────────────────────────────
+    async function processDeck(file) {
+      const text = await file.text();
+      pendingText = text;
+      const commander = extractCommander(text);
+      if (commander) await revealCommander(commander);
+      else { commanderReveal.classList.add("show"); commanderName.textContent = "Deck chargé"; }
+    }
+
+    // ── Helpers communs ────────────────────────────────────────────────────────
     const scryfallCache = new Map();
     async function fetchCommander(name) {
       if (scryfallCache.has(name)) return scryfallCache.get(name);
@@ -769,15 +920,11 @@
         if (!r.ok) throw new Error("not found");
         const d = await r.json();
         const face = d.card_faces && d.card_faces[0]?.image_uris ? d.card_faces[0] : d;
-        const data = {
-          art_crop: face.image_uris?.art_crop || null,
-          normal:   face.image_uris?.normal   || null,
-          identity: d.color_identity || [],
-        };
+        const data = { art_crop: face.image_uris?.art_crop || null, normal: face.image_uris?.normal || null };
         scryfallCache.set(name, data);
         return data;
       } catch {
-        const data = { art_crop: null, normal: null, identity: [] };
+        const data = { art_crop: null, normal: null };
         scryfallCache.set(name, data);
         return data;
       }
@@ -799,6 +946,29 @@
         if (m) return m[2].trim();
       }
       return null;
+    }
+
+    function parseDecklistText(text) {
+      const lines = text.split(/\r?\n/);
+      const sections = [];
+      let cur = [];
+      for (const line of lines) {
+        const t = line.trim();
+        if (!t) { if (cur.length) { sections.push(cur); cur = []; } }
+        else cur.push(t);
+      }
+      if (cur.length) sections.push(cur);
+      const cards = [];
+      const deckSections = sections.length >= 2 ? sections.slice(0, -1) : sections;
+      for (const sec of deckSections) {
+        for (const line of sec) {
+          if (line.startsWith("#") || line.startsWith("//")) continue;
+          const m = line.match(/^(\d+)[xX]?\s+(.+)$/);
+          const name = m ? m[2].trim() : line.trim();
+          if (name) cards.push(name);
+        }
+      }
+      return cards;
     }
 
     const RING = 151;
@@ -826,111 +996,45 @@
       }
     }
 
-    async function processDeck(file) {
-      pendingFile = file;
-      const text = await file.text();
-      const commander = extractCommander(text);
-      if (commander) await revealCommander(commander);
-      else { commanderReveal.classList.add("show"); commanderName.textContent = "Deck chargé"; }
-      // Attendre que l'utilisateur choisisse un algo et clique "Analyser"
-    }
-
-    // Parse la decklist depuis le texte brut (format Moxfield/Archidekt)
-    function parseDecklistText(text) {
-      const lines = text.split(/\r?\n/);
-      const sections = [];
-      let cur = [];
-      for (const line of lines) {
-        const t = line.trim();
-        if (!t) { if (cur.length) { sections.push(cur); cur = []; } }
-        else cur.push(t);
-      }
-      if (cur.length) sections.push(cur);
-
-      const cards = [];
-      // Toutes les sections sauf la dernière (commandant) → cartes du deck
-      const deckSections = sections.length >= 2 ? sections.slice(0, -1) : sections;
-      for (const sec of deckSections) {
-        for (const line of sec) {
-          if (line.startsWith("#") || line.startsWith("//")) continue;
-          const m = line.match(/^(\d+)[xX]?\s+(.+)$/);
-          const name = m ? m[2].trim() : line.trim();
-          if (name) cards.push(name);
-        }
-      }
-      return cards;
-    }
-
+    // ── Lancer l'analyse ───────────────────────────────────────────────────────
     async function startUpload() {
-      const file = pendingFile;
-      if (!file) return;
+      if (!pendingText) return;
 
       algoSection.style.display = "none";
       progressWrap.classList.add("show");
 
       try {
-        // ── Deck Mentor IA (moteur hybride) ──────────────────────────────────
         if (selectedAlgo === "hybrid") {
-          const text = await file.text();
-          const commander = extractCommander(text);
+          const commander = extractCommander(pendingText);
           if (!commander) throw new Error("Commandant introuvable dans la decklist.");
-          const decklist = parseDecklistText(text);
+          const decklist = parseDecklistText(pendingText);
           if (!decklist.length) throw new Error("Decklist vide ou format non reconnu.");
 
           setProgress(20, "Envoi au Mentor IA…");
-
           const res = await fetch("/api/deck/analyze", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ commander, decklist }),
           });
-
           setProgress(60, "Calcul des recommandations…");
-
-          if (!res.ok) {
-            const errBody = await res.json().catch(() => ({}));
-            throw new Error(errBody.error || "Erreur serveur");
-          }
-
+          if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || "Erreur serveur"); }
           const data = await res.json();
           setProgress(100, "Analyse prête !");
-
-          // Stocker le résultat dans sessionStorage pour results.html
           sessionStorage.setItem("deckMentorResult", JSON.stringify(data));
-
-          setTimeout(() => {
-            window.location.href = "/results?algo=hybrid";
-          }, 400);
+          setTimeout(() => { window.location.href = "/results?algo=hybrid"; }, 400);
           return;
         }
 
-        // ── Algorithmes V1 / V3 (legacy) ─────────────────────────────────────
+        // V1 — upload via FormData (texte converti en Blob)
+        const blob = new Blob([pendingText], { type: "text/plain" });
         const fd = new FormData();
-        fd.append("deckfile", file);
+        fd.append("deckfile", blob, "deck.txt");
+        fd.append("algo", selectedAlgo);
+        setProgress(40, "Envoi du deck…");
 
-        let endpoint = "/upload-deck";
-        if (selectedAlgo === "v3") {
-          endpoint = "/upload-deck-v2";
-          setProgress(20, "Envoi du deck…");
-        } else {
-          fd.append("algo", selectedAlgo);
-          setProgress(40, "Envoi du deck…");
-        }
-
-        const res = await fetch(endpoint, { method: "POST", body: fd });
-        if (!res.ok) {
-          const errBody = await res.json().catch(() => ({}));
-          throw new Error(errBody.error || "Erreur serveur");
-        }
-
-        if (selectedAlgo === "v3") {
-          setProgress(50, "Analyse du commandant…");
-          await new Promise(r => setTimeout(r, 400));
-          setProgress(75, "Scoring hybride en cours…");
-        } else {
-          setProgress(80, "Génération des recommandations…");
-        }
-
+        const res = await fetch("/upload-deck", { method: "POST", body: fd });
+        if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || "Erreur serveur"); }
+        setProgress(80, "Génération des recommandations…");
         const data = await res.json();
         setProgress(100, "Recommandations prêtes !");
         setTimeout(() => {
@@ -969,6 +1073,8 @@
       if (f && f.name.toLowerCase().endsWith(".txt")) processDeck(f);
       else showNotice("Dépose un fichier <b>.txt</b> de decklist.");
     });
+
+    loadMoxDecks();
   </script>
 </body>
 </html>

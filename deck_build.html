@@ -50,39 +50,40 @@
   #topPanel {
     display: flex; gap: 0; width: 100%;
     background: var(--ink-panel); border: 1px solid var(--gold-line);
-    border-radius: 14px; overflow: hidden; backdrop-filter: blur(8px);
+    border-radius: 14px; overflow: visible; backdrop-filter: blur(8px);
   }
+  #topPanel > *:first-child { border-radius: 14px 0 0 14px; overflow: hidden; }
+  #topPanel > *:last-child  { border-radius: 0 14px 14px 0; }
   #cmdPortrait {
-    flex: 0 0 22%; max-width: 360px; min-width: 240px;
-    background: rgba(12,9,16,0.6); align-self: stretch;
+    flex: 0 0 271px;
+    align-self: flex-start;
+    max-height: 100%;
+    background: rgba(12,9,16,0.6);
+    overflow: hidden;
   }
-  #cmdPortrait img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+  #cmdPortrait img { width: 100%; height: auto; display: block; }
   #cmdPortraitPlaceholder {
-    width: 100%; height: 100%; min-height: 420px;
+    width: 100%; height: 100%;
     display: flex; align-items: center; justify-content: center;
     color: var(--parch-600); font-size: 0.7rem; font-style: italic;
   }
   #topPanelRight {
     flex: 1; display: flex; flex-direction: column; gap: 0;
-    min-width: 0; overflow: hidden;
+    min-width: 0;
   }
   #topPanelControls {
-    display: flex; flex-direction: column; gap: 18px;
-    padding: 24px 28px 20px;
+    display: flex; flex-direction: column; gap: 10px;
+    padding: 14px 20px 12px;
   }
   #topPanelComposition {
     border-top: 1px solid var(--gold-line);
-    padding: 18px 28px 22px;
+    padding: 12px 20px 14px;
   }
 
   /* ── Titre ── */
-  .top-bar-title { display: flex; flex-direction: column; gap: 4px; }
-  .top-bar-title .hero-label {
-    font-family: var(--serif-engraved); font-size: 0.6rem; letter-spacing: 0.25em;
-    color: var(--gold); text-transform: uppercase;
-  }
+  .top-bar-title { display: flex; flex-direction: column; gap: 0; }
   .top-bar-title .hero-title {
-    font-family: var(--serif-display); font-size: clamp(1.4rem, 2.5vw, 2rem);
+    font-family: var(--serif-display); font-size: clamp(1.1rem, 2vw, 1.5rem);
     font-weight: 600; color: var(--parch-100); margin: 0; line-height: 1.1;
   }
 
@@ -96,38 +97,108 @@
   }
   .deck-select:focus { border-color: var(--arcane); box-shadow: 0 0 0 3px var(--arcane-glow); }
   .deck-select option { background: #17101f; color: var(--parch-100); }
-  .submit-btn {
-    padding: 12px 36px; font-family: var(--serif-engraved); font-size: 0.75rem; letter-spacing: 0.18em;
-    color: var(--ink-900); background: linear-gradient(135deg, var(--gold) 0%, var(--gold-soft) 100%);
-    border: none; border-radius: 8px; cursor: pointer; transition: opacity 0.2s, transform 0.15s; flex-shrink: 0;
-  }
-  .submit-btn:hover { opacity: 0.9; transform: translateY(-1px); }
-  .submit-btn:active { transform: translateY(0); }
-  .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
-  /* ── Stats en grille 2 colonnes ── */
-  .stats-banner { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .stat-chip {
-    background: rgba(201,164,92,0.08); border: 1px solid var(--gold-line); border-radius: 8px;
-    padding: 10px 16px; display: flex; flex-direction: column; gap: 2px;
+  /* ── Barre de recherche carte ── */
+  #cardSearchRow {
+    margin-right: -20px;
+    gap: 8px;
+    align-items: center;
   }
-  .stat-chip-label {
-    font-family: var(--serif-engraved); font-size: 0.52rem; letter-spacing: 0.2em;
-    color: var(--gold); text-transform: uppercase;
+  .card-search-pair {
+    flex: 1; display: flex; align-items: center; gap: 6px; min-width: 0;
   }
-  .stat-chip-value { font-family: var(--serif-display); font-size: 1.4rem; font-weight: 600; color: var(--parch-100); }
+  .card-search-wrap {
+    position: relative; flex: 1; min-width: 0;
+  }
+  .card-search-wrap input {
+    width: 100%; box-sizing: border-box; flex: none;
+  }
+  .card-search-dropdown {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 9999;
+    background: #1a1125; border: 1px solid var(--gold-line); border-radius: 8px;
+    overflow-y: auto; overflow-x: hidden;
+    max-height: calc(8 * 38px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+    display: none;
+  }
+  .card-search-dropdown.open { display: block; }
+  .cs-item {
+    padding: 9px 14px; font-family: var(--serif-body); font-size: 0.9rem;
+    color: var(--parch-300); cursor: pointer; transition: background 0.1s;
+    border-bottom: 1px solid rgba(201,164,92,0.08);
+  }
+  .cs-item:last-child { border-bottom: none; }
+  .cs-item:hover, .cs-item.active { background: rgba(160,123,224,0.12); color: var(--parch-100); }
+  /* Badge taux d'inclusion — positionné en absolu dans le champ */
+  #csInclusionBadge {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    display: none;
+    font-family: var(--serif-engraved); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em;
+    color: var(--arcane); background: rgba(20,13,28,0.9);
+    border: 1px solid rgba(160,123,224,0.45); border-radius: 20px;
+    padding: 3px 10px; white-space: nowrap; pointer-events: none;
+  }
+  .card-search-add-btn {
+    flex-shrink: 0; width: 38px; height: 38px; border-radius: 50%;
+    background: rgba(39,174,96,0.85); color: #fff; border: 2px solid rgba(39,174,96,0.6);
+    font-size: 1.4rem; font-weight: 300; line-height: 1;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: opacity 0.15s, transform 0.15s; box-shadow: 0 2px 8px rgba(39,174,96,0.3);
+  }
+  .card-search-add-btn:hover { opacity: 0.85; transform: scale(1.08); }
+  .card-search-add-btn:active { transform: scale(0.95); }
+  .card-search-add-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+  .card-search-remove-btn {
+    flex-shrink: 0; width: 38px; height: 38px; border-radius: 50%;
+    background: rgba(192,57,43,0.85); color: #fff; border: 2px solid rgba(192,57,43,0.6);
+    font-size: 1.6rem; font-weight: 300; line-height: 1;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: opacity 0.15s, transform 0.15s; box-shadow: 0 2px 8px rgba(192,57,43,0.3);
+    margin-right: 20px;
+  }
+  .card-search-remove-btn:hover { opacity: 0.85; transform: scale(1.08); }
+  .card-search-remove-btn:active { transform: scale(0.95); }
+  .card-search-remove-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+  /* Badge inclusion partagé */
+  #crInclusionBadge {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    display: none;
+    font-family: var(--serif-engraved); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em;
+    color: #eb8c7a; background: rgba(20,13,28,0.9);
+    border: 1px solid rgba(192,57,43,0.45); border-radius: 20px;
+    padding: 3px 10px; white-space: nowrap; pointer-events: none;
+  }
 
-  /* ── Résultats ── */
-  #results { display: flex; flex-direction: column; gap: 16px; }
+
+  /* ── Résultats deux colonnes ── */
+  #results { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; margin-top: -30px; }
+  .col-panel {
+    background: var(--ink-panel); border: 1px solid var(--gold-line);
+    border-radius: 12px; overflow: hidden; backdrop-filter: blur(8px);
+    display: flex; flex-direction: column;
+  }
+  .col-header {
+    padding: 14px 20px 12px;
+    border-bottom: 1px solid var(--gold-line);
+  }
   .section-title {
-    font-family: var(--serif-engraved); font-size: 0.68rem; letter-spacing: 0.22em;
-    color: var(--gold); text-transform: uppercase; text-align: center; margin: 0;
+    font-family: var(--serif-display); font-size: 1.2rem; font-weight: 700; letter-spacing: 0.04em;
+    color: var(--parch-100); text-transform: uppercase; margin: 0;
   }
+  .col-body { padding: 16px; }
 
   .cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(213px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+  .state-col { padding: 24px 16px; text-align: center; color: var(--parch-500); font-style: italic; font-size: 0.88rem; }
+  /* Badge taux de popularité sur les cartes à retirer */
+  .cut-rate-badge {
+    position: absolute; top: 43px; right: 21px;
+    font-family: var(--serif-engraved); font-size: 0.6rem; font-weight: 700;
+    color: #fff; background: rgba(180,40,40,0.88);
+    padding: 3px 8px; border-radius: 20px; letter-spacing: 0.06em; pointer-events: none;
   }
   .card-tile { display: flex; flex-direction: column; gap: 10px; animation: fadeUp 0.35s ease both; }
   .card-img-wrap {
@@ -141,16 +212,55 @@
   }
   .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; transition: opacity 0.3s; }
   .copies-badge {
-    position: absolute; top: 38px; right: 8px;
+    position: absolute; top: 43px; right: 21px;
     font-family: var(--serif-engraved); font-size: 0.6rem; font-weight: 700;
     color: var(--ink-900); background: var(--arcane);
     padding: 3px 8px; border-radius: 20px; letter-spacing: 0.06em;
   }
   .card-meta { display: flex; flex-direction: column; gap: 3px; }
+  .card-action-btn {
+    position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%) scale(0.7);
+    width: 44px; height: 44px; border-radius: 50%; border: 2px solid transparent;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem; font-weight: 300; line-height: 1;
+    opacity: 0; transition: opacity 0.18s ease, transform 0.18s ease, background 0.2s;
+    pointer-events: none; z-index: 10;
+    backdrop-filter: blur(4px);
+  }
+  .card-img-wrap:hover .card-action-btn {
+    opacity: 1; transform: translateX(-50%) scale(1); pointer-events: auto;
+  }
+  .card-action-btn:hover { transform: translateX(-50%) scale(1.12) !important; }
+  .card-action-btn:active { transform: translateX(-50%) scale(0.95) !important; }
+  .card-action-btn.add-btn {
+    background: rgba(39,174,96,0.85); color: #fff; border-color: rgba(39,174,96,0.6);
+    box-shadow: 0 2px 12px rgba(39,174,96,0.4);
+  }
+  .card-action-btn.remove-btn {
+    background: rgba(192,57,43,0.85); color: #fff; border-color: rgba(192,57,43,0.6);
+    box-shadow: 0 2px 12px rgba(192,57,43,0.4);
+  }
+  /* État "action faite" — bouton ✓ toujours visible */
+  .card-action-btn.confirmed {
+    opacity: 1 !important; transform: translateX(-50%) scale(1) !important;
+    pointer-events: auto !important;
+    font-size: 1.2rem;
+  }
+  .card-action-btn.add-btn.confirmed {
+    background: rgba(39,174,96,0.5); border-color: rgba(39,174,96,0.9);
+  }
+  .card-action-btn.remove-btn.confirmed {
+    background: rgba(192,57,43,0.5); border-color: rgba(192,57,43,0.9);
+  }
   .card-meta-name {
     font-family: var(--serif-display); font-size: 1.05rem; font-weight: 600;
     color: var(--parch-100); line-height: 1.2;
   }
+  .card-name-link {
+    color: inherit; text-decoration: none; cursor: pointer;
+    border-bottom: 1px solid transparent; transition: border-color 0.15s, color 0.15s;
+  }
+  .card-name-link:hover { color: var(--gold-soft); border-bottom-color: var(--gold-line); }
   .card-meta-sub { font-size: 0.7rem; color: var(--parch-600); }
   .img-placeholder {
     width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
@@ -166,7 +276,7 @@
 
   /* Badge source */
   .source-badge {
-    position: absolute; top: 38px; left: 8px;
+    position: absolute; top: 43px; left: 21px;
     font-family: var(--serif-engraved); font-size: 0.52rem; font-weight: 700; letter-spacing: 0.06em;
     padding: 3px 7px; border-radius: 20px;
   }
@@ -179,23 +289,23 @@
   }
   .comp-grid {
     display: grid;
-    grid-template-columns: repeat(8, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 10px;
   }
   .comp-type {
-    display: flex; flex-direction: column; gap: 8px;
+    display: flex; flex-direction: column; gap: 6px;
     background: rgba(12,9,16,0.4); border: 1px solid var(--gold-line);
     border-radius: 8px; padding: 10px 12px; min-width: 0;
   }
   .comp-type-name {
-    font-family: var(--serif-engraved); font-size: 0.6rem; letter-spacing: 0.14em;
+    font-family: var(--serif-engraved); font-size: 0.64rem; letter-spacing: 0.14em;
     color: var(--gold); text-transform: uppercase; white-space: nowrap;
     overflow: hidden; text-overflow: ellipsis;
   }
   .comp-bars { display: flex; flex-direction: column; gap: 6px; }
   .comp-bar-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
   .comp-bar-label {
-    font-size: 0.68rem; color: var(--parch-500); width: 58px; flex-shrink: 0;
+    font-size: 0.72rem; color: var(--parch-500); width: 58px; flex-shrink: 0;
     font-family: var(--serif-body);
   }
   .comp-bar-track {
@@ -206,8 +316,8 @@
   .comp-bar-fill.my-deck  { background: var(--arcane); }
   .comp-bar-fill.edhrec   { background: var(--gold); }
   .comp-bar-val {
-    font-size: 0.82rem; font-family: var(--serif-display); font-weight: 600;
-    color: var(--parch-100); width: 30px; text-align: right; flex-shrink: 0;
+    font-size: 0.9rem; font-family: var(--serif-display); font-weight: 600;
+    color: var(--parch-100); width: 32px; text-align: right; flex-shrink: 0;
   }
 </style>
 </head>
@@ -222,9 +332,8 @@
     <a href="/" class="back-link">← Accueil</a>
     <span style="font-family:var(--serif-engraved);font-size:0.7rem;letter-spacing:0.2em;color:var(--gold);opacity:0.5;">MANAMIND</span>
     <nav style="display:flex;gap:20px;">
-      <a href="/deck-suggest" class="back-link">Suggestions d'ajouts</a>
-      <a href="/collection-suggest" class="back-link">Ma collection</a>
       <a href="/deck-moves" class="back-link">Déplacements</a>
+      <a href="/deck-config" class="back-link">Mes decklists</a>
     </nav>
   </header>
 
@@ -236,27 +345,29 @@
     <div id="topPanelRight">
       <div id="topPanelControls">
         <div class="top-bar-title">
-          <span class="hero-label">Ma collection</span>
           <h1 class="hero-title">Ajouts depuis ma collection</h1>
         </div>
         <div class="action-row">
           <select id="deckSelect" class="deck-select">
             <option value="">— Sélectionner un deck —</option>
           </select>
-          <button class="submit-btn" id="submitBtn" onclick="doAnalyze()">Analyser</button>
         </div>
-        <div id="statsBar" style="display:none;" class="stats-banner">
-          <div class="stat-chip">
-            <span class="stat-chip-label">Cartes en collection</span>
-            <span class="stat-chip-value" id="statCollection">—</span>
+        <div class="action-row" id="cardSearchRow" style="display:none; gap:8px;">
+          <div class="card-search-pair">
+            <div class="card-search-wrap">
+              <input id="cardSearchInput" class="deck-select" type="text" placeholder="Ajouter une carte au deck…" autocomplete="off" spellcheck="false" style="flex:none;width:100%;" />
+              <span id="csInclusionBadge"></span>
+              <div id="cardSearchDropdown" class="card-search-dropdown"></div>
+            </div>
+            <button id="cardSearchBtn" class="card-search-add-btn" title="Ajouter au deck" onclick="addSearchedCard()">+</button>
           </div>
-          <div class="stat-chip">
-            <span class="stat-chip-label">Disponibles (collection)</span>
-            <span class="stat-chip-value" id="statAvailable">—</span>
-          </div>
-          <div class="stat-chip" id="statOpenedChip" style="display:none;">
-            <span class="stat-chip-label">Depuis boosters ouverts</span>
-            <span class="stat-chip-value" id="statOpened">—</span>
+          <div class="card-search-pair">
+            <div class="card-search-wrap">
+              <input id="cardRemoveInput" class="deck-select" type="text" placeholder="Retirer une carte du deck…" autocomplete="off" spellcheck="false" style="flex:none;width:100%;" />
+              <span id="crInclusionBadge"></span>
+              <div id="cardRemoveDropdown" class="card-search-dropdown"></div>
+            </div>
+            <button id="cardRemoveBtn" class="card-search-remove-btn" title="Retirer du deck" onclick="removeSearchedCard()">−</button>
           </div>
         </div>
       </div>
@@ -273,7 +384,20 @@
     </div>
   </div>
 
-  <div id="results"></div>
+  <div id="results">
+    <div id="colAdd" class="col-panel" style="display:none;">
+      <div class="col-header">
+        <p class="section-title" id="addTitle">Cartes à ajouter</p>
+      </div>
+      <div class="col-body" id="addBody"></div>
+    </div>
+    <div id="colTrim" class="col-panel" style="display:none;">
+      <div class="col-header">
+        <p class="section-title" id="trimTitle">Cartes à retirer</p>
+      </div>
+      <div class="col-body" id="trimBody"></div>
+    </div>
+  </div>
 
 </div>
 
@@ -288,10 +412,8 @@
     }
   })();
 
-  const submitBtn = document.getElementById('submitBtn');
   const deckSelect = document.getElementById('deckSelect');
-  const zone = document.getElementById('results');
-  const statsBar = document.getElementById('statsBar');
+
 
   // ── Chargement des decks ──────────────────────────────────────────────────
   (async function loadDecks() {
@@ -311,7 +433,7 @@
   // ── Portrait du commandant ────────────────────────────────────────────────
   const cmdPortraitImg = document.getElementById('cmdPortraitImg');
 
-  deckSelect.addEventListener('change', () => loadCommanderPortrait(deckSelect.value));
+  deckSelect.addEventListener('change', () => doAnalyze());
 
   const cmdPortraitPlaceholder = document.getElementById('cmdPortraitPlaceholder');
 
@@ -336,68 +458,71 @@
   async function doAnalyze() {
     const commander = deckSelect.value;
     if (!commander) {
-      zone.innerHTML = `<p class="state-msg">Sélectionne d'abord un deck.</p>`;
+      document.getElementById('addBody').innerHTML = `<p class="state-col">Sélectionne d'abord un deck.</p>`;
+      document.getElementById('colAdd').style.display = '';
+      document.getElementById('colTrim').style.display = 'none';
       return;
     }
 
-    submitBtn.disabled = true;
-    statsBar.style.display = 'none';
     document.getElementById('resultsHeader').style.display = 'none';
-    zone.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+    // Afficher les deux colonnes avec spinner
+    const colAdd  = document.getElementById('colAdd');
+    const colTrim = document.getElementById('colTrim');
+    const addBody = document.getElementById('addBody');
+    const trimBody = document.getElementById('trimBody');
+    colAdd.style.display  = '';
+    colTrim.style.display = '';
+    addBody.innerHTML  = '<div class="loading"><div class="spinner"></div></div>';
+    trimBody.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
     loadCommanderPortrait(commander);
 
-    const params = new URLSearchParams({ top: 40, commander });
+    const params = new URLSearchParams({ top: 30, commander });
 
+    // Lancer les deux requêtes en parallèle
+    const [addRes, trimRes] = await Promise.allSettled([
+      fetch(`/api/collection-suggest?${params}`),
+      fetch(`/api/deck-trim?commander=${encodeURIComponent(commander)}`),
+    ]);
+
+    // Colonne gauche — cartes à ajouter
     try {
-      const res  = await fetch(`/api/collection-suggest?${params}`);
-      const data = await res.json();
-
-      if (!res.ok) {
-        zone.innerHTML = `<p class="state-msg error">Erreur : ${escHtml(data.error || 'Réponse invalide')}</p>`;
-        return;
+      if (addRes.status === 'fulfilled' && addRes.value.ok) {
+        const data = await addRes.value.json();
+        if (!data.results || data.results.length === 0) {
+          addBody.innerHTML = `<p class="state-col">Aucune carte de ta collection à ajouter pour ce commandant.</p>`;
+        } else {
+          renderResults(data, commander);
+        }
+      } else {
+        const data = addRes.status === 'fulfilled' ? await addRes.value.json() : {};
+        addBody.innerHTML = `<p class="state-col">Erreur : ${escHtml(data.error || 'Réponse invalide')}</p>`;
       }
-
-      if (!data.results || data.results.length === 0) {
-        zone.innerHTML = `<p class="state-msg">Aucune carte de ta collection à ajouter pour ce commandant.</p>`;
-        renderStats(data.stats);
-        loadComposition(commander);
-        return;
-      }
-
-      renderStats(data.stats);
-      renderResults(data, commander);
-      loadComposition(commander);
-
     } catch (err) {
-      zone.innerHTML = `<p class="state-msg error">Erreur réseau : ${escHtml(err.message)}</p>`;
-    } finally {
-      submitBtn.disabled = false;
+      addBody.innerHTML = `<p class="state-col">Erreur réseau : ${escHtml(err.message)}</p>`;
     }
+
+    // Colonne droite — cartes à retirer
+    try {
+      if (trimRes.status === 'fulfilled' && trimRes.value.ok) {
+        const data = await trimRes.value.json();
+        renderTrimResults(data, commander);
+      } else {
+        trimBody.innerHTML = `<p class="state-col">Impossible de charger les suggestions de retrait.</p>`;
+      }
+    } catch (err) {
+      trimBody.innerHTML = `<p class="state-col">Erreur réseau : ${escHtml(err.message)}</p>`;
+    }
+
+    loadComposition(commander);
   }
 
-  function renderStats(stats) {
-    if (!stats) return;
-    document.getElementById('statCollection').textContent = stats.collection_size ?? '—';
-    document.getElementById('statAvailable').textContent  = stats.available_cards  ?? '—';
-    const openedCount = stats.opened_sets_cards ?? 0;
-    const openedChip  = document.getElementById('statOpenedChip');
-    if (openedCount > 0) {
-      document.getElementById('statOpened').textContent = openedCount;
-      openedChip.style.display = '';
-    } else {
-      openedChip.style.display = 'none';
-    }
-    statsBar.style.display = 'flex';
-  }
 
   function renderResults(data, commander) {
     const rows = data.results || [];
-
-    // Titre et lien dans le panneau du haut
-    const rh = document.getElementById('resultsHeader');
-    document.getElementById('resultsTitle').textContent = `Top ${rows.length} — cartes à ajouter dans ${commander}`;
-    document.getElementById('trimLink').href = `/deck-trim?commander=${encodeURIComponent(commander)}`;
-    rh.style.display = '';
+    const addBody = document.getElementById('addBody');
+    document.getElementById('addTitle').textContent = `Cartes à ajouter`;
 
     let html = `<div class="cards-grid">`;
 
@@ -409,15 +534,17 @@
       const copiesHtml = isOpened
         ? ''
         : `<span class="copies-badge" title="Copies disponibles">${r.copies_owned - r.copies_used}×</span>`;
+      const cardNameEsc = escHtml(r.card_name).replace(/'/g, "\\'");
       html += `
-        <div class="card-tile" style="animation-delay:${delay}s">
-          <div class="card-img-wrap" id="wrap-${i}" style="cursor:pointer" title="Rechercher sur Cardmarket" onclick="openCardmarket('${escHtml(r.card_name).replace(/'/g,"\\'")}')">
+        <div class="card-tile" style="animation-delay:${delay}s" id="add-tile-${i}">
+          <div class="card-img-wrap" id="wrap-${i}" style="cursor:pointer" title="Rechercher sur Cardmarket" onclick="openCardmarket('${cardNameEsc}')">
             <div class="img-placeholder" id="ph-${i}">${escHtml(r.card_name)}</div>
             <span class="source-badge ${badgeClass}">${badgeLabel}</span>
             ${copiesHtml}
+            <button class="card-action-btn add-btn" id="add-btn-${i}" title="Ajouter au deck" onclick="event.stopPropagation();addCardToDeck('${cardNameEsc}', ${i})">+</button>
           </div>
           <div class="card-meta">
-            <div class="card-meta-name">${escHtml(r.card_name)}</div>
+            <div class="card-meta-name"><a href="/commander-suggest?card=${encodeURIComponent(r.card_name)}" target="_blank" class="card-name-link">${escHtml(r.card_name)}</a></div>
             <div class="card-meta-sub">${r.decks_with_card} / ${r.total_decks} decks · ${r.inclusion_rate.toFixed(1)}%</div>
             <div class="card-meta-sub" id="price-${i}" style="color:var(--gold-soft);">…</div>
           </div>
@@ -425,9 +552,92 @@
     });
 
     html += `</div>`;
-    zone.innerHTML = html;
+    addBody.innerHTML = html;
     loadImages(rows);
     loadPrices(rows);
+  }
+
+  function renderTrimResults(data, commander) {
+    const trimBody = document.getElementById('trimBody');
+    const cuts = (data.results || []).slice(0, 30);
+
+    document.getElementById('trimTitle').textContent = `Cartes à retirer`;
+
+    if (cuts.length === 0) {
+      trimBody.innerHTML = `<p class="state-col">Aucune suggestion de retrait pour ce deck.</p>`;
+      return;
+    }
+
+    let html = `<div class="cards-grid">`;
+    cuts.forEach((c, i) => {
+      const delay = (i * 0.04).toFixed(2);
+      const rate  = c.inclusion_rate != null ? c.inclusion_rate.toFixed(1) + '%' : '—';
+      const cutNameEsc = escHtml(c.card_name).replace(/'/g, "\\'");
+      html += `
+        <div class="card-tile" style="animation-delay:${delay}s" id="cut-tile-${i}">
+          <div class="card-img-wrap" id="cut-wrap-${i}" style="cursor:pointer" title="Rechercher sur Cardmarket" onclick="openCardmarket('${cutNameEsc}')">
+            <div class="img-placeholder" id="cut-ph-${i}">${escHtml(c.card_name)}</div>
+            <span class="cut-rate-badge">${rate}</span>
+            <button class="card-action-btn remove-btn" id="cut-btn-${i}" title="Retirer du deck" onclick="event.stopPropagation();removeCardFromDeck('${cutNameEsc}', ${i})">−</button>
+          </div>
+          <div class="card-meta">
+            <div class="card-meta-name"><a href="/commander-suggest?card=${encodeURIComponent(c.card_name)}" target="_blank" class="card-name-link">${escHtml(c.card_name)}</a></div>
+            <div class="card-meta-sub">${c.decks_with_card ?? '?'} / ${c.total_decks ?? '?'} decks · ${rate}</div>
+            <div class="card-meta-sub" id="cut-price-${i}" style="color:var(--gold-soft);">…</div>
+          </div>
+        </div>`;
+    });
+    html += `</div>`;
+    trimBody.innerHTML = html;
+
+    loadTrimImages(cuts);
+    loadTrimPrices(cuts);
+  }
+
+  async function loadTrimImages(cuts) {
+    const BATCH = 4;
+    for (let i = 0; i < cuts.length; i += BATCH) {
+      const batch = cuts.slice(i, i + BATCH);
+      await Promise.all(batch.map((c, j) => fetchTrimCardImage(c.card_name, i + j)));
+    }
+  }
+
+  async function loadTrimPrices(cuts) {
+    const BATCH = 6;
+    for (let i = 0; i < cuts.length; i += BATCH) {
+      const batch = cuts.slice(i, i + BATCH);
+      await Promise.all(batch.map((c, j) => fetchTrimCardPrice(c.card_name, i + j)));
+    }
+  }
+
+  async function fetchTrimCardImage(name, idx) {
+    const wrap = document.getElementById(`cut-wrap-${idx}`);
+    if (!wrap) return;
+    try {
+      const res = await fetch(`/api/cards/image?name=${encodeURIComponent(name)}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data.url) return;
+      const img = document.createElement('img');
+      img.alt = name;
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;opacity:0;transition:opacity 0.4s';
+      img.onload = () => { img.style.opacity = '1'; };
+      img.src = data.url;
+      const ph = document.getElementById(`cut-ph-${idx}`);
+      if (ph) ph.replaceWith(img);
+    } catch {}
+  }
+
+  async function fetchTrimCardPrice(name, idx) {
+    const el = document.getElementById(`cut-price-${idx}`);
+    if (!el) return;
+    try {
+      const res  = await fetch(`/api/cards/price?name=${encodeURIComponent(name)}`);
+      const data = await res.json();
+      el.textContent = data.price != null ? `${data.price.toFixed(2)} €` : '— €';
+    } catch {
+      el.textContent = '— €';
+    }
   }
 
   async function loadImages(rows) {
@@ -532,7 +742,7 @@
         </div>`;
       const avgBar = avgVal !== null ? `
         <div class="comp-bar-row">
-          <span class="comp-bar-label">EDHREC</span>
+          <span class="comp-bar-label">Baseline</span>
           <div class="comp-bar-track"><div class="comp-bar-fill edhrec" style="width:${avgPct}%"></div></div>
           <span class="comp-bar-val">${avgVal.toFixed(1)}</span>
         </div>` : '';
@@ -556,7 +766,7 @@
             <span class="comp-bar-val">${myCmc !== null ? myCmc.toFixed(2) : '—'}</span>
           </div>
           ${avgCmc !== null ? `<div class="comp-bar-row">
-            <span class="comp-bar-label">EDHREC</span>
+            <span class="comp-bar-label">Baseline</span>
             <div class="comp-bar-track"><div class="comp-bar-fill edhrec" style="width:${avgPctCmc}%"></div></div>
             <span class="comp-bar-val">${avgCmc.toFixed(2)}</span>
           </div>` : ''}
@@ -565,6 +775,348 @@
 
     grid.innerHTML = typeCards + cmcCard;
     panel.style.display = '';
+  }
+
+  // ── Actions +/− sur les cartes (toggle avec annulation) ─────────────────
+  async function addCardToDeck(cardName, idx) {
+    const commander = deckSelect.value;
+    if (!commander) return;
+    const btn = document.getElementById(`add-btn-${idx}`);
+    if (!btn) return;
+
+    if (btn.dataset.confirmed === '1') {
+      // Annulation : retirer du deck
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/deck-card/remove', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ commander, card_name: cardName }),
+        });
+        if (res.ok) {
+          btn.dataset.confirmed = '0';
+          btn.classList.remove('confirmed');
+          btn.textContent = '+';
+          btn.title = 'Ajouter au deck';
+        }
+      } finally {
+        btn.disabled = false;
+      }
+    } else {
+      // Ajout
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/deck-card/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ commander, card_name: cardName }),
+        });
+        if (res.ok) {
+          btn.dataset.confirmed = '1';
+          btn.classList.add('confirmed');
+          btn.textContent = '✓';
+          btn.title = 'Ajouté — cliquer pour annuler';
+        }
+      } finally {
+        btn.disabled = false;
+      }
+    }
+  }
+
+  async function removeCardFromDeck(cardName, idx) {
+    const commander = deckSelect.value;
+    if (!commander) return;
+    const btn = document.getElementById(`cut-btn-${idx}`);
+    if (!btn) return;
+
+    if (btn.dataset.confirmed === '1') {
+      // Annulation : remettre dans le deck
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/deck-card/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ commander, card_name: cardName }),
+        });
+        if (res.ok) {
+          btn.dataset.confirmed = '0';
+          btn.classList.remove('confirmed');
+          btn.textContent = '−';
+          btn.title = 'Retirer du deck';
+        }
+      } finally {
+        btn.disabled = false;
+      }
+    } else {
+      // Suppression
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/deck-card/remove', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ commander, card_name: cardName }),
+        });
+        if (res.ok) {
+          btn.dataset.confirmed = '1';
+          btn.classList.add('confirmed');
+          btn.textContent = '✓';
+          btn.title = 'Retiré — cliquer pour annuler';
+        }
+      } finally {
+        btn.disabled = false;
+      }
+    }
+  }
+
+  // ── Barre de recherche / ajout manuel de carte ───────────────────────────
+  const cardSearchInput    = document.getElementById('cardSearchInput');
+  const cardSearchDropdown = document.getElementById('cardSearchDropdown');
+  const cardSearchRow      = document.getElementById('cardSearchRow');
+  const csInclusionBadge   = document.getElementById('csInclusionBadge');
+  const cardRemoveInput    = document.getElementById('cardRemoveInput');
+  const cardRemoveDropdown = document.getElementById('cardRemoveDropdown');
+  const crInclusionBadge   = document.getElementById('crInclusionBadge');
+
+  // Afficher la barre dès qu'un deck est sélectionné
+  deckSelect.addEventListener('change', () => {
+    cardSearchRow.style.display = deckSelect.value ? '' : 'none';
+    cardSearchInput.value = ''; csInclusionBadge.style.display = 'none'; closeCardSearch();
+    cardRemoveInput.value = ''; crInclusionBadge.style.display = 'none'; closeCardRemove();
+  });
+
+  let csController = null;
+  let csItems = [];
+  let csIndex = -1;
+
+  cardSearchInput.addEventListener('input', () => {
+    const q = cardSearchInput.value.trim();
+    if (!q) { csInclusionBadge.style.display = 'none'; }
+    if (q.length < 2) { closeCardSearch(); return; }
+    fetchCardSuggestions(q);
+  });
+
+  cardSearchInput.addEventListener('keydown', e => {
+    if (!cardSearchDropdown.classList.contains('open')) {
+      if (e.key === 'Enter') addSearchedCard();
+      return;
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      csIndex = Math.min(csIndex + 1, csItems.length - 1);
+      renderCsActive();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      csIndex = Math.max(csIndex - 1, -1);
+      renderCsActive();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (csIndex >= 0 && csItems[csIndex]) {
+        selectCsCard(csItems[csIndex]);
+      } else {
+        closeCardSearch();
+        showInclusionRate(cardSearchInput.value.trim());
+        addSearchedCard();
+      }
+    } else if (e.key === 'Escape') {
+      closeCardSearch();
+    }
+  });
+
+  cardSearchInput.addEventListener('blur', () => setTimeout(closeCardSearch, 150));
+
+  async function fetchCardSuggestions(q) {
+    if (csController) csController.abort();
+    csController = new AbortController();
+    try {
+      const res = await fetch(`/api/cards/autocomplete?q=${encodeURIComponent(q)}&limit=8`, { signal: csController.signal });
+      const data = await res.json();
+      renderCsDropdown(data.names || []);
+    } catch (e) {
+      if (e.name !== 'AbortError') closeCardSearch();
+    }
+  }
+
+  function renderCsDropdown(names) {
+    if (!names.length) { closeCardSearch(); return; }
+    csItems = names;
+    csIndex = -1;
+    cardSearchDropdown.innerHTML = names.map(name =>
+      `<div class="cs-item" onmousedown="event.preventDefault();selectCsCard('${escHtml(name).replace(/'/g,"\\'")}');">${escHtml(name)}</div>`
+    ).join('');
+    cardSearchDropdown.classList.add('open');
+  }
+
+  function selectCsCard(name) {
+    cardSearchInput.value = name;
+    closeCardSearch();
+    showInclusionRate(name);
+  }
+
+  function renderCsActive() {
+    cardSearchDropdown.querySelectorAll('.cs-item').forEach((el, i) => el.classList.toggle('active', i === csIndex));
+    if (csIndex >= 0 && csItems[csIndex]) cardSearchInput.value = csItems[csIndex];
+  }
+
+  function closeCardSearch() {
+    cardSearchDropdown.classList.remove('open');
+    cardSearchDropdown.innerHTML = '';
+    csItems = [];
+    csIndex = -1;
+  }
+
+  async function showInclusionRate(cardName) {
+    const commander = deckSelect.value;
+    csInclusionBadge.style.display = 'none';
+    if (!commander || !cardName) return;
+    try {
+      const res = await fetch(`/api/card-inclusion?card=${encodeURIComponent(cardName)}&commander=${encodeURIComponent(commander)}`);
+      const data = await res.json();
+      if (data.inclusion_rate != null) {
+        csInclusionBadge.textContent = `${data.inclusion_rate}% EDHREC`;
+        csInclusionBadge.style.display = '';
+      }
+    } catch {}
+  }
+
+  // ── Champ "retirer" ──────────────────────────────────────────────────────
+  let crController = null;
+  let crItems = [];
+  let crIndex = -1;
+
+  cardRemoveInput.addEventListener('input', () => {
+    const q = cardRemoveInput.value.trim();
+    if (!q) crInclusionBadge.style.display = 'none';
+    if (q.length < 2) { closeCardRemove(); return; }
+    fetchRemoveSuggestions(q);
+  });
+
+  cardRemoveInput.addEventListener('keydown', e => {
+    if (!cardRemoveDropdown.classList.contains('open')) {
+      if (e.key === 'Enter') removeSearchedCard();
+      return;
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault(); crIndex = Math.min(crIndex + 1, crItems.length - 1); renderCrActive();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault(); crIndex = Math.max(crIndex - 1, -1); renderCrActive();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (crIndex >= 0 && crItems[crIndex]) selectCrCard(crItems[crIndex]);
+      else { closeCardRemove(); showRemoveInclusionRate(cardRemoveInput.value.trim()); removeSearchedCard(); }
+    } else if (e.key === 'Escape') {
+      closeCardRemove();
+    }
+  });
+
+  cardRemoveInput.addEventListener('blur', () => setTimeout(closeCardRemove, 150));
+
+  async function fetchRemoveSuggestions(q) {
+    if (crController) crController.abort();
+    crController = new AbortController();
+    try {
+      const res = await fetch(`/api/cards/autocomplete?q=${encodeURIComponent(q)}&limit=8`, { signal: crController.signal });
+      const data = await res.json();
+      renderCrDropdown(data.names || []);
+    } catch (e) { if (e.name !== 'AbortError') closeCardRemove(); }
+  }
+
+  function renderCrDropdown(names) {
+    if (!names.length) { closeCardRemove(); return; }
+    crItems = names; crIndex = -1;
+    cardRemoveDropdown.innerHTML = names.map(name =>
+      `<div class="cs-item" onmousedown="event.preventDefault();selectCrCard('${escHtml(name).replace(/'/g,"\\'")}');">${escHtml(name)}</div>`
+    ).join('');
+    cardRemoveDropdown.classList.add('open');
+  }
+
+  function renderCrActive() {
+    cardRemoveDropdown.querySelectorAll('.cs-item').forEach((el, i) => el.classList.toggle('active', i === crIndex));
+    if (crIndex >= 0 && crItems[crIndex]) cardRemoveInput.value = crItems[crIndex];
+  }
+
+  function selectCrCard(name) {
+    cardRemoveInput.value = name;
+    closeCardRemove();
+    showRemoveInclusionRate(name);
+  }
+
+  function closeCardRemove() {
+    cardRemoveDropdown.classList.remove('open');
+    cardRemoveDropdown.innerHTML = '';
+    crItems = []; crIndex = -1;
+  }
+
+  async function showRemoveInclusionRate(cardName) {
+    const commander = deckSelect.value;
+    crInclusionBadge.style.display = 'none';
+    if (!commander || !cardName) return;
+    try {
+      const res = await fetch(`/api/card-inclusion?card=${encodeURIComponent(cardName)}&commander=${encodeURIComponent(commander)}`);
+      const data = await res.json();
+      if (data.inclusion_rate != null) {
+        crInclusionBadge.textContent = `${data.inclusion_rate}% EDHREC`;
+        crInclusionBadge.style.display = '';
+      }
+    } catch {}
+  }
+
+  async function removeSearchedCard() {
+    const commander = deckSelect.value;
+    const cardName  = cardRemoveInput.value.trim();
+    if (!commander || !cardName) return;
+    const btn = document.getElementById('cardRemoveBtn');
+    btn.disabled = true;
+    try {
+      const res = await fetch('/api/deck-card/remove', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commander, card_name: cardName }),
+      });
+      if (res.ok) {
+        cardRemoveInput.value = '';
+        crInclusionBadge.style.display = 'none';
+        cardRemoveInput.placeholder = `✓ ${cardName} retirée`;
+        setTimeout(() => { cardRemoveInput.placeholder = 'Retirer une carte du deck…'; }, 2500);
+      } else {
+        cardRemoveInput.placeholder = '✗ Erreur — réessaie';
+        setTimeout(() => { cardRemoveInput.placeholder = 'Retirer une carte du deck…'; }, 2500);
+      }
+    } catch {
+      cardRemoveInput.placeholder = '✗ Erreur réseau';
+      setTimeout(() => { cardRemoveInput.placeholder = 'Retirer une carte du deck…'; }, 2500);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function addSearchedCard() {
+    const commander = deckSelect.value;
+    const cardName  = cardSearchInput.value.trim();
+    if (!commander || !cardName) return;
+
+    const btn = document.getElementById('cardSearchBtn');
+    btn.disabled = true;
+
+    try {
+      const res = await fetch('/api/deck-card/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commander, card_name: cardName }),
+      });
+      if (res.ok) {
+        cardSearchInput.value = '';
+        cardSearchInput.placeholder = `✓ ${cardName} ajoutée`;
+        setTimeout(() => { cardSearchInput.placeholder = 'Ajouter une carte au deck…'; }, 2500);
+      } else {
+        cardSearchInput.placeholder = '✗ Erreur — réessaie';
+        setTimeout(() => { cardSearchInput.placeholder = 'Ajouter une carte au deck…'; }, 2500);
+      }
+    } catch {
+      cardSearchInput.placeholder = '✗ Erreur réseau';
+      setTimeout(() => { cardSearchInput.placeholder = 'Ajouter une carte au deck…'; }, 2500);
+    } finally {
+      btn.disabled = false;
+    }
   }
 </script>
 </body>

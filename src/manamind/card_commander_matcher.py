@@ -8,11 +8,66 @@ ROOT = Path(__file__).resolve().parents[2]
 COMMANDERS_FILE = ROOT / "data" / "My_commanders.txt"
 FREQUENCY_CSV = ROOT / "data" / "stats" / "commander_frequency.csv"
 SUMMARY_CSV = ROOT / "data" / "stats" / "commander_summary.csv"
+MY_DECKS_DIR = ROOT / "data" / "My decks"
 
 
 def _normalize(name: str) -> str:
     name = unicodedata.normalize("NFKD", name)
     return "".join(c for c in name if not unicodedata.combining(c)).lower().strip()
+
+
+def _deck_contains_card(commander_name: str, card_norm: str) -> bool:
+    """Retourne True si la carte est déjà présente dans le deck du commandant."""
+    # Priorité Moxfield
+    try:
+        from manamind.moxfield_client import get_decklist_for_commander
+        entries = get_decklist_for_commander(commander_name)
+        if entries is not None:
+            return any(_normalize(name) == card_norm for name, _ in entries)
+    except Exception:
+        pass
+
+    # Fallback .txt local
+    import re
+    _re = re.compile(r"[^a-z0-9 ]")
+
+    def _strip(s: str) -> str:
+        return _re.sub(r" ", _normalize(s))
+
+    cmd_clean = _strip(commander_name)
+    if not MY_DECKS_DIR.exists():
+        return False
+
+    files = list(MY_DECKS_DIR.glob("*.txt"))
+    deck_file = None
+    words = [w for w in cmd_clean.split() if len(w) >= 4]
+    for f in files:
+        if cmd_clean.strip() in _strip(f.stem):
+            deck_file = f
+            break
+    if deck_file is None and words:
+        for f in files:
+            if all(w in _strip(f.stem) for w in words):
+                deck_file = f
+                break
+    if deck_file is None and words:
+        for f in files:
+            if words[0] in _strip(f.stem):
+                deck_file = f
+                break
+
+    if deck_file is None:
+        return False
+
+    for line in deck_file.read_text(encoding="utf-8", errors="replace").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        parts = line.split(None, 1)
+        name = parts[1] if len(parts) == 2 and parts[0].isdigit() else line
+        if _normalize(name) == card_norm:
+            return True
+    return False
 
 
 def load_allowed_commanders() -> set[str]:
@@ -77,8 +132,12 @@ def suggest_commanders(card_name: str, top_n: int = 3) -> list[dict]:
             except (ValueError, KeyError):
                 continue
 
+            commander_display = allowed_norm[cmd_norm]
+            if _deck_contains_card(commander_display, card_norm):
+                continue
+
             results.append({
-                "commander": allowed_norm[cmd_norm],
+                "commander": commander_display,
                 "inclusion_rate": round(inclusion_rate, 2),
                 "decks_with_card": decks_with_card,
                 "total_decks": total_decks,

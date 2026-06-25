@@ -91,11 +91,30 @@ def load_my_decks() -> dict[str, int]:
 
 
 def load_allowed_commanders() -> dict[str, str]:
-    """Retourne { norm: display } depuis My_commanders.txt."""
-    if not COMMANDERS_FILE.exists():
-        return {}
-    lines = COMMANDERS_FILE.read_text(encoding="utf-8").splitlines()
-    return {_normalize(l.strip()): l.strip() for l in lines if l.strip()}
+    """
+    Retourne { norm: display } en fusionnant :
+    1. Les commandants configurés dans Moxfield (priorité)
+    2. Les commandants dans My_commanders.txt (fallback/complément)
+    """
+    result: dict[str, str] = {}
+
+    # 1. Moxfield
+    try:
+        from manamind.moxfield_client import get_all_moxfield_commanders
+        for name in get_all_moxfield_commanders():
+            if name:
+                result[_normalize(name)] = name
+    except Exception:
+        pass
+
+    # 2. My_commanders.txt (seulement ceux non déjà couverts par Moxfield)
+    if COMMANDERS_FILE.exists():
+        for line in COMMANDERS_FILE.read_text(encoding="utf-8").splitlines():
+            name = line.strip()
+            if name and _normalize(name) not in result:
+                result[_normalize(name)] = name
+
+    return result
 
 
 def load_opened_set_cards() -> dict[str, str]:
@@ -208,15 +227,10 @@ def suggest_from_collection(top_n: int = 40, commander_filter: str | None = None
     # Index des cartes par deck : { cmd_norm: set[card_norm] }
     deck_cards_index: dict[str, set[str]] = {}
     for cmd_norm, cmd_display in commanders.items():
-        f = _find_deck_file(cmd_display)
-        if not f:
+        entries, source = _get_deck_entries(cmd_display)
+        if not source:
             continue
-        cards: set[str] = set()
-        for line in f.read_text(encoding="utf-8", errors="replace").splitlines():
-            parsed = _parse_card_line(line)
-            if parsed:
-                cards.add(_normalize(parsed[0]))
-        deck_cards_index[cmd_norm] = cards
+        deck_cards_index[cmd_norm] = {_normalize(name) for name, _ in entries}
 
     # Filtre optionnel sur un commandant unique
     if commander_filter:
@@ -320,25 +334,15 @@ def suggest_moves(top_n: int = 30) -> dict:
     freq_index  = load_frequency_index()      # {cmd_norm: {card_norm: {...}}}
 
     # Construire le mapping fichier -> (cmd_norm, cmd_display)
-    deck_to_cmd: dict[str, tuple[str, str]] = {}
-    for cmd_norm, cmd_display in commanders.items():
-        f = _find_deck_file(cmd_display)
-        if f:
-            deck_to_cmd[f.name] = (cmd_norm, cmd_display)
-
-    # Construire l'index inverse : cmd_norm -> set(card_norm) pour savoir
-    # quelles cartes sont déjà dans chaque deck (évite les faux déplacements)
+    # Construire l'index : cmd_norm -> (cmd_display, set(card_norm))
     deck_cards: dict[str, set[str]] = {}
-    for deck_file in MY_DECKS_DIR.glob("*.txt"):
-        if deck_file.name not in deck_to_cmd:
+    valid_commanders: dict[str, str] = {}  # norm -> display, seulement ceux avec decklist
+    for cmd_norm, cmd_display in commanders.items():
+        entries, source = _get_deck_entries(cmd_display)
+        if not source:
             continue
-        cmd_norm_key, _ = deck_to_cmd[deck_file.name]
-        cards_in_deck: set[str] = set()
-        for line in deck_file.read_text(encoding="utf-8", errors="replace").splitlines():
-            parsed = _parse_card_line(line)
-            if parsed:
-                cards_in_deck.add(_normalize(parsed[0]))
-        deck_cards[cmd_norm_key] = cards_in_deck
+        valid_commanders[cmd_norm] = cmd_display
+        deck_cards[cmd_norm] = {_normalize(name) for name, _ in entries}
 
     # Construire l'ensemble de tous les terrains (basiques + non-basiques) via la DB
     land_norms: set[str] = set()
@@ -363,17 +367,11 @@ def suggest_moves(top_n: int = 30) -> dict:
     best_move: dict[str, dict] = {}
     cards_scanned = 0
 
-    for deck_file in MY_DECKS_DIR.glob("*.txt"):
-        if deck_file.name not in deck_to_cmd:
-            continue
-        from_norm, from_display = deck_to_cmd[deck_file.name]
+    for from_norm, from_display in valid_commanders.items():
         from_freq = freq_index.get(from_norm, {})
+        entries, _ = _get_deck_entries(from_display)
 
-        for line in deck_file.read_text(encoding="utf-8", errors="replace").splitlines():
-            parsed = _parse_card_line(line)
-            if not parsed:
-                continue
-            card_name, _ = parsed
+        for card_name, _ in entries:
             card_norm = _normalize(card_name)
 
             if card_norm == from_norm or card_norm in land_norms:
@@ -383,8 +381,6 @@ def suggest_moves(top_n: int = 30) -> dict:
             from_data = from_freq.get(card_norm)
             from_rate = from_data["inclusion_rate"] if from_data else None
 
-            # Ignorer les cartes dont le taux dans le deck source est inconnu :
-            # on ne peut pas savoir si elles sont vraiment "mal placées".
             if from_rate is None:
                 continue
 
@@ -394,10 +390,9 @@ def suggest_moves(top_n: int = 30) -> dict:
             best_other_rate  = from_rate
             best_other_data  = None
 
-            for to_norm, to_display in commanders.items():
+            for to_norm, to_display in valid_commanders.items():
                 if to_norm == from_norm:
                     continue
-                # Bug fix : exclure les commandants qui ont déjà cette carte dans leur deck
                 if card_norm in deck_cards.get(to_norm, set()):
                     continue
                 cmd_freq = freq_index.get(to_norm, {})
@@ -441,7 +436,7 @@ def suggest_moves(top_n: int = 30) -> dict:
         "results": [{"rank": i + 1, **r} for i, r in enumerate(ranked[:top_n])],
         "missing_data": missing_data,
         "stats": {
-            "decks_analyzed": len(deck_to_cmd),
+            "decks_analyzed": len(valid_commanders),
             "cards_scanned":  cards_scanned,
         },
     }
@@ -490,6 +485,32 @@ def _find_deck_file(commander_name: str) -> Path | None:
     return None
 
 
+def _get_deck_entries(commander_name: str) -> tuple[list[tuple[str, int]], str | None]:
+    """
+    Retourne ([(card_name, qty), ...], source) pour un commandant.
+    Source = "moxfield" ou le nom du fichier .txt, ou None si introuvable.
+    Priorité : Moxfield > fichier .txt local.
+    """
+    try:
+        from manamind.moxfield_client import get_decklist_for_commander
+        entries = get_decklist_for_commander(commander_name)
+        if entries is not None:
+            return entries, "moxfield"
+    except Exception:
+        pass
+
+    deck_file = _find_deck_file(commander_name)
+    if deck_file is None:
+        return [], None
+
+    entries = []
+    for line in deck_file.read_text(encoding="utf-8", errors="replace").splitlines():
+        parsed = _parse_card_line(line)
+        if parsed:
+            entries.append(parsed)
+    return entries, deck_file.name
+
+
 def suggest_cuts(commander_name: str) -> dict:
     """
     Pour un commandant donné, lit son decklist et retourne toutes ses cartes
@@ -513,21 +534,15 @@ def suggest_cuts(commander_name: str) -> dict:
             "error": str | None,
         }
     """
-    deck_file = _find_deck_file(commander_name)
-    if deck_file is None:
-        return {"commander": commander_name, "deck_file": None, "results": [], "unknown": [], "error": "Fichier deck introuvable"}
+    entries, source = _get_deck_entries(commander_name)
+    if not source:
+        return {"commander": commander_name, "deck_file": None, "results": [], "unknown": [], "error": "Deck introuvable (ni Moxfield ni fichier local)"}
 
     freq_index = load_frequency_index()
     cmd_norm   = _normalize(commander_name)
     cmd_cards  = freq_index.get(cmd_norm, {})
 
-    # Charger toutes les cartes du deck
-    deck_card_names: list[str] = []
-    for line in deck_file.read_text(encoding="utf-8", errors="replace").splitlines():
-        parsed = _parse_card_line(line)
-        if parsed:
-            name, _ = parsed
-            deck_card_names.append(name)
+    deck_card_names: list[str] = [name for name, _ in entries]
 
     results: list[dict] = []
     unknown: list[str]  = []
@@ -556,7 +571,7 @@ def suggest_cuts(commander_name: str) -> dict:
 
     return {
         "commander":  commander_name,
-        "deck_file":  deck_file.name,
+        "deck_file":  source,
         "results":    [{"rank": i + 1, **r} for i, r in enumerate(results)],
         "unknown":    sorted(unknown),
         "error":      None,
@@ -749,9 +764,9 @@ def compute_deck_composition(commander_name: str) -> dict:
         "error": str | None,
     }
     """
-    deck_file = _find_deck_file(commander_name)
-    if deck_file is None:
-        return {"commander": commander_name, "my_deck": None, "edhrec_avg": None, "edhrec_deck_count": 0, "error": "Fichier deck introuvable"}
+    entries, source = _get_deck_entries(commander_name)
+    if not source:
+        return {"commander": commander_name, "my_deck": None, "edhrec_avg": None, "edhrec_deck_count": 0, "error": "Deck introuvable (ni Moxfield ni fichier local)"}
 
     # Charger les ressources DB
     type_map = _load_card_type_map()
@@ -759,13 +774,9 @@ def compute_deck_composition(commander_name: str) -> dict:
 
     # Mon deck
     cmd_norm = _normalize(commander_name)
-    my_card_entries: list[tuple[str, int]] = []
-    for line in deck_file.read_text(encoding="utf-8", errors="replace").splitlines():
-        parsed = _parse_card_line(line)
-        if parsed:
-            name, qty = parsed
-            if _normalize(name) != cmd_norm:
-                my_card_entries.append((name, qty))
+    my_card_entries: list[tuple[str, int]] = [
+        (name, qty) for name, qty in entries if _normalize(name) != cmd_norm
+    ]
 
     my_counts, my_avg_cmc = _count_types_in_deck(my_card_entries, type_map, dfc_land_norms)
 

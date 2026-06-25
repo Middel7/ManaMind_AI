@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-<title>ManaMind — Déplacements suggérés</title>
+<title>ManaMind â€” DÃ©placements suggÃ©rÃ©s</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
@@ -46,7 +46,7 @@
   .back-link { font-family: var(--serif-engraved); font-size: 0.72rem; letter-spacing: 0.12em; color: var(--gold); text-decoration: none; opacity: 0.8; transition: opacity 0.2s; }
   .back-link:hover { opacity: 1; }
 
-  /* ── Barre du haut ── */
+  /* â”€â”€ Barre du haut â”€â”€ */
   .top-bar { display: flex; align-items: center; gap: 32px; }
   .top-bar-title { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
   .hero-label { font-family: var(--serif-engraved); font-size: 0.6rem; letter-spacing: 0.25em; color: var(--teal); text-transform: uppercase; }
@@ -69,7 +69,7 @@
   .submit-btn:active { transform: translateY(0); }
   .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
-  /* ── Stats ── */
+  /* â”€â”€ Stats â”€â”€ */
   .stats-banner { display: flex; gap: 16px; flex-wrap: wrap; }
   .stat-chip {
     background: var(--teal-faint); border: 1px solid var(--teal-line); border-radius: 8px;
@@ -78,13 +78,13 @@
   .stat-chip-label { font-family: var(--serif-engraved); font-size: 0.55rem; letter-spacing: 0.2em; color: var(--teal); text-transform: uppercase; }
   .stat-chip-value { font-family: var(--serif-display); font-size: 1.3rem; font-weight: 600; color: var(--parch-100); }
 
-  /* ── Section title ── */
+  /* â”€â”€ Section title â”€â”€ */
   .section-title {
     font-family: var(--serif-engraved); font-size: 0.68rem; letter-spacing: 0.22em;
     color: var(--teal); text-transform: uppercase; text-align: center; margin: 0;
   }
 
-  /* ── Grille ── */
+  /* â”€â”€ Grille â”€â”€ */
   .cards-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(213px, 1fr));
@@ -118,7 +118,7 @@
     padding: 3px 8px; border-radius: 20px; letter-spacing: 0.06em;
   }
 
-  /* Métadonnées sous la carte */
+  /* MÃ©tadonnÃ©es sous la carte */
   .card-meta { display: flex; flex-direction: column; gap: 4px; }
 
   .card-meta-name {
@@ -127,7 +127,7 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
 
-  /* Ligne de déplacement : DE → VERS */
+  /* Ligne de dÃ©placement : DE â†’ VERS */
   .move-row {
     display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
   }
@@ -172,24 +172,22 @@
 <div id="app">
 
   <header class="site-header">
-    <a href="/" class="back-link">← Accueil</a>
+    <a href="/" class="back-link">â† Accueil</a>
     <span style="font-family:var(--serif-engraved);font-size:0.7rem;letter-spacing:0.2em;color:var(--gold);opacity:0.5;">MANAMIND</span>
     <nav style="display:flex;gap:20px;">
-      <a href="/collection-suggest" class="back-link">Ma collection</a>
-      <a href="/deck-suggest" class="back-link">Suggestions d'ajouts</a>
       <a href="/deck-build" class="back-link">Ajouts depuis ma collection</a>
     </nav>
   </header>
 
   <div class="top-bar">
     <div class="top-bar-title">
-      <span class="hero-label">Optimisation croisée</span>
-      <h1 class="hero-title">Déplacements suggérés</h1>
-      <p style="font-size:0.78rem;color:var(--parch-600);font-style:italic;line-height:1.5;max-width:240px;margin:0;">Repère les cartes présentes dans un de tes decks qui seraient statistiquement mieux placées dans un autre, selon leur taux d'inclusion EDHREC.</p>
+      <span class="hero-label">Optimisation croisÃ©e</span>
+      <h1 class="hero-title">DÃ©placements suggÃ©rÃ©s</h1>
+      <p style="font-size:0.78rem;color:var(--parch-600);font-style:italic;line-height:1.5;max-width:240px;margin:0;">RepÃ¨re les cartes prÃ©sentes dans un de tes decks qui seraient statistiquement mieux placÃ©es dans un autre, selon leur taux d'inclusion EDHREC.</p>
     </div>
     <div class="action-panel">
       <p class="action-panel-desc">
-        Identifie les cartes présentes dans un de tes decks qui seraient <strong>bien mieux placées</strong> dans un autre, en comparant leur taux d'inclusion EDHREC pour chacun de tes commandants.
+        Identifie les cartes prÃ©sentes dans un de tes decks qui seraient <strong>bien mieux placÃ©es</strong> dans un autre, en comparant leur taux d'inclusion EDHREC pour chacun de tes commandants.
       </p>
       <button class="submit-btn" id="submitBtn" onclick="doAnalyze()">Analyser mes decks</button>
     </div>
@@ -197,21 +195,21 @@
 
   <div id="statsBar" class="stats-banner" style="display:none;">
     <div class="stat-chip">
-      <span class="stat-chip-label">Decks analysés</span>
-      <span class="stat-chip-value" id="statDecks">—</span>
+      <span class="stat-chip-label">Decks analysÃ©s</span>
+      <span class="stat-chip-value" id="statDecks">â€”</span>
     </div>
     <div class="stat-chip">
-      <span class="stat-chip-label">Cartes scannées</span>
-      <span class="stat-chip-value" id="statCards">—</span>
+      <span class="stat-chip-label">Cartes scannÃ©es</span>
+      <span class="stat-chip-value" id="statCards">â€”</span>
     </div>
     <div class="stat-chip">
-      <span class="stat-chip-label">Déplacements trouvés</span>
-      <span class="stat-chip-value" id="statMoves">—</span>
+      <span class="stat-chip-label">DÃ©placements trouvÃ©s</span>
+      <span class="stat-chip-value" id="statMoves">â€”</span>
     </div>
   </div>
 
   <div id="missingBar" style="display:none; background:rgba(160,123,224,0.08); border:1px solid rgba(160,123,224,0.25); border-radius:10px; padding:12px 20px;">
-    <div style="font-family:var(--serif-engraved);font-size:0.55rem;letter-spacing:0.2em;color:var(--arcane);text-transform:uppercase;margin-bottom:6px;">Commandants sans données EDHREC — non analysés</div>
+    <div style="font-family:var(--serif-engraved);font-size:0.55rem;letter-spacing:0.2em;color:var(--arcane);text-transform:uppercase;margin-bottom:6px;">Commandants sans donnÃ©es EDHREC â€” non analysÃ©s</div>
     <div id="missingList" style="font-size:0.85rem;color:var(--parch-500);line-height:1.8;"></div>
   </div>
 
@@ -244,12 +242,12 @@
       const data = await res.json();
 
       if (!res.ok) {
-        zone.innerHTML = `<p class="state-msg error">Erreur : ${escHtml(data.error || 'Réponse invalide')}</p>`;
+        zone.innerHTML = `<p class="state-msg error">Erreur : ${escHtml(data.error || 'RÃ©ponse invalide')}</p>`;
         return;
       }
 
       if (!data.results || data.results.length === 0) {
-        zone.innerHTML = `<p class="state-msg">Aucun déplacement suggéré — vos cartes sont bien placées !</p>`;
+        zone.innerHTML = `<p class="state-msg">Aucun dÃ©placement suggÃ©rÃ© â€” vos cartes sont bien placÃ©es !</p>`;
         return;
       }
 
@@ -258,7 +256,7 @@
       renderResults(data.results);
 
     } catch (err) {
-      zone.innerHTML = `<p class="state-msg error">Erreur réseau : ${escHtml(err.message)}</p>`;
+      zone.innerHTML = `<p class="state-msg error">Erreur rÃ©seau : ${escHtml(err.message)}</p>`;
     } finally {
       submitBtn.disabled = false;
     }
@@ -267,19 +265,19 @@
   function renderMissing(missing) {
     const bar = document.getElementById('missingBar');
     if (!missing.length) { bar.style.display = 'none'; return; }
-    document.getElementById('missingList').textContent = missing.join('  ·  ');
+    document.getElementById('missingList').textContent = missing.join('  Â·  ');
     bar.style.display = 'block';
   }
 
   function renderStats(stats, count) {
-    document.getElementById('statDecks').textContent  = stats.decks_analyzed ?? '—';
-    document.getElementById('statCards').textContent  = stats.cards_scanned  ?? '—';
+    document.getElementById('statDecks').textContent  = stats.decks_analyzed ?? 'â€”';
+    document.getElementById('statCards').textContent  = stats.cards_scanned  ?? 'â€”';
     document.getElementById('statMoves').textContent  = count;
     statsBar.style.display = 'flex';
   }
 
   function renderResults(rows) {
-    let html = `<p class="section-title">Top ${rows.length} — classés par gain de taux d'inclusion</p>`;
+    let html = `<p class="section-title">Top ${rows.length} â€” classÃ©s par gain de taux d'inclusion</p>`;
     html += `<div class="cards-grid">`;
 
     rows.forEach((r, i) => {
@@ -293,12 +291,12 @@
           <div class="card-meta">
             <div class="card-meta-name" title="${escHtml(r.card_name)}">${escHtml(r.card_name)}</div>
             <div class="move-row">
-              <a class="move-from" href="/deck-trim?commander=${encodeURIComponent(r.from_commander)}" title="Voir les cartes à retirer de ce deck">${escHtml(r.from_commander)}</a>
-              <span class="move-arrow">→</span>
-              <a class="move-to" href="/deck-trim?commander=${encodeURIComponent(r.to_commander)}" title="Voir les cartes à retirer de ce deck">${escHtml(r.to_commander)}</a>
+              <a class="move-from" href="/deck-trim?commander=${encodeURIComponent(r.from_commander)}" title="Voir les cartes Ã  retirer de ce deck">${escHtml(r.from_commander)}</a>
+              <span class="move-arrow">â†’</span>
+              <a class="move-to" href="/deck-trim?commander=${encodeURIComponent(r.to_commander)}" title="Voir les cartes Ã  retirer de ce deck">${escHtml(r.to_commander)}</a>
             </div>
-            <div class="card-meta-sub">${r.from_rate.toFixed(1)}% → ${r.to_rate.toFixed(1)}% · ${r.decks_with_card}/${r.total_decks} decks</div>
-            <div class="card-meta-price" id="price-${i}">…</div>
+            <div class="card-meta-sub">${r.from_rate.toFixed(1)}% â†’ ${r.to_rate.toFixed(1)}% Â· ${r.decks_with_card}/${r.total_decks} decks</div>
+            <div class="card-meta-price" id="price-${i}">â€¦</div>
           </div>
         </div>`;
     });
@@ -347,9 +345,9 @@
     try {
       const res  = await fetch(`/api/cards/price?name=${encodeURIComponent(name)}`);
       const data = await res.json();
-      el.textContent = data.price != null ? `${data.price.toFixed(2)} €` : '— €';
+      el.textContent = data.price != null ? `${data.price.toFixed(2)} â‚¬` : 'â€” â‚¬';
     } catch {
-      el.textContent = '— €';
+      el.textContent = 'â€” â‚¬';
     }
   }
 

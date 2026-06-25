@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<title>ManaMind — Mes Decklists</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink-900: #0c0910; --ink-850: #120c1a; --ink-800: #17101f; --ink-700: #1d1529;
+    --ink-panel: rgba(20, 13, 28, 0.62);
+    --parch-100: #efe6d6; --parch-300: #cdbfa8; --parch-500: #9c8e79; --parch-600: #7c715f;
+    --arcane: #a07be0; --arcane-deep: #6c4bb0; --arcane-glow: rgba(160, 123, 224, 0.55);
+    --gold: #c9a45c; --gold-soft: #d8bd83; --gold-line: rgba(201, 164, 92, 0.42); --gold-faint: rgba(201, 164, 92, 0.16);
+    --red: #c0392b; --red-soft: rgba(192,57,43,0.15);
+    --green: #27ae60; --green-soft: rgba(39,174,96,0.15);
+    --serif-display: "Cormorant Garamond", Georgia, serif;
+    --serif-engraved: "Cinzel", Georgia, serif;
+    --serif-body: "Spectral", Georgia, serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body { color: var(--parch-100); font-family: var(--serif-body); background: var(--ink-900); min-height: 100vh; }
+
+  #scene {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      radial-gradient(120% 80% at 50% 0%, rgba(12,9,16,0.30), rgba(12,9,16,0.86) 62%, rgba(12,9,16,0.97) 100%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2020/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
+    background-color: var(--ink-900);
+  }
+  #particles { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .particle { position: absolute; border-radius: 50%; background: var(--arcane); opacity: 0; animation: float linear infinite; }
+  @keyframes float { 0% { transform: translateY(100vh) scale(0); opacity: 0; } 10% { opacity: 0.6; } 90% { opacity: 0.3; } 100% { transform: translateY(-10vh) scale(1.2); opacity: 0; } }
+
+  #app {
+    position: relative; z-index: 1;
+    max-width: 900px; margin: 0 auto;
+    padding: 32px 32px 80px;
+    display: flex; flex-direction: column; gap: 28px;
+  }
+
+  .site-header { display: flex; align-items: center; justify-content: space-between; }
+  .back-link { font-family: var(--serif-engraved); font-size: 0.72rem; letter-spacing: 0.12em; color: var(--gold); text-decoration: none; opacity: 0.8; transition: opacity 0.2s; }
+  .back-link:hover { opacity: 1; }
+
+  /* ── Panneau ── */
+  .panel {
+    background: var(--ink-panel); border: 1px solid var(--gold-line);
+    border-radius: 14px; padding: 28px 32px; backdrop-filter: blur(8px);
+  }
+  .panel-title {
+    font-family: var(--serif-engraved); font-size: 0.62rem; letter-spacing: 0.22em;
+    color: var(--gold); text-transform: uppercase; margin: 0 0 6px;
+  }
+  .panel-heading {
+    font-family: var(--serif-display); font-size: 1.8rem; font-weight: 600;
+    color: var(--parch-100); margin: 0 0 24px; line-height: 1.1;
+  }
+
+  /* ── Formulaire ajout ── */
+  .add-row { display: flex; gap: 12px; }
+  .url-input {
+    flex: 1; padding: 11px 16px; font-family: var(--serif-body); font-size: 0.9rem;
+    color: var(--parch-100); background: rgba(12,9,16,0.55);
+    border: 1px solid var(--gold-line); border-radius: 8px; outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .url-input:focus { border-color: var(--arcane); box-shadow: 0 0 0 3px var(--arcane-glow); }
+  .url-input::placeholder { color: var(--parch-600); }
+  .btn {
+    padding: 11px 28px; font-family: var(--serif-engraved); font-size: 0.68rem; letter-spacing: 0.16em;
+    border: none; border-radius: 8px; cursor: pointer; transition: opacity 0.2s, transform 0.15s; white-space: nowrap;
+  }
+  .btn:hover { opacity: 0.88; transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn-gold { color: var(--ink-900); background: linear-gradient(135deg, var(--gold) 0%, var(--gold-soft) 100%); }
+  .btn-ghost { color: var(--parch-500); background: rgba(255,255,255,0.05); border: 1px solid var(--gold-line); }
+  .btn-danger { color: #fff; background: rgba(192,57,43,0.7); border: 1px solid rgba(192,57,43,0.4); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* ── Message feedback ── */
+  #feedback {
+    padding: 10px 16px; border-radius: 8px; font-size: 0.88rem;
+    display: none;
+  }
+  #feedback.ok  { background: var(--green-soft); border: 1px solid rgba(39,174,96,0.3); color: #6fcf97; }
+  #feedback.err { background: var(--red-soft);   border: 1px solid rgba(192,57,43,0.3); color: #eb5757; }
+
+  /* ── Liste des decks ── */
+  .deck-list { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+  .deck-row {
+    display: flex; align-items: center; gap: 16px;
+    background: rgba(12,9,16,0.4); border: 1px solid var(--gold-line);
+    border-radius: 10px; padding: 14px 18px;
+  }
+  .deck-row-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .deck-commander {
+    font-family: var(--serif-display); font-size: 1.05rem; font-weight: 600;
+    color: var(--parch-100); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .deck-meta { font-size: 0.7rem; color: var(--parch-600); }
+  .deck-meta a { color: var(--gold); opacity: 0.7; text-decoration: none; }
+  .deck-meta a:hover { opacity: 1; }
+  .source-pill {
+    font-family: var(--serif-engraved); font-size: 0.48rem; letter-spacing: 0.12em;
+    padding: 2px 8px; border-radius: 20px; text-transform: uppercase; flex-shrink: 0;
+  }
+  .source-pill.moxfield { background: rgba(160,123,224,0.2); color: var(--arcane); border: 1px solid rgba(160,123,224,0.3); }
+  .source-pill.local    { background: rgba(201,164,92,0.1);  color: var(--gold);   border: 1px solid var(--gold-line); }
+  .deck-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+  /* Bouton copier en état "modifié localement" */
+  .btn-copy-urgent {
+    color: var(--ink-900) !important;
+    background: linear-gradient(135deg, #e67e22 0%, #f39c12 100%) !important;
+    border: none !important;
+    animation: pulse-orange 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse-orange {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(230,126,34,0.5); }
+    50%       { box-shadow: 0 0 0 6px rgba(230,126,34,0); }
+  }
+
+  /* Badge "modifié localement" */
+  .modified-pill {
+    font-family: var(--serif-engraved); font-size: 0.45rem; letter-spacing: 0.1em;
+    padding: 2px 8px; border-radius: 20px; text-transform: uppercase; flex-shrink: 0;
+    background: rgba(230,126,34,0.15); color: #e67e22; border: 1px solid rgba(230,126,34,0.4);
+  }
+
+  .empty-state { text-align: center; padding: 32px; color: var(--parch-500); font-style: italic; }
+
+  .spinner-inline {
+    display: inline-block; width: 12px; height: 12px;
+    border: 2px solid rgba(255,255,255,0.2); border-top-color: #fff;
+    border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-left: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div id="scene"></div>
+<div id="particles"></div>
+
+<div id="app">
+
+  <header class="site-header">
+    <a href="/" class="back-link">← Accueil</a>
+    <span style="font-family:var(--serif-engraved);font-size:0.7rem;letter-spacing:0.2em;color:var(--gold);opacity:0.5;">MANAMIND</span>
+    <nav style="display:flex;gap:20px;">
+      <a href="/deck-build" class="back-link">Ajouts collection</a>
+      <a href="/deck-moves" class="back-link">Déplacements</a>
+    </nav>
+  </header>
+
+  <div class="panel">
+    <p class="panel-title">Configuration</p>
+    <h1 class="panel-heading">Mes Decklists</h1>
+
+    <div class="add-row">
+      <input type="url" id="urlInput" class="url-input" placeholder="https://moxfield.com/decks/..." />
+      <button class="btn btn-gold" id="addBtn" onclick="addDeck()">Ajouter</button>
+    </div>
+    <div id="feedback" style="margin-top:12px;"></div>
+  </div>
+
+  <div class="panel">
+    <p class="panel-title">Decks configurés</p>
+    <div class="deck-list" id="deckList">
+      <div class="empty-state">Chargement…</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Particules
+  (function () {
+    const c = document.getElementById('particles');
+    for (let i = 0; i < 18; i++) {
+      const p = document.createElement('div'); p.className = 'particle';
+      const s = Math.random() * 3 + 1;
+      p.style.cssText = `width:${s}px;height:${s}px;left:${Math.random()*100}%;animation-duration:${8+Math.random()*14}s;animation-delay:${Math.random()*12}s`;
+      c.appendChild(p);
+    }
+  })();
+
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function showFeedback(msg, isOk) {
+    const el = document.getElementById('feedback');
+    el.textContent = msg;
+    el.className = isOk ? 'ok' : 'err';
+    el.style.display = '';
+    setTimeout(() => { el.style.display = 'none'; }, 4000);
+  }
+
+  // ── Chargement de la liste ────────────────────────────────────────────────
+  async function loadDecks() {
+    const list = document.getElementById('deckList');
+    try {
+      const res  = await fetch('/api/moxfield-decks');
+      const data = await res.json();
+      const decks = data.decks || [];
+
+      if (decks.length === 0) {
+        list.innerHTML = `<div class="empty-state">Aucun deck Moxfield configuré.</div>`;
+        return;
+      }
+
+      decks.sort((a, b) => (a.commander || '').localeCompare(b.commander || ''));
+
+      list.innerHTML = decks.map(d => {
+        const mod = d.locally_modified;
+        const id  = escHtml(d.deck_id);
+        return `
+        <div class="deck-row" id="row-${id}">
+          <div class="deck-row-info">
+            <div class="deck-commander">${escHtml(d.commander || 'Commandant inconnu')}</div>
+            <div class="deck-meta">
+              ${d.name ? escHtml(d.name) + ' · ' : ''}
+              <a href="${escHtml(d.url)}" target="_blank">${escHtml(d.url)}</a>
+            </div>
+          </div>
+          ${mod ? '<span class="modified-pill">Modifié localement</span>' : '<span class="source-pill moxfield">Moxfield</span>'}
+          <div class="deck-actions">
+            <button class="btn ${mod ? 'btn-copy-urgent' : 'btn-ghost'}" id="copy-${id}"
+              onclick="copyDeckTxt('${id}', this)" title="${mod ? 'Des modifications locales n\'ont pas été copiées vers Moxfield' : 'Copier la decklist'}">
+              ${mod ? '⚠ Copier' : 'Copier'}
+            </button>
+            <button class="btn btn-ghost" onclick="refreshDeck('${id}')"
+              ${mod ? 'disabled title="Copie les modifications vers Moxfield avant de mettre à jour"' : ''}>
+              Mettre à jour
+            </button>
+            <button class="btn btn-danger" id="del-${id}" onclick="deleteDeck('${id}')"
+              disabled title="Copie d\'abord la decklist pour pouvoir supprimer">
+              Supprimer
+            </button>
+          </div>
+        </div>`;
+      }).join('');
+    } catch (e) {
+      list.innerHTML = `<div class="empty-state">Erreur de chargement.</div>`;
+    }
+  }
+
+  // ── Ajout ─────────────────────────────────────────────────────────────────
+  async function addDeck() {
+    const input = document.getElementById('urlInput');
+    const btn   = document.getElementById('addBtn');
+    const url   = input.value.trim();
+    if (!url) return;
+
+    btn.disabled = true;
+    btn.innerHTML = `Ajout en cours<span class="spinner-inline"></span>`;
+
+    try {
+      const res  = await fetch('/api/moxfield-decks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        showFeedback(data.error || 'Erreur inconnue', false);
+      } else {
+        showFeedback(`✓ Deck ajouté : ${data.deck.commander}`, true);
+        input.value = '';
+        loadDecks();
+      }
+    } catch (e) {
+      showFeedback('Erreur réseau', false);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Ajouter';
+    }
+  }
+
+  // ── Mise à jour ───────────────────────────────────────────────────────────
+  async function refreshDeck(deckId) {
+    const btn = document.querySelector(`#row-${deckId} .btn-ghost`);
+    if (btn) { btn.disabled = true; btn.innerHTML = `Mise à jour<span class="spinner-inline"></span>`; }
+
+    try {
+      const res  = await fetch(`/api/moxfield-decks/${deckId}/refresh`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        showFeedback(data.error || 'Erreur lors de la mise à jour', false);
+        if (btn) { btn.disabled = false; btn.textContent = 'Mettre à jour'; }
+      } else {
+        showFeedback(`✓ Deck mis à jour : ${data.deck.commander}`, true);
+        loadDecks();
+      }
+    } catch (e) {
+      showFeedback('Erreur réseau', false);
+      if (btn) { btn.disabled = false; btn.textContent = 'Mettre à jour'; }
+    }
+  }
+
+  // ── Suppression ───────────────────────────────────────────────────────────
+  async function deleteDeck(deckId) {
+    if (!confirm('Supprimer ce deck de la configuration ?')) return;
+    try {
+      const res  = await fetch(`/api/moxfield-decks/${deckId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.ok) {
+        showFeedback('Deck supprimé.', true);
+        loadDecks();
+      } else {
+        showFeedback('Deck introuvable.', false);
+      }
+    } catch (e) {
+      showFeedback('Erreur réseau', false);
+    }
+  }
+
+  // ── Copier le TXT ─────────────────────────────────────────────────────────
+  async function copyDeckTxt(deckId, btn) {
+    btn.disabled = true;
+    try {
+      const res  = await fetch(`/api/deck-txt/${deckId}`);
+      const data = await res.json();
+      if (!res.ok || !data.content) {
+        showFeedback('Contenu introuvable.', false);
+        btn.disabled = false;
+        return;
+      }
+      await navigator.clipboard.writeText(data.content);
+
+      // Marquer comme synchronisé côté serveur (met à jour le mtime du cache)
+      await fetch(`/api/deck-txt/${deckId}/mark-synced`, { method: 'POST' });
+
+      // Mettre à jour l'UI : retirer l'état "modifié localement"
+      btn.textContent = '✓ Copié !';
+      btn.className = btn.className.replace('btn-copy-urgent', 'btn-ghost');
+      btn.style.animation = 'none';
+      btn.title = 'Copier la decklist';
+
+      const row = document.getElementById(`row-${deckId}`);
+      if (row) {
+        const pill = row.querySelector('.modified-pill');
+        if (pill) {
+          const newPill = document.createElement('span');
+          newPill.className = 'source-pill moxfield';
+          newPill.textContent = 'Moxfield';
+          pill.replaceWith(newPill);
+        }
+        // Réactiver "Mettre à jour"
+        const updateBtn = row.querySelector('.btn-ghost[onclick*="refreshDeck"]');
+        if (updateBtn) { updateBtn.disabled = false; updateBtn.title = ''; }
+        // Réactiver "Mettre à jour" (sélecteur plus large au cas où)
+        row.querySelectorAll('button').forEach(b => {
+          if (b.textContent.includes('Mettre à jour')) {
+            b.disabled = false;
+            b.removeAttribute('title');
+          }
+        });
+      }
+
+      // Débloquer le bouton supprimer
+      const delBtn = document.getElementById(`del-${deckId}`);
+      if (delBtn) { delBtn.disabled = false; delBtn.title = 'Supprimer ce deck'; }
+
+      setTimeout(() => {
+        btn.textContent = 'Copier';
+        btn.disabled = false;
+      }, 2000);
+    } catch (e) {
+      showFeedback('Erreur lors de la copie.', false);
+      btn.disabled = false;
+    }
+  }
+
+  // Entrée clavier sur le champ URL
+  document.getElementById('urlInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addDeck();
+  });
+
+  loadDecks();
+</script>
+</body>
+</html>

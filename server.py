@@ -208,13 +208,6 @@ def index() -> FileResponse:
     )
 
 
-@app.get("/cards")
-def cards_page() -> FileResponse:
-    return FileResponse(
-        ROOT / "cards.html",
-        media_type="text/html",
-        headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
-    )
 
 
 @app.get("/results")
@@ -510,7 +503,6 @@ async def api_deck_explanation(
         return _json_response({"error": str(exc)}, status_code=500)
 
 
-# ── API recherche de cartes ───────────────────────────────────────────────────
 @app.get("/api/cards/search")
 def search_cards(
     q: str = Query(default="", description="Texte à rechercher dans le nom des cartes"),
@@ -794,15 +786,6 @@ def autocomplete_cards(
         return _json_response({"names": [], "error": str(exc)})
 
 
-@app.get("/collection-suggest")
-def collection_suggest_page() -> FileResponse:
-    return FileResponse(
-        ROOT / "collection_suggest.html",
-        media_type="text/html",
-        headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
-    )
-
-
 @app.get("/api/collection-suggest")
 def api_collection_suggest(
     top: int = Query(default=40, ge=1, le=100),
@@ -879,37 +862,148 @@ def api_deck_trim(
 @app.get("/api/my-decks")
 def api_my_decks() -> JSONResponse:
     """
-    Retourne la liste des decks personnels (data/My decks/) avec leur nom de commandant
-    et leur contenu (lignes brutes) pour pré-remplir le textarea de deck-suggest.
+    Retourne la liste des decks (Moxfield en priorité + .txt locaux en fallback).
     """
     from manamind.collection_advisor import MY_DECKS_DIR, load_allowed_commanders, _find_deck_file
+    from manamind.moxfield_client import load_config as mox_config, get_all_moxfield_commanders
 
-    commanders = load_allowed_commanders()  # {norm: display}
-    # Construire mapping fichier -> commandant display
+    seen: set[str] = set()
+    decks = []
+
+    # 1. Decks Moxfield
+    for entry in mox_config():
+        cmd = entry.get("commander", "")
+        if not cmd:
+            continue
+        decks.append({
+            "commander": cmd,
+            "source": "moxfield",
+            "deck_id": entry["deck_id"],
+            "url": entry.get("url", ""),
+        })
+        seen.add(cmd.lower())
+
+    # 2. Decks .txt locaux non déjà couverts par Moxfield
+    commanders = load_allowed_commanders()
     file_to_cmd: dict[str, str] = {}
     for cmd_norm, cmd_display in commanders.items():
         f = _find_deck_file(cmd_display)
         if f:
             file_to_cmd[f.name] = cmd_display
 
-    decks = []
     if MY_DECKS_DIR.exists():
         for f in MY_DECKS_DIR.glob("*.txt"):
             commander = file_to_cmd.get(f.name, f.stem)
+            if commander.lower() in seen:
+                continue
             content = f.read_text(encoding="utf-8", errors="replace")
-            decks.append({"commander": commander, "filename": f.name, "content": content})
+            decks.append({"commander": commander, "source": "local", "filename": f.name, "content": content})
 
     decks.sort(key=lambda d: d["commander"].lower())
     return _json_response({"decks": decks})
 
 
-@app.get("/deck-suggest")
-def deck_suggest_page() -> FileResponse:
+# ── Moxfield config ───────────────────────────────────────────────────────────
+
+@app.get("/deck-config")
+def deck_config_page() -> FileResponse:
     return FileResponse(
-        ROOT / "deck_suggest.html",
+        ROOT / "deck_config.html",
         media_type="text/html",
         headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
     )
+
+
+@app.get("/api/moxfield-decks")
+def api_moxfield_list() -> JSONResponse:
+    from manamind.moxfield_client import load_config, is_locally_modified
+    decks = load_config()
+    for d in decks:
+        d["locally_modified"] = is_locally_modified(d["deck_id"], d.get("commander", ""))
+    return _json_response({"decks": decks})
+
+
+@app.post("/api/moxfield-decks")
+async def api_moxfield_add(request: Request) -> JSONResponse:
+    body = await request.json()
+    url = (body.get("url") or "").strip()
+    if not url:
+        return _json_response({"error": "URL manquante"}, status_code=400)
+    try:
+        from manamind.moxfield_client import add_or_update_deck
+        entry = add_or_update_deck(url)
+        return _json_response({"ok": True, "deck": entry})
+    except ValueError as e:
+        return _json_response({"error": str(e)}, status_code=400)
+
+
+@app.post("/api/moxfield-decks/{deck_id}/refresh")
+def api_moxfield_refresh(deck_id: str) -> JSONResponse:
+    try:
+        from manamind.moxfield_client import refresh_deck
+        entry = refresh_deck(deck_id)
+        return _json_response({"ok": True, "deck": entry})
+    except ValueError as e:
+        return _json_response({"error": str(e)}, status_code=400)
+
+
+@app.delete("/api/moxfield-decks/{deck_id}")
+def api_moxfield_delete(deck_id: str) -> JSONResponse:
+    from manamind.moxfield_client import remove_deck
+    ok = remove_deck(deck_id)
+    return _json_response({"ok": ok})
+
+
+@app.post("/api/deck-card/add")
+async def api_deck_card_add(request: Request) -> JSONResponse:
+    body = await request.json()
+    commander = (body.get("commander") or "").strip()
+    card      = (body.get("card_name") or "").strip()
+    if not commander or not card:
+        return _json_response({"error": "Paramètres manquants"}, status_code=400)
+    try:
+        from manamind.moxfield_client import add_card_to_deck
+        add_card_to_deck(commander, card)
+        return _json_response({"ok": True})
+    except Exception as e:
+        return _json_response({"error": str(e)}, status_code=500)
+
+
+@app.post("/api/deck-card/remove")
+async def api_deck_card_remove(request: Request) -> JSONResponse:
+    body = await request.json()
+    commander = (body.get("commander") or "").strip()
+    card      = (body.get("card_name") or "").strip()
+    if not commander or not card:
+        return _json_response({"error": "Paramètres manquants"}, status_code=400)
+    try:
+        from manamind.moxfield_client import remove_card_from_deck
+        remove_card_from_deck(commander, card)
+        return _json_response({"ok": True})
+    except Exception as e:
+        return _json_response({"error": str(e)}, status_code=500)
+
+
+@app.get("/api/deck-txt/{deck_id}")
+def api_deck_txt(deck_id: str) -> JSONResponse:
+    from manamind.moxfield_client import load_config, get_local_txt_content
+    decks = load_config()
+    entry = next((d for d in decks if d["deck_id"] == deck_id), None)
+    if not entry:
+        return _json_response({"error": "Deck introuvable"}, status_code=404)
+    content = get_local_txt_content(entry["commander"])
+    return _json_response({"ok": True, "content": content or "", "commander": entry["commander"]})
+
+
+@app.post("/api/deck-txt/{deck_id}/mark-synced")
+def api_deck_mark_synced(deck_id: str) -> JSONResponse:
+    from manamind.moxfield_client import load_config, mark_as_synced
+    decks = load_config()
+    entry = next((d for d in decks if d["deck_id"] == deck_id), None)
+    if not entry:
+        return _json_response({"error": "Deck introuvable"}, status_code=404)
+    ok = mark_as_synced(deck_id, entry["commander"])
+    return _json_response({"ok": ok})
 
 
 @app.get("/deck-build")
@@ -921,38 +1015,6 @@ def deck_build_page() -> FileResponse:
     )
 
 
-@app.post("/api/deck-suggest")
-async def api_deck_suggest(request: Request) -> JSONResponse:
-    """
-    Détecte le commandant le plus probable depuis une liste de cartes et retourne
-    les 20 cartes absentes de la liste avec le meilleur taux d'inclusion.
-
-    Body JSON : { "cards": ["Sol Ring", "Cultivate", ...] }
-    """
-    try:
-        body = await request.json()
-    except Exception:
-        return _json_response({"error": "JSON invalide"}, status_code=400)
-
-    cards = body.get("cards") or []
-    if not isinstance(cards, list) or len(cards) == 0:
-        return _json_response({"error": "Liste de cartes vide ou invalide"}, status_code=400)
-
-    import re as _re
-    def _parse_card_name(raw: str) -> str:
-        # Retire " (SET) #num" (format Moxfield)
-        raw = _re.sub(r'\s*\([A-Z0-9]+\)\s*#\S+$', '', raw.strip())
-        # Retire quantité en début "1x " ou "2 "
-        raw = _re.sub(r'^\d+[xX]?\s+', '', raw)
-        return raw.strip()
-
-    cards = [_parse_card_name(str(c)) for c in cards if _parse_card_name(str(c))]
-
-    from manamind.card_commander_matcher import suggest_additions
-    result = suggest_additions(cards, top_n=20)
-    return _json_response(result)
-
-
 @app.get("/commander-suggest")
 def commander_suggest_page() -> FileResponse:
     return FileResponse(
@@ -960,6 +1022,27 @@ def commander_suggest_page() -> FileResponse:
         media_type="text/html",
         headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
     )
+
+
+@app.get("/api/card-inclusion")
+def api_card_inclusion(
+    card: str = Query(...),
+    commander: str = Query(...),
+) -> JSONResponse:
+    """Taux d'inclusion d'une carte pour un commandant donné."""
+    from manamind.card_commander_matcher import _normalize, _load_frequency_index
+    idx = _load_frequency_index()
+    cmd_norm  = _normalize(commander)
+    card_norm = _normalize(card)
+    cmd_data  = idx.get(cmd_norm, {})
+    entry     = cmd_data.get(card_norm)
+    if entry is None:
+        return _json_response({"inclusion_rate": None})
+    return _json_response({
+        "inclusion_rate": round(entry["inclusion_rate"], 1),
+        "decks_with_card": entry["decks_with_card"],
+        "total_decks": entry["total_decks"],
+    })
 
 
 @app.get("/api/commander-suggest")
