@@ -655,28 +655,7 @@ async def card_image(
 
     name = name.strip()
 
-    # 1. DB locale — recherche exacte sur le nom normalisé
-    if _DB_AVAILABLE:
-        try:
-            with SessionLocal() as session:
-                from sqlalchemy import func as _func
-                stmt = (
-                    select(CardPrinting.image_normal)
-                    .join(Card, Card.id == CardPrinting.card_id)
-                    .where(
-                        Card.name.ilike(name),
-                        CardPrinting.image_normal.isnot(None),
-                        CardPrinting.lang == "en",
-                    )
-                    .limit(1)
-                )
-                row = session.execute(stmt).first()
-                if row and row[0]:
-                    return _json_response({"url": row[0]})
-        except Exception:
-            pass
-
-    # 2. Fallback Scryfall (requête serveur → pas de CORS)
+    # Scryfall (côté serveur → pas de CORS) — source unique pour image + colors + booster
     try:
         async with httpx.AsyncClient(timeout=6) as client:
             resp = await client.get(
@@ -690,12 +669,119 @@ async def card_image(
                     data.get("image_uris", {}).get("normal")
                     or (data.get("card_faces") or [{}])[0].get("image_uris", {}).get("normal")
                 )
+                colors = data.get("color_identity") or data.get("colors") or []
+                rarity = data.get("rarity", "")
+                set_code = data.get("set", "").upper()
                 if url:
-                    return _json_response({"url": url})
+                    return _json_response({"url": url, "colors": colors, "rarity": rarity, "set": set_code})
     except Exception:
         pass
 
+    # Fallback DB locale (image uniquement, pas de metadata couleur)
+    if _DB_AVAILABLE:
+        try:
+            with SessionLocal() as session:
+                stmt = (
+                    select(CardPrinting.image_normal)
+                    .join(Card, Card.id == CardPrinting.card_id)
+                    .where(
+                        Card.name.ilike(name),
+                        CardPrinting.image_normal.isnot(None),
+                        CardPrinting.lang == "en",
+                    )
+                    .limit(1)
+                )
+                row = session.execute(stmt).first()
+                if row and row[0]:
+                    return _json_response({"url": row[0], "colors": [], "booster": None})
+        except Exception:
+            pass
+
     return _json_response({"url": None}, status_code=404)
+
+
+@app.get("/api/card-source")
+def api_card_source(name: str = Query(...)) -> JSONResponse:
+    """
+    Retourne la source d'une carte parmi : 'in_deck', 'collection', 'opened_sets', ou None.
+    Même logique de priorité que deck_build.
+    """
+    import unicodedata as _ud
+    def _norm(s: str) -> str:
+        s = _ud.normalize("NFKD", s)
+        return "".join(c for c in s if not _ud.combining(c)).lower().strip()
+
+    card_norm = _norm(name)
+
+    # 1. Dans un deck Moxfield ?
+    from manamind.moxfield_client import load_config, get_decklist_for_commander
+    decks_found: list[str] = []
+    for entry in load_config():
+        commander = entry.get("commander", "")
+        if not commander:
+            continue
+        try:
+            entries = get_decklist_for_commander(commander)
+            if entries and any(_norm(cn) == card_norm for cn, _ in entries):
+                decks_found.append(commander)
+        except Exception:
+            continue
+    if decks_found:
+        return _json_response({"source": "in_deck", "decks": decks_found})
+
+    # 2. Dans Ma collection.txt ?
+    from manamind.collection_advisor import load_collection
+    collection = load_collection()
+    if card_norm in collection:
+        return _json_response({"source": "collection", "decks": []})
+
+    # 3. C/U dans un set ouvert (Opened.txt) ?
+    opened_file = ROOT / "Opened.txt"
+    if opened_file.exists():
+        opened_codes = {l.strip().upper() for l in opened_file.read_text(encoding="utf-8").splitlines() if l.strip()}
+        from manamind.collection_advisor import load_opened_set_cards
+        opened_cards = load_opened_set_cards()
+        if card_norm in opened_cards:
+            return _json_response({"source": "opened_sets", "decks": []})
+
+    return _json_response({"source": None, "decks": []})
+
+
+@app.get("/api/card-in-decks")
+def api_card_in_decks(name: str = Query(...)) -> JSONResponse:
+    """
+    Retourne la liste des commandants dont le deck contient la carte `name`.
+    Utilise les caches Moxfield / fichiers .txt locaux.
+    """
+    import unicodedata as _ud
+    def _norm(s: str) -> str:
+        s = _ud.normalize("NFKD", s)
+        return "".join(c for c in s if not _ud.combining(c)).lower().strip()
+
+    from manamind.moxfield_client import load_config, get_decklist_for_commander
+    card_norm = _norm(name)
+    decks_found: list[str] = []
+    for entry in load_config():
+        commander = entry.get("commander", "")
+        if not commander:
+            continue
+        try:
+            entries = get_decklist_for_commander(commander)
+            if entries and any(_norm(cn) == card_norm for cn, _ in entries):
+                decks_found.append(commander)
+        except Exception:
+            continue
+    return _json_response({"decks": decks_found})
+
+
+@app.get("/api/opened-sets")
+def api_opened_sets() -> JSONResponse:
+    """Retourne la liste des codes de sets ouverts (Opened.txt)."""
+    opened_file = ROOT / "Opened.txt"
+    if not opened_file.exists():
+        return _json_response({"sets": []})
+    codes = [l.strip().upper() for l in opened_file.read_text(encoding="utf-8").splitlines() if l.strip()]
+    return _json_response({"sets": codes})
 
 
 @app.get("/api/cards/price")
@@ -859,6 +945,24 @@ def api_deck_trim(
     return _json_response(result)
 
 
+@app.get("/api/deck-baseland-counts")
+def api_deck_baseland_counts(
+    commander: str = Query(...),
+) -> JSONResponse:
+    """Retourne { counts: { 'Plains': 5, 'Island': 3, ... } } pour les terrains de base du deck."""
+    from manamind.collection_advisor import _get_deck_entries, _normalize
+    BASIC_LANDS = {"plains": "Plains", "island": "Island", "swamp": "Swamp",
+                   "mountain": "Mountain", "forest": "Forest", "wastes": "Wastes"}
+    entries, source = _get_deck_entries(commander)
+    counts: dict[str, int] = {}
+    for name, qty in entries:
+        norm = _normalize(name)
+        if norm in BASIC_LANDS:
+            canonical = BASIC_LANDS[norm]
+            counts[canonical] = counts.get(canonical, 0) + qty
+    return _json_response({"counts": counts})
+
+
 @app.get("/api/my-decks")
 def api_my_decks() -> JSONResponse:
     """
@@ -978,7 +1082,9 @@ async def api_deck_card_remove(request: Request) -> JSONResponse:
         return _json_response({"error": "Paramètres manquants"}, status_code=400)
     try:
         from manamind.moxfield_client import remove_card_from_deck
-        remove_card_from_deck(commander, card)
+        found = remove_card_from_deck(commander, card)
+        if not found:
+            return _json_response({"ok": False, "error": f"« {card} » n'est pas dans le deck de {commander}"}, status_code=404)
         return _json_response({"ok": True})
     except Exception as e:
         return _json_response({"error": str(e)}, status_code=500)
@@ -1074,4 +1180,4 @@ def static_file(filename: str) -> FileResponse:
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("server:app", host="0.0.0.0", port=8080, reload=True)
+    uvicorn.run("server:app", host="0.0.0.0", port=8080, reload=False)

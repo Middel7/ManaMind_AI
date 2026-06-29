@@ -1,0 +1,46 @@
+Section,Card Name,Score,Support,Deck Frequency
+Commander,"Orah, Skyclave Hierophant",,,
+
+Additions,,,,
+add,Edgewalker,209,,
+add,Starlit Sanctum,192,,
+add,Arcane Signet,173,,
+add,Isolated Chapel,169,,
+add,"Ayli, Eternal Pilgrim",164,,
+add,Doomed Necromancer,156,,
+add,Caves of Koilos,156,,
+add,Priest of Forgotten Gods,148,,
+add,Godless Shrine,142,,
+add,Suture Priest,137,,
+add,Soul's Attendant,135,,
+add,Twilight Diviner,132,,
+add,Master of Dark Rites,129,,
+add,"Minwu, White Mage",128,,
+add,Orzhov Signet,125,,
+add,Umbral Collar Zealot,124,,
+add,Talisman of Hierarchy,123,,
+add,Rotlung Reanimator,120,,
+add,Tainted Field,119,,
+add,Fetid Heath,114,,
+
+Removals,,,,
+remove,Invasion of New Capenna // Holy Frazzle-Cannon,,0,0
+remove,Joined Researchers // Joined Researchers,,0,0
+remove,Lunarch Veteran // Luminous Phantom,,0,0
+remove,Malakir Rebirth // Malakir Mire,,0,0
+remove,Pelakka Predation // Pelakka Caverns,,0,0
+remove,Selfless Glyphweaver // Deadly Vanity,,0,0
+remove,"Shaile, Dean of Radiance // Embrose, Dean of Shadow",,0,0
+remove,Skyclave Cleric // Skyclave Basilica,,0,0
+remove,Wedding Announcement // Wedding Festivity,,0,0
+remove,Benalish Sleeper,,0,2
+remove,Sigardian Savior,,0,8
+remove,Scorn-Blade Berserker,,0,19
+remove,Spirit-Sister's Call,,0,24
+remove,Ghoulish Procession,,0,73
+remove,The Wandering Emperor,,0,119
+remove,"Vraan, Executioner Thane",,0,165
+remove,Cathar Commando,,0,196
+remove,White Sun's Twilight,,0,212
+remove,Corpse Knight,,0,441
+remove,Moonshaker Cavalry,,0,565

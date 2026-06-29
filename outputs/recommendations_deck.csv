@@ -1,46 +1,46 @@
 Section,Card Name,Score,Support,Deck Frequency
-Commander,"Eluge, the Shoreless Sea",,,
+Commander,"Narci, Fable Singer",,,
 
 Additions,,,,
-add,Mystic Sanctuary,308,,
-add,Reliquary Tower,298,,
-add,Arcane Signet,272,,
-add,Essence Flux,241,,
-add,High Tide,229,,
-add,Pull from Tomorrow,215,,
-add,Frantic Search,212,,
-add,Rogue's Passage,211,,
-add,Mystic Confluence,200,,
-add,Sink into Stupor,191,,
-add,Blue Sun's Zenith,188,,
-add,Blur,184,,
-add,Ghostly Flicker,180,,
-add,Archmage of Runes,174,,
-add,Pongify,170,,
-add,Displacer Kitten,161,,
-add,Rapid Hybridization,160,,
-add,Cryptic Command,155,,
-add,Archaeomancer,154,,
-add,The Flood of Mars,153,,
+add,"Sythis, Harvest's Hand",215,,
+add,Sanctum Weaver,209,,
+add,"Satsuki, the Living Lore",197,,
+add,Sol Ring,193,,
+add,Eidolon of Blossoms,183,,
+add,Setessan Champion,173,,
+add,The Cruelty of Gix,172,,
+add,Summon:Fenrir,167,,
+add,Sterling Grove,164,,
+add,Arcane Signet,164,,
+add,Summon:Yojimbo,158,,
+add,Summon: Primal Odin,155,,
+add,Hall of Heliod's Generosity,150,,
+add,Exotic Orchard,147,,
+add,Herald of the Pantheon,147,,
+add,Godless Shrine,144,,
+add,Starfield Mystic,143,,
+add,Temple Garden,143,,
+add,Overgrown Tomb,142,,
+add,Summon:Bahamut,140,,
 
 Removals,,,,
-remove,Jwari Disruption // Jwari Ruins,,0,0
-remove,Malevolent Hermit // Benevolent Geist,,0,0
-remove,"Search for Azcanta // Azcanta, the Sunken Ruin",,0,0
-remove,Silundi Vision // Silundi Isle,,0,0
-remove,Abhorrent Oculus,,0,41
-remove,Renegade Doppelganger,,1,5
-remove,Steamcore Scholar,,1,11
-remove,Demilich,,2,3
-remove,Roaming Throne,,2,3562
-remove,Ertai's Scorn,,3,42
-remove,Compulsive Research,,5,105
-remove,Shadowspear,,5,322
-remove,Tyrite Sanctum,,9,207
-remove,Thundertrap Trainer,,11,28
-remove,Silver Scrutiny,,16,27
-remove,Ledger Shredder,,16,188
-remove,Hall of Storm Giants,,19,80
-remove,Gifts Ungiven,,23,289
-remove,Alrund's Epiphany,,24,67
-remove,Pact of Negation,,24,832
+remove,The Dragon-Kami Reborn // Dragon-Kami's Egg,,0,0
+remove,The Long Reach of Night // Animus of Night's Reach,,0,0
+remove,Planar Collapse,,0,6
+remove,The Dross Pits,,0,42
+remove,White Sun's Twilight,,0,212
+remove,War Room,,0,1361
+remove,Mythos of Nethroi,,1,12
+remove,Doomskar,,1,63
+remove,"Syr Konrad, the Grim",,1,2348
+remove,Winds of Rath,,2,16
+remove,Tymaret Calls the Dead,,2,26
+remove,Fyndhorn Elves,,2,1655
+remove,Doom Foretold,,3,19
+remove,Restless Fortress,,3,120
+remove,Elvish Mystic,,3,2407
+remove,Carnivorous Canopy,,4,57
+remove,Cast Out,,4,134
+remove,Arasta of the Endless Web,,6,199
+remove,Painful Quandary,,6,240
+remove,Blind Obedience,,6,588

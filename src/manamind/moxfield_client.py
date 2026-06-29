@@ -149,17 +149,21 @@ def _local_txt_path(commander_name: str) -> Path:
 
 
 def _write_local_txt(commander_name: str, cards: list[tuple[str, int]]) -> None:
-    """Écrit la decklist au format Moxfield (1 Card Name) dans le .txt local."""
+    """Écrit la decklist au format Moxfield dans le .txt local.
+    Pour les decks Partner ("Cmd1 + Cmd2"), écrit une ligne par commandant."""
     lines = [f"{qty} {name}" for name, qty in sorted(cards, key=lambda x: x[0])]
-    lines.append(f"\n1 {commander_name}")
+    cmd_lines = "\n".join(f"1 {n.strip()}" for n in commander_name.split("+"))
+    lines.append(f"\n{cmd_lines}")
     _local_txt_path(commander_name).write_text("\n".join(lines), encoding="utf-8")
 
 
 def _read_local_txt(commander_name: str) -> list[tuple[str, int]]:
-    """Lit le .txt local et retourne [(name, qty), ...]."""
+    """Lit le .txt local et retourne [(name, qty), ...] sans le(s) commandant(s)."""
     path = _local_txt_path(commander_name)
     if not path.exists():
         return []
+    # Exclure chaque partie du nom (gère "Cmd1 + Cmd2")
+    cmd_norms = {_normalize(n.strip()) for n in commander_name.split("+")}
     result = []
     for line in path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
@@ -167,7 +171,9 @@ def _read_local_txt(commander_name: str) -> list[tuple[str, int]]:
             continue
         parts = line.split(None, 1)
         if len(parts) == 2 and parts[0].isdigit():
-            result.append((parts[1], int(parts[0])))
+            name = parts[1]
+            if _normalize(name) not in cmd_norms:
+                result.append((name, int(parts[0])))
     return result
 
 
@@ -184,18 +190,23 @@ def add_card_to_deck(commander_name: str, card_name: str) -> None:
     _write_local_txt(commander_name, cards)
 
 
-def remove_card_from_deck(commander_name: str, card_name: str) -> None:
-    """Retire une carte du .txt local du commandant."""
+def remove_card_from_deck(commander_name: str, card_name: str) -> bool:
+    """Retire une carte du .txt local du commandant. Retourne False si la carte est absente."""
     cards = _read_local_txt(commander_name)
     norm_target = _normalize(card_name)
+    found = False
     new_cards = []
     for name, qty in cards:
         if _normalize(name) == norm_target:
+            found = True
             if qty > 1:
                 new_cards.append((name, qty - 1))
         else:
             new_cards.append((name, qty))
+    if not found:
+        return False
     _write_local_txt(commander_name, new_cards)
+    return True
 
 
 def get_local_txt_content(commander_name: str) -> str | None:
@@ -270,27 +281,31 @@ def _load_cache(deck_id: str) -> dict | None:
 
 
 def _extract_commander(data: dict) -> str:
-    """Extrait le nom du commandant depuis la réponse JSON Moxfield."""
-    # boards.commanders.cards est un dict {card_id: {card: {name: ...}}}
+    """Extrait le(s) nom(s) du/des commandant(s) depuis la réponse JSON Moxfield.
+    Pour les decks Partner, retourne "Cmd1 + Cmd2" (trié alphabétiquement)."""
     commanders = (
         data.get("boards", {})
             .get("commanders", {})
             .get("cards", {})
     )
-    for card_data in commanders.values():
-        name = card_data.get("card", {}).get("name", "")
-        if name:
-            return name
-    # fallback : nom du deck
+    names = sorted(
+        card_data.get("card", {}).get("name", "")
+        for card_data in commanders.values()
+        if card_data.get("card", {}).get("name", "")
+    )
+    if names:
+        return " + ".join(names)
     return data.get("name", "Commandant inconnu")
 
 
+_ACTIVE_BOARDS = {"mainboard", "sideboard"}
+
 def _parse_cards(data: dict) -> list[tuple[str, int]]:
-    """Extrait toutes les cartes (hors commandant) de la réponse Moxfield."""
+    """Extrait les cartes du mainboard et sideboard (hors commandant et maybeboard)."""
     result: list[tuple[str, int]] = []
     boards = data.get("boards", {})
     for board_name, board in boards.items():
-        if board_name == "commanders":
+        if board_name not in _ACTIVE_BOARDS:
             continue
         for card_data in board.get("cards", {}).values():
             name = card_data.get("card", {}).get("name", "")

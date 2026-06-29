@@ -288,13 +288,12 @@
     flex-shrink: 0;
   }
 
-  /* Le plateau qui tourne (contient face avant + face arrière) */
+  /* Le plateau (plus de flip au hover — clic sur image = Cardmarket) */
   .card-flip {
     position: absolute; inset: 0;
     transform-style: preserve-3d;
-    transition: transform .55s cubic-bezier(.4,0,.2,1);
   }
-  .card-inner:hover .card-flip { transform: rotateY(180deg); }
+  .card-inner { cursor: pointer; }
 
   /* Face avant : l'image */
   .card-front {
@@ -434,6 +433,17 @@
   .card-rem .buy { color: var(--copper-br); border-color: rgba(215,122,94,0.32);
     background: linear-gradient(180deg, rgba(181,69,47,0.14), rgba(181,69,47,0.03)); }
   .card-rem .buy:hover { color: #2a1410; background: linear-gradient(180deg, var(--copper-br), var(--copper)); border-color: transparent; }
+
+  /* badge source booster/collection */
+  .source-tag {
+    position: absolute; bottom: 8px; left: 8px; z-index: 3;
+    font-family: var(--serif-cap); font-size: 8px; letter-spacing: 0.16em;
+    text-transform: uppercase; padding: 3px 8px; border-radius: 3px;
+    pointer-events: none;
+  }
+  .source-tag.booster    { background: var(--gold); color: #12090e; }
+  .source-tag.collection { background: var(--arcane-br); color: #12090e; }
+  .source-tag.in-deck    { background: var(--green-br); color: #0a1a10; }
 
   /* skeletons */
   .skeleton { position: relative; overflow: hidden; background: rgba(60,46,82,0.35); border-radius: 3px; }
@@ -877,6 +887,16 @@ function ingest(rows){
   state.rem=rem.slice(0,25);
 }
 
+function cardSourceTag(source, decks) {
+  if (source === 'in_deck') {
+    const title = (decks || []).join(', ');
+    return `<span class="source-tag in-deck" title="${title}">Dans un deck</span>`;
+  }
+  if (source === 'collection') return `<span class="source-tag collection">Collection</span>`;
+  if (source === 'opened_sets') return `<span class="source-tag booster">Boosters</span>`;
+  return '';
+}
+
 /* ── Lookup via endpoints locaux (image + prix) ───────────────────────────── */
 const cache = new Map();
 function scryfall(name) {
@@ -892,7 +912,9 @@ function scryfall(name) {
       normal:       url,
       cheap:        url,
       eur:          eur,
-      colors:       [],
+      colors:       imgData?.colors || [],
+      rarity:       imgData?.rarity || null,
+      set:          imgData?.set || null,
       scryfall_uri: null,
     };
   });
@@ -997,10 +1019,16 @@ function renderGallery(){
   }
 }
 
-async function hydrate(el, c, isAdd){
-  let data;
+const hydrateV1 = async function(el, c, isAdd){
+  let data, cardSource = null, cardSourceDecks = [];
   try {
-    data = await scryfall(c.name);
+    [data] = await Promise.all([
+      scryfall(c.name),
+      fetch(`/api/card-source?name=${encodeURIComponent(c.name)}`)
+        .then(r => r.ok ? r.json() : {source: null, decks: []})
+        .then(d => { cardSource = d.source; cardSourceDecks = d.decks || []; })
+        .catch(() => {}),
+    ]);
   } catch(e) {
     el.innerHTML = `<div class="art-fallback" style="color:#e07b7b">${c.name}<br><small>${e.message}</small></div>`;
     return;
@@ -1013,6 +1041,7 @@ async function hydrate(el, c, isAdd){
   const btnLabel = isAdd ? 'Acheter ↗' : 'Vendre ↗';
   const scryfallUri = data?.scryfall_uri
     || `https://scryfall.com/search?q=!"${encodeURIComponent(c.name)}"`;
+  const boosterTag = cardSourceTag(cardSource, cardSourceDecks);
   const artHtml = full
     ? `<img alt="${c.name}" src="${full}" />`
     : `<div class="art-fallback">${c.name}</div>`;
@@ -1064,23 +1093,22 @@ async function hydrate(el, c, isAdd){
       </div>`;
   };
 
+  const cmdrSuggestUrl = `/commander-suggest?card=${encodeURIComponent(c.name)}`;
   el.innerHTML = `
-    <div class="card-inner">
+    <div class="card-inner" onclick="window.open('${cardmarket(c.name)}','_blank')" title="Voir sur Cardmarket">
       <div class="card-flip">
-        <div class="card-front">${artHtml}</div>
-        <div class="card-back">${buildBack()}</div>
+        <div class="card-front">${artHtml}${boosterTag}</div>
       </div>
     </div>
     <div class="card-body">
+      <div class="card-meta-name" style="font-family:var(--serif-disp);font-size:14px;font-weight:600;color:var(--text);line-height:1.2;margin-bottom:2px">
+        <a href="${cmdrSuggestUrl}" target="_blank" style="color:inherit;text-decoration:none;border-bottom:1px solid rgba(212,177,95,0.3);transition:border-color .2s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='rgba(212,177,95,0.3)'">${c.name}</a>
+      </div>
       <div class="card-foot">
         ${priceHtml}
         <a class="buy" href="${cardmarket(c.name)}" target="_blank" rel="noopener noreferrer">${btnLabel}</a>
       </div>
-      ${!isAdd && c.reason ? `<div class="rem-freq">${c.reason.split('(')[0].trim()}</div>` : ''}
-      <div class="card-links">
-        <a class="scryfall-link" href="${scryfallUri}" target="_blank" rel="noopener noreferrer">Scryfall ↗</a>
-        <a class="moxfield-link" href="${moxfield(c.name)}" target="_blank" rel="noopener noreferrer">Moxfield ↗</a>
-      </div>
+      ${!isAdd && c.reason ? `<div class="rem-freq">${c.reason}</div>` : ''}
     </div>`;
 }
 
@@ -1304,16 +1332,23 @@ async function bootHybrid(data) {
   }
 }
 
-// Surcharge de buildBack pour les cartes hybrides
-const _origHydrate = hydrate;
+// Dispatcher : cartes V1 ou hybrid
 async function hydrate(el, c, isAdd) {
-  if (!c.isHybrid) { return _origHydrate(el, c, isAdd); }
+  if (!c.isHybrid) { return hydrateV1(el, c, isAdd); }
 
-  const data = await scryfall(c.name);
+  let cardSource = null, cardSourceDecks = [];
+  const [data] = await Promise.all([
+    scryfall(c.name),
+    fetch(`/api/card-source?name=${encodeURIComponent(c.name)}`)
+      .then(r => r.ok ? r.json() : {source: null, decks: []})
+      .then(d => { cardSource = d.source; cardSourceDecks = d.decks || []; })
+      .catch(() => {}),
+  ]);
   const full = data ? (isAdd ? (data.normal || data.art) : (data.cheap || data.normal || data.art)) : null;
   const price = data ? fmtEur(data.eur) : null;
   const priceHtml = price ? `<span class="price">${price}</span>` : `<span class="price na">N/A</span>`;
   const scryfallUri = data?.scryfall_uri || `https://scryfall.com/search?q=!"${encodeURIComponent(c.name)}"`;
+  const boosterTag = cardSourceTag(cardSource, cardSourceDecks);
   const artHtml = full
     ? `<img alt="${c.name}" src="${full}" />`
     : `<div class="art-fallback">${c.name}</div>`;
@@ -1321,21 +1356,20 @@ async function hydrate(el, c, isAdd) {
   const cardmarket_url = `https://www.cardmarket.com/en/Magic/Products/Search?category=-1&searchString=${encodeURIComponent(c.name)}&searchMode=v2`;
   const btnLabel = isAdd ? 'Acheter ↗' : 'Vendre ↗';
 
+  const cmdrSuggestUrlH = `/commander-suggest?card=${encodeURIComponent(c.name)}`;
   el.innerHTML = `
-    <div class="card-inner">
+    <div class="card-inner" onclick="window.open('${cardmarket_url}','_blank')" title="Voir sur Cardmarket">
       <div class="card-flip">
-        <div class="card-front">${artHtml}</div>
-        <div class="card-back">${buildHybridBack(c, isAdd, scryfallUri)}</div>
+        <div class="card-front">${artHtml}${boosterTag}</div>
       </div>
     </div>
     <div class="card-body">
+      <div class="card-meta-name" style="font-family:var(--serif-disp);font-size:14px;font-weight:600;color:var(--text);line-height:1.2;margin-bottom:2px">
+        <a href="${cmdrSuggestUrlH}" target="_blank" style="color:inherit;text-decoration:none;border-bottom:1px solid rgba(212,177,95,0.3);transition:border-color .2s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='rgba(212,177,95,0.3)'">${c.name}</a>
+      </div>
       <div class="card-foot">
         ${priceHtml}
-        <a class="buy ${isAdd ? '' : ''}" href="${cardmarket_url}" target="_blank" rel="noopener noreferrer">${btnLabel}</a>
-      </div>
-      <div class="card-links">
-        <a class="scryfall-link" href="${scryfallUri}" target="_blank" rel="noopener noreferrer">Scryfall ↗</a>
-        <a class="moxfield-link" href="${moxLink}" target="_blank" rel="noopener noreferrer">Moxfield ↗</a>
+        <a class="buy" href="${cardmarket_url}" target="_blank" rel="noopener noreferrer">${btnLabel}</a>
       </div>
     </div>`;
 }
@@ -1422,6 +1456,26 @@ async function boot(){
       <p>Le mentor n'a trouvé aucune carte à ajouter ou retirer pour ce deck.</p></div>`;
     return;
   }
+
+  // Remplacer les retraits du CSV par suggest_cuts (même algo que /deck-build)
+  if (state.commander) {
+    try {
+      const trimRes = await fetch(`/api/deck-trim?commander=${encodeURIComponent(state.commander.name)}`);
+      if (trimRes.ok) {
+        const trimData = await trimRes.json();
+        const cuts = (trimData.results || []).filter(c => c.inclusion_rate != null);
+        if (cuts.length > 0) {
+          state.rem = cuts.slice(0, 25).map(c => ({
+            name: c.card_name,
+            freq: c.inclusion_rate,
+            reason: `${c.decks_with_card ?? '?'} / ${c.total_decks ?? '?'} decks · ${c.inclusion_rate?.toFixed(1) ?? '—'}%`,
+          }));
+          document.getElementById('pillRem').textContent = state.rem.length;
+        }
+      }
+    } catch(e) { /* fallback CSV conservé */ }
+  }
+
   renderCommander();
   renderGallery();
 }

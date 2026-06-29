@@ -282,6 +282,58 @@
   }
   .source-badge.collection { color: var(--ink-900); background: var(--arcane); }
   .source-badge.opened-sets { color: var(--ink-900); background: var(--gold); }
+  .source-badge.in-deck { color: #0a1a10; background: #5fb583; }
+
+  /* ── Compteur de cartes + terrains de base ── */
+  #deckCountBar {
+    display: none; align-items: center; gap: 12px;
+    padding: 6px 0 2px;
+    font-family: var(--serif-engraved); font-size: 0.68rem; letter-spacing: 0.14em;
+    color: var(--parch-500);
+  }
+  #deckCountVal {
+    font-size: 1.1rem; font-family: var(--serif-display); font-weight: 700;
+    color: var(--parch-100); letter-spacing: 0;
+  }
+  #deckCountVal.warn { color: #e07b7b; }
+  #deckCountVal.ok   { color: #5fb583; }
+
+  #baselandPanel {
+    display: none; gap: 8px; flex-wrap: wrap; align-items: center;
+    padding: 8px 0 2px;
+    border-top: 1px solid var(--gold-faint);
+  }
+  .baseland-row {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(12,9,16,0.45); border: 1px solid var(--gold-line);
+    border-radius: 8px; padding: 4px 10px;
+  }
+  .baseland-pip {
+    width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0;
+    border: 1.5px solid rgba(255,255,255,0.15);
+  }
+  .baseland-pip.W { background: #f9faf4; }
+  .baseland-pip.U { background: #0e68ab; }
+  .baseland-pip.B { background: #21201e; border-color: rgba(255,255,255,0.3); }
+  .baseland-pip.R { background: #d3202a; }
+  .baseland-pip.G { background: #00733e; }
+  .baseland-name {
+    font-family: var(--serif-display); font-size: 0.82rem; color: var(--parch-300);
+    min-width: 52px;
+  }
+  .baseland-qty {
+    font-family: var(--serif-display); font-size: 1rem; font-weight: 700;
+    color: var(--parch-100); min-width: 20px; text-align: center;
+  }
+  .baseland-btn {
+    width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--gold-line);
+    background: rgba(201,164,92,0.1); color: var(--gold); font-size: 1rem; font-weight: 300;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, color 0.15s;
+    line-height: 1;
+  }
+  .baseland-btn:hover { background: rgba(201,164,92,0.25); color: var(--parch-100); }
+  .baseland-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
   .comp-title {
     font-family: var(--serif-engraved); font-size: 0.68rem; letter-spacing: 0.22em;
@@ -352,6 +404,15 @@
             <option value="">— Sélectionner un deck —</option>
           </select>
         </div>
+        <!-- Compteur de cartes -->
+        <div id="deckCountBar">
+          <span>CARTES DANS LE DECK</span>
+          <span id="deckCountVal">—</span>
+          <span id="deckCountOf" style="color:var(--parch-600);">/ 100</span>
+        </div>
+        <!-- Terrains de base -->
+        <div id="baselandPanel" style="display:none; flex-wrap:wrap; gap:8px; align-items:center; padding:8px 0 2px; border-top:1px solid var(--gold-faint);"></div>
+
         <div class="action-row" id="cardSearchRow" style="display:none; gap:8px;">
           <div class="card-search-pair">
             <div class="card-search-wrap">
@@ -516,6 +577,8 @@
     }
 
     loadComposition(commander);
+    loadDeckCount(commander);
+    loadBaseLands(commander);
   }
 
 
@@ -592,6 +655,25 @@
 
     loadTrimImages(cuts);
     loadTrimPrices(cuts);
+    loadTrimDeckBadges(cuts);
+  }
+
+  async function loadTrimDeckBadges(cuts) {
+    await Promise.all(cuts.map(async (c, i) => {
+      const wrap = document.getElementById(`cut-wrap-${i}`);
+      if (!wrap) return;
+      try {
+        const res = await fetch(`/api/card-in-decks?name=${encodeURIComponent(c.card_name)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const decks = data.decks || [];
+        const badge = document.createElement('span');
+        badge.className = 'source-badge in-deck';
+        badge.title = decks.join(', ');
+        badge.textContent = 'Dans un deck';
+        wrap.appendChild(badge);
+      } catch {}
+    }));
   }
 
   async function loadTrimImages(cuts) {
@@ -777,6 +859,123 @@
     panel.style.display = '';
   }
 
+  // ── Compteur de cartes ───────────────────────────────────────────────────
+  const DECK_TARGET = 100; // commandant inclus
+
+  async function loadDeckCount(commander) {
+    const bar  = document.getElementById('deckCountBar');
+    const val  = document.getElementById('deckCountVal');
+    const ofEl = document.getElementById('deckCountOf');
+    bar.style.display = 'none';
+    if (!commander) return;
+    try {
+      // Cartes hors terrains de base (suggest_cuts) + terrains de base + 1 commandant
+      const [trimRes, blRes] = await Promise.all([
+        fetch(`/api/deck-trim?commander=${encodeURIComponent(commander)}`),
+        fetch(`/api/deck-baseland-counts?commander=${encodeURIComponent(commander)}`),
+      ]);
+      if (!trimRes.ok) return;
+      const trimData = await trimRes.json();
+      const blData   = blRes.ok ? await blRes.json() : { counts: {} };
+      const nonLand  = (trimData.results || []).length + (trimData.unknown || []).length;
+      const landCount = Object.values(blData.counts || {}).reduce((s, n) => s + n, 0);
+      const count = nonLand + landCount + 1; // +1 commandant
+      val.textContent = count;
+      val.className = count === DECK_TARGET ? 'ok' : 'warn';
+      ofEl.textContent = `/ ${DECK_TARGET}`;
+      bar.style.display = 'flex';
+    } catch {}
+  }
+
+  // ── Terrains de base ──────────────────────────────────────────────────────
+  const COLOR_LANDS = {
+    W: { name: 'Plaine',   en: 'Plains',   pip: 'W' },
+    U: { name: 'Île',      en: 'Island',   pip: 'U' },
+    B: { name: 'Marais',   en: 'Swamp',    pip: 'B' },
+    R: { name: 'Montagne', en: 'Mountain', pip: 'R' },
+    G: { name: 'Forêt',    en: 'Forest',   pip: 'G' },
+  };
+
+  // Quantités courantes : { 'Plains': 5, 'Island': 3, ... }
+  let _baselandQty = {};
+  let _cmdColors   = [];
+
+  async function loadBaseLands(commander) {
+    const panel = document.getElementById('baselandPanel');
+    panel.style.display = 'none';
+    _baselandQty = {};
+    _cmdColors   = [];
+    if (!commander) return;
+
+    // 1. Couleurs du commandant via Scryfall (gère Partner "A + B")
+    try {
+      const parts = commander.split('+').map(s => s.trim()).filter(Boolean);
+      const colorSet = new Set();
+      await Promise.all(parts.map(async part => {
+        const res  = await fetch(`/api/cards/image?name=${encodeURIComponent(part)}`);
+        const data = await res.json();
+        (data.colors || []).forEach(c => colorSet.add(c));
+      }));
+      _cmdColors = ['W','U','B','R','G'].filter(c => colorSet.has(c) && COLOR_LANDS[c]);
+    } catch {}
+    if (!_cmdColors.length) return;
+
+    // 2. Quantités actuelles dans le deck
+    try {
+      const res  = await fetch(`/api/deck-baseland-counts?commander=${encodeURIComponent(commander)}`);
+      if (res.ok) {
+        const data = await res.json();
+        _baselandQty = data.counts || {};
+      }
+    } catch {}
+
+    renderBaseLands(commander);
+  }
+
+  function renderBaseLands(commander) {
+    const panel = document.getElementById('baselandPanel');
+    panel.innerHTML = _cmdColors.map(color => {
+      const land = COLOR_LANDS[color];
+      const qty  = _baselandQty[land.en] ?? 0;
+      return `<div class="baseland-row" id="bl-row-${color}">
+        <div class="baseland-pip ${color}"></div>
+        <span class="baseland-name">${land.name}</span>
+        <button class="baseland-btn" onclick="changeBaseLand('${commander}','${land.en}','${color}',-1)" id="bl-minus-${color}" ${qty <= 0 ? 'disabled' : ''}>−</button>
+        <span class="baseland-qty" id="bl-qty-${color}">${qty}</span>
+        <button class="baseland-btn" onclick="changeBaseLand('${commander}','${land.en}','${color}',+1)" id="bl-plus-${color}">+</button>
+      </div>`;
+    }).join('');
+    panel.style.display = _cmdColors.length ? 'flex' : 'none';
+  }
+
+  async function changeBaseLand(commander, landName, color, delta) {
+    const minusBtn = document.getElementById(`bl-minus-${color}`);
+    const plusBtn  = document.getElementById(`bl-plus-${color}`);
+    const qtyEl    = document.getElementById(`bl-qty-${color}`);
+    if (minusBtn) minusBtn.disabled = true;
+    if (plusBtn)  plusBtn.disabled  = true;
+
+    try {
+      const endpoint = delta > 0 ? '/api/deck-card/add' : '/api/deck-card/remove';
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commander, card_name: landName }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok !== false) {
+        _baselandQty[landName] = (_baselandQty[landName] ?? 0) + delta;
+        if (qtyEl) qtyEl.textContent = _baselandQty[landName];
+        loadDeckCount(commander); // rafraîchir le compteur
+      }
+    } catch {}
+
+    // Remettre les boutons à jour selon la nouvelle quantité
+    const newQty = _baselandQty[landName] ?? 0;
+    if (minusBtn) minusBtn.disabled = newQty <= 0;
+    if (plusBtn)  plusBtn.disabled  = false;
+  }
+
   // ── Actions +/− sur les cartes (toggle avec annulation) ─────────────────
   async function addCardToDeck(cardName, idx) {
     const commander = deckSelect.value;
@@ -856,11 +1055,16 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ commander, card_name: cardName }),
         });
-        if (res.ok) {
+        const data = await res.json();
+        if (res.ok && data.ok) {
           btn.dataset.confirmed = '1';
           btn.classList.add('confirmed');
           btn.textContent = '✓';
           btn.title = 'Retiré — cliquer pour annuler';
+        } else {
+          btn.title = data.error || 'Carte absente du deck';
+          btn.textContent = '✗';
+          setTimeout(() => { btn.textContent = '−'; btn.title = 'Retirer du deck'; }, 2500);
         }
       } finally {
         btn.disabled = false;
@@ -1072,14 +1276,17 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ commander, card_name: cardName }),
       });
-      if (res.ok) {
+      const data = await res.json();
+      if (res.ok && data.ok) {
         cardRemoveInput.value = '';
         crInclusionBadge.style.display = 'none';
         cardRemoveInput.placeholder = `✓ ${cardName} retirée`;
         setTimeout(() => { cardRemoveInput.placeholder = 'Retirer une carte du deck…'; }, 2500);
       } else {
-        cardRemoveInput.placeholder = '✗ Erreur — réessaie';
-        setTimeout(() => { cardRemoveInput.placeholder = 'Retirer une carte du deck…'; }, 2500);
+        const msg = data.error || 'Carte absente du deck';
+        cardRemoveInput.value = '';
+        cardRemoveInput.placeholder = `✗ ${msg}`;
+        setTimeout(() => { cardRemoveInput.placeholder = 'Retirer une carte du deck…'; }, 3000);
       }
     } catch {
       cardRemoveInput.placeholder = '✗ Erreur réseau';

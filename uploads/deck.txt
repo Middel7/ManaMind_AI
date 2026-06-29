@@ -1,75 +1,77 @@
-1 Abhorrent Oculus
-1 Aetherize
-1 Aetherspouts
-1 Alrund's Epiphany
-1 An Offer You Can't Refuse
-1 Arcane Denial
-1 Archmage Emeritus
-1 Archmage's Charm
-1 Aven Courier
-1 Brainstorm
-1 Castle Vantress
-1 Chrome Host Seedshark
-1 Compulsive Research
-1 Conjurer's Closet
-1 Counterspell
-1 Cyclonic Rift
-1 Demilich
-1 Dig Through Time
-1 Ertai's Scorn
-1 Fact or Fiction
-1 Fellwar Stone
-1 Finale of Revelation
-1 Flow of Knowledge
-1 Gifts Ungiven
-1 Hall of Storm Giants
-1 Hullbreaker Horror
-1 Invoke the Winds
-31 Island
-1 Jwari Disruption // Jwari Ruins
-1 Ledger Shredder
-1 Lier, Disciple of the Drowned
-1 Lórien Revealed
-1 Malevolent Hermit // Benevolent Geist
-1 March of Swirling Mist
-1 Mind Stone
-1 Murmuring Mystic
-1 Myriad Landscape
-1 Mystic Remora
-1 Mystical Tutor
-1 Narset, Parter of Veils
-1 Negate
-1 Nykthos, Shrine to Nyx
-1 Pact of Negation
-1 Planar Incision
-1 Planar Incision
-1 Ponder
-1 Refute
-1 Renegade Doppelganger
-1 Rewind
-1 Rhystic Study
-1 Rivendell
-1 Roaming Throne
-1 Sapphire Medallion
-1 Search for Azcanta // Azcanta, the Sunken Ruin
-1 Season of Weaving
-1 Shadowspear
-1 Shark Typhoon
-1 Shore Up
-1 Silundi Vision // Silundi Isle
-1 Silver Scrutiny
-1 Sky Diamond
-1 Sol Ring
-1 Solve the Equation
-1 Steamcore Scholar
-1 Sublime Epiphany
-1 Talrand, Sky Summoner
-1 Thought Vessel
-1 Thundertrap Trainer
-1 Time Stop
-1 Time Warp
-1 Tyrite Sanctum
-1 Unwind
-1 Wavebreak Hippocamp
+1 Arasta of the Endless Web
+1 Archon of Sun's Grace
+1 Ash Barrens
+1 Austere Command
+1 Battle at the Helvault
+1 Battle for Bretagard
+1 Beast Within
+1 Binding the Old Gods
+1 Blind Obedience
+1 Braids's Frightful Return
+1 Calix, Destiny's Hand
+1 Cankerbloom
+1 Carnivorous Canopy
+1 Cast Out
+1 Command Tower
+1 Cosmic Rebirth
+1 Courser of Kruphix
+1 Destiny Spinner
+1 Doom Foretold
+1 Doomskar
+1 Elspeth Conquers Death
+1 Elvish Mystic
+1 Enchantress's Presence
+1 Evolution Sage
+9 Forest
+1 Fyndhorn Elves
+1 Grasp of Fate
+1 Historian's Boon
+1 Jukai Naturalist
+1 Kenrith's Transformation
+1 Krosan Verge
+1 Love Song of Night and Day
+1 Lurrus of the Dream-Den
+1 Myrkul, Lord of Bones
+1 Mythos of Nethroi
+1 Necroblossom Snarl
+1 Nessian Wanderer
+1 Nesting Grounds
+1 Oath of the Grey Host
+1 Ondu Spiritdancer
+1 Painful Quandary
+1 Path to Exile
+9 Plains
+1 Planar Collapse
+1 Resourceful Defense
+1 Restless Fortress
+1 Resurgent Belief
+1 Satyr Enchanter
+1 Scholar of New Horizons
+1 Shineshadow Snarl
+1 Spirit-Sister's Call
+1 Summon: Magus Sisters
+1 Sun Titan
+8 Swamp
+1 Syr Konrad, the Grim
+1 Tale of Tinúviel
+1 Temple of Malady
+1 Temple of Plenty
+1 The Birth of Meletis
+1 The Dragon-Kami Reborn // Dragon-Kami's Egg
+1 The Dross Pits
+1 The Eldest Reborn
+1 The First Iroan Games
+1 The Long Reach of Night // Animus of Night's Reach
+1 The Mending of Dominaria
+1 The World Spell
+1 Thirsting Roots
+1 Three Blind Mice
+1 Tymaret Calls the Dead
+1 Unnatural Restoration
+1 Vraska, Betrayal's Sting
+1 War Room
+1 White Sun's Twilight
+1 Wild Growth
+1 Winds of Rath
 
-1 Eluge, the Shoreless Sea
+1 Narci, Fable Singer

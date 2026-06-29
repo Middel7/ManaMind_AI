@@ -24,6 +24,36 @@ def _normalize(name: str) -> str:
     return "".join(c for c in name if not unicodedata.combining(c)).lower().strip()
 
 
+def _cmd_norms(commander_name: str) -> set[str]:
+    """Retourne l'ensemble des noms normalisés pour un commandant (gère Partner 'A + B')."""
+    return {_normalize(n.strip()) for n in commander_name.split("+") if n.strip()}
+
+
+def _cmd_freq(commander_name: str, freq_index: dict) -> dict:
+    """Retourne les données EDHREC pour un commandant.
+    Pour les Partner, essaie d'abord le nom complet 'A + B', puis chaque partie seule,
+    et retourne les données du commandant avec le plus grand nombre de decks."""
+    parts = [n.strip() for n in commander_name.split("+")]
+    candidates: list[tuple[int, dict]] = []
+    # Essai 1 : nom complet "A + B" (si indexé ainsi)
+    full_norm = _normalize(commander_name)
+    if full_norm in freq_index:
+        data = freq_index[full_norm]
+        sample = next(iter(data.values()), {})
+        candidates.append((sample.get("total_decks", 0), data))
+    # Essai 2 : chaque partie séparément
+    for part in parts:
+        norm = _normalize(part)
+        if norm in freq_index:
+            data = freq_index[norm]
+            sample = next(iter(data.values()), {})
+            candidates.append((sample.get("total_decks", 0), data))
+    if not candidates:
+        return {}
+    # Retourner les données du commandant avec le plus de decks (meilleure base statistique)
+    return max(candidates, key=lambda x: x[0])[1]
+
+
 def _parse_card_line(line: str) -> tuple[str, int] | None:
     """
     Parse une ligne au format Moxfield ou simple :
@@ -230,7 +260,11 @@ def suggest_from_collection(top_n: int = 40, commander_filter: str | None = None
         entries, source = _get_deck_entries(cmd_display)
         if not source:
             continue
-        deck_cards_index[cmd_norm] = {_normalize(name) for name, _ in entries}
+        this_cmd_norms = _cmd_norms(cmd_display)
+        deck_cards_index[cmd_norm] = {
+            _normalize(name) for name, _ in entries
+            if _normalize(name) not in this_cmd_norms
+        }
 
     # Filtre optionnel sur un commandant unique
     if commander_filter:
@@ -259,9 +293,9 @@ def suggest_from_collection(top_n: int = 40, commander_filter: str | None = None
     best_per_card: dict[str, dict] = {}
 
     for cmd_norm, cmd_display in commanders.items():
-        if cmd_norm not in freq_index:
+        cmd_cards = _cmd_freq(cmd_display, freq_index)
+        if not cmd_cards:
             continue
-        cmd_cards = freq_index[cmd_norm]
         this_deck = deck_cards_index.get(cmd_norm, set())
         for card_norm, (qty, source) in available.items():
             if card_norm not in cmd_cards:
@@ -368,13 +402,14 @@ def suggest_moves(top_n: int = 30) -> dict:
     cards_scanned = 0
 
     for from_norm, from_display in valid_commanders.items():
-        from_freq = freq_index.get(from_norm, {})
+        from_freq  = _cmd_freq(from_display, freq_index)
+        from_cmd_norms = _cmd_norms(from_display)
         entries, _ = _get_deck_entries(from_display)
 
         for card_name, _ in entries:
             card_norm = _normalize(card_name)
 
-            if card_norm == from_norm or card_norm in land_norms:
+            if card_norm in from_cmd_norms or card_norm in land_norms:
                 continue
 
             cards_scanned += 1
@@ -395,7 +430,7 @@ def suggest_moves(top_n: int = 30) -> dict:
                     continue
                 if card_norm in deck_cards.get(to_norm, set()):
                     continue
-                cmd_freq = freq_index.get(to_norm, {})
+                cmd_freq = _cmd_freq(to_display, freq_index)
                 if card_norm not in cmd_freq:
                     continue
                 other_data = cmd_freq[card_norm]
@@ -539,8 +574,8 @@ def suggest_cuts(commander_name: str) -> dict:
         return {"commander": commander_name, "deck_file": None, "results": [], "unknown": [], "error": "Deck introuvable (ni Moxfield ni fichier local)"}
 
     freq_index = load_frequency_index()
-    cmd_norm   = _normalize(commander_name)
-    cmd_cards  = freq_index.get(cmd_norm, {})
+    cmd_cards  = _cmd_freq(commander_name, freq_index)
+    cmd_norms  = _cmd_norms(commander_name)
 
     deck_card_names: list[str] = [name for name, _ in entries]
 
@@ -551,10 +586,18 @@ def suggest_cuts(commander_name: str) -> dict:
                    "wastes", "snow-covered plains", "snow-covered island",
                    "snow-covered swamp", "snow-covered mountain", "snow-covered forest"}
 
+    # Récupérer le total_decks pour ce commandant (pour les cartes absentes du CSV)
+    total_decks_ref: int | None = None
+    if cmd_cards:
+        sample = next(iter(cmd_cards.values()))
+        total_decks_ref = sample.get("total_decks")
+
     for name in deck_card_names:
         norm = _normalize(name)
-        if norm == cmd_norm:
-            continue  # sauter le commandant lui-même
+        if norm in cmd_norms:
+            continue  # sauter le(s) commandant(s)
+        if norm in BASIC_LANDS:
+            continue  # ne jamais suggérer de retirer un terrain de base
         if norm in cmd_cards:
             data = cmd_cards[norm]
             results.append({
@@ -564,9 +607,15 @@ def suggest_cuts(commander_name: str) -> dict:
                 "total_decks":    data["total_decks"],
             })
         else:
-            unknown.append(name)
+            # Carte absente du CSV = 0 deck similaire ne la joue → taux effectif de 0%
+            results.append({
+                "card_name":       name,
+                "inclusion_rate":  0.0,
+                "decks_with_card": 0,
+                "total_decks":     total_decks_ref,
+            })
 
-    # Trier : inclusion_rate ASC (les moins jouées en premier), None à la fin
+    # Trier : inclusion_rate ASC (les moins jouées en premier)
     results.sort(key=lambda r: (r["inclusion_rate"] is None, r["inclusion_rate"] or 0, r["card_name"]))
 
     return {
@@ -701,9 +750,18 @@ def _compute_edhrec_averages(commander_name: str, type_map: dict[str, str], dfc_
     """
     cmd_dir = DECKLISTS_DIR / commander_name
     if not cmd_dir.exists():
-        # Essai insensible à la casse
+        # Essai insensible à la casse + équivalence "&" / "+" pour les decks Partner
         try:
-            matches = [d for d in DECKLISTS_DIR.iterdir() if d.is_dir() and d.name.lower() == commander_name.lower()]
+            name_lower = commander_name.lower()
+            # Générer l'alternative avec l'autre séparateur Partner
+            if " + " in name_lower:
+                name_alt = name_lower.replace(" + ", " & ")
+            else:
+                name_alt = name_lower.replace(" & ", " + ")
+            matches = [
+                d for d in DECKLISTS_DIR.iterdir()
+                if d.is_dir() and d.name.lower() in (name_lower, name_alt)
+            ]
             if matches:
                 cmd_dir = matches[0]
             else:
@@ -772,10 +830,10 @@ def compute_deck_composition(commander_name: str) -> dict:
     type_map = _load_card_type_map()
     dfc_land_norms = _load_dfc_land_norms()
 
-    # Mon deck
-    cmd_norm = _normalize(commander_name)
+    # Mon deck — exclure le(s) commandant(s) (gère Partner)
+    cmd_norms_set = _cmd_norms(commander_name)
     my_card_entries: list[tuple[str, int]] = [
-        (name, qty) for name, qty in entries if _normalize(name) != cmd_norm
+        (name, qty) for name, qty in entries if _normalize(name) not in cmd_norms_set
     ]
 
     my_counts, my_avg_cmc = _count_types_in_deck(my_card_entries, type_map, dfc_land_norms)
@@ -802,7 +860,12 @@ def compute_deck_composition(commander_name: str) -> dict:
             cmd_dir = DECKLISTS_DIR / commander_name
             if not cmd_dir.exists():
                 try:
-                    matches = [d for d in DECKLISTS_DIR.iterdir() if d.is_dir() and d.name.lower() == commander_name.lower()]
+                    name_lower = commander_name.lower()
+                    if " + " in name_lower:
+                        name_alt = name_lower.replace(" + ", " & ")
+                    else:
+                        name_alt = name_lower.replace(" & ", " + ")
+                    matches = [d for d in DECKLISTS_DIR.iterdir() if d.is_dir() and d.name.lower() in (name_lower, name_alt)]
                     if matches:
                         cmd_dir = matches[0]
                 except Exception:

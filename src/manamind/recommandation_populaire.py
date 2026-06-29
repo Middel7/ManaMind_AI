@@ -104,20 +104,31 @@ def load_deck_dataset(root: Path) -> list[DeckInfo]:
     return decks
 
 
-def build_statistics(decks: list[DeckInfo]) -> tuple[Counter, dict[str, list[DeckInfo]], dict[str, Counter]]:
+def build_statistics(decks: list[DeckInfo]) -> tuple[Counter, dict[str, list[DeckInfo]], list[DeckInfo]]:
     deck_frequency = Counter()
     commander_decks: dict[str, list[DeckInfo]] = defaultdict(list)
-    cooccurrence: dict[str, Counter] = defaultdict(Counter)
 
     for deck in decks:
         for card in deck.cards:
             deck_frequency[card] += 1
         if deck.commander:
             commander_decks[deck.commander].append(deck)
-        for card in deck.cards:
-            cooccurrence[card].update(deck.cards - {card})
 
-    return deck_frequency, commander_decks, cooccurrence
+    # La co-occurrence n'est plus pré-calculée globalement (trop coûteux sur 28k decks).
+    # On retourne la liste brute pour permettre un calcul local si besoin.
+    return deck_frequency, commander_decks, decks
+
+
+def _build_cooccurrence_for(input_cards: set[str], decks: list[DeckInfo]) -> dict[str, Counter]:
+    """Calcule la co-occurrence uniquement pour les cartes du deck cible."""
+    cooccurrence: dict[str, Counter] = defaultdict(Counter)
+    for deck in decks:
+        relevant = deck.cards & input_cards
+        if not relevant:
+            continue
+        for card in relevant:
+            cooccurrence[card].update(deck.cards - {card})
+    return cooccurrence
 
 
 def recommend_additions(
@@ -126,7 +137,7 @@ def recommend_additions(
     deck_frequency: Counter,
     commander: str | None,
     commander_decks: dict[str, list[DeckInfo]],
-    cooccurrence: dict[str, Counter],
+    all_decks: list[DeckInfo],
     limit: int = 20,
 ) -> list[tuple[str, int]]:
     candidates = all_cards - input_cards - BASIC_LANDS
@@ -138,7 +149,8 @@ def recommend_additions(
                     score[card] += 1
         if len(score) >= limit:
             return score.most_common(limit)
-        # fallback to co-occurrence if commander-specific scoring is sparse
+        # Fallback co-occurrence calculée à la volée sur les cartes du deck uniquement
+        cooccurrence = _build_cooccurrence_for(input_cards, all_decks)
         fallback = Counter()
         for card in input_cards:
             fallback.update(cooccurrence.get(card, Counter()))
@@ -149,6 +161,7 @@ def recommend_additions(
                 score[card] += extra_score
         return [(card, score[card]) for card in score.most_common(limit) if card in candidates][:limit]
 
+    cooccurrence = _build_cooccurrence_for(input_cards, all_decks)
     for card in input_cards:
         score.update(cooccurrence.get(card, Counter()))
     for card in input_cards:
@@ -161,7 +174,7 @@ def recommend_removals(
     deck_frequency: Counter,
     commander: str | None,
     commander_decks: dict[str, list[DeckInfo]],
-    cooccurrence: dict[str, Counter],
+    all_decks: list[DeckInfo],
     commander_card: str | None,
     limit: int = 20,
 ) -> list[tuple[str, int, float]]:
@@ -175,6 +188,7 @@ def recommend_removals(
         removals.sort(key=lambda item: (item[1], item[2], item[0]))
         return removals[:limit]
 
+    cooccurrence = _build_cooccurrence_for(input_cards, all_decks)
     for card in sorted(candidates):
         support = sum(cooccurrence.get(card, Counter()).get(other, 0) for other in candidates if other != card)
         removals.append((card, support, deck_frequency[card]))
@@ -228,11 +242,11 @@ def main() -> None:
     output_path = Path(args.output)
     cards, commander = parse_decklist_text(input_path)
     deck_infos = load_deck_dataset(DECKLISTS_ROOT)
-    deck_frequency, commander_decks, cooccurrence = build_statistics(deck_infos)
+    deck_frequency, commander_decks, all_decks = build_statistics(deck_infos)
 
     all_cards = set(deck_frequency) | set(cards)
-    additions = recommend_additions(set(cards), all_cards, deck_frequency, commander, commander_decks, cooccurrence)
-    removals = recommend_removals(set(cards), deck_frequency, commander, commander_decks, cooccurrence, commander)
+    additions = recommend_additions(set(cards), all_cards, deck_frequency, commander, commander_decks, all_decks)
+    removals = recommend_removals(set(cards), deck_frequency, commander, commander_decks, all_decks, commander)
 
     print_recommendations(commander, additions, removals)
     save_recommendations(output_path, commander, additions, removals, len(cards))
