@@ -233,7 +233,9 @@
     </div>
 
     <div id="cardVisual">
-      <img id="cardVisualImg" alt="" />
+      <a id="cardVisualLink" href="#" target="_blank" rel="noopener noreferrer" style="display:block;width:100%">
+        <img id="cardVisualImg" alt="" style="cursor:pointer" />
+      </a>
       <div id="cardVisualPrice"></div>
     </div>
   </div>
@@ -337,7 +339,9 @@
   // ── Visuel carte + prix Scryfall ──────────────────────────────────────────
   const cardVisual      = document.getElementById('cardVisual');
   const cardVisualImg   = document.getElementById('cardVisualImg');
+  const cardVisualLink  = document.getElementById('cardVisualLink');
   const cardVisualPrice = document.getElementById('cardVisualPrice');
+  const cardmarketUrl   = name => 'https://www.cardmarket.com/en/Magic/Products/Search?category=-1&searchString=' + encodeURIComponent(name);
 
   const scryfallCache = new Map();
   async function fetchCardVisual(name) {
@@ -364,6 +368,7 @@
     const data = await fetchCardVisual(name);
     if (data.image) {
       cardVisualImg.src = data.image;
+      cardVisualLink.href = cardmarketUrl(data.canonicalName || name);
       cardVisualPrice.textContent = data.price != null ? '€' + data.price.toFixed(2).replace('.', ',') : '';
       cardVisual.classList.add('show');
     } else {

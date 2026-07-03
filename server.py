@@ -8,6 +8,8 @@ from pathlib import Path
 import re
 import unicodedata
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, File, Form, Query, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response
 import json as _json
@@ -173,16 +175,22 @@ except Exception:
     CardPrinting = None  # type: ignore[assignment]
     _DB_AVAILABLE = False
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Précharge le moteur dès le démarrage du serveur (évite le délai au premier appel)."""
+    import asyncio
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, _get_deck_engine)
+    yield
 
-# ── Deck Improvement Engine — singleton lazy-loadé ────────────────────────────
-# Chargé à la première requête POST /api/deck/analyze (~24s la première fois).
-# Les appels suivants utilisent l'instance déjà en mémoire.
+app = FastAPI(lifespan=lifespan)
+
+# ── Deck Improvement Engine — singleton préchargé au démarrage ───────────────
 _deck_engine = None
 _deck_engine_lock = None
 
 def _get_deck_engine():
-    """Retourne le DeckImprovementEngine en le chargeant si nécessaire (lazy)."""
+    """Retourne le DeckImprovementEngine (préchargé au démarrage, thread-safe)."""
     global _deck_engine, _deck_engine_lock
     import threading
     if _deck_engine_lock is None:
@@ -309,7 +317,7 @@ async def api_deck_analyze(request: Request) -> JSONResponse:
         t0 = _time.perf_counter()
 
         profile   = engine.analyze_deck(commander, decklist)
-        gap_summaries, dist_meta = engine.gap_analysis(commander, profile)
+        gap_summaries, dist_meta = engine.gap_analysis(commander, profile, decklist)
         additions = engine.generate_additions(commander, decklist, profile, gap_summaries)
         cuts      = engine.generate_cuts(commander, decklist, profile)
         replacements = engine.generate_replacements(cuts, additions)
@@ -340,7 +348,8 @@ async def api_deck_analyze(request: Request) -> JSONResponse:
             )[:10]
         ]
 
-        # Gap analysis (clusters avec delta significatif)
+        # Gap analysis — clusters spécifiques au commandant (commander_cluster_meta)
+        # Filtrage simple : garder uniquement les clusters avec un delta significatif
         gap_data = [
             {
                 "cluster_id":   s.cluster_id,
@@ -351,8 +360,8 @@ async def api_deck_analyze(request: Request) -> JSONResponse:
                 "delta":        round(s.delta * 100, 1),
             }
             for s in gap_summaries
-            if abs(s.delta) > 0.015
-        ][:20]
+            if abs(s.delta) > 0.01
+        ][:15]
 
         return _json_response({
             "commander":     commander,

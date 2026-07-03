@@ -252,17 +252,29 @@ class DeckImprovementEngine:
             for c in fdata["clusters"]:
                 self.cluster_family[c["cluster_id"]] = family
 
+        # Option C : lire card_cluster_full.csv (inclut les cartes bruit réassignées)
+        # Fallback sur les CSV individuels si le fichier n'existe pas encore.
         self.card_cluster: dict[str, int] = {}
-        for path in sorted((CLUST_DIR / "clusters").glob("cluster_*.csv")):
-            df = pd.read_csv(path, encoding="utf-8")
-            for _, row in df.iterrows():
-                self.card_cluster[row["card_name"]] = int(row["cluster_id"])
+        full_path = CLUST_DIR / "card_cluster_full.csv"
+        if full_path.exists():
+            df_full = pd.read_csv(full_path, encoding="utf-8")
+            for _, row in df_full.iterrows():
+                cid = int(row["cluster_id"])
+                if cid != -1:
+                    self.card_cluster[row["card_name"]] = cid
+            log.info("  Clusters : %d cartes (card_cluster_full.csv, fallback cosine inclus)",
+                     len(self.card_cluster))
+        else:
+            for path in sorted((CLUST_DIR / "clusters").glob("cluster_*.csv")):
+                df = pd.read_csv(path, encoding="utf-8")
+                for _, row in df.iterrows():
+                    self.card_cluster[row["card_name"]] = int(row["cluster_id"])
+            log.info("  Clusters : %d cartes clustérisées (CSV individuels)", len(self.card_cluster))
 
         # Profil de clusters du commandant (poids = Σ tfidf_norm par cluster)
         self.cmd_cluster_profile: dict[str, dict[int, float]] = (
             self._build_cmd_cluster_profiles(tfidf_df)
         )
-        log.info("  Clusters : %d cartes clustérisées", len(self.card_cluster))
 
         # ── Tags → Cluster (Naive Bayes) ─────────────────────────────────────
         self._t2c_pivot, self._nb, self._mlb, self._nb_classes = self._build_tag_model()
@@ -496,22 +508,112 @@ class DeckImprovementEngine:
     # ── Étape 2 : Gap analysis ────────────────────────────────────────────────
 
     def gap_analysis(
-        self, commander: str, deck_profile: DeckProfile
+        self, commander: str, deck_profile: DeckProfile,
+        decklist: list[str] | None = None,
     ) -> tuple[list[ClusterSummary], float]:
         """
         Retourne (cluster_summaries, distance_to_meta).
-        distance = distance euclidienne entre vecteur cluster du deck et vecteur méta.
+
+        Utilise commander_cluster_meta (clustering spécifique par commandant) si disponible.
+        Fallback sur cmd_cluster_profile (clusters globaux) sinon.
         """
+        cmd_meta = self._load_commander_cluster_meta(commander)
+        if cmd_meta and decklist is not None:
+            return self._gap_from_commander_clusters(commander, decklist, cmd_meta)
+        else:
+            return self._gap_from_global_clusters(commander, deck_profile)
+
+    def _load_commander_cluster_meta(self, commander: str) -> list[dict]:
+        """Charge commander_cluster_meta depuis la DB. Retourne [] si absent."""
+        try:
+            with SessionLocal() as s:
+                rows = s.execute(text("""
+                    SELECT cluster_id, cluster_label, card_count,
+                           deck_presence, total_decks, presence_rate, top_cards
+                    FROM commander_cluster_meta
+                    WHERE commander = :c
+                    ORDER BY deck_presence DESC
+                """), {"c": commander}).fetchall()
+            return [dict(r._mapping) for r in rows]
+        except Exception:
+            return []
+
+    def _gap_from_commander_clusters(
+        self, commander: str, decklist: list[str], cmd_meta: list[dict]
+    ) -> tuple[list[ClusterSummary], float]:
+        """
+        Gap analysis basé sur commander_cluster_meta.
+
+        deck_share  = part des cartes du deck appartenant à ce cluster (via commander_clusters)
+        meta_share  = presence_rate du cluster dans les decks méta (depuis commander_cluster_meta)
+        """
+        try:
+            with SessionLocal() as s:
+                rows = s.execute(text("""
+                    SELECT card_name, cluster_id
+                    FROM commander_clusters
+                    WHERE commander = :c
+                """), {"c": commander}).fetchall()
+            card_to_cluster: dict[str, int] = {r.card_name: r.cluster_id for r in rows}
+        except Exception as e:
+            log.warning("Fallback global clusters : %s", e)
+            return self._gap_from_global_clusters(commander, DeckProfile(
+                commander=commander, card_count=0, deck_embedding=[],
+                coherence_score=0, avg_cosine_to_commander=0,
+                cluster_distribution={}, family_distribution={},
+                tag_distribution={}, mana_curve={}, color_distribution={},
+                missing_in_corpus=[],
+            ))
+
+        # Compter les cartes du deck dans chaque cluster du commandant
+        cluster_card_counts: dict[int, int] = {}
+        total_matched = 0
+        for card in decklist:
+            cid = card_to_cluster.get(card)
+            if cid is not None:
+                cluster_card_counts[cid] = cluster_card_counts.get(cid, 0) + 1
+                total_matched += 1
+
+        total_matched = total_matched or 1
+
+        summaries: list[ClusterSummary] = []
+        for m in cmd_meta:
+            cid        = int(m["cluster_id"])
+            label      = m["cluster_label"] or f"Cluster {cid}"
+            deck_count = cluster_card_counts.get(cid, 0)
+            d_share    = round(deck_count / total_matched, 4)
+            m_share    = round(float(m["presence_rate"]) / 100.0, 4)
+            delta      = round(d_share - m_share, 4)
+            summaries.append(ClusterSummary(
+                cluster_id=cid,
+                name=label,
+                family=label,
+                card_count=deck_count,
+                deck_share=d_share,
+                meta_share=m_share,
+                delta=delta,
+            ))
+
+        d_vec = np.array([s.deck_share for s in summaries])
+        m_vec = np.array([s.meta_share for s in summaries])
+        dist  = float(np.linalg.norm(d_vec - m_vec))
+
+        summaries.sort(key=lambda s: -abs(s.delta))
+        return summaries, round(dist, 4)
+
+    def _gap_from_global_clusters(
+        self, commander: str, deck_profile: DeckProfile
+    ) -> tuple[list[ClusterSummary], float]:
+        """Fallback : gap analysis avec les clusters globaux (ancienne méthode)."""
         meta = self.cmd_cluster_profile.get(commander, {})
         deck_dist = {
             cid: v["share"]
             for cid, v in deck_profile.cluster_distribution.items()
         }
-
         all_cids = sorted(set(list(meta.keys()) + list(deck_dist.keys())))
         summaries: list[ClusterSummary] = []
         for cid in all_cids:
-            ann = self.annotations.get(cid, {})
+            ann     = self.annotations.get(cid, {})
             d_share = deck_dist.get(cid, 0.0)
             m_share = meta.get(cid, 0.0)
             summaries.append(ClusterSummary(
@@ -523,12 +625,9 @@ class DeckImprovementEngine:
                 meta_share=round(m_share, 4),
                 delta=round(d_share - m_share, 4),
             ))
-
-        # Distance euclidienne normalisée
         d_vec = np.array([deck_dist.get(cid, 0.0) for cid in all_cids])
         m_vec = np.array([meta.get(cid, 0.0)      for cid in all_cids])
         dist  = float(np.linalg.norm(d_vec - m_vec))
-
         summaries.sort(key=lambda s: -abs(s.delta))
         return summaries, round(dist, 4)
 

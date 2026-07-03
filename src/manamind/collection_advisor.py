@@ -9,7 +9,6 @@ ROOT = Path(__file__).resolve().parents[2]
 COLLECTION_FILE = ROOT / "Ma collection.txt"
 MY_DECKS_DIR    = ROOT / "data" / "My decks"
 COMMANDERS_FILE = ROOT / "data" / "My_commanders.txt"
-FREQUENCY_CSV   = ROOT / "data" / "stats" / "commander_frequency.csv"
 OPENED_SETS_FILE = ROOT / "Opened.txt"
 DECKLISTS_DIR   = ROOT / "data" / "Decklists"
 TYPE_AVERAGES_CACHE = ROOT / "data" / "stats" / "deck_type_averages.json"
@@ -29,29 +28,48 @@ def _cmd_norms(commander_name: str) -> set[str]:
     return {_normalize(n.strip()) for n in commander_name.split("+") if n.strip()}
 
 
-def _cmd_freq(commander_name: str, freq_index: dict) -> dict:
-    """Retourne les données EDHREC pour un commandant.
-    Pour les Partner, essaie d'abord le nom complet 'A + B', puis chaque partie seule,
-    et retourne les données du commandant avec le plus grand nombre de decks."""
+def _cmd_freq_db(commander_name: str) -> dict[str, dict]:
+    """
+    Retourne { card_norm: {card_name, inclusion_rate, decks_with_card, total_decks} }
+    depuis PostgreSQL pour un commandant.
+    Pour les Partner ("A + B"), essaie le nom complet puis chaque partie,
+    et retourne les données du jeu de decks le plus fourni.
+    """
+    from sqlalchemy import text as _text
+    from manamind.db.engine import SessionLocal as _SessionLocal
+
     parts = [n.strip() for n in commander_name.split("+")]
-    candidates: list[tuple[int, dict]] = []
-    # Essai 1 : nom complet "A + B" (si indexé ainsi)
-    full_norm = _normalize(commander_name)
-    if full_norm in freq_index:
-        data = freq_index[full_norm]
-        sample = next(iter(data.values()), {})
-        candidates.append((sample.get("total_decks", 0), data))
-    # Essai 2 : chaque partie séparément
-    for part in parts:
-        norm = _normalize(part)
-        if norm in freq_index:
-            data = freq_index[norm]
-            sample = next(iter(data.values()), {})
-            candidates.append((sample.get("total_decks", 0), data))
-    if not candidates:
-        return {}
-    # Retourner les données du commandant avec le plus de decks (meilleure base statistique)
-    return max(candidates, key=lambda x: x[0])[1]
+    candidates_to_try = [commander_name] + (parts if len(parts) > 1 else [])
+
+    best_total = -1
+    best_data: dict[str, dict] = {}
+
+    with _SessionLocal() as session:
+        for name in candidates_to_try:
+            rows = session.execute(
+                _text("""
+                    SELECT card_name, inclusion_rate, decks_with_card, total_decks
+                    FROM deck_stat_commander
+                    WHERE commander = :cmd
+                """),
+                {"cmd": name},
+            ).fetchall()
+            if not rows:
+                continue
+            total = rows[0].total_decks
+            if total > best_total:
+                best_total = total
+                best_data = {
+                    _normalize(r.card_name): {
+                        "card_name":       r.card_name,
+                        "inclusion_rate":  r.inclusion_rate,
+                        "decks_with_card": r.decks_with_card,
+                        "total_decks":     r.total_decks,
+                    }
+                    for r in rows
+                }
+
+    return best_data
 
 
 def _parse_card_line(line: str) -> tuple[str, int] | None:
@@ -185,37 +203,6 @@ def load_opened_set_cards() -> dict[str, str]:
         return {}
 
 
-def load_frequency_index() -> dict[str, dict[str, dict]]:
-    """
-    Charge commander_frequency.csv.
-    Retourne { commander_norm: { card_norm: { card_name, inclusion_rate, decks_with_card, total_decks } } }
-    """
-    import csv
-    index: dict[str, dict[str, dict]] = {}
-    if not FREQUENCY_CSV.exists():
-        return index
-    with open(FREQUENCY_CSV, encoding="utf-8-sig", newline="") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            cmd_norm  = _normalize(row["commander"].strip())
-            card_raw  = row["card_name"].strip()
-            card_norm = _normalize(card_raw)
-            try:
-                ir  = float(row["inclusion_rate"])
-                dwc = int(row["decks_with_card"])
-                td  = int(row["total_decks"])
-            except (ValueError, KeyError):
-                continue
-            if cmd_norm not in index:
-                index[cmd_norm] = {}
-            index[cmd_norm][card_norm] = {
-                "card_name":      card_raw,
-                "inclusion_rate": ir,
-                "decks_with_card": dwc,
-                "total_decks":    td,
-            }
-    return index
-
 
 # ── Algorithme principal ──────────────────────────────────────────────────────
 
@@ -251,7 +238,6 @@ def suggest_from_collection(top_n: int = 40, commander_filter: str | None = None
     collection  = load_collection()           # { norm: qty }
     deck_usage  = load_my_decks()             # { norm: nb_decks }
     commanders  = load_allowed_commanders()   # { norm: display }
-    freq_index  = load_frequency_index()      # { cmd_norm: { card_norm: {...} } }
     opened_set_cards = load_opened_set_cards()  # { norm: name } cartes C/UC des sets ouverts
 
     # Index des cartes par deck : { cmd_norm: set[card_norm] }
@@ -288,19 +274,17 @@ def suggest_from_collection(top_n: int = 40, commander_filter: str | None = None
     # Fusionner : collection prioritaire sur sets ouverts
     available: dict[str, tuple[int, str]] = {**available_opened, **available_collection}
 
-    # Pour chaque carte disponible, trouver le meilleur commandant
-    # (la carte ne doit pas déjà être dans le deck de ce commandant)
+    # Pour chaque commandant, requête SQL unique puis croisement avec les cartes disponibles
     best_per_card: dict[str, dict] = {}
 
     for cmd_norm, cmd_display in commanders.items():
-        cmd_cards = _cmd_freq(cmd_display, freq_index)
+        cmd_cards = _cmd_freq_db(cmd_display)
         if not cmd_cards:
             continue
         this_deck = deck_cards_index.get(cmd_norm, set())
         for card_norm, (qty, source) in available.items():
             if card_norm not in cmd_cards:
                 continue
-            # Exclure si la carte est déjà dans ce deck
             if card_norm in this_deck:
                 continue
             data = cmd_cards[card_norm]
@@ -365,10 +349,7 @@ def suggest_moves(top_n: int = 30) -> dict:
         }
     """
     commanders  = load_allowed_commanders()   # {norm: display}
-    freq_index  = load_frequency_index()      # {cmd_norm: {card_norm: {...}}}
 
-    # Construire le mapping fichier -> (cmd_norm, cmd_display)
-    # Construire l'index : cmd_norm -> (cmd_display, set(card_norm))
     deck_cards: dict[str, set[str]] = {}
     valid_commanders: dict[str, str] = {}  # norm -> display, seulement ceux avec decklist
     for cmd_norm, cmd_display in commanders.items():
@@ -401,8 +382,14 @@ def suggest_moves(top_n: int = 30) -> dict:
     best_move: dict[str, dict] = {}
     cards_scanned = 0
 
+    # Pré-charger les stats SQL pour tous les commandants valides en une passe
+    freq_cache: dict[str, dict[str, dict]] = {
+        cmd_norm: _cmd_freq_db(cmd_display)
+        for cmd_norm, cmd_display in valid_commanders.items()
+    }
+
     for from_norm, from_display in valid_commanders.items():
-        from_freq  = _cmd_freq(from_display, freq_index)
+        from_freq  = freq_cache.get(from_norm, {})
         from_cmd_norms = _cmd_norms(from_display)
         entries, _ = _get_deck_entries(from_display)
 
@@ -419,7 +406,6 @@ def suggest_moves(top_n: int = 30) -> dict:
             if from_rate is None:
                 continue
 
-            # Chercher le meilleur autre commandant pour cette carte
             best_other_norm  = None
             best_other_disp  = None
             best_other_rate  = from_rate
@@ -430,10 +416,10 @@ def suggest_moves(top_n: int = 30) -> dict:
                     continue
                 if card_norm in deck_cards.get(to_norm, set()):
                     continue
-                cmd_freq = _cmd_freq(to_display, freq_index)
-                if card_norm not in cmd_freq:
+                to_freq = freq_cache.get(to_norm, {})
+                if card_norm not in to_freq:
                     continue
-                other_data = cmd_freq[card_norm]
+                other_data = to_freq[card_norm]
                 other_rate = other_data["inclusion_rate"]
                 if other_rate > best_other_rate:
                     best_other_rate  = other_rate
@@ -442,7 +428,7 @@ def suggest_moves(top_n: int = 30) -> dict:
                     best_other_data  = other_data
 
             if best_other_norm is None:
-                continue  # pas de meilleur endroit disponible
+                continue
 
             gain = best_other_rate - from_rate
             existing = best_move.get(card_norm)
@@ -458,11 +444,10 @@ def suggest_moves(top_n: int = 30) -> dict:
                     "total_decks":     best_other_data["total_decks"],
                 }
 
-    # Commandants sans données dans le CSV (leurs cartes ont été ignorées)
     missing_data = sorted(
         cmd_display
         for cmd_norm, cmd_display in commanders.items()
-        if cmd_norm not in freq_index
+        if not freq_cache.get(cmd_norm)
     )
 
     ranked = sorted(best_move.values(), key=lambda r: (-r["gain"], r["card_name"]))
@@ -573,8 +558,7 @@ def suggest_cuts(commander_name: str) -> dict:
     if not source:
         return {"commander": commander_name, "deck_file": None, "results": [], "unknown": [], "error": "Deck introuvable (ni Moxfield ni fichier local)"}
 
-    freq_index = load_frequency_index()
-    cmd_cards  = _cmd_freq(commander_name, freq_index)
+    cmd_cards  = _cmd_freq_db(commander_name)
     cmd_norms  = _cmd_norms(commander_name)
 
     deck_card_names: list[str] = [name for name, _ in entries]

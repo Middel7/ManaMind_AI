@@ -562,6 +562,59 @@ Envoyer `cluster_descriptions.json` à un LLM (Claude Opus) avec le prompt :
     log.info("Ecrit : clustering_report.md")
 
 
+# ── Option C : fallback cosine pour les cartes bruit ─────────────────────────
+
+def export_noise_fallback(
+    df: pd.DataFrame,
+    centroids: np.ndarray,
+    clust_ids: list[int],
+) -> None:
+    """
+    Assigne chaque carte bruit (cluster_id == -1) au centroïde HDBSCAN le plus proche
+    par similarité cosine, puis écrit card_cluster_full.csv.
+
+    Ce fichier est utilisé par deck_improver.py à la place des CSV individuels.
+    Il couvre 100% des cartes (plus aucune bruit silencieusement ignorée).
+    """
+    emb_cols = [c for c in df.columns if c.startswith("emb_")]
+
+    noise_mask = df["cluster_id"] == -1
+    n_noise = int(noise_mask.sum())
+    log.info("Fallback cosine pour %d cartes bruit...", n_noise)
+
+    # Normaliser les centroides pour dot product = cosine
+    cent_norm = centroids / (np.linalg.norm(centroids, axis=1, keepdims=True) + 1e-9)
+
+    # Traiter les cartes bruit par batch de 1000 pour économiser la mémoire
+    result_labels = df["cluster_id"].copy()
+    noise_indices = np.where(noise_mask)[0]
+
+    BATCH = 1000
+    for start in range(0, len(noise_indices), BATCH):
+        batch_idx = noise_indices[start: start + BATCH]
+        vecs = df.iloc[batch_idx][emb_cols].to_numpy(dtype=np.float32)
+        norms = np.linalg.norm(vecs, axis=1, keepdims=True)
+        vecs_norm = vecs / (norms + 1e-9)
+        sims = vecs_norm @ cent_norm.T          # (batch, n_clusters)
+        best = np.argmax(sims, axis=1)
+        for i, idx in enumerate(batch_idx):
+            result_labels.iloc[idx] = clust_ids[best[i]]
+
+    assigned_noise = int((result_labels[noise_mask] != -1).sum())
+    log.info("  %d/%d cartes bruit assignées par fallback", assigned_noise, n_noise)
+
+    # Écrire card_cluster_full.csv
+    out = df[["card_name", "global_frequency"]].copy()
+    out["cluster_id"]       = result_labels.values
+    out["is_noise_fallback"] = noise_mask.values
+    out = out.sort_values("global_frequency", ascending=False).reset_index(drop=True)
+
+    path = OUT_DIR / "card_cluster_full.csv"
+    out.to_csv(path, index=False, encoding="utf-8")
+    log.info("Ecrit : card_cluster_full.csv (%d cartes, dont %d fallback)",
+             len(out), n_noise)
+
+
 # ── Point d'entrée ────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -591,6 +644,9 @@ def main() -> None:
     # 7. Centroides
     centroids, clust_ids = compute_centroids(df, summary)
     centroids_df = pd.read_csv(OUT_DIR / "cluster_centroids.csv")
+
+    # 7b. Option C : fallback cosine pour les cartes bruit
+    export_noise_fallback(df, centroids, clust_ids)
 
     # 8. Similarité
     sim_df = None

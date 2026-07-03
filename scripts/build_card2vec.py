@@ -47,8 +47,10 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 # ── Chemins ──────────────────────────────────────────────────────────────────
-DECKLISTS_DIR = ROOT / "data" / "Decklists"
-TFIDF_CSV     = ROOT / "data" / "stats" / "commander_tfidf.csv"
+# Source principale : Bureau (411k decks). Fallback : data/Decklists/ (28k decks).
+DECKLISTS_DIR = Path(r"C:\Users\fabie\Desktop\decklists_csv\output_csv")
+if not DECKLISTS_DIR.exists():
+    DECKLISTS_DIR = ROOT / "data" / "Decklists"
 OUT_DIR       = ROOT / "data" / "embeddings"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -272,7 +274,7 @@ def export_neighbors(model: Word2Vec, token_to_name: dict[str, str]) -> None:
 
 # ── Commander Embeddings pondérés TF-IDF ─────────────────────────────────────
 
-def build_commander_embeddings(model: Word2Vec, tfidf_path: Path) -> None:
+def build_commander_embeddings(model: Word2Vec) -> None:
     """
     Construit un vecteur par commandant par moyenne pondérée TF-IDF.
 
@@ -282,13 +284,21 @@ def build_commander_embeddings(model: Word2Vec, tfidf_path: Path) -> None:
       commander_embeddings.npy  -- float32 (nb_commandants × VECTOR_SIZE)
       commander_embeddings.json -- { commander: [float, ...] }
     """
-    if not tfidf_path.exists():
-        log.warning("commander_tfidf.csv introuvable — skip commander embeddings")
-        return
-
     import pandas as pd
-    log.info("Chargement TF-IDF depuis %s...", tfidf_path.name)
-    df = pd.read_csv(tfidf_path, encoding="utf-8")
+    from dotenv import load_dotenv
+    load_dotenv(ROOT / ".env")
+    from src.manamind.db.engine import SessionLocal
+    from sqlalchemy import text as _text
+
+    log.info("Chargement TF-IDF depuis PostgreSQL (deck_stat_commander)...")
+    with SessionLocal() as s:
+        rows = s.execute(_text("""
+            SELECT commander, card_name, tfidf_norm
+            FROM deck_stat_commander
+            WHERE tfidf_norm IS NOT NULL
+        """)).fetchall()
+    df = pd.DataFrame(rows, columns=["commander", "card_name", "tfidf_norm"])
+    log.info("TF-IDF chargé : %d paires depuis DB", len(df))
 
     # Pré-calculer les tokens une seule fois
     df["token"] = df["card_name"].map(normalize)
@@ -374,7 +384,7 @@ def main() -> None:
     export_neighbors(model, token_to_name)
 
     # Commander embeddings pondérés TF-IDF
-    build_commander_embeddings(model, TFIDF_CSV)
+    build_commander_embeddings(model)
 
     # Aperçu qualitatif
     log.info("--- Apercu nearest_neighbors ---")

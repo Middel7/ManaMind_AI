@@ -59,7 +59,6 @@ STATS_DIR = ROOT / "data" / "stats"
 OUT_DIR   = ROOT / "data" / "ml"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-TFIDF_CSV   = STATS_DIR / "commander_tfidf.csv"
 CARD_NPY    = EMB_DIR / "card_embeddings.npy"
 CMD_NPY     = EMB_DIR / "commander_embeddings.npy"
 CMD_JSON    = EMB_DIR / "commander_embeddings.json"
@@ -150,6 +149,20 @@ def load_global_frequency() -> dict[str, float]:
             "SELECT card_name, global_frequency FROM deck_stat_global"
         )).fetchall()
     return {r[0]: float(r[1]) for r in rows}
+
+
+def load_tfidf_from_db() -> pd.DataFrame:
+    """Charge les stats TF-IDF depuis deck_stat_commander (PostgreSQL)."""
+    log.info("Chargement TF-IDF depuis DB (deck_stat_commander)...")
+    with SessionLocal() as s:
+        rows = s.execute(text("""
+            SELECT commander, card_name, inclusion_rate, idf, tfidf, tfidf_norm
+            FROM deck_stat_commander
+            WHERE tfidf IS NOT NULL
+        """)).fetchall()
+    df = pd.DataFrame(rows, columns=["commander", "card_name", "inclusion_rate", "idf", "tfidf", "tfidf_norm"])
+    log.info("TF-IDF chargé : %d paires (commandant, carte)", len(df))
+    return df
 
 
 # ── Construction du dataset ───────────────────────────────────────────────────
@@ -275,7 +288,7 @@ def main() -> None:
 
     # Chargement
     card_matrix, cmd_matrix, card_idx, cmd_idx = load_embeddings()
-    tfidf_df   = pd.read_csv(TFIDF_CSV, encoding="utf-8")
+    tfidf_df   = load_tfidf_from_db()
     scryfall   = load_scryfall_metadata()
     cmd_colors = load_commander_color_identity()
     global_freq = load_global_frequency()

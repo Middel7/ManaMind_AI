@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-import csv
 import unicodedata
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 COMMANDERS_FILE = ROOT / "data" / "My_commanders.txt"
-FREQUENCY_CSV = ROOT / "data" / "stats" / "commander_frequency.csv"
-SUMMARY_CSV = ROOT / "data" / "stats" / "commander_summary.csv"
 MY_DECKS_DIR = ROOT / "data" / "My decks"
 
 
@@ -81,101 +78,78 @@ def suggest_commanders(card_name: str, top_n: int = 3) -> list[dict]:
     """
     Retourne les `top_n` commandants qui jouent le plus souvent `card_name`,
     parmi ceux listés dans data/commanders.txt.
-
-    Chaque résultat :
-        {
-            "commander": str,
-            "inclusion_rate": float,   # pourcentage 0–100
-            "decks_with_card": int,
-            "total_decks": int,
-        }
     """
+    from sqlalchemy import text as _text
+    from manamind.db.engine import SessionLocal as _SessionLocal
+
     allowed = load_allowed_commanders()
     allowed_norm = {_normalize(c): c for c in allowed}
-
     card_norm = _normalize(card_name)
-
-    # Chargement du summary pour le deck_count (départage à égalité)
-    deck_count: dict[str, int] = {}
-    if SUMMARY_CSV.exists():
-        with open(SUMMARY_CSV, encoding="utf-8-sig", newline="") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                cmd = row["commander"].strip()
-                try:
-                    deck_count[_normalize(cmd)] = int(row["deck_count"])
-                except (ValueError, KeyError):
-                    pass
 
     results: list[dict] = []
 
-    if not FREQUENCY_CSV.exists():
-        return results
+    with _SessionLocal() as session:
+        rows = session.execute(
+            _text("""
+                SELECT commander, inclusion_rate, decks_with_card, total_decks
+                FROM deck_stat_commander
+                WHERE card_name = :card
+                ORDER BY inclusion_rate DESC
+            """),
+            {"card": card_name},
+        ).fetchall()
 
-    with open(FREQUENCY_CSV, encoding="utf-8-sig", newline="") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            cmd_raw = row["commander"].strip()
-            card_raw = row["card_name"].strip()
+    for row in rows:
+        cmd_norm = _normalize(row.commander)
+        if cmd_norm not in allowed_norm:
+            continue
+        commander_display = allowed_norm[cmd_norm]
+        if _deck_contains_card(commander_display, card_norm):
+            continue
+        results.append({
+            "commander":      commander_display,
+            "inclusion_rate": round(row.inclusion_rate, 2),
+            "decks_with_card": row.decks_with_card,
+            "total_decks":    row.total_decks,
+        })
 
-            if _normalize(card_raw) != card_norm:
-                continue
-
-            cmd_norm = _normalize(cmd_raw)
-            if cmd_norm not in allowed_norm:
-                continue
-
-            try:
-                inclusion_rate = float(row["inclusion_rate"])
-                decks_with_card = int(row["decks_with_card"])
-                total_decks = int(row["total_decks"])
-            except (ValueError, KeyError):
-                continue
-
-            commander_display = allowed_norm[cmd_norm]
-            if _deck_contains_card(commander_display, card_norm):
-                continue
-
-            results.append({
-                "commander": commander_display,
-                "inclusion_rate": round(inclusion_rate, 2),
-                "decks_with_card": decks_with_card,
-                "total_decks": total_decks,
-            })
-
-    # Tri : inclusion_rate DESC, puis nom du commandant ASC (départage égalité)
     results.sort(key=lambda r: (-r["inclusion_rate"], r["commander"]))
     return results[:top_n]
 
 
-def _load_frequency_index() -> dict[str, dict[str, dict]]:
+def _load_commander_index_db(allowed_norm: dict[str, str]) -> dict[str, dict[str, dict]]:
     """
-    Charge commander_frequency.csv en mémoire.
-    Retourne : { commander_norm: { card_norm: {inclusion_rate, decks_with_card, total_decks, card_name} } }
+    Charge depuis PostgreSQL les stats pour tous les commandants autorisés.
+    Retourne { commander_norm: { card_norm: {card_name, inclusion_rate, decks_with_card, total_decks} } }
     """
+    from sqlalchemy import text as _text
+    from manamind.db.engine import SessionLocal as _SessionLocal
+
     index: dict[str, dict[str, dict]] = {}
-    if not FREQUENCY_CSV.exists():
+    if not allowed_norm:
         return index
-    with open(FREQUENCY_CSV, encoding="utf-8-sig", newline="") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            cmd_norm = _normalize(row["commander"].strip())
-            card_raw = row["card_name"].strip()
-            card_norm = _normalize(card_raw)
-            try:
-                ir = float(row["inclusion_rate"])
-                dwc = int(row["decks_with_card"])
-                td = int(row["total_decks"])
-            except (ValueError, KeyError):
-                continue
-            if cmd_norm not in index:
-                index[cmd_norm] = {}
-            index[cmd_norm][card_norm] = {
-                "card_name": card_raw,
-                "inclusion_rate": ir,
-                "decks_with_card": dwc,
-                "total_decks": td,
-            }
+
+    with _SessionLocal() as session:
+        rows = session.execute(
+            _text("""
+                SELECT commander, card_name, inclusion_rate, decks_with_card, total_decks
+                FROM deck_stat_commander
+                WHERE commander = ANY(:cmds)
+            """),
+            {"cmds": list(allowed_norm.values())},
+        ).fetchall()
+
+    for row in rows:
+        cmd_norm = _normalize(row.commander)
+        card_norm = _normalize(row.card_name)
+        if cmd_norm not in index:
+            index[cmd_norm] = {}
+        index[cmd_norm][card_norm] = {
+            "card_name":       row.card_name,
+            "inclusion_rate":  row.inclusion_rate,
+            "decks_with_card": row.decks_with_card,
+            "total_decks":     row.total_decks,
+        }
     return index
 
 
@@ -195,7 +169,7 @@ def detect_commander(card_names: list[str]) -> dict | None:
     """
     allowed = load_allowed_commanders()
     allowed_norm = {_normalize(c): c for c in allowed}
-    index = _load_frequency_index()
+    index = _load_commander_index_db(allowed_norm)
 
     input_norms = [_normalize(n) for n in card_names if n.strip()]
 
@@ -247,7 +221,7 @@ def suggest_additions(card_names: list[str], top_n: int = 20) -> dict:
     """
     allowed = load_allowed_commanders()
     allowed_norm = {_normalize(c): c for c in allowed}
-    index = _load_frequency_index()
+    index = _load_commander_index_db(allowed_norm)
 
     input_norms = {_normalize(n): n for n in card_names if n.strip()}
 

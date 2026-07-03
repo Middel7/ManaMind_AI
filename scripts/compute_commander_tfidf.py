@@ -2,39 +2,36 @@
 """
 compute_commander_tfidf.py
 
-Génère les profils TF-IDF par commandant depuis les tables PostgreSQL
-deck_stat_commander et deck_stat_global.
+Calcule et stocke idf, tfidf, tfidf_norm dans deck_stat_commander (PostgreSQL).
+Régénère aussi commander_tfidf.csv (pour les scripts ML qui en ont encore besoin)
+et commander_top_signatures.csv.
 
-TF(card, commander)       = inclusion_rate / 100  (ratio 0-1)
-TF-IDF(card, commander)   = TF × IDF
-Normalized TF-IDF         = TF-IDF / max(TF-IDF du commandant)
+Formules :
+  TF(card, commander)    = inclusion_rate / 100
+  IDF(card)              = depuis deck_stat_global.idf
+  TF-IDF                 = TF × IDF
+  TF-IDF normalisé       = TF-IDF / max(TF-IDF du commandant)
 
-Sorties :
-  data/stats/commander_tfidf.csv          ← toutes les paires (commander, card)
-  data/stats/commander_profiles/<slug>.csv ← top 500 par commandant
-  data/stats/commander_profiles_json/<slug>.json
-  data/stats/commander_summary.csv         ← résumé par commandant
-  data/stats/commander_top_signatures.csv  ← top 20 cartes signatures
+Usage :
+  uv run python scripts/compute_commander_tfidf.py
+  uv run python scripts/compute_commander_tfidf.py --no-csv   (DB seulement)
 """
 from __future__ import annotations
 
-import json
+import argparse
 import logging
-import re
 import sys
-import unicodedata
 from pathlib import Path
-
-import pandas as pd
-from tqdm import tqdm
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from src.manamind.db.engine import SessionLocal  # noqa: E402
-from sqlalchemy import text  # noqa: E402
+from dotenv import load_dotenv
+load_dotenv(ROOT / ".env")
 
-# ── Logging ──────────────────────────────────────────────────────────────────
+from sqlalchemy import text
+from src.manamind.db.engine import SessionLocal
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s  %(levelname)-8s  %(message)s",
@@ -46,201 +43,150 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-# ── Constantes ───────────────────────────────────────────────────────────────
-TOP_CARDS_PER_PROFILE = 500
-TOP_SIGNATURES = 20
 STATS_DIR = ROOT / "data" / "stats"
-PROFILES_DIR = STATS_DIR / "commander_profiles"
-JSON_DIR = STATS_DIR / "commander_profiles_json"
-
-(ROOT / "logs").mkdir(exist_ok=True)
-STATS_DIR.mkdir(parents=True, exist_ok=True)
-PROFILES_DIR.mkdir(exist_ok=True)
-JSON_DIR.mkdir(exist_ok=True)
+TOP_SIGNATURES = 20
 
 
-def slugify(name: str) -> str:
-    """Convertit un nom de commandant en slug ASCII snake_case."""
-    name = unicodedata.normalize("NFKD", name)
-    name = "".join(c for c in name if not unicodedata.combining(c))
-    name = re.sub(r"[^a-zA-Z0-9\s]", "", name)
-    name = re.sub(r"\s+", "_", name.strip())
-    return name
+def compute_tfidf_in_db(session) -> int:
+    """
+    Calcule et écrit idf, tfidf, tfidf_norm dans deck_stat_commander.
+    Retourne le nombre de lignes mises à jour.
+    """
+    n_cmd = session.execute(text(
+        "SELECT COUNT(DISTINCT commander) FROM deck_stat_commander"
+    )).scalar() or 1
 
+    log.info("Étape 0/3 — Recalcul IDF dans deck_stat_global (N=%d commandants)...", n_cmd)
+    session.execute(text(f"""
+        UPDATE deck_stat_global dsg
+        SET idf = LN({n_cmd}.0 / GREATEST(sub.cmd_count, 1))
+        FROM (
+            SELECT card_name, COUNT(DISTINCT commander) AS cmd_count
+            FROM deck_stat_commander
+            GROUP BY card_name
+        ) sub
+        WHERE dsg.card_name = sub.card_name
+    """))
+    session.commit()
 
-def load_from_db() -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Charge deck_stat_commander et deck_stat_global depuis PostgreSQL."""
-    log.info("Connexion à PostgreSQL...")
-    with SessionLocal() as session:
-        log.info("Chargement deck_stat_commander...")
-        commander_df = pd.read_sql(
-            text("SELECT commander, card_name, decks_with_card, total_decks, inclusion_rate FROM deck_stat_commander"),
-            session.bind,
+    log.info("Étape 1/3 — Copie de l'IDF vers deck_stat_commander...")
+    session.execute(text("""
+        UPDATE deck_stat_commander dsc
+        SET idf = dsg.idf
+        FROM deck_stat_global dsg
+        WHERE dsc.card_name = dsg.card_name
+    """))
+    session.execute(text("UPDATE deck_stat_commander SET idf = 0.0 WHERE idf IS NULL"))
+
+    log.info("Étape 2/3 — Calcul TF-IDF...")
+    session.execute(text("""
+        UPDATE deck_stat_commander
+        SET tfidf = ROUND(((inclusion_rate / 100.0) * idf)::numeric, 6)
+    """))
+
+    log.info("Étape 3/3 — Normalisation TF-IDF par commandant...")
+    session.execute(text("""
+        UPDATE deck_stat_commander dsc
+        SET tfidf_norm = ROUND(
+            (dsc.tfidf / NULLIF(mx.max_tfidf, 0))::numeric, 6
         )
-        log.info("Chargement deck_stat_global...")
-        global_df = pd.read_sql(
-            text("SELECT card_name, decks_count, total_decks, global_frequency, commanders_count, idf FROM deck_stat_global"),
-            session.bind,
-        )
-    log.info(
-        "Chargé : %d paires (commander, carte) | %d cartes globales",
-        len(commander_df),
-        len(global_df),
-    )
-    return commander_df, global_df
+        FROM (
+            SELECT commander, MAX(tfidf) AS max_tfidf
+            FROM deck_stat_commander
+            GROUP BY commander
+        ) mx
+        WHERE dsc.commander = mx.commander
+    """))
+    session.execute(text("UPDATE deck_stat_commander SET tfidf_norm = 0.0 WHERE tfidf_norm IS NULL"))
+    session.commit()
+
+    n = session.execute(text("SELECT COUNT(*) FROM deck_stat_commander WHERE tfidf IS NOT NULL")).scalar()
+    return n or 0
 
 
-def compute_tfidf(commander_df: pd.DataFrame, global_df: pd.DataFrame) -> pd.DataFrame:
-    """Calcule TF-IDF et normalized TF-IDF pour chaque paire (commander, card)."""
-    log.info("Calcul TF-IDF...")
-
-    # TF = inclusion_rate en ratio 0-1 (DB stocke en pourcentage)
-    df = commander_df.copy()
-    df["tf"] = df["inclusion_rate"] / 100.0
-
-    # Join avec IDF depuis deck_stat_global
-    idf_map = global_df.set_index("card_name")["idf"]
-    df["idf"] = df["card_name"].map(idf_map)
-
-    missing = df["idf"].isna().sum()
-    if missing > 0:
-        log.warning("%d cartes sans IDF — remplacement par 0.0", missing)
-        df["idf"] = df["idf"].fillna(0.0)
-
-    df["tfidf"] = df["tf"] * df["idf"]
-
-    # Normalized TF-IDF : score / max du commandant
-    max_per_commander = df.groupby("commander")["tfidf"].transform("max")
-    df["tfidf_norm"] = df["tfidf"] / max_per_commander.replace(0, 1)
-
-    # Colonnes finales
-    result = df[["commander", "card_name", "inclusion_rate", "idf", "tfidf", "tfidf_norm"]].copy()
-    result = result.sort_values(["commander", "tfidf"], ascending=[True, False])
-    result["inclusion_rate"] = result["inclusion_rate"].round(4)
-    result["idf"] = result["idf"].round(6)
-    result["tfidf"] = result["tfidf"].round(6)
-    result["tfidf_norm"] = result["tfidf_norm"].round(6)
-
-    log.info("TF-IDF calculé pour %d paires.", len(result))
-    return result
-
-
-def write_global_csv(df: pd.DataFrame) -> None:
-    """Écrit commander_tfidf.csv (toutes les paires)."""
+def write_tfidf_csv(session) -> None:
+    """Régénère commander_tfidf.csv depuis la DB (pour les scripts ML)."""
+    import csv
     path = STATS_DIR / "commander_tfidf.csv"
-    df.to_csv(path, index=False, encoding="utf-8")
-    log.info("Ecrit : %s (%d lignes)", path.name, len(df))
+    log.info("Écriture de %s...", path.name)
+    rows = session.execute(text("""
+        SELECT commander, card_name, inclusion_rate, idf, tfidf, tfidf_norm
+        FROM deck_stat_commander
+        ORDER BY commander ASC, tfidf DESC
+    """)).fetchall()
+    with open(path, "w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["commander", "card_name", "inclusion_rate", "idf", "tfidf", "tfidf_norm"])
+        for r in rows:
+            writer.writerow([r.commander, r.card_name,
+                             round(r.inclusion_rate, 4), round(r.idf, 6),
+                             round(r.tfidf, 6), round(r.tfidf_norm, 6)])
+    log.info("  %d lignes écrites dans %s", len(rows), path.name)
 
 
-def write_commander_profiles(df: pd.DataFrame) -> None:
-    """Écrit un CSV par commandant (top N cartes TF-IDF) + JSON."""
-    commanders = df["commander"].unique()
-    log.info("Génération des profils pour %d commandants...", len(commanders))
-
-    for cmd in tqdm(commanders, desc="Profils CSV+JSON", unit="cmd"):
-        slug = slugify(cmd)
-        cmd_df = df[df["commander"] == cmd].head(TOP_CARDS_PER_PROFILE).copy()
-        cmd_df.insert(0, "rank", range(1, len(cmd_df) + 1))
-
-        # CSV
-        csv_path = PROFILES_DIR / f"{slug}.csv"
-        cmd_df[["rank", "card_name", "inclusion_rate", "idf", "tfidf", "tfidf_norm"]].to_csv(
-            csv_path, index=False, encoding="utf-8"
-        )
-
-        # JSON
-        top_json = cmd_df.head(TOP_SIGNATURES)[["card_name", "tfidf", "tfidf_norm"]].to_dict(orient="records")
-        json_payload = {
-            "commander": cmd,
-            "top_cards": [
-                {
-                    "card_name": r["card_name"],
-                    "tfidf": round(r["tfidf"], 4),
-                    "tfidf_norm": round(r["tfidf_norm"], 4),
-                }
-                for r in top_json
-            ],
-        }
-        json_path = JSON_DIR / f"{slug}.json"
-        json_path.write_text(json.dumps(json_payload, ensure_ascii=False, indent=2), encoding="utf-8")
-
-
-def write_commander_summary(df: pd.DataFrame, commander_df: pd.DataFrame) -> None:
-    """Écrit commander_summary.csv — une ligne par commandant."""
-    log.info("Calcul du résumé commandants...")
-    rows = []
-    for cmd, group in df.groupby("commander"):
-        deck_count = int(commander_df[commander_df["commander"] == cmd]["total_decks"].iloc[0])
-        top_row = group.iloc[0]
-        rows.append({
-            "commander": cmd,
-            "deck_count": deck_count,
-            "unique_cards": len(group),
-            "mean_tfidf": round(group["tfidf"].mean(), 4),
-            "max_tfidf": round(group["tfidf"].max(), 4),
-            "top_card": top_row["card_name"],
-        })
-    summary = pd.DataFrame(rows).sort_values("commander")
-    path = STATS_DIR / "commander_summary.csv"
-    summary.to_csv(path, index=False, encoding="utf-8")
-    log.info("Ecrit : %s (%d commandants)", path.name, len(summary))
-
-
-def write_top_signatures(df: pd.DataFrame) -> None:
-    """Écrit commander_top_signatures.csv — top 20 cartes signatures par commandant."""
-    log.info("Calcul des signatures (top %d)...", TOP_SIGNATURES)
-    signatures = (
-        df.groupby("commander")
-        .head(TOP_SIGNATURES)
-        .copy()
-    )
-    signatures.insert(
-        0, "rank",
-        signatures.groupby("commander").cumcount() + 1
-    )
+def write_top_signatures(session) -> None:
+    """Régénère commander_top_signatures.csv."""
+    import csv
     path = STATS_DIR / "commander_top_signatures.csv"
-    signatures[["commander", "rank", "card_name", "tfidf", "tfidf_norm"]].to_csv(
-        path, index=False, encoding="utf-8"
-    )
-    log.info("Ecrit : %s (%d lignes)", path.name, len(signatures))
+    log.info("Écriture de %s...", path.name)
+    rows = session.execute(text(f"""
+        SELECT commander, card_name, tfidf, tfidf_norm, rank
+        FROM (
+            SELECT commander, card_name, tfidf, tfidf_norm,
+                   ROW_NUMBER() OVER (PARTITION BY commander ORDER BY tfidf DESC) AS rank
+            FROM deck_stat_commander
+            WHERE tfidf IS NOT NULL
+        ) sub
+        WHERE rank <= {TOP_SIGNATURES}
+        ORDER BY commander ASC, rank ASC
+    """)).fetchall()
+    with open(path, "w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["commander", "rank", "card_name", "tfidf", "tfidf_norm"])
+        for r in rows:
+            writer.writerow([r.commander, r.rank, r.card_name,
+                             round(r.tfidf, 6), round(r.tfidf_norm, 6)])
+    log.info("  %d lignes écrites dans %s", len(rows), path.name)
 
 
-def print_sample(df: pd.DataFrame, commander: str = "Galadriel, Light of Valinor") -> None:
-    """Affiche un aperçu pour un commandant donné."""
-    sample = df[df["commander"] == commander].head(10)
-    if sample.empty:
-        available = df["commander"].unique()[:5]
-        sample = df[df["commander"] == available[0]].head(10)
-        commander = available[0]
-    log.info("--- Apercu : %s ---", commander)
-    for _, row in sample.iterrows():
-        log.info(
-            "  %-40s  IR=%.2f%%  IDF=%.4f  TF-IDF=%.4f  norm=%.4f",
-            row["card_name"],
-            row["inclusion_rate"],
-            row["idf"],
-            row["tfidf"],
-            row["tfidf_norm"],
-        )
+def print_sample(session, commander: str = "Aesi, Tyrant of Gyre Strait") -> None:
+    rows = session.execute(text("""
+        SELECT card_name, inclusion_rate, idf, tfidf, tfidf_norm
+        FROM deck_stat_commander
+        WHERE commander = :cmd
+        ORDER BY tfidf DESC
+        LIMIT 10
+    """), {"cmd": commander}).fetchall()
+    if not rows:
+        return
+    log.info("--- Aperçu : %s ---", commander)
+    for r in rows:
+        log.info("  %-40s  IR=%6.2f%%  IDF=%.4f  TFIDF=%.4f  norm=%.4f",
+                 r.card_name, r.inclusion_rate, r.idf, r.tfidf, r.tfidf_norm)
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--no-csv", action="store_true",
+                        help="Ne pas régénérer les CSV (DB seulement)")
+    args = parser.parse_args()
+
+    (ROOT / "logs").mkdir(exist_ok=True)
+    STATS_DIR.mkdir(parents=True, exist_ok=True)
+
     log.info("=== compute_commander_tfidf.py ===")
 
-    commander_df, global_df = load_from_db()
-    tfidf_df = compute_tfidf(commander_df, global_df)
+    with SessionLocal() as session:
+        n = compute_tfidf_in_db(session)
+        log.info("TF-IDF calculé pour %d lignes en DB.", n)
 
-    write_global_csv(tfidf_df)
-    write_commander_profiles(tfidf_df)
-    write_commander_summary(tfidf_df, commander_df)
-    write_top_signatures(tfidf_df)
+        if not args.no_csv:
+            write_tfidf_csv(session)
+            write_top_signatures(session)
 
-    print_sample(tfidf_df)
+        print_sample(session)
 
-    log.info("=== Termine ===")
-    log.info("  commander_tfidf.csv        : %d lignes", len(tfidf_df))
-    log.info("  Profils CSV+JSON           : %d commandants", tfidf_df["commander"].nunique())
-    log.info("  Sorties dans               : %s", STATS_DIR)
+    log.info("=== Terminé ===")
 
 
 if __name__ == "__main__":
