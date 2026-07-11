@@ -37,8 +37,8 @@
 
   #app {
     position: relative; z-index: 1;
-    max-width: 1600px; margin: 0 auto;
-    padding: 48px 40px 80px;
+    max-width: 1920px; margin: 0 auto;
+    padding: 48px 48px 80px;
     display: flex; flex-direction: column; gap: 24px;
   }
 
@@ -146,27 +146,19 @@
 
 <div id="app">
 
-  <header class="site-header">
-    <a href="#" onclick="history.back(); return false;" class="back-link">← Retour</a>
-    <span style="font-family:var(--serif-engraved);font-size:0.7rem;letter-spacing:0.2em;color:var(--gold);opacity:0.5;">MANAMIND</span>
-    <nav style="display:flex;gap:20px;">
-      <a href="/commander-suggest" class="back-link">Trouver un commandant</a>
-      <a href="/deck-build" class="back-link">Ajouts depuis ma collection</a>
-      <a href="/deck-moves" class="back-link">Déplacements</a>
-      <a href="/deck-config" class="back-link">Mes decklists</a>
-    </nav>
+  <header class="site-header" style="display:flex;align-items:center;gap:24px;padding-bottom:16px;border-bottom:1px solid var(--gold-line);">
+    <a href="/" class="back-link" style="flex-shrink:0;">← Accueil</a>
+    <h1 class="hero-title" style="margin:0;flex:1;text-align:center;font-size:clamp(1.4rem,3vw,2rem);">Cartes à retirer</h1>
+    <span id="userBadge" style="display:flex;align-items:center;gap:6px;flex-shrink:0;"></span>
   </header>
 
   <div class="page-hero" id="pageHero">
-    <span class="hero-label">Optimisation du deck</span>
-    <h1 class="hero-title">Cartes à retirer</h1>
-    <p style="font-size:0.78rem;color:var(--parch-600);font-style:italic;line-height:1.5;margin:4px 0 0;opacity:0.85;">Les cartes de ce deck classées par popularité croissante — celles en tête sont les moins jouées et les meilleures candidates à être retirées.</p>
     <p class="hero-commander" id="heroCommander">…</p>
   </div>
 
   <div class="info-banner">
     Les cartes ci-dessous sont classées par <strong>taux d'inclusion croissant</strong> dans les decks
-    du même commandant sur EDHREC. Celles en tête de liste sont les moins populaires dans la méta
+    du même commandant. Celles en tête de liste sont les moins populaires dans la méta
     et sont les meilleures candidates à être retirées.
   </div>
 
@@ -189,6 +181,7 @@
 
 </div>
 
+<script src="/auth-guard.js"></script>
 <script>
   // ── Particules ────────────────────────────────────────────────────────────
   (function () {
@@ -271,7 +264,7 @@
 
       const subText = pct != null
         ? `${r.decks_with_card} / ${r.total_decks} decks · ${pct.toFixed(1)}%`
-        : 'Absent des données EDHREC';
+        : 'Absent des données méta';
 
       html += `
         <div class="card-tile" style="animation-delay:${delay}s">
@@ -292,7 +285,7 @@
     if (unknown.length) {
       html += `
         <div class="unknown-panel">
-          <div class="unknown-label">Hors données EDHREC (${unknown.length})</div>
+          <div class="unknown-label">Hors données méta (${unknown.length})</div>
           <div class="unknown-list">${unknown.map(escHtml).join(' · ')}</div>
         </div>`;
     }

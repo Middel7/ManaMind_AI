@@ -378,6 +378,49 @@ def suggest_moves(top_n: int = 30) -> dict:
                       "wastes", "snow-covered plains", "snow-covered island",
                       "snow-covered swamp", "snow-covered mountain", "snow-covered forest"}
 
+    # Charger les noms normalisés des cartes strictement rares/mythiques.
+    # Une carte est considérée rare/mythic seulement si elle n'a AUCUNE impression
+    # dans un set "normal" (non-promo, non-secret-lair) avec rarity common ou uncommon.
+    # Les sets exclus du filtre anti-C/U : sld (Secret Lair), prm (promos), tle, pw21...
+    # On utilise le type de set : seuls les sets de type 'expansion', 'core', 'masters',
+    # 'commander', 'draft_innovation', 'funny', 'starter', 'box' comptent pour déterminer
+    # la rareté "canonique".
+    rare_mythic_norms: set[str] = set()
+    from sqlalchemy import text as _text_rm
+    from manamind.db.engine import SessionLocal as _SL_rm
+    with _SL_rm() as _sess_rm:
+        _rows_rm = _sess_rm.execute(_text_rm("""
+            SELECT DISTINCT LOWER(TRIM(sc.name))
+            FROM scryfall_cards sc
+            WHERE
+              -- A au moins une impression rare ou mythic
+              EXISTS (
+                SELECT 1 FROM scryfall_card_printings p
+                WHERE p.card_id = sc.id
+                  AND p.rarity IN ('rare', 'mythic')
+              )
+              -- N'a AUCUNE impression common ou uncommon dans les sets normaux
+              -- (on exclut les sets promos/secret-lair qui réimpriment à une rareté différente)
+              AND NOT EXISTS (
+                SELECT 1 FROM scryfall_card_printings p
+                WHERE p.card_id = sc.id
+                  AND p.rarity IN ('common', 'uncommon')
+                  AND p.set_code NOT IN (
+                    -- Secret Lair, promos, listes
+                    'sld','sis','plst','plist','mb1','fmb1','prm','pw21','pw22',
+                    'ple','p02','pgpx','pres','tle','anb','ptc','parl','parl2','parl3','pbook',
+                    -- Bonus sheets (réimpressions de rares en uncommon dans des inserts)
+                    'pz1','pz2',
+                    -- Wilds of Eldraine Enchanting Tales (bonus sheet)
+                    'wot',
+                    -- Old core sets et sets spéciaux sans rareté canonique
+                    'conf','tsp','tsb','sum','rin','chr',
+                    '4ed','5ed','6ed','7ed','8ed','9ed','10e'
+                  )
+              )
+        """)).fetchall()
+        rare_mythic_norms = {row[0] for row in _rows_rm}
+
     # best_move[card_norm] = meilleur déplacement trouvé pour cette carte
     best_move: dict[str, dict] = {}
     cards_scanned = 0
@@ -397,6 +440,10 @@ def suggest_moves(top_n: int = 30) -> dict:
             card_norm = _normalize(card_name)
 
             if card_norm in from_cmd_norms or card_norm in land_norms:
+                continue
+
+            # Filtrer : uniquement rares et mythiques (si le set est chargé)
+            if rare_mythic_norms and card_norm not in rare_mythic_norms:
                 continue
 
             cards_scanned += 1
@@ -726,7 +773,7 @@ def _count_types_in_deck(
     return counts, avg_cmc
 
 
-def _compute_edhrec_averages(commander_name: str, type_map: dict[str, str], dfc_land_norms: set[str]) -> dict[str, float] | None:
+def _compute_meta_averages(commander_name: str, type_map: dict[str, str], dfc_land_norms: set[str]) -> dict[str, float] | None:
     """
     Calcule les moyennes de composition par type pour un commandant
     à partir des CSVs dans data/Decklists/[commander]/.
@@ -796,19 +843,19 @@ def _compute_edhrec_averages(commander_name: str, type_map: dict[str, str], dfc_
 
 def compute_deck_composition(commander_name: str) -> dict:
     """
-    Retourne la composition par type du deck personnel et la moyenne EDHREC.
+    Retourne la composition par type du deck personnel et la moyenne méta.
 
     {
         "commander": str,
         "my_deck": { "Land": int, "Creature": int, ... },
-        "edhrec_avg": { "Land": float, "Creature": float, ... } | None,
-        "edhrec_deck_count": int,
+        "meta_avg": { "Land": float, "Creature": float, ... } | None,
+        "meta_deck_count": int,
         "error": str | None,
     }
     """
     entries, source = _get_deck_entries(commander_name)
     if not source:
-        return {"commander": commander_name, "my_deck": None, "edhrec_avg": None, "edhrec_deck_count": 0, "error": "Deck introuvable (ni Moxfield ni fichier local)"}
+        return {"commander": commander_name, "my_deck": None, "meta_avg": None, "meta_deck_count": 0, "error": "Deck introuvable (ni Moxfield ni fichier local)"}
 
     # Charger les ressources DB
     type_map = _load_card_type_map()
@@ -822,7 +869,7 @@ def compute_deck_composition(commander_name: str) -> dict:
 
     my_counts, my_avg_cmc = _count_types_in_deck(my_card_entries, type_map, dfc_land_norms)
 
-    # EDHREC averages — depuis le cache ou recalcul
+    # Moyennes méta — depuis le cache ou recalcul
     cache_data: dict = {}
     if TYPE_AVERAGES_CACHE.exists():
         try:
@@ -834,13 +881,13 @@ def compute_deck_composition(commander_name: str) -> dict:
     cached_entry = cache_data.get(cache_key)
 
     if cached_entry:
-        edhrec_avg = cached_entry.get("avg")
-        edhrec_deck_count = cached_entry.get("deck_count", 0)
+        meta_avg = cached_entry.get("avg")
+        meta_deck_count = cached_entry.get("deck_count", 0)
     else:
-        edhrec_avg = _compute_edhrec_averages(commander_name, type_map, dfc_land_norms)
+        meta_avg = _compute_meta_averages(commander_name, type_map, dfc_land_norms)
         # Compter les decks pour l'affichage
-        edhrec_deck_count = 0
-        if edhrec_avg is not None:
+        meta_deck_count = 0
+        if meta_avg is not None:
             cmd_dir = DECKLISTS_DIR / commander_name
             if not cmd_dir.exists():
                 try:
@@ -857,8 +904,8 @@ def compute_deck_composition(commander_name: str) -> dict:
             if cmd_dir.exists():
                 edhrec_deck_count = len(list(cmd_dir.glob("*.csv")))
 
-        if edhrec_avg is not None:
-            cache_data[cache_key] = {"avg": edhrec_avg, "deck_count": edhrec_deck_count}
+        if meta_avg is not None:
+            cache_data[cache_key] = {"avg": meta_avg, "deck_count": meta_deck_count}
             try:
                 TYPE_AVERAGES_CACHE.parent.mkdir(parents=True, exist_ok=True)
                 TYPE_AVERAGES_CACHE.write_text(json.dumps(cache_data, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -869,8 +916,280 @@ def compute_deck_composition(commander_name: str) -> dict:
         "commander":         commander_name,
         "my_deck":           my_counts,
         "my_avg_cmc":        my_avg_cmc,
-        "edhrec_avg":        edhrec_avg,
-        "edhrec_avg_cmc":    edhrec_avg.get("avg_cmc") if edhrec_avg else None,
-        "edhrec_deck_count": edhrec_deck_count,
+        "meta_avg":        meta_avg,
+        "meta_avg_cmc":    meta_avg.get("avg_cmc") if meta_avg else None,
+        "meta_deck_count": meta_deck_count,
         "error":             None,
+    }
+
+
+# ── Wrappers multi-utilisateur (DB-backed) ────────────────────────────────────
+
+def _get_deck_entries_for_user(user_id: int, commander_name: str) -> tuple[list[tuple[str, int]], str | None]:
+    """Remplace _get_deck_entries mais lit depuis la DB par user_id."""
+    from manamind.user_decks import get_deck_cards
+    entries = get_deck_cards(user_id, commander_name)
+    if entries:
+        return entries, "db"
+    return [], None
+
+
+def suggest_from_collection_for_user(user_id: int, top_n: int = 40, commander_filter: str | None = None) -> dict:
+    """Variante multi-user de suggest_from_collection."""
+    from manamind.user_decks import load_config_for_user, get_deck_cards
+    from sqlalchemy import text as _t
+    from manamind.db.engine import SessionLocal
+
+    # Collection de l'utilisateur
+    with SessionLocal() as sess:
+        coll_rows = sess.execute(_t("""
+            SELECT card_name, SUM(quantity) as qty
+            FROM user_collection WHERE user_id = :uid
+            GROUP BY card_name
+        """), {"uid": user_id}).fetchall()
+    collection = {_normalize(r.card_name): r.qty for r in coll_rows}
+
+    # Decks de l'utilisateur
+    decks_cfg = load_config_for_user(user_id)
+    if commander_filter:
+        decks_cfg = [d for d in decks_cfg if _normalize(d.get("commander", "")) == _normalize(commander_filter)]
+
+    deck_usage: dict[str, int] = {}
+    deck_cards_index: dict[str, set[str]] = {}
+    for deck in decks_cfg:
+        commander = deck.get("commander", "")
+        if not commander:
+            continue
+        entries = get_deck_cards(user_id, commander)
+        cmd_norm = _normalize(commander)
+        deck_cards_index[cmd_norm] = {_normalize(n) for n, _ in entries}
+        for card_name, _qty in entries:
+            norm = _normalize(card_name)
+            deck_usage[norm] = deck_usage.get(norm, 0) + 1
+
+    available: dict[str, int] = {
+        norm: qty for norm, qty in collection.items()
+        if qty > deck_usage.get(norm, 0)
+    }
+
+    best_per_card: dict[str, dict] = {}
+    for deck in decks_cfg:
+        commander = deck.get("commander", "")
+        if not commander:
+            continue
+        cmd_norm = _normalize(commander)
+        cmd_cards = _cmd_freq_db(commander)
+        if not cmd_cards:
+            continue
+        this_deck = deck_cards_index.get(cmd_norm, set())
+        this_cmd_norms = _cmd_norms(commander)
+        for card_norm, qty in available.items():
+            if card_norm in this_cmd_norms or card_norm in this_deck:
+                continue
+            if card_norm not in cmd_cards:
+                continue
+            data = cmd_cards[card_norm]
+            ir = data["inclusion_rate"]
+            existing = best_per_card.get(card_norm)
+            if existing is None or ir > existing["inclusion_rate"]:
+                best_per_card[card_norm] = {
+                    "card_name":       data["card_name"],
+                    "commander":       commander,
+                    "inclusion_rate":  ir,
+                    "decks_with_card": data["decks_with_card"],
+                    "total_decks":     data["total_decks"],
+                    "copies_owned":    qty,
+                    "copies_used":     deck_usage.get(card_norm, 0),
+                    "source":          "collection",
+                }
+
+    ranked = sorted(best_per_card.values(), key=lambda r: (-r["inclusion_rate"], r["card_name"]))
+    return {
+        "results": [{"rank": i + 1, **r} for i, r in enumerate(ranked[:top_n])],
+        "stats": {
+            "collection_size":    len(collection),
+            "available_cards":    len(available),
+            "opened_sets_cards":  0,
+            "commanders_checked": len(decks_cfg),
+        },
+    }
+
+
+def suggest_moves_for_user(user_id: int, top_n: int = 30) -> dict:
+    """Variante multi-user de suggest_moves."""
+    from manamind.user_decks import load_config_for_user, get_deck_cards
+
+    decks_cfg = load_config_for_user(user_id)
+    valid_commanders: dict[str, str] = {}
+    deck_cards: dict[str, set[str]] = {}
+    for deck in decks_cfg:
+        commander = deck.get("commander", "")
+        if not commander:
+            continue
+        entries = get_deck_cards(user_id, commander)
+        if not entries:
+            continue
+        cmd_norm = _normalize(commander)
+        valid_commanders[cmd_norm] = commander
+        deck_cards[cmd_norm] = {_normalize(n) for n, _ in entries}
+
+    # Terres et rares/mythiques (même logique que suggest_moves)
+    land_norms: set[str] = set()
+    try:
+        from manamind.db.engine import SessionLocal as _SL
+        from manamind.db.models.card import Card as _Card
+        from sqlalchemy import select as _sel
+        with _SL() as _s:
+            land_norms = {r[0] for r in _s.execute(_sel(_Card.normalized_name).where(_Card.type_line.ilike("%Land%"))).all()}
+    except Exception:
+        land_norms = {"plains", "island", "swamp", "mountain", "forest", "wastes"}
+
+    rare_mythic_norms: set[str] = set()
+    from sqlalchemy import text as _t2
+    from manamind.db.engine import SessionLocal as _SL2
+    with _SL2() as _s2:
+        rare_mythic_norms = {r[0] for r in _s2.execute(_t2("""
+            SELECT DISTINCT LOWER(TRIM(sc.name)) FROM scryfall_cards sc
+            WHERE EXISTS (SELECT 1 FROM scryfall_card_printings p WHERE p.card_id=sc.id AND p.rarity IN ('rare','mythic'))
+              AND NOT EXISTS (SELECT 1 FROM scryfall_card_printings p WHERE p.card_id=sc.id AND p.rarity IN ('common','uncommon')
+                AND p.set_code NOT IN ('sld','sis','plst','plist','mb1','fmb1','prm','pw21','pw22','ple','p02','pgpx','pres','tle','anb','ptc','parl','parl2','parl3','pbook','pz1','pz2','wot','conf','tsp','tsb','sum','rin','chr','4ed','5ed','6ed','7ed','8ed','9ed','10e'))
+        """)).fetchall()}
+
+    freq_cache = {cn: _cmd_freq_db(cd) for cn, cd in valid_commanders.items()}
+    best_move: dict[str, dict] = {}
+    cards_scanned = 0
+
+    for from_norm, from_display in valid_commanders.items():
+        from_freq = freq_cache.get(from_norm, {})
+        from_cmd_norms = _cmd_norms(from_display)
+        entries = get_deck_cards(user_id, from_display)
+        for card_name, _ in entries:
+            card_norm = _normalize(card_name)
+            if card_norm in from_cmd_norms or card_norm in land_norms:
+                continue
+            if rare_mythic_norms and card_norm not in rare_mythic_norms:
+                continue
+            cards_scanned += 1
+            from_data = from_freq.get(card_norm)
+            from_rate = from_data["inclusion_rate"] if from_data else None
+            if from_rate is None:
+                continue
+            best_other_norm = best_other_disp = best_other_data = None
+            best_other_rate = from_rate
+            for to_norm, to_display in valid_commanders.items():
+                if to_norm == from_norm or card_norm in deck_cards.get(to_norm, set()):
+                    continue
+                to_data = freq_cache.get(to_norm, {}).get(card_norm)
+                if to_data and to_data["inclusion_rate"] > best_other_rate:
+                    best_other_rate = to_data["inclusion_rate"]
+                    best_other_norm = to_norm
+                    best_other_disp = to_display
+                    best_other_data = to_data
+            if best_other_norm is None:
+                continue
+            gain = best_other_rate - from_rate
+            existing = best_move.get(card_norm)
+            if existing is None or gain > existing["gain"]:
+                best_move[card_norm] = {
+                    "card_name":       from_data["card_name"],
+                    "from_commander":  from_display,
+                    "from_rate":       round(from_rate, 2),
+                    "to_commander":    best_other_disp,
+                    "to_rate":         round(best_other_rate, 2),
+                    "gain":            round(gain, 2),
+                    "decks_with_card": best_other_data["decks_with_card"],
+                    "total_decks":     best_other_data["total_decks"],
+                }
+
+    ranked = sorted(best_move.values(), key=lambda r: (-r["gain"], r["card_name"]))
+    return {
+        "results": [{"rank": i + 1, **r} for i, r in enumerate(ranked[:top_n])],
+        "missing_data": [],
+        "stats": {"decks_analyzed": len(valid_commanders), "cards_scanned": cards_scanned},
+    }
+
+
+def suggest_cuts_for_user(user_id: int, commander_name: str) -> dict:
+    """Variante multi-user de suggest_cuts."""
+    from manamind.user_decks import get_deck_cards
+    entries = get_deck_cards(user_id, commander_name)
+    if not entries:
+        return {"commander": commander_name, "deck_file": None, "results": [], "unknown": [], "error": "Deck introuvable"}
+
+    cmd_cards = _cmd_freq_db(commander_name)
+    cmd_norms = _cmd_norms(commander_name)
+    BASIC_LANDS = {"plains", "island", "swamp", "mountain", "forest",
+                   "wastes", "snow-covered plains", "snow-covered island",
+                   "snow-covered swamp", "snow-covered mountain", "snow-covered forest"}
+
+    total_decks_ref = None
+    if cmd_cards:
+        total_decks_ref = next(iter(cmd_cards.values())).get("total_decks")
+
+    results: list[dict] = []
+    for name, _ in entries:
+        norm = _normalize(name)
+        if norm in cmd_norms or norm in BASIC_LANDS:
+            continue
+        if norm in cmd_cards:
+            data = cmd_cards[norm]
+            results.append({"card_name": data["card_name"], "inclusion_rate": data["inclusion_rate"],
+                            "decks_with_card": data["decks_with_card"], "total_decks": data["total_decks"]})
+        else:
+            results.append({"card_name": name, "inclusion_rate": 0.0, "decks_with_card": 0, "total_decks": total_decks_ref})
+
+    results.sort(key=lambda r: (r["inclusion_rate"] is None, r["inclusion_rate"] or 0, r["card_name"]))
+    return {
+        "commander": commander_name,
+        "deck_file": "db",
+        "results": [{"rank": i + 1, **r} for i, r in enumerate(results)],
+        "unknown": [],
+        "error": None,
+    }
+
+
+def compute_deck_composition_for_user(user_id: int, commander_name: str) -> dict:
+    """Variante multi-user de compute_deck_composition."""
+    from manamind.user_decks import get_deck_cards
+    entries = get_deck_cards(user_id, commander_name)
+    if not entries:
+        return {"commander": commander_name, "my_deck": None, "meta_avg": None, "meta_deck_count": 0, "error": "Deck introuvable"}
+
+    type_map = _load_card_type_map()
+    dfc_land_norms = _load_dfc_land_norms()
+    cmd_norms_set = _cmd_norms(commander_name)
+    my_card_entries = [(name, qty) for name, qty in entries if _normalize(name) not in cmd_norms_set]
+    my_counts, my_avg_cmc = _count_types_in_deck(my_card_entries, type_map, dfc_land_norms)
+
+    # Cache méta (réutilise le même cache que compute_deck_composition)
+    cache_data: dict = {}
+    if TYPE_AVERAGES_CACHE.exists():
+        try:
+            cache_data = json.loads(TYPE_AVERAGES_CACHE.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    cache_key = _normalize(commander_name)
+    cached_entry = cache_data.get(cache_key)
+    if cached_entry:
+        meta_avg = cached_entry.get("avg")
+        meta_deck_count = cached_entry.get("deck_count", 0)
+    else:
+        meta_avg = _compute_meta_averages(commander_name, type_map, dfc_land_norms)
+        meta_deck_count = 0
+        if meta_avg is not None:
+            cache_data[cache_key] = {"avg": meta_avg, "deck_count": meta_deck_count}
+            try:
+                TYPE_AVERAGES_CACHE.parent.mkdir(parents=True, exist_ok=True)
+                TYPE_AVERAGES_CACHE.write_text(json.dumps(cache_data, ensure_ascii=False, indent=2), encoding="utf-8")
+            except Exception:
+                pass
+
+    return {
+        "commander":       commander_name,
+        "my_deck":         my_counts,
+        "my_avg_cmc":      my_avg_cmc,
+        "meta_avg":        meta_avg,
+        "meta_avg_cmc":    meta_avg.get("avg_cmc") if meta_avg else None,
+        "meta_deck_count": meta_deck_count,
+        "error":           None,
     }

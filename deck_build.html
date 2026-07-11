@@ -36,8 +36,8 @@
 
   #app {
     position: relative; z-index: 1;
-    max-width: 1800px; margin: 0 auto;
-    padding: 32px 32px 80px;
+    max-width: 1920px; margin: 0 auto;
+    padding: 48px 48px 80px;
     display: flex; flex-direction: column; gap: 24px;
   }
 
@@ -366,7 +366,7 @@
   }
   .comp-bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
   .comp-bar-fill.my-deck  { background: var(--arcane); }
-  .comp-bar-fill.edhrec   { background: var(--gold); }
+  .comp-bar-fill.meta-avg { background: var(--gold); }
   .comp-bar-val {
     font-size: 0.9rem; font-family: var(--serif-display); font-weight: 600;
     color: var(--parch-100); width: 32px; text-align: right; flex-shrink: 0;
@@ -380,13 +380,10 @@
 
 <div id="app">
 
-  <header class="site-header">
-    <a href="/" class="back-link">← Accueil</a>
-    <span style="font-family:var(--serif-engraved);font-size:0.7rem;letter-spacing:0.2em;color:var(--gold);opacity:0.5;">MANAMIND</span>
-    <nav style="display:flex;gap:20px;">
-      <a href="/deck-moves" class="back-link">Déplacements</a>
-      <a href="/deck-config" class="back-link">Mes decklists</a>
-    </nav>
+  <header class="site-header" style="display:flex;align-items:center;gap:24px;padding-bottom:16px;border-bottom:1px solid var(--gold-line);">
+    <a href="/" class="back-link" style="flex-shrink:0;">← Accueil</a>
+    <h1 style="margin:0;flex:1;text-align:center;font-family:var(--serif-display);font-size:clamp(1.4rem,3vw,2rem);font-weight:600;color:var(--parch-100);">Améliorer mes decks avec ma collection</h1>
+    <span id="userBadge" style="display:flex;align-items:center;gap:6px;flex-shrink:0;"></span>
   </header>
 
   <div id="topPanel">
@@ -462,6 +459,7 @@
 
 </div>
 
+<script src="/auth-guard.js"></script>
 <script>
   (function () {
     const c = document.getElementById('particles');
@@ -803,9 +801,9 @@
     const grid  = document.getElementById('compGrid');
 
     const my     = data.my_deck    || {};
-    const avg    = data.edhrec_avg || null;
+    const avg    = data.meta_avg || data.edhrec_avg || null;
     const myCmc  = data.my_avg_cmc    ?? null;
-    const avgCmc = data.edhrec_avg_cmc ?? null;
+    const avgCmc = data.meta_avg_cmc ?? data.edhrec_avg_cmc ?? null;
 
     const allVals = CARD_TYPES.flatMap(t => [my[t] || 0, avg ? (avg[t] || 0) : 0]);
     const maxVal  = Math.max(...allVals, 1);
@@ -825,7 +823,7 @@
       const avgBar = avgVal !== null ? `
         <div class="comp-bar-row">
           <span class="comp-bar-label">Baseline</span>
-          <div class="comp-bar-track"><div class="comp-bar-fill edhrec" style="width:${avgPct}%"></div></div>
+          <div class="comp-bar-track"><div class="comp-bar-fill meta-avg" style="width:${avgPct}%"></div></div>
           <span class="comp-bar-val">${avgVal.toFixed(1)}</span>
         </div>` : '';
 
@@ -849,7 +847,7 @@
           </div>
           ${avgCmc !== null ? `<div class="comp-bar-row">
             <span class="comp-bar-label">Baseline</span>
-            <div class="comp-bar-track"><div class="comp-bar-fill edhrec" style="width:${avgPctCmc}%"></div></div>
+            <div class="comp-bar-track"><div class="comp-bar-fill meta-avg" style="width:${avgPctCmc}%"></div></div>
             <span class="comp-bar-val">${avgCmc.toFixed(2)}</span>
           </div>` : ''}
         </div>
@@ -1176,7 +1174,7 @@
       const res = await fetch(`/api/card-inclusion?card=${encodeURIComponent(cardName)}&commander=${encodeURIComponent(commander)}`);
       const data = await res.json();
       if (data.inclusion_rate != null) {
-        csInclusionBadge.textContent = `${data.inclusion_rate}% EDHREC`;
+        csInclusionBadge.textContent = `${data.inclusion_rate}% méta`;
         csInclusionBadge.style.display = '';
       }
     } catch {}
@@ -1258,7 +1256,7 @@
       const res = await fetch(`/api/card-inclusion?card=${encodeURIComponent(cardName)}&commander=${encodeURIComponent(commander)}`);
       const data = await res.json();
       if (data.inclusion_rate != null) {
-        crInclusionBadge.textContent = `${data.inclusion_rate}% EDHREC`;
+        crInclusionBadge.textContent = `${data.inclusion_rate}% méta`;
         crInclusionBadge.style.display = '';
       }
     } catch {}

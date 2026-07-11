@@ -86,11 +86,11 @@
   /* ── Outer gold frame ──────────────────────────────────────── */
   .frame {
     position: relative; z-index: 2;
-    margin: 14px;
+    margin: 0;
     border: 1px solid var(--gold-faint);
-    border-radius: 3px;
+    border-radius: 0;
     box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 24px 80px rgba(0,0,0,0.55);
-    min-height: calc(100vh - 28px);
+    min-height: 100vh;
   }
   /* corner brackets */
   .corner {
@@ -404,6 +404,10 @@
     font-variant-numeric: tabular-nums; font-weight: 500;
   }
   .price.na { color: var(--text-faint); font-size: 13px; font-style: italic; }
+  .edhrec-pct {
+    font-family: var(--serif-body); font-size: 11px; color: var(--text-faint);
+    white-space: nowrap; margin-left: 4px;
+  }
   .buy {
     font-family: var(--serif-cap); font-size: 10px; letter-spacing: 0.12em;
     text-transform: uppercase; text-decoration: none;
@@ -433,6 +437,48 @@
   .card-rem .buy { color: var(--copper-br); border-color: rgba(215,122,94,0.32);
     background: linear-gradient(180deg, rgba(181,69,47,0.14), rgba(181,69,47,0.03)); }
   .card-rem .buy:hover { color: #2a1410; background: linear-gradient(180deg, var(--copper-br), var(--copper)); border-color: transparent; }
+
+  /* ── Bouton ⓘ + tooltip sous-scores ─────────────────────────────────────── */
+  .score-info-btn {
+    width: 22px; height: 22px; border-radius: 50%; border: 1px solid rgba(212,177,95,0.35);
+    background: rgba(212,177,95,0.07); color: var(--gold-bright);
+    font-size: 12px; line-height: 1; cursor: pointer; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: background .18s, border-color .18s; position: relative;
+    font-family: serif;
+  }
+  .score-info-btn:hover { background: rgba(212,177,95,0.18); border-color: var(--gold); }
+
+  .score-tooltip {
+    position: absolute; bottom: calc(100% + 8px); right: 0;
+    width: 240px; z-index: 99;
+    background: var(--card-bg, #1c1812); border: 1px solid rgba(212,177,95,0.25);
+    border-radius: 6px; padding: 10px 12px 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.55);
+    font-family: var(--serif-body); font-size: 11px; color: var(--text-faint);
+    display: none; pointer-events: none;
+  }
+  .score-tooltip.open { display: block; }
+  .score-tooltip::after {
+    content: ''; position: absolute; bottom: -5px; right: 9px;
+    width: 9px; height: 9px;
+    background: var(--card-bg, #1c1812); border-right: 1px solid rgba(212,177,95,0.25);
+    border-bottom: 1px solid rgba(212,177,95,0.25); transform: rotate(45deg);
+  }
+  .stt-title {
+    font-family: var(--serif-cap); font-size: 9px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--gold); margin-bottom: 9px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .stt-global { font-size: 15px; font-family: var(--serif-disp); color: var(--text); font-weight: 700; }
+  .stt-row { display: flex; flex-direction: column; gap: 2px; margin-bottom: 7px; }
+  .stt-row:last-child { margin-bottom: 0; }
+  .stt-label { display: flex; justify-content: space-between; font-size: 10px; line-height: 1.4; }
+  .stt-val { color: var(--text); font-variant-numeric: tabular-nums; }
+  .stt-bar-track {
+    height: 4px; border-radius: 2px; background: rgba(255,255,255,0.07); overflow: hidden;
+  }
+  .stt-bar-fill { height: 100%; border-radius: 2px; transition: width .3s; }
 
   /* badge source booster/collection */
   .source-tag {
@@ -626,11 +672,11 @@
         </span>
       </a>
       <div class="nav-right">
-        <a class="nav-link" href="/" id="newDeck">
+        <a class="nav-link" href="/">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M15 6l-6 6 6 6"/></svg>
-          Nouveau deck
+          Accueil
         </a>
-        <a class="nav-link active" href="#" aria-current="page">Recommandations</a>
+        <a class="nav-link active" href="#" aria-current="page" id="pageLabel">Recommandations</a>
       </div>
     </nav>
 
@@ -897,6 +943,30 @@ function cardSourceTag(source, decks) {
   return '';
 }
 
+/* ── Taux EDHREC par carte (chargé en batch après parse CSV) ─────────────── */
+const edhrecRates = new Map(); // card_name → pct (float)
+
+async function loadEdhrecRates() {
+  if (!state.commander || !state.add.length) return;
+  const algo = new URLSearchParams(location.search).get('algo') || 'v1';
+  if (algo !== 'v1') return; // uniquement pour l'algo popularité
+  try {
+    const res = await fetch('/api/deck-freq', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        commander: state.commander.name,
+        cards: state.add.map(c => c.name),
+      }),
+    });
+    if (!res.ok) return;
+    const { rates } = await res.json();
+    for (const [name, pct] of Object.entries(rates || {})) {
+      edhrecRates.set(name, pct);
+    }
+  } catch (_) {}
+}
+
 /* ── Lookup via endpoints locaux (image + prix) ───────────────────────────── */
 const cache = new Map();
 function scryfall(name) {
@@ -1019,6 +1089,79 @@ function renderGallery(){
   }
 }
 
+/* ── Tooltip sous-scores ──────────────────────────────────────────────────── */
+function buildScoreTooltipHtml(c) {
+  const global100 = c.score_100 ?? Math.round((c.addition_score || 0) * 100);
+  const sub = c.sub_scores || {};
+
+  // Couleur de barre selon valeur
+  function barColor(v) {
+    if (v >= 70) return '#4ade80';
+    if (v >= 40) return '#e2b96f';
+    return '#e07b7b';
+  }
+
+  function row(label, val, desc) {
+    const v = Math.min(Math.max(Math.round(val || 0), 0), 100);
+    return `
+      <div class="stt-row">
+        <div class="stt-label"><span>${label}</span><span class="stt-val">${v}/100</span></div>
+        <div class="stt-bar-track"><div class="stt-bar-fill" style="width:${v}%;background:${barColor(v)}"></div></div>
+        ${desc ? `<div style="font-size:9px;color:var(--text-faint);opacity:0.7;margin-top:1px;line-height:1.35">${desc}</div>` : ''}
+      </div>`;
+  }
+
+  const rows = [
+    {
+      label: 'Pertinence pour ce commandant',
+      val: sub.hybrid,
+      desc: 'Cette carte apparaît souvent dans des decks avec ce commandant (TF-IDF + Card2Vec + tags MTG).',
+    },
+    {
+      label: 'Popularité dans les decks Commander',
+      val: sub.edhrec,
+      desc: 'Estimation du % de decks Commander qui incluent cette carte, basée sur les statistiques de decks.',
+    },
+    {
+      label: 'Comble un manque du deck',
+      val: sub.gap,
+      desc: 'Le deck a moins de cartes de cet archétype que la moyenne méta — cette carte rééquilibre.',
+    },
+    {
+      label: 'Cohérence avec le deck actuel',
+      val: sub.synergy,
+      desc: 'Cette carte "ressemble" aux cartes déjà dans le deck selon les co-occurrences (Card2Vec).',
+    },
+  ];
+
+  return `
+    <div class="stt-title">
+      <span>Pourquoi cette carte ?</span>
+      <span class="stt-global">${global100}<span style="font-size:9px;color:var(--text-faint)">/100</span></span>
+    </div>
+    ${rows.map(r => row(r.label, r.val, r.desc)).join('')}`;
+}
+
+function attachScoreTooltip(btn, c) {
+  const tip = btn.querySelector('.score-tooltip');
+  if (!tip) return;
+  tip.innerHTML = buildScoreTooltipHtml(c);
+
+  let closeTimer = null;
+
+  function open(e) {
+    e.stopPropagation();
+    // Fermer tous les autres tooltips ouverts
+    document.querySelectorAll('.score-tooltip.open').forEach(t => { if (t !== tip) t.classList.remove('open'); });
+    tip.classList.toggle('open');
+  }
+
+  btn.addEventListener('click', open);
+
+  // Fermer au clic ailleurs
+  document.addEventListener('click', () => tip.classList.remove('open'));
+}
+
 const hydrateV1 = async function(el, c, isAdd){
   let data, cardSource = null, cardSourceDecks = [];
   try {
@@ -1038,6 +1181,8 @@ const hydrateV1 = async function(el, c, isAdd){
   const full = data ? (isAdd ? (data.normal || data.art) : (data.cheap || data.normal || data.art)) : null;
   const price = data ? fmtEur(data.eur) : null;
   const priceHtml = price ? `<span class="price">${price}</span>` : `<span class="price na">N/A</span>`;
+  const pct = isAdd ? edhrecRates.get(c.name) : null;
+  const pctHtml = pct != null ? `<span class="edhrec-pct">· ${pct}% des decks</span>` : '';
   const btnLabel = isAdd ? 'Acheter ↗' : 'Vendre ↗';
   const scryfallUri = data?.scryfall_uri
     || `https://scryfall.com/search?q=!"${encodeURIComponent(c.name)}"`;
@@ -1057,7 +1202,7 @@ const hydrateV1 = async function(el, c, isAdd){
         ['Rôle strat. ×25%',c.strategy,   pct(c.strategy)],
         ['Synergie ×20%',   c.synergy,    pct(c.synergy)],
         ['Vectoriel ×15%',  c.similarity, pct(c.similarity)],
-        ['EDHREC ×10%',     c.edhrec,     pct(c.edhrec)],
+        ['Popularité ×10%', c.edhrec,     pct(c.edhrec)],
         ['Courbe ×3%',      c.manacurve,  pct(c.manacurve)],
         ['Qualité ×2%',     c.quality,    pct(c.quality)],
       ];
@@ -1094,6 +1239,9 @@ const hydrateV1 = async function(el, c, isAdd){
   };
 
   const cmdrSuggestUrl = `/commander-suggest?card=${encodeURIComponent(c.name)}`;
+  const infoBtnV1 = isAdd && c.sub_scores
+    ? `<button class="score-info-btn" title="Pourquoi cette carte ?">ⓘ<div class="score-tooltip"></div></button>`
+    : '';
   el.innerHTML = `
     <div class="card-inner" onclick="window.open('${cardmarket(c.name)}','_blank')" title="Voir sur Cardmarket">
       <div class="card-flip">
@@ -1105,11 +1253,18 @@ const hydrateV1 = async function(el, c, isAdd){
         <a href="${cmdrSuggestUrl}" target="_blank" style="color:inherit;text-decoration:none;border-bottom:1px solid rgba(212,177,95,0.3);transition:border-color .2s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='rgba(212,177,95,0.3)'">${c.name}</a>
       </div>
       <div class="card-foot">
-        ${priceHtml}
-        <a class="buy" href="${cardmarket(c.name)}" target="_blank" rel="noopener noreferrer">${btnLabel}</a>
+        <span style="display:flex;align-items:baseline;gap:0;flex-wrap:wrap;row-gap:0">${priceHtml}${pctHtml}</span>
+        <span style="display:flex;align-items:center;gap:6px">
+          ${infoBtnV1}
+          <a class="buy" href="${cardmarket(c.name)}" target="_blank" rel="noopener noreferrer">${btnLabel}</a>
+        </span>
       </div>
       ${!isAdd && c.reason ? `<div class="rem-freq">${c.reason}</div>` : ''}
     </div>`;
+  if (isAdd && c.sub_scores) {
+    const btn = el.querySelector('.score-info-btn');
+    if (btn) attachScoreTooltip(btn, c);
+  }
 }
 
 /* ── Profil stratégique (V2 et V3) ───────────────────────────────────────── */
@@ -1192,8 +1347,8 @@ function renderHybridGap(gapData) {
   const cont  = document.getElementById('hybridGapContent');
   if (!panel || !cont) return;
 
-  // Trier : sous-représentés en premier (delta négatif = opportunité)
-  const sorted = [...gapData].sort((a, b) => a.delta - b.delta);
+  // Trier : meta_share descendant (les clusters les plus présents dans la méta en premier)
+  const sorted = [...gapData].sort((a, b) => b.meta_share - a.meta_share);
 
   cont.innerHTML = sorted.slice(0, 12).map(g => {
     const deltaSign = g.delta > 0 ? '+' : '';
@@ -1306,6 +1461,7 @@ async function bootHybrid(data) {
     cluster_name:   a.cluster_name,
     cluster_family: a.cluster_family,
     explanation:    a.explanation,
+    sub_scores:     a.sub_scores,
     isHybrid:       true,
   }));
   state.rem = (data.top_cuts || []).map(c => ({
@@ -1347,6 +1503,8 @@ async function hydrate(el, c, isAdd) {
   const full = data ? (isAdd ? (data.normal || data.art) : (data.cheap || data.normal || data.art)) : null;
   const price = data ? fmtEur(data.eur) : null;
   const priceHtml = price ? `<span class="price">${price}</span>` : `<span class="price na">N/A</span>`;
+  const pct = isAdd ? edhrecRates.get(c.name) : null;
+  const pctHtml = pct != null ? `<span class="edhrec-pct">· ${pct}% des decks</span>` : '';
   const scryfallUri = data?.scryfall_uri || `https://scryfall.com/search?q=!"${encodeURIComponent(c.name)}"`;
   const boosterTag = cardSourceTag(cardSource, cardSourceDecks);
   const artHtml = full
@@ -1357,6 +1515,9 @@ async function hydrate(el, c, isAdd) {
   const btnLabel = isAdd ? 'Acheter ↗' : 'Vendre ↗';
 
   const cmdrSuggestUrlH = `/commander-suggest?card=${encodeURIComponent(c.name)}`;
+  const infoBtnH = isAdd && c.sub_scores
+    ? `<button class="score-info-btn" title="Pourquoi cette carte ?">ⓘ<div class="score-tooltip"></div></button>`
+    : '';
   el.innerHTML = `
     <div class="card-inner" onclick="window.open('${cardmarket_url}','_blank')" title="Voir sur Cardmarket">
       <div class="card-flip">
@@ -1368,15 +1529,33 @@ async function hydrate(el, c, isAdd) {
         <a href="${cmdrSuggestUrlH}" target="_blank" style="color:inherit;text-decoration:none;border-bottom:1px solid rgba(212,177,95,0.3);transition:border-color .2s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='rgba(212,177,95,0.3)'">${c.name}</a>
       </div>
       <div class="card-foot">
-        ${priceHtml}
-        <a class="buy" href="${cardmarket_url}" target="_blank" rel="noopener noreferrer">${btnLabel}</a>
+        <span style="display:flex;align-items:baseline;gap:0;flex-wrap:wrap;row-gap:0">${priceHtml}${pctHtml}</span>
+        <span style="display:flex;align-items:center;gap:6px">
+          ${infoBtnH}
+          <a class="buy" href="${cardmarket_url}" target="_blank" rel="noopener noreferrer">${btnLabel}</a>
+        </span>
       </div>
     </div>`;
+  if (isAdd && c.sub_scores) {
+    const btn = el.querySelector('.score-info-btn');
+    if (btn) attachScoreTooltip(btn, c);
+  }
 }
 
 /* ── Boot ─────────────────────────────────────────────────────────────────── */
 async function boot(){
   const algo = new URLSearchParams(location.search).get('algo');
+
+  // ── Titre de la page selon le mode ───────────────────────────────────────
+  const labelEl = document.getElementById('pageLabel');
+  if (labelEl) {
+    labelEl.textContent = algo === 'hybrid'
+      ? 'Recommandations par intelligence artificielle'
+      : 'Recommandations par popularité';
+  }
+  document.title = algo === 'hybrid'
+    ? 'ManaMind — Recommandations par intelligence artificielle'
+    : 'ManaMind — Recommandations par popularité';
 
   // ── Mode Deck Mentor IA ───────────────────────────────────────────────────
   if (algo === 'hybrid') {
@@ -1476,6 +1655,7 @@ async function boot(){
     } catch(e) { /* fallback CSV conservé */ }
   }
 
+  await loadEdhrecRates();
   renderCommander();
   renderGallery();
 }

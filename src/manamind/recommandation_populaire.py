@@ -61,10 +61,14 @@ def parse_decklist_text(path: Path) -> tuple[dict[str, int], str | None]:
         sections.append(current)
 
     commander: str | None = None
-    if len(sections) >= 2 and len(sections[-1]) == 1:
-        match = LINE_PATTERN.match(sections[-1][0])
-        if match:
-            commander = normalize_name(match.group(2))
+    if len(sections) >= 2 and len(sections[-1]) in (1, 2):
+        cmd_parts = []
+        for line in sections[-1]:
+            m = LINE_PATTERN.match(line)
+            if m:
+                cmd_parts.append(normalize_name(m.group(2)))
+        if cmd_parts:
+            commander = " + ".join(cmd_parts)
 
     cards: dict[str, int] = {}
     for line in lines:

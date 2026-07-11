@@ -38,8 +38,8 @@
 
   #app {
     position: relative; z-index: 1;
-    max-width: 900px; margin: 0 auto;
-    padding: 32px 32px 80px;
+    max-width: 1920px; margin: 0 auto;
+    padding: 48px 48px 80px;
     display: flex; flex-direction: column; gap: 28px;
   }
 
@@ -148,18 +148,15 @@
 
 <div id="app">
 
-  <header class="site-header">
-    <a href="/" class="back-link">← Accueil</a>
-    <span style="font-family:var(--serif-engraved);font-size:0.7rem;letter-spacing:0.2em;color:var(--gold);opacity:0.5;">MANAMIND</span>
-    <nav style="display:flex;gap:20px;">
-      <a href="/deck-build" class="back-link">Ajouts collection</a>
-      <a href="/deck-moves" class="back-link">Déplacements</a>
-    </nav>
+  <header class="site-header" style="display:flex;align-items:center;gap:24px;padding-bottom:16px;border-bottom:1px solid var(--gold-line);">
+    <a href="/" class="back-link" style="flex-shrink:0;">← Accueil</a>
+    <h1 style="margin:0;flex:1;text-align:center;font-family:var(--serif-display);font-size:clamp(1.4rem,3vw,2rem);font-weight:600;color:var(--parch-100);">Gérer mes Decklists</h1>
+    <button onclick="refreshAll()" id="refreshAllBtn" class="btn btn-gold" style="flex-shrink:0;">↻ Tout mettre à jour</button>
   </header>
 
   <div class="panel">
-    <p class="panel-title">Configuration</p>
-    <h1 class="panel-heading">Mes Decklists</h1>
+    <p class="panel-title" style="display:none;"></p>
+    <h1 class="panel-heading" style="display:none;"></h1>
 
     <div class="add-row">
       <input type="url" id="urlInput" class="url-input" placeholder="https://moxfield.com/decks/..." />
@@ -177,6 +174,7 @@
 
 </div>
 
+<script src="/auth-guard.js"></script>
 <script>
   // Particules
   (function () {
@@ -301,6 +299,35 @@
       showFeedback('Erreur réseau', false);
       if (btn) { btn.disabled = false; btn.textContent = 'Mettre à jour'; }
     }
+  }
+
+  // ── Mise à jour de tous les decks ────────────────────────────────────────
+  async function refreshAll() {
+    const btn = document.getElementById('refreshAllBtn');
+    btn.disabled = true;
+    btn.textContent = '↻ Mise à jour…';
+
+    const rows = document.querySelectorAll('[id^="row-"]');
+    const deckIds = Array.from(rows).map(r => r.id.replace('row-', ''));
+    if (!deckIds.length) {
+      showFeedback('Aucun deck Moxfield configuré.', false);
+      btn.disabled = false; btn.textContent = '↻ Tout mettre à jour';
+      return;
+    }
+
+    let ok = 0, fail = 0;
+    for (const deckId of deckIds) {
+      try {
+        const res = await fetch(`/api/moxfield-decks/${deckId}/refresh`, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok || data.error) { fail++; } else { ok++; }
+      } catch { fail++; }
+    }
+
+    showFeedback(`✓ ${ok} deck${ok > 1 ? 's' : ''} mis à jour${fail ? ` · ${fail} échec${fail > 1 ? 's' : ''}` : ''}`, fail === 0);
+    loadDecks();
+    btn.disabled = false;
+    btn.textContent = '↻ Tout mettre à jour';
   }
 
   // ── Suppression ───────────────────────────────────────────────────────────

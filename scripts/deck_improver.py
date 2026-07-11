@@ -31,8 +31,12 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.preprocessing import MultiLabelBinarizer
+try:
+    from sklearn.naive_bayes import MultinomialNB
+    from sklearn.preprocessing import MultiLabelBinarizer
+except ImportError:
+    MultinomialNB = None  # type: ignore
+    MultiLabelBinarizer = None  # type: ignore
 from sqlalchemy import text
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -519,7 +523,7 @@ class DeckImprovementEngine:
         """
         cmd_meta = self._load_commander_cluster_meta(commander)
         if cmd_meta and decklist is not None:
-            return self._gap_from_commander_clusters(commander, decklist, cmd_meta)
+            return self._gap_from_commander_clusters(commander, decklist, cmd_meta, deck_profile)
         else:
             return self._gap_from_global_clusters(commander, deck_profile)
 
@@ -539,7 +543,8 @@ class DeckImprovementEngine:
             return []
 
     def _gap_from_commander_clusters(
-        self, commander: str, decklist: list[str], cmd_meta: list[dict]
+        self, commander: str, decklist: list[str], cmd_meta: list[dict],
+        deck_profile: Optional[DeckProfile] = None,
     ) -> tuple[list[ClusterSummary], float]:
         """
         Gap analysis basé sur commander_cluster_meta.
@@ -557,13 +562,14 @@ class DeckImprovementEngine:
             card_to_cluster: dict[str, int] = {r.card_name: r.cluster_id for r in rows}
         except Exception as e:
             log.warning("Fallback global clusters : %s", e)
-            return self._gap_from_global_clusters(commander, DeckProfile(
+            fallback_profile = deck_profile or DeckProfile(
                 commander=commander, card_count=0, deck_embedding=[],
                 coherence_score=0, avg_cosine_to_commander=0,
                 cluster_distribution={}, family_distribution={},
                 tag_distribution={}, mana_curve={}, color_distribution={},
                 missing_in_corpus=[],
-            ))
+            )
+            return self._gap_from_global_clusters(commander, fallback_profile)
 
         # Compter les cartes du deck dans chaque cluster du commandant
         cluster_card_counts: dict[int, int] = {}
@@ -654,6 +660,22 @@ class DeckImprovementEngine:
         }
         max_under = max(under_clusters.values(), default=1.0) or 1.0
 
+        # Mapping card→cluster depuis commander_clusters DB (cohérent avec gap_summaries)
+        # On le charge ici pour aligner les IDs avec ceux du gap analysis.
+        cmd_card_cluster: dict[str, int] = {}
+        try:
+            with SessionLocal() as _s:
+                _rows = _s.execute(text("""
+                    SELECT card_name, cluster_id FROM commander_clusters WHERE commander = :c
+                """), {"c": commander}).fetchall()
+            cmd_card_cluster = {r.card_name: r.cluster_id for r in _rows}
+        except Exception:
+            pass  # fallback sur self.card_cluster ci-dessous
+
+        def _get_cid(card: str) -> Optional[int]:
+            """Cluster ID cohérent avec gap_summaries : DB en priorité, CSV en fallback."""
+            return cmd_card_cluster.get(card) or self.card_cluster.get(card)
+
         # Pool de candidats = cartes connues dans TF-IDF du commandant
         # + toutes les cartes dans card_index (si color_identity OK)
         candidate_pool: set[str] = self.cmd_known_cards.get(commander, set()) - deck_set
@@ -677,8 +699,8 @@ class DeckImprovementEngine:
             # IR normalisé [0,1] (on sait que max ≈ 100%)
             ir_norm = min(ir / 100.0, 1.0)
 
-            # Gap bonus : carte dans un cluster sous-représenté
-            cid = self.card_cluster.get(card)
+            # Gap bonus : carte dans un cluster sous-représenté (IDs alignés avec gap_summaries)
+            cid = _get_cid(card)
             gap_bonus = 0.0
             if cid is not None and cid in under_clusters:
                 gap_bonus = under_clusters[cid] / max_under
@@ -912,8 +934,8 @@ class DeckImprovementEngine:
         log.info("  Cohérence interne : %.4f  |  Cosine cmd : %.4f",
                  profile.coherence_score, profile.avg_cosine_to_commander)
 
-        # Étape 2
-        gap_summaries, dist_meta = self.gap_analysis(commander, profile)
+        # Étape 2 — passer decklist pour utiliser commander_cluster_meta si disponible
+        gap_summaries, dist_meta = self.gap_analysis(commander, profile, decklist=decklist)
         gap_df = pd.DataFrame([asdict(s) for s in gap_summaries])
         gap_df.to_csv(output_dir / "deck_gap_analysis.csv", index=False, encoding="utf-8")
         log.info("  Distance au méta : %.4f  |  Clusters analysés : %d",

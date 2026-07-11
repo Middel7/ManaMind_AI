@@ -4,7 +4,6 @@ compute_commander_tfidf.py
 
 Calcule et stocke idf, tfidf, tfidf_norm dans deck_stat_commander (PostgreSQL).
 Régénère aussi commander_tfidf.csv (pour les scripts ML qui en ont encore besoin)
-et commander_top_signatures.csv.
 
 Formules :
   TF(card, commander)    = inclusion_rate / 100
@@ -44,7 +43,6 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 STATS_DIR = ROOT / "data" / "stats"
-TOP_SIGNATURES = 20
 
 
 def compute_tfidf_in_db(session) -> int:
@@ -124,30 +122,6 @@ def write_tfidf_csv(session) -> None:
     log.info("  %d lignes écrites dans %s", len(rows), path.name)
 
 
-def write_top_signatures(session) -> None:
-    """Régénère commander_top_signatures.csv."""
-    import csv
-    path = STATS_DIR / "commander_top_signatures.csv"
-    log.info("Écriture de %s...", path.name)
-    rows = session.execute(text(f"""
-        SELECT commander, card_name, tfidf, tfidf_norm, rank
-        FROM (
-            SELECT commander, card_name, tfidf, tfidf_norm,
-                   ROW_NUMBER() OVER (PARTITION BY commander ORDER BY tfidf DESC) AS rank
-            FROM deck_stat_commander
-            WHERE tfidf IS NOT NULL
-        ) sub
-        WHERE rank <= {TOP_SIGNATURES}
-        ORDER BY commander ASC, rank ASC
-    """)).fetchall()
-    with open(path, "w", encoding="utf-8", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(["commander", "rank", "card_name", "tfidf", "tfidf_norm"])
-        for r in rows:
-            writer.writerow([r.commander, r.rank, r.card_name,
-                             round(r.tfidf, 6), round(r.tfidf_norm, 6)])
-    log.info("  %d lignes écrites dans %s", len(rows), path.name)
-
 
 def print_sample(session, commander: str = "Aesi, Tyrant of Gyre Strait") -> None:
     rows = session.execute(text("""
@@ -182,7 +156,6 @@ def main() -> None:
 
         if not args.no_csv:
             write_tfidf_csv(session)
-            write_top_signatures(session)
 
         print_sample(session)
 
