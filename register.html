@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ManaMind — Créer un compte</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Cormorant+Garamond:wght@400;500;600&family=Spectral:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink-900:#0c0910; --ink-850:#120c1a; --ink-800:#17101f;
+    --parch-100:#efe6d6; --parch-300:#cdbfa8; --parch-500:#9c8e79;
+    --gold:#c9a45c; --gold-soft:#d8bd83; --gold-line:rgba(201,164,92,0.42); --gold-faint:rgba(201,164,92,0.12);
+    --serif-display:"Cormorant Garamond",Georgia,serif;
+    --serif-engraved:"Cinzel",Georgia,serif;
+    --serif-body:"Spectral",Georgia,serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;background:var(--ink-900);color:var(--parch-100);font-family:var(--serif-body);}
+  body{display:flex;align-items:center;justify-content:center;min-height:100vh;
+    background:radial-gradient(140% 90% at 50% -10%,rgba(100,60,160,0.22) 0%,rgba(12,9,16,0) 55%),var(--ink-900);}
+
+  .card{
+    width:100%;max-width:440px;padding:48px 40px;
+    background:rgba(18,12,26,0.9);
+    border:1px solid var(--gold-line);border-radius:14px;
+    box-shadow:0 8px 40px rgba(0,0,0,0.6),inset 0 1px 0 rgba(201,164,92,0.1);
+  }
+
+  .brand{display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:32px;}
+  .brand-seal{
+    width:44px;height:44px;border-radius:50%;display:grid;place-items:center;
+    border:1px solid var(--gold-line);
+    background:radial-gradient(circle at 35% 30%,rgba(124,107,168,0.5),rgba(30,22,44,0.9));
+  }
+  .brand-seal svg{width:22px;height:22px;}
+  .brand-name{font-family:var(--serif-engraved);font-size:1.4rem;letter-spacing:0.12em;color:var(--gold-soft);}
+
+  h1{font-family:var(--serif-display);font-size:1.5rem;font-weight:500;text-align:center;margin-bottom:6px;color:var(--parch-100);}
+  .subtitle{text-align:center;font-size:0.82rem;color:var(--parch-500);margin-bottom:28px;}
+
+  .field{margin-bottom:16px;}
+  label{display:block;font-family:var(--serif-engraved);font-size:0.65rem;letter-spacing:0.12em;color:var(--parch-500);margin-bottom:6px;}
+  input{
+    width:100%;padding:10px 14px;
+    background:rgba(255,255,255,0.04);border:1px solid var(--gold-line);border-radius:6px;
+    color:var(--parch-100);font-family:var(--serif-body);font-size:0.95rem;
+    outline:none;transition:border-color 0.2s;
+  }
+  input:focus{border-color:var(--gold);}
+  input::placeholder{color:var(--parch-500);}
+  input[readonly]{opacity:0.6;cursor:not-allowed;}
+
+  .hint{font-size:0.72rem;color:var(--parch-500);margin-top:4px;}
+
+  .btn-primary{
+    width:100%;padding:12px;margin-top:8px;border:none;border-radius:7px;
+    background:linear-gradient(135deg,rgba(160,123,224,0.3),rgba(201,164,92,0.25));
+    border:1px solid var(--gold-line);
+    color:var(--gold-soft);font-family:var(--serif-engraved);font-size:0.78rem;letter-spacing:0.12em;
+    cursor:pointer;transition:all 0.2s;
+  }
+  .btn-primary:hover:not(:disabled){background:linear-gradient(135deg,rgba(160,123,224,0.45),rgba(201,164,92,0.35));border-color:var(--gold);}
+  .btn-primary:disabled{opacity:0.5;cursor:not-allowed;}
+
+  .msg{margin-top:14px;padding:10px 14px;border-radius:6px;font-size:0.85rem;display:none;}
+  .msg.show{display:block;}
+  .msg.error{background:rgba(220,60,60,0.1);border:1px solid rgba(220,60,60,0.35);color:#e08080;}
+  .msg.success{background:rgba(92,201,184,0.1);border:1px solid rgba(92,201,184,0.35);color:#5cc9b8;}
+
+  .inv-invalid{text-align:center;padding:24px 0;}
+  .inv-invalid p{color:#e08080;margin-bottom:16px;}
+  .inv-invalid a{color:var(--gold);text-decoration:none;}
+
+  .footer-link{margin-top:20px;text-align:center;font-size:0.8rem;color:var(--parch-500);}
+  .footer-link a{color:var(--gold);text-decoration:none;}
+
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite;margin-right:6px;vertical-align:middle;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="brand">
+    <div class="brand-seal">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#a795d6" stroke-width="1.3">
+        <path d="M12 2.5 20 7v10l-8 4.5L4 17V7l8-4.5Z"/>
+        <path d="M12 7.2 16 9.5v5L12 16.8 8 14.5v-5L12 7.2Z" stroke="#d4b15f"/>
+        <circle cx="12" cy="12" r="1.4" fill="#d4b15f" stroke="none"/>
+      </svg>
+    </div>
+    <span class="brand-name">ManaMind</span>
+  </div>
+
+  <div id="formWrap">
+    <h1>Créer un compte</h1>
+    <p class="subtitle">Via invitation</p>
+
+    <form id="registerForm">
+      <div class="field">
+        <label>LIEN D'INVITATION</label>
+        <input id="tokenDisplay" type="text" readonly />
+      </div>
+      <div class="field">
+        <label for="displayName">PSEUDO</label>
+        <input id="displayName" type="text" placeholder="Ton pseudo" maxlength="40" />
+      </div>
+      <div class="field">
+        <label for="email">EMAIL</label>
+        <input id="email" type="email" placeholder="votre@email.com" required autocomplete="email" />
+      </div>
+      <div class="field">
+        <label for="password">MOT DE PASSE</label>
+        <input id="password" type="password" placeholder="••••••••" required autocomplete="new-password" minlength="8" />
+        <div class="hint">8 caractères minimum</div>
+      </div>
+      <div class="field">
+        <label for="password2">CONFIRMER LE MOT DE PASSE</label>
+        <input id="password2" type="password" placeholder="••••••••" required autocomplete="new-password" />
+      </div>
+      <button class="btn-primary" type="submit" id="submitBtn">Créer mon compte</button>
+      <div class="msg error" id="errorMsg"></div>
+      <div class="msg success" id="successMsg"></div>
+    </form>
+
+    <div class="footer-link">
+      Déjà un compte ? <a href="/login">Se connecter</a>
+    </div>
+  </div>
+
+  <div id="invInvalid" class="inv-invalid" style="display:none;">
+    <p id="invError">Lien d'invitation invalide ou expiré.</p>
+    <a href="/login">Aller à la connexion</a>
+  </div>
+</div>
+
+<script>
+const token = new URLSearchParams(location.search).get('token') || '';
+
+if (!token) {
+  document.getElementById('formWrap').style.display = 'none';
+  document.getElementById('invInvalid').style.display = 'block';
+  document.getElementById('invError').textContent = 'Aucun lien d\'invitation fourni.';
+} else {
+  document.getElementById('tokenDisplay').value = token.slice(0, 8) + '••••••••••••••••••••••••';
+}
+
+document.getElementById('registerForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn      = document.getElementById('submitBtn');
+  const errEl    = document.getElementById('errorMsg');
+  const succEl   = document.getElementById('successMsg');
+  const email       = document.getElementById('email').value.trim();
+  const password    = document.getElementById('password').value;
+  const password2   = document.getElementById('password2').value;
+  const displayName = document.getElementById('displayName').value.trim();
+
+  errEl.classList.remove('show');
+  succEl.classList.remove('show');
+
+  if (password !== password2) {
+    errEl.textContent = 'Les mots de passe ne correspondent pas.';
+    errEl.classList.add('show');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Création…';
+
+  try {
+    const res  = await fetch('/auth/register', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({token, email, password, display_name: displayName}),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      errEl.textContent = data.error || 'Erreur lors de la création du compte.';
+      errEl.classList.add('show');
+      btn.disabled = false;
+      btn.textContent = 'Créer mon compte';
+      return;
+    }
+    succEl.textContent = 'Compte créé ! Redirection…';
+    succEl.classList.add('show');
+    setTimeout(() => { window.location.href = '/'; }, 1200);
+  } catch {
+    errEl.textContent = 'Erreur réseau, réessaie.';
+    errEl.classList.add('show');
+    btn.disabled = false;
+    btn.textContent = 'Créer mon compte';
+  }
+});
+</script>
+</body>
+</html>

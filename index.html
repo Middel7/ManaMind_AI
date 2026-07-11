@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<title>ManaMind — Accueil</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink-900: #0c0910; --ink-850: #120c1a; --ink-800: #17101f; --ink-700: #1d1529;
+    --ink-panel: rgba(20, 13, 28, 0.62);
+    --parch-100: #efe6d6; --parch-300: #cdbfa8; --parch-500: #9c8e79; --parch-600: #7c715f;
+    --arcane: #a07be0; --arcane-deep: #6c4bb0;
+    --gold: #c9a45c; --gold-soft: #d8bd83; --gold-line: rgba(201, 164, 92, 0.42); --gold-faint: rgba(201, 164, 92, 0.16);
+    --teal: #5cc9b8; --teal-faint: rgba(92, 201, 184, 0.12); --teal-line: rgba(92, 201, 184, 0.35);
+    --serif-display: "Cormorant Garamond", Georgia, serif;
+    --serif-engraved: "Cinzel", Georgia, serif;
+    --serif-body: "Spectral", Georgia, serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body { color: var(--parch-100); font-family: var(--serif-body); background: var(--ink-900); min-height: 100vh; }
+
+  #scene {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      radial-gradient(140% 90% at 50% -10%, rgba(100, 60, 160, 0.22) 0%, rgba(12,9,16,0) 55%),
+      radial-gradient(120% 80% at 50% 0%, rgba(12,9,16,0.20), rgba(12,9,16,0.90) 65%, rgba(12,9,16,0.98) 100%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E");
+    background-color: var(--ink-900);
+  }
+  #particles { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .particle { position: absolute; border-radius: 50%; background: var(--arcane); opacity: 0; animation: float linear infinite; }
+  @keyframes float { 0% { transform: translateY(100vh) scale(0); opacity: 0; } 10% { opacity: 0.35; } 90% { opacity: 0.12; } 100% { transform: translateY(-10vh) scale(1.2); opacity: 0; } }
+
+  #app {
+    position: relative; z-index: 1;
+    max-width: 1920px; margin: 0 auto;
+    padding: 28px 64px 80px;
+    display: flex; flex-direction: column; gap: 32px;
+  }
+
+  /* ── Header compact ── */
+  .site-header {
+    display: flex; align-items: center; gap: 14px;
+    padding: 16px 0 12px;
+    border-bottom: 1px solid var(--gold-line);
+  }
+  .brand-seal {
+    flex-shrink: 0;
+    width: 36px; height: 36px;
+    display: grid; place-items: center;
+    border-radius: 50%;
+    border: 1px solid var(--gold-line);
+    background: radial-gradient(circle at 35% 30%, rgba(160,123,224,0.5), rgba(20,13,28,0.92));
+    box-shadow: inset 0 0 14px rgba(160,123,224,0.25), 0 0 16px rgba(100,60,160,0.15);
+  }
+  .brand-seal svg { width: 18px; height: 18px; fill: var(--gold); opacity: 0.9; }
+  .brand-name {
+    font-family: var(--serif-engraved); font-size: 1.35rem; font-weight: 700;
+    color: var(--gold-soft); letter-spacing: 0.06em;
+    text-shadow: 0 0 28px rgba(201,164,92,0.25);
+  }
+  .brand-sep {
+    color: var(--gold-line); font-size: 1rem; margin: 0 2px;
+  }
+  .brand-tagline {
+    font-family: var(--serif-display); font-size: 1.35rem; font-style: italic;
+    color: var(--parch-500); margin: 0;
+  }
+
+  /* ── Séparateur ── */
+  .gold-rule { display: flex; align-items: center; gap: 14px; }
+  .gold-rule::before, .gold-rule::after { content: ""; flex: 1; height: 1px; background: var(--gold-line); }
+  .gold-rule-diamond { width: 6px; height: 6px; background: var(--gold); transform: rotate(45deg); opacity: 0.55; }
+
+  /* ── Catégories ── */
+  .categories { display: flex; flex-direction: column; gap: 36px; }
+  .category-block { display: flex; flex-direction: column; gap: 14px; }
+
+  .category-label { display: flex; align-items: center; gap: 12px; }
+  .category-label-text {
+    font-family: var(--serif-engraved); font-size: 0.58rem; letter-spacing: 0.3em;
+    text-transform: uppercase; white-space: nowrap;
+  }
+  .category-label-line { flex: 1; height: 1px; }
+
+  .cat-explore  .category-label-text { color: var(--teal); }
+  .cat-explore  .category-label-line { background: var(--teal-line); }
+  .cat-optimize .category-label-text { color: var(--arcane); }
+  .cat-optimize .category-label-line { background: rgba(160,123,224,0.28); }
+  .cat-manage   .category-label-text { color: var(--gold); }
+  .cat-manage   .category-label-line { background: var(--gold-line); }
+
+  /* ── Bloc moteur IA ── */
+  #engineBlock {
+    display: none;
+    border: 1px solid rgba(212,177,95,0.2);
+    border-radius: 6px;
+    padding: 18px 22px;
+    background: rgba(212,177,95,0.04);
+  }
+  #engineBlock h3 {
+    font-family: var(--serif-engraved); font-size: 0.7rem; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--gold); margin: 0 0 8px;
+  }
+  #engineBlock p {
+    font-family: var(--serif-display); font-size: 0.85rem; color: var(--parch-500);
+    margin: 0 0 14px; line-height: 1.5;
+  }
+  #engineStartBtn {
+    font-family: var(--serif-engraved); font-size: 0.68rem; letter-spacing: 0.14em;
+    text-transform: uppercase; cursor: pointer;
+    padding: 9px 20px; border-radius: 4px;
+    border: 1px solid rgba(212,177,95,0.4); color: var(--gold-bright);
+    background: rgba(212,177,95,0.1);
+    transition: background .2s, border-color .2s;
+  }
+  #engineStartBtn:hover:not(:disabled) { background: rgba(212,177,95,0.22); border-color: var(--gold); }
+  #engineStartBtn:disabled { cursor: default; }
+  #engineStatus {
+    font-family: var(--serif-display); font-size: 0.8rem; margin-top: 10px;
+    color: var(--parch-500); font-style: italic; min-height: 1.2em;
+  }
+
+  /* ── Grilles ── */
+  .tiles-grid {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+
+  /* ── Tuile ── */
+  .tile {
+    display: flex; align-items: flex-start; gap: 16px;
+    padding: 18px 20px;
+    background: var(--ink-panel);
+    border-radius: 12px;
+    border: 1px solid transparent;
+    text-decoration: none; color: inherit;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.18s, background 0.2s;
+    animation: fadeUp 0.38s ease both;
+  }
+  .tile:hover { transform: translateY(-3px); background: rgba(28, 16, 42, 0.85); }
+
+  .cat-explore  .tile { border-color: var(--teal-line); }
+  .cat-explore  .tile:hover { border-color: var(--teal); box-shadow: 0 6px 28px rgba(0,0,0,0.45), 0 0 0 1px rgba(92,201,184,0.38); }
+  .cat-optimize .tile { border-color: rgba(160,123,224,0.22); }
+  .cat-optimize .tile:hover { border-color: var(--arcane); box-shadow: 0 6px 28px rgba(0,0,0,0.45), 0 0 0 1px rgba(160,123,224,0.42); }
+  .cat-manage   .tile { border-color: var(--gold-line); }
+  .cat-manage   .tile:hover { border-color: var(--gold); box-shadow: 0 6px 28px rgba(0,0,0,0.45), 0 0 0 1px rgba(201,164,92,0.38); }
+
+  .tile-icon {
+    flex-shrink: 0; width: 42px; height: 42px;
+    display: grid; place-items: center; border-radius: 9px; font-size: 1.25rem;
+  }
+  .cat-explore  .tile-icon { background: var(--teal-faint); border: 1px solid var(--teal-line); }
+  .cat-optimize .tile-icon { background: rgba(160,123,224,0.08); border: 1px solid rgba(160,123,224,0.22); }
+  .cat-manage   .tile-icon { background: var(--gold-faint); border: 1px solid var(--gold-line); }
+
+  .tile-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .tile-name {
+    font-family: var(--serif-display); font-size: 1rem; font-weight: 600;
+    color: var(--parch-100); line-height: 1.25;
+  }
+  .tile-desc { font-size: 0.8rem; color: var(--parch-500); line-height: 1.5; }
+
+  .tile-arrow {
+    margin-left: auto; flex-shrink: 0; align-self: center;
+    font-size: 0.95rem; opacity: 0; transition: opacity 0.18s, transform 0.18s;
+  }
+  .cat-explore  .tile-arrow { color: var(--teal); }
+  .cat-optimize .tile-arrow { color: var(--arcane); }
+  .cat-manage   .tile-arrow { color: var(--gold); }
+  .tile:hover .tile-arrow { opacity: 1; transform: translateX(3px); }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .tile:nth-child(1) { animation-delay: 0.04s; }
+  .tile:nth-child(2) { animation-delay: 0.09s; }
+  .tile:nth-child(3) { animation-delay: 0.14s; }
+  .tile:nth-child(4) { animation-delay: 0.19s; }
+
+  /* ── Footer ── */
+  .site-footer {
+    text-align: center; font-family: var(--serif-engraved); font-size: 0.52rem;
+    letter-spacing: 0.22em; color: var(--parch-600); text-transform: uppercase; opacity: 0.45;
+  }
+</style>
+</head>
+<body>
+
+<div id="scene"></div>
+<div id="particles"></div>
+
+<div id="app">
+
+  <!-- ── Header compact ── -->
+  <header class="site-header" style="display:flex;align-items:center;">
+    <div class="brand-seal">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2L9.5 8.5H3L8.5 12.5L6 19L12 15L18 19L15.5 12.5L21 8.5H14.5L12 2Z"/>
+      </svg>
+    </div>
+    <span class="brand-name">ManaMind</span>
+    <span class="brand-sep">·</span>
+    <span class="brand-tagline" style="flex:1;">Votre gestionnaire de deck et de collection pour le Commander</span>
+    <span id="userBadge" style="display:flex;align-items:center;gap:6px;flex-shrink:0;"></span>
+  </header>
+
+  <!-- ── Contenu ── -->
+  <div class="categories">
+
+    <!-- Gérer -->
+    <div class="category-block cat-manage">
+      <div class="category-label">
+        <span class="category-label-text">Gérer</span>
+        <div class="category-label-line"></div>
+      </div>
+      <div class="tiles-grid">
+
+        <a class="tile" href="/deck-config">
+          <div class="tile-icon">📋</div>
+          <div class="tile-body">
+            <div class="tile-name">Mes decklists</div>
+            <div class="tile-desc">Gérez vos decklists importées depuis Moxfield ou vos fichiers .txt locaux.</div>
+          </div>
+          <span class="tile-arrow">→</span>
+        </a>
+
+        <a class="tile" href="/collection-manage">
+          <div class="tile-icon">🗃️</div>
+          <div class="tile-body">
+            <div class="tile-name">Gérer ma collection</div>
+            <div class="tile-desc">Consultez, recherchez et modifiez les quantités de vos cartes en collection.</div>
+          </div>
+          <span class="tile-arrow">→</span>
+        </a>
+
+      </div>
+    </div>
+
+    <!-- Explorer -->
+    <div class="category-block cat-explore">
+      <div class="category-label">
+        <span class="category-label-text">Explorer</span>
+        <div class="category-label-line"></div>
+      </div>
+      <div class="tiles-grid">
+
+        <a class="tile" href="/commander-suggest">
+          <div class="tile-icon">🔮</div>
+          <div class="tile-body">
+            <div class="tile-name">Trouver un commandant pour ma carte</div>
+            <div class="tile-desc">Saisissez une carte et découvrez dans quel commandant elle a le plus de chances d'être jouée.</div>
+          </div>
+          <span class="tile-arrow">→</span>
+        </a>
+
+        <a class="tile" href="/collection-commanders">
+          <div class="tile-icon">💎</div>
+          <div class="tile-body">
+            <div class="tile-name">Quel deck créer avec ma collection ?</div>
+            <div class="tile-desc">Visualisez quels commandants tirent le plus de valeur de vos cartes disponibles.</div>
+          </div>
+          <span class="tile-arrow">→</span>
+        </a>
+
+      </div>
+    </div>
+
+    <!-- Optimiser -->
+    <div class="category-block cat-optimize">
+      <div class="category-label">
+        <span class="category-label-text">Optimiser</span>
+        <div class="category-label-line"></div>
+      </div>
+      <div class="tiles-grid">
+
+        <a class="tile" href="/deck-build">
+          <div class="tile-icon">📦</div>
+          <div class="tile-body">
+            <div class="tile-name">Améliorer mes decks avec ma collection</div>
+            <div class="tile-desc">Trouve les cartes de votre collection non utilisées qui amélioreraient le plus chacun de vos decks.</div>
+          </div>
+          <span class="tile-arrow">→</span>
+        </a>
+
+        <a class="tile" href="/deck-moves">
+          <div class="tile-icon">🔄</div>
+          <div class="tile-body">
+            <div class="tile-name">Quelle carte fonctionnerait mieux dans un autre deck ?</div>
+            <div class="tile-desc">Repère les rares et mythiques présents dans un deck qui seraient statistiquement mieux placés ailleurs.</div>
+          </div>
+          <span class="tile-arrow">→</span>
+        </a>
+
+        <a class="tile" href="/deck-select?mode=popular">
+          <div class="tile-icon">📊</div>
+          <div class="tile-body">
+            <div class="tile-name">Recommandations par popularité</div>
+            <div class="tile-desc">Analysez un deck et obtenez des suggestions basées sur les cartes les plus jouées dans la méta.</div>
+          </div>
+          <span class="tile-arrow">→</span>
+        </a>
+
+        <a class="tile" href="/deck-select?mode=ia">
+          <div class="tile-icon">🤖</div>
+          <div class="tile-body">
+            <div class="tile-name">Recommandations par intelligence artificielle</div>
+            <div class="tile-desc">Analysez un deck avec l'IA pour obtenir des suggestions contextuelles et personnalisées.</div>
+          </div>
+          <span class="tile-arrow">→</span>
+        </a>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bloc moteur IA — visible uniquement pour les admins via JS -->
+  <div id="engineBlock">
+    <h3>Moteur d'intelligence artificielle</h3>
+    <p>Le moteur IA n'est pas chargé automatiquement au démarrage du serveur. Lance-le manuellement quand tu as besoin des recommandations par IA (environ 3 à 4 minutes de chargement).</p>
+    <button id="engineStartBtn">Lancer le moteur IA</button>
+    <div id="engineStatus"></div>
+  </div>
+
+  <div class="gold-rule"><div class="gold-rule-diamond"></div></div>
+  <footer class="site-footer">ManaMind &nbsp;·&nbsp; Powered by Scryfall</footer>
+
+</div>
+
+<script src="/auth-guard.js"></script>
+<script>
+(async () => {
+  // Attendre que auth-guard.js ait peuplé sessionStorage (max 6s)
+  async function waitForUser(maxMs) {
+    const t0 = Date.now();
+    while (Date.now() - t0 < maxMs) {
+      try {
+        const u = JSON.parse(sessionStorage.getItem('_mm_user'));
+        if (u) return u;
+      } catch {}
+      await new Promise(r => setTimeout(r, 100));
+    }
+    // Fallback : interroger directement /auth/me
+    try {
+      const r = await fetch('/auth/me');
+      const d = await r.json();
+      return d.authenticated ? d.user : null;
+    } catch { return null; }
+  }
+
+  const user = await waitForUser(6000);
+  if (!user || user.role !== 'admin') return;
+
+  const block = document.getElementById('engineBlock');
+  if (!block) return;
+  block.style.display = 'block';
+
+  const btn      = document.getElementById('engineStartBtn');
+  const statusEl = document.getElementById('engineStatus');
+  let _poll = null;
+
+  function setReady() {
+    btn.disabled = true;
+    btn.textContent = 'Moteur prêt';
+    btn.style.opacity = '0.6';
+    statusEl.textContent = 'Le moteur est chargé et prêt à l\'emploi.';
+    statusEl.style.color = '#4ade80';
+    if (_poll) { clearInterval(_poll); _poll = null; }
+    // Mettre à jour l'indicateur header si présent
+    const dot = document.getElementById('engineDotCircle');
+    const label = document.getElementById('engineDotLabel');
+    const wrap  = document.getElementById('engineDot');
+    if (dot) { dot.classList.remove('loading'); dot.style.background = '#4ade80'; }
+    if (label) label.textContent = 'Moteur IA prêt';
+    if (wrap) {
+      setTimeout(() => {
+        wrap.style.transition = 'opacity 1s';
+        wrap.style.opacity = '0';
+        setTimeout(() => { wrap.style.display = 'none'; }, 1000);
+      }, 4000);
+    }
+  }
+
+  async function checkStatus() {
+    try {
+      const r = await fetch('/api/engine/status');
+      const { ready } = await r.json();
+      if (ready) setReady();
+    } catch {}
+  }
+
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    btn.textContent = 'Chargement…';
+    statusEl.textContent = 'Démarrage en cours — cela prend environ 3 à 4 minutes.';
+    statusEl.style.color = '#e2b96f';
+
+    // Afficher l'indicateur dans le header
+    const dot = document.getElementById('engineDotCircle');
+    const label = document.getElementById('engineDotLabel');
+    const wrap  = document.getElementById('engineDot');
+    if (wrap) { wrap.style.display = 'inline-flex'; wrap.style.opacity = '1'; }
+    if (dot) dot.classList.add('loading');
+    if (label) label.textContent = 'Moteur IA…';
+
+    try {
+      const r = await fetch('/api/engine/start', { method: 'POST' });
+      const d = await r.json();
+      if (d.status === 'already_ready') { setReady(); return; }
+    } catch {
+      statusEl.textContent = 'Erreur lors du démarrage.';
+      statusEl.style.color = '#e07b7b';
+      btn.disabled = false;
+      btn.textContent = 'Lancer le moteur IA';
+      return;
+    }
+    _poll = setInterval(checkStatus, 4000);
+  });
+
+  // Vérifier l'état au chargement de la page
+  checkStatus();
+})();
+</script>
+<script>
+  (function () {
+    const c = document.getElementById('particles');
+    for (let i = 0; i < 18; i++) {
+      const p = document.createElement('div'); p.className = 'particle';
+      const s = Math.random() * 3 + 1;
+      p.style.cssText = `width:${s}px;height:${s}px;left:${Math.random()*100}%;animation-duration:${12+Math.random()*18}s;animation-delay:${Math.random()*16}s`;
+      c.appendChild(p);
+    }
+  })();
+</script>
+</body>
+</html>

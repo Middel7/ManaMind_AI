@@ -129,9 +129,22 @@ def fetch_decks(conn, commander: str, land_names: set[str]) -> dict[str, list[st
     return decks
 
 
+def fetch_card_types(conn, card_names: list[str]) -> dict[str, dict]:
+    """Charge type_line + oracle_text depuis scryfall_cards pour une liste de cartes."""
+    if not card_names:
+        return {}
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT name, type_line, oracle_text FROM scryfall_cards
+            WHERE name = ANY(%s)
+        """, (card_names,))
+        return {r[0]: {"type_line": r[1] or "", "oracle_text": r[2] or ""} for r in cur.fetchall()}
+
+
 def write_results(conn, commander: str, clusters: dict[str, int],
                   card_stats: dict[str, tuple[int, int]], total_decks: int,
-                  cluster_presence: dict[int, int]) -> int:
+                  cluster_presence: dict[int, int],
+                  card_data: dict[str, dict] | None = None) -> int:
     """
     Écrit les résultats dans commander_clusters et commander_cluster_meta.
     Retourne le nombre de clusters.
@@ -148,12 +161,16 @@ def write_results(conn, commander: str, clusters: dict[str, int],
             deck_count = card_stats.get(card_name, (0, 0))[0]
             cluster_cards.setdefault(cluster_id, []).append((card_name, deck_count))
 
+        # Réutiliser card_data passé en paramètre (évite un second fetch)
+        card_types = card_data or fetch_card_types(conn, list(clusters.keys()))
+
         # Générer les labels et fusionner les clusters de même label
         label_groups: dict[str, dict] = {}
         for cluster_id, cards in cluster_cards.items():
             top = sorted(cards, key=lambda x: -x[1])[:5]
             top_names = [c[0] for c in top]
-            label = _make_label(cluster_id, top_names)
+            all_names = [c[0] for c in cards]
+            label = _make_label(cluster_id, top_names, all_names, card_types)
             presence = cluster_presence.get(cluster_id, 0)
 
             if label not in label_groups:
@@ -220,28 +237,151 @@ def write_results(conn, commander: str, clusters: dict[str, int],
     return n_clusters
 
 
-def _make_label(cluster_id: int, top_cards: list[str]) -> str:
-    cards_lower = " ".join(top_cards).lower()
-    if any(k in cards_lower for k in ["traumatize", "mill", "glimpse", "maddening", "mind funeral", "altar of dementia", "mesmeric orb"]):
-        return "Mill"
-    if any(k in cards_lower for k in ["horror", "aberration", "nemesis of reason", "brainstealer"]):
-        return "Horrors Tribal"
-    if any(k in cards_lower for k in ["zombie", "gravecrawler", "undead", "wilhelt", "diregraf"]):
-        return "Zombies Tribal"
-    if any(k in cards_lower for k in ["reanimate", "animate dead", "dread return", "exhume", "entomb"]):
-        return "Reanimator"
-    if any(k in cards_lower for k in ["counterspell", "negate", "swan song", "force of will", "mana drain"]):
-        return "Counterspells"
-    if any(k in cards_lower for k in ["sol ring", "arcane signet", "dimir signet", "dark ritual", "cabal coffers"]):
-        return "Mana Rocks / Ramp"
-    if any(k in cards_lower for k in ["rhystic study", "phyrexian arena", "necropotence", "windfall", "brainstorm"]):
-        return "Card Draw"
-    if any(k in cards_lower for k in ["island", "swamp", "underground sea", "watery grave", "drowned catacomb"]):
-        return "Lands"
-    if any(k in cards_lower for k in ["lightning greaves", "swiftfoot boots", "commander's sphere"]):
-        return "Utility / Protection"
+TRIBES = [
+    "Elf", "Zombie", "Vampire", "Dragon", "Goblin", "Merfolk", "Wizard",
+    "Warrior", "Horror", "Elemental", "Spirit", "Soldier", "Angel", "Demon",
+    "Beast", "Cat", "Bird", "Shaman", "Cleric", "Knight", "Scout",
+    "Druid", "Ranger", "Faerie", "Sliver", "Dinosaur", "Pirate",
+]
+
+# Cartes-clés pour chaque stratégie
+STRATEGY_KEYS: list[tuple[str, list[str]]] = [
+    ("Mill", ["traumatize", "glimpse the unthinkable", "maddening cacophony",
+              "mind funeral", "altar of dementia", "mesmeric orb",
+              "trepanation blade", "consuming aberration", "brainstealer dragon",
+              "nemesis of reason", "ruin crab", "teferi's tutelage"]),
+    ("Reanimator", ["reanimate", "animate dead", "dread return", "exhume",
+                    "entomb", "buried alive", "necromancy", "persist",
+                    "unearth", "late to dinner", "victimize", "stitch together"]),
+    ("Counterspells", ["counterspell", "negate", "swan song", "force of will",
+                       "mana drain", "arcane denial", "delay", "remand",
+                       "fierce guardianship", "dovin's veto"]),
+    ("Sacrifice / Aristocrats", ["ashnod's altar", "phyrexian altar", "viscera seer",
+                                  "blood artist", "zulaport cutthroat", "falkenrath noble",
+                                  "grave pact", "dictate of erebos", "malevolent noble"]),
+    ("Token Doublers", ["doubling season", "parallel lives", "primal vigor",
+                        "anointed procession", "intangible virtue", "mondrak"]),
+    ("Finishers / Overrun", ["craterhoof behemoth", "overwhelming stampede",
+                              "beastmaster ascension", "triumph of the hordes",
+                              "pathbreaker ibex", "concordant crossroads"]),
+    ("Mana Rituals / Black Ramp", ["cabal coffers", "urborg, tomb of yawgmoth", "nykthos",
+                                    "dark ritual", "culling the weak", "diabolic intent",
+                                    "cabal stronghold"]),
+    ("Mana Rocks", ["arcane signet", "chromatic lantern", "thought vessel", "mind stone",
+                    "commander's sphere", "dimir signet", "simic signet", "izzet signet",
+                    "golgari signet", "fellwar stone", "coalition relic", "talisman"]),
+    ("Creature Tutors", ["natural order", "defense of the heart", "tooth and nail",
+                          "finale of devastation", "chord of calling", "green sun's zenith",
+                          "worldly tutor", "summoner's pact", "shared summons"]),
+    ("Power / Toughness Matters", ["garruk's uprising", "rishkar's expertise",
+                                    "return of the wildspeaker", "soul's majesty",
+                                    "regal force", "greater good", "selvala's stampede",
+                                    "herd baloth", "temur sabertooth", "kogla, the titan ape",
+                                    "fierce empath", "ghalta, primal hunger"]),
+    ("Card Draw / Engines", ["rhystic study", "necropotence", "windfall", "brainstorm",
+                              "divination", "phyrexian arena", "mystic remora",
+                              "sensei's divining top", "sylvan library", "harmonize",
+                              "shamanic revelation", "wellspring", "prospect"]),
+    ("Ramp / Land Search", ["cultivate", "kodama's reach", "three visits", "nature's lore",
+                             "rampant growth", "sakura-tribe elder", "wood elves",
+                             "farhaven elf", "springbloom druid", "harrow",
+                             "skyshroud claim", "explosive vegetation", "farseek"]),
+    ("Removal / Protection", ["heroic intervention", "cyclonic rift", "chaos warp",
+                               "swords to plowshares", "path to exile", "beast within",
+                               "generous gift", "nature's claim", "veil of summer",
+                               "tamiyo's safekeeping", "tyvar's stand"]),
+    ("Recursion / Graveyard", ["eternal witness", "regrowth", "noxious revival",
+                                "pull from eternity", "life from the loam",
+                                "archeomancer", "conjurer's closet"]),
+]
+
+
+def _classify_card(card: str, card_data: dict) -> str:
+    """Classifie une carte selon son oracle_text et type_line."""
+    oracle = card_data.get("oracle_text", "").lower()
+    tl     = card_data.get("type_line", "").lower()
+    name   = card.lower()
+
+    # Mana dork : créature qui ajoute du mana via tap
+    if "creature" in tl and ("{t}: add" in oracle or "{t}: add {" in oracle):
+        return "mana_dork"
+    # Enchantement de terrain qui ajoute du mana
+    if ("enchantment" in tl and "enchant land" in oracle and "add {" in oracle):
+        return "mana_dork"
+    # Mill explicite
+    if "mill" in oracle or "mills" in oracle:
+        return "mill"
+    # Draw
+    if "draw" in oracle and ("card" in oracle or "cards" in oracle):
+        return "draw"
+    # Ramp land search
+    if "search your library" in oracle and ("land" in oracle or "forest" in oracle):
+        return "ramp"
+    # Removal
+    if any(k in oracle for k in ["exile target", "destroy target", "return target"]):
+        return "removal"
+    return "other"
+
+
+def _make_label(cluster_id: int, top_cards: list[str],
+                all_cards: list[str] | None = None,
+                card_types: dict[str, dict] | None = None) -> str:
+    """
+    Génère un label thématique pour un cluster via :
+    1. Vote tribal (si ≥40% des cartes partagent un type créature)
+    2. Vote fonctionnel via oracle_text (mana_dork, mill, draw, ramp…)
+    3. Matching par cartes-clés sur tous les noms du cluster
+    4. Fallback : nom de la carte la plus présente
+    """
+    from collections import Counter
+    card_list = all_cards or top_cards
+    all_lower = " ".join(card_list).lower()
+    ct = card_types or {}
+
+    # ── 1. Vote tribal ────────────────────────────────────────────────────────
+    tribe_votes: Counter = Counter()
+    for card in card_list:
+        data = ct.get(card, {})
+        tl = data.get("type_line", "").lower() if isinstance(data, dict) else str(data).lower()
+        if "creature" not in tl:
+            continue
+        for tribe in TRIBES:
+            if tribe.lower() in tl:
+                tribe_votes[tribe] += 1
+    if tribe_votes:
+        best_tribe, best_count = tribe_votes.most_common(1)[0]
+        if best_count >= max(4, len(card_list) * 0.40):
+            return f"{best_tribe}s Tribal"
+
+    # ── 2. Vote fonctionnel via oracle_text ───────────────────────────────────
+    if ct:
+        func_votes: Counter = Counter()
+        for card in card_list:
+            data = ct.get(card, {})
+            if isinstance(data, dict):
+                func_votes[_classify_card(card, data)] += 1
+        total = len(card_list)
+        # mana dorks dominants → Elves / Mana Dorks
+        if func_votes.get("mana_dork", 0) >= max(3, total * 0.30):
+            return "Elves / Mana Dorks"
+        # Mill dominant
+        if func_votes.get("mill", 0) >= max(2, total * 0.20):
+            return "Mill"
+        # Ramp dominant (et peu de draw)
+        ramp_n = func_votes.get("ramp", 0)
+        draw_n = func_votes.get("draw", 0)
+        if ramp_n >= max(3, total * 0.25) and ramp_n > draw_n:
+            return "Ramp / Land Search"
+
+    # ── 3. Matching cartes-clés sur les noms ─────────────────────────────────
+    for label, keys in STRATEGY_KEYS:
+        if any(k in all_lower for k in keys):
+            return label
+
+    # ── 4. Fallback ───────────────────────────────────────────────────────────
     if top_cards:
-        return f"{top_cards[0][:30]} Package"
+        name = top_cards[0]
+        return f"{name[:28]} Package" if len(name) > 28 else f"{name} Package"
     return f"Cluster {cluster_id}"
 
 
@@ -290,7 +430,15 @@ def build_cooccurrence_matrix(decks: dict[str, list[str]], min_inclusion: float
     return df, card_stats
 
 
-def cluster_commander(decks: dict[str, list[str]]) -> tuple[dict[str, int], dict[str, tuple[int, int]], dict[int, int]]:
+def pre_assign_functional_groups(card_list: list[str], card_data: dict[str, dict]) -> dict[str, str]:
+    """
+    Pré-assigne chaque carte à un groupe fonctionnel via oracle_text.
+    Retourne {card_name: group} où group est "mana_dork", "removal", "other", etc.
+    """
+    return {card: _classify_card(card, card_data.get(card, {})) for card in card_list}
+
+
+def cluster_commander(decks: dict[str, list[str]], card_data: dict[str, dict] | None = None) -> tuple[dict[str, int], dict[str, tuple[int, int]], dict[int, int]]:
     """
     Clustérise les cartes d'un commandant par K-Means sur la matrice de co-occurrence.
     K est déterminé automatiquement : sqrt(n_cards / 8), borné entre 3 et 12.
@@ -306,25 +454,42 @@ def cluster_commander(decks: dict[str, list[str]]) -> tuple[dict[str, int], dict
     if df.empty:
         return {}, {}, {}
 
-    matrix = df.values  # (n_cards, n_decks)
-    n_cards = matrix.shape[0]
-
-    # K automatique : ~1 cluster par 8 cartes, borné entre 3 et 12
-    k = max(3, min(12, int(n_cards ** 0.5 // 2)))
-
-    # Réduction PCA avant K-Means (plus stable que UMAP pour des corpus petits)
-    n_components = min(20, n_cards - 1, matrix.shape[1] - 1)
-    if n_components >= 2:
-        pca = PCA(n_components=n_components, random_state=42)
-        reduced = pca.fit_transform(matrix)
-    else:
-        reduced = matrix
-
-    km = KMeans(n_clusters=k, random_state=42, n_init=10)
-    labels = km.fit_predict(reduced)
-
     card_names = df.index.tolist()
-    clusters = {name: int(label) for name, label in zip(card_names, labels)}
+
+    # Séparer les mana dorks avant le K-Means — ils forment toujours leur propre cluster
+    MANA_DORK_GROUP = -99  # ID réservé
+    if card_data:
+        dork_mask = [_classify_card(c, card_data.get(c, {})) == "mana_dork" for c in card_names]
+        dork_cards = [c for c, is_dork in zip(card_names, dork_mask) if is_dork]
+        non_dork_cards = [c for c, is_dork in zip(card_names, dork_mask) if not is_dork]
+    else:
+        dork_cards = []
+        non_dork_cards = card_names
+
+    # K-Means uniquement sur les cartes non-dork
+    if non_dork_cards:
+        idx_map = {c: i for i, c in enumerate(card_names)}
+        nd_indices = [idx_map[c] for c in non_dork_cards]
+        matrix = df.values[nd_indices]  # (n_non_dork, n_decks)
+        n_cards = matrix.shape[0]
+        k = max(3, min(15, int(round(n_cards ** 0.5 / 1.5))))
+        n_components = min(20, n_cards - 1, matrix.shape[1] - 1)
+        if n_components >= 2:
+            pca = PCA(n_components=n_components, random_state=42)
+            reduced = pca.fit_transform(matrix)
+        else:
+            reduced = matrix
+        km = KMeans(n_clusters=k, random_state=42, n_init=10)
+        nd_labels = km.fit_predict(reduced)
+        clusters = {name: int(label) for name, label in zip(non_dork_cards, nd_labels)}
+    else:
+        clusters = {}
+
+    # Ajouter les mana dorks dans leur propre cluster (ID = max_label + 1)
+    if dork_cards:
+        next_id = max(clusters.values(), default=-1) + 1
+        for c in dork_cards:
+            clusters[c] = next_id
 
     # Calculer la présence de chaque cluster (nb decks contenant ≥1 carte du cluster)
     cluster_cards_set: dict[int, set[str]] = {}
@@ -378,7 +543,9 @@ def main() -> None:
                 skipped += 1
                 continue
 
-            clusters, card_stats, cluster_presence = cluster_commander(decks)
+            all_card_names_pre = list({c for cards in decks.values() for c in cards})
+            card_data_pre = fetch_card_types(conn, all_card_names_pre)
+            clusters, card_stats, cluster_presence = cluster_commander(decks, card_data_pre)
 
             if not clusters:
                 # Pas assez de cartes — marquer quand même pour ne pas retenter
@@ -391,7 +558,7 @@ def main() -> None:
                 skipped += 1
                 continue
 
-            n_clusters = write_results(conn, commander, clusters, card_stats, len(decks), cluster_presence)
+            n_clusters = write_results(conn, commander, clusters, card_stats, len(decks), cluster_presence, card_data_pre)
             ok += 1
 
             if (i + 1) % 100 == 0 or args.commander:

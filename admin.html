@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<title>ManaMind — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Cormorant+Garamond:wght@400;500;600&family=Spectral:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink-900:#0c0910; --ink-850:#120c1a; --ink-800:#17101f; --ink-700:#1d1529;
+    --ink-panel:rgba(20,13,28,0.62);
+    --parch-100:#efe6d6; --parch-300:#cdbfa8; --parch-500:#9c8e79; --parch-600:#7c715f;
+    --gold:#c9a45c; --gold-soft:#d8bd83; --gold-line:rgba(201,164,92,0.42); --gold-faint:rgba(201,164,92,0.16);
+    --teal:#5cc9b8; --teal-faint:rgba(92,201,184,0.12); --teal-line:rgba(92,201,184,0.35);
+    --red:rgba(220,60,60,0.8); --red-faint:rgba(220,60,60,0.1); --red-line:rgba(220,60,60,0.4);
+    --serif-display:"Cormorant Garamond",Georgia,serif;
+    --serif-engraved:"Cinzel",Georgia,serif;
+    --serif-body:"Spectral",Georgia,serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;min-height:100%;background:var(--ink-900);color:var(--parch-100);font-family:var(--serif-body);}
+  .page-wrap{max-width:1920px;margin:0 auto;padding:32px 48px;min-height:100vh;
+    background:linear-gradient(160deg,var(--ink-850) 0%,var(--ink-900) 60%);}
+
+  header{display:flex;align-items:center;gap:24px;padding:16px 0;border-bottom:1px solid var(--gold-line);margin-bottom:32px;}
+  header a.back{font-family:var(--serif-engraved);font-size:0.72rem;letter-spacing:0.12em;color:var(--gold);text-decoration:none;opacity:0.8;flex-shrink:0;}
+  header a.back:hover{opacity:1;}
+  header h1{margin:0;flex:1;text-align:center;font-family:var(--serif-display);font-size:clamp(1.4rem,3vw,2rem);font-weight:600;}
+  .header-spacer{flex-shrink:0;visibility:hidden;font-size:0.72rem;}
+
+  .section{margin-bottom:40px;}
+  .section-title{font-family:var(--serif-engraved);font-size:0.75rem;letter-spacing:0.14em;color:var(--parch-500);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--gold-line);}
+
+  /* Invitations */
+  .inv-actions{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+  .btn{padding:9px 18px;border-radius:6px;font-family:var(--serif-engraved);font-size:0.7rem;letter-spacing:0.1em;cursor:pointer;transition:all 0.2s;border:none;}
+  .btn-gold{background:var(--gold-faint);border:1px solid var(--gold-line);color:var(--gold-soft);}
+  .btn-gold:hover{background:rgba(201,164,92,0.22);border-color:var(--gold);color:var(--gold);}
+
+  .inv-link-box{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:8px;background:var(--ink-panel);border:1px solid var(--teal-line);margin-bottom:16px;}
+  .inv-link-box input{flex:1;background:none;border:none;color:var(--teal);font-family:var(--serif-body);font-size:0.85rem;outline:none;}
+  .btn-copy{padding:6px 12px;border-radius:4px;border:1px solid var(--teal-line);background:var(--teal-faint);color:var(--teal);font-size:0.72rem;font-family:var(--serif-engraved);cursor:pointer;white-space:nowrap;}
+  .btn-copy:hover{background:rgba(92,201,184,0.2);}
+  .inv-expires{font-size:0.72rem;color:var(--parch-500);margin-top:4px;}
+
+  /* Table invitations */
+  .inv-table{width:100%;border-collapse:collapse;font-size:0.82rem;}
+  .inv-table th{padding:8px 12px;text-align:left;font-family:var(--serif-engraved);font-size:0.65rem;letter-spacing:0.1em;color:var(--parch-500);border-bottom:1px solid var(--gold-line);}
+  .inv-table td{padding:8px 12px;border-bottom:1px solid rgba(201,164,92,0.08);}
+  .badge-used{padding:2px 8px;border-radius:10px;font-size:0.68rem;font-family:var(--serif-engraved);background:var(--teal-faint);border:1px solid var(--teal-line);color:var(--teal);}
+  .badge-pending{padding:2px 8px;border-radius:10px;font-size:0.68rem;font-family:var(--serif-engraved);background:var(--gold-faint);border:1px solid var(--gold-line);color:var(--gold-soft);}
+  .badge-expired{padding:2px 8px;border-radius:10px;font-size:0.68rem;font-family:var(--serif-engraved);background:var(--red-faint);border:1px solid var(--red-line);color:var(--red);}
+
+  /* Table users */
+  .user-table{width:100%;border-collapse:collapse;font-size:0.85rem;}
+  .user-table th{padding:10px 12px;text-align:left;font-family:var(--serif-engraved);font-size:0.65rem;letter-spacing:0.1em;color:var(--parch-500);border-bottom:1px solid var(--gold-line);}
+  .user-table td{padding:10px 12px;border-bottom:1px solid rgba(201,164,92,0.08);vertical-align:middle;}
+  .user-table tr:hover td{background:var(--gold-faint);}
+  .role-admin{color:var(--gold);font-family:var(--serif-engraved);font-size:0.7rem;}
+  .role-user{color:var(--parch-500);font-size:0.78rem;}
+  .status-active{color:var(--teal);}
+  .status-inactive{color:var(--red);}
+
+  .btn-toggle{padding:5px 12px;border-radius:4px;border:1px solid rgba(220,60,60,0.35);background:var(--red-faint);color:var(--red);font-size:0.7rem;font-family:var(--serif-engraved);cursor:pointer;transition:all 0.15s;}
+  .btn-toggle:hover{background:rgba(220,60,60,0.2);}
+  .btn-toggle.activate{border-color:var(--teal-line);background:var(--teal-faint);color:var(--teal);}
+  .btn-toggle.activate:hover{background:rgba(92,201,184,0.2);}
+
+  .state-msg{text-align:center;padding:40px;color:var(--parch-500);font-style:italic;}
+  .spinner{display:inline-block;width:24px;height:24px;border:2px solid var(--gold-faint);border-top-color:var(--gold);border-radius:50%;animation:spin 0.8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  #toast{position:fixed;bottom:24px;right:24px;z-index:9999;padding:10px 18px;border-radius:6px;background:var(--ink-700);border:1px solid var(--gold-line);color:var(--parch-100);font-size:0.85rem;opacity:0;transition:opacity 0.3s;pointer-events:none;}
+  #toast.show{opacity:1;}
+</style>
+</head>
+<body>
+<div class="page-wrap">
+  <header>
+    <a href="/" class="back">← Accueil</a>
+    <h1>Panneau d'administration</h1>
+    <span class="header-spacer">← Accueil</span>
+  </header>
+
+  <!-- Invitations -->
+  <div class="section">
+    <div class="section-title">INVITATIONS</div>
+    <div class="inv-actions">
+      <button class="btn btn-gold" id="genInvBtn">+ Générer un lien d'invitation</button>
+    </div>
+    <div id="newInvWrap" style="display:none;"></div>
+    <div id="invListWrap"><div class="state-msg"><div class="spinner"></div></div></div>
+  </div>
+
+  <!-- Utilisateurs -->
+  <div class="section">
+    <div class="section-title">UTILISATEURS</div>
+    <div id="userListWrap"><div class="state-msg"><div class="spinner"></div></div></div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+(() => {
+  const NOW = Date.now();
+
+  // ── Chargement invitations ────────────────────────────────────
+  async function loadInvitations() {
+    const wrap = document.getElementById('invListWrap');
+    try {
+      const res  = await fetch('/api/admin/invitations');
+      if (res.status === 401 || res.status === 403) { location.href = '/login?next=/admin'; return; }
+      const data = await res.json();
+      const invs = data.invitations || [];
+      if (invs.length === 0) {
+        wrap.innerHTML = '<div class="state-msg">Aucune invitation générée.</div>';
+        return;
+      }
+      wrap.innerHTML = `
+        <table class="inv-table">
+          <thead><tr>
+            <th>Token</th><th>Statut</th><th>Expiration</th><th>Créé par</th><th>Utilisé par</th>
+          </tr></thead>
+          <tbody>
+            ${invs.map(inv => {
+              const expired = inv.expires_at && new Date(inv.expires_at) < new Date();
+              const badge = inv.used_at
+                ? '<span class="badge-used">Utilisé</span>'
+                : expired ? '<span class="badge-expired">Expiré</span>'
+                : '<span class="badge-pending">En attente</span>';
+              return `<tr>
+                <td style="font-family:monospace;font-size:0.78rem;color:var(--parch-500)">${inv.token.slice(0,16)}…</td>
+                <td>${badge}</td>
+                <td>${inv.expires_at ? fmtDate(inv.expires_at) : '—'}</td>
+                <td>${esc(inv.created_by || '—')}</td>
+                <td>${esc(inv.used_by || '—')}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>`;
+    } catch { wrap.innerHTML = '<div class="state-msg">Erreur de chargement.</div>'; }
+  }
+
+  // ── Générer une invitation ────────────────────────────────────
+  document.getElementById('genInvBtn').addEventListener('click', async () => {
+    const newWrap = document.getElementById('newInvWrap');
+    try {
+      const res  = await fetch('/api/admin/invitations', { method: 'POST' });
+      if (res.status === 401 || res.status === 403) { location.href = '/login?next=/admin'; return; }
+      const data = await res.json();
+      newWrap.style.display = 'block';
+      newWrap.innerHTML = `
+        <div class="inv-link-box">
+          <input id="invLinkInput" type="text" value="${esc(data.link)}" readonly />
+          <button class="btn-copy" onclick="copyInv()">Copier</button>
+        </div>
+        <div class="inv-expires">Expire le ${fmtDate(data.expires_at)} · Usage unique</div>`;
+      loadInvitations();
+    } catch { showToast('Erreur lors de la génération.'); }
+  });
+
+  window.copyInv = () => {
+    const inp = document.getElementById('invLinkInput');
+    inp.select();
+    navigator.clipboard.writeText(inp.value).then(() => showToast('Lien copié !'));
+  };
+
+  // ── Chargement utilisateurs ───────────────────────────────────
+  async function loadUsers() {
+    const wrap = document.getElementById('userListWrap');
+    try {
+      const res  = await fetch('/api/admin/users');
+      if (res.status === 401 || res.status === 403) { location.href = '/login?next=/admin'; return; }
+      const data = await res.json();
+      const users = data.users || [];
+      wrap.innerHTML = `
+        <table class="user-table">
+          <thead><tr>
+            <th>ID</th><th>Email</th><th>Pseudo</th><th>Rôle</th><th>Statut</th>
+            <th>Collection</th><th>Decks</th><th>Créé le</th><th>Dernière connexion</th><th></th>
+          </tr></thead>
+          <tbody>
+            ${users.map(u => {
+              const roleHtml = u.role === 'admin'
+                ? '<span class="role-admin">Admin</span>'
+                : '<span class="role-user">Utilisateur</span>';
+              const statusHtml = u.is_active
+                ? '<span class="status-active">Actif</span>'
+                : '<span class="status-inactive">Désactivé</span>';
+              const toggleLabel = u.is_active ? 'Désactiver' : 'Activer';
+              const toggleClass = u.is_active ? '' : 'activate';
+              const isAdmin = u.role === 'admin';
+              return `<tr>
+                <td style="color:var(--parch-500)">#${u.id}</td>
+                <td>${esc(u.email)}</td>
+                <td>${esc(u.display_name || '—')}</td>
+                <td>${roleHtml}</td>
+                <td>${statusHtml}</td>
+                <td style="text-align:center">${u.collection_count}</td>
+                <td style="text-align:center">${u.deck_count}</td>
+                <td style="color:var(--parch-500);font-size:0.78rem">${u.created_at ? fmtDate(u.created_at) : '—'}</td>
+                <td style="color:var(--parch-500);font-size:0.78rem">${u.last_login_at ? fmtDate(u.last_login_at) : 'Jamais'}</td>
+                <td>${isAdmin ? '' : `<button class="btn-toggle ${toggleClass}" data-id="${u.id}" data-active="${u.is_active}">${toggleLabel}</button>`}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>`;
+
+      wrap.querySelectorAll('.btn-toggle').forEach(btn => {
+        btn.addEventListener('click', () => toggleUser(btn));
+      });
+    } catch { wrap.innerHTML = '<div class="state-msg">Erreur de chargement.</div>'; }
+  }
+
+  async function toggleUser(btn) {
+    const uid = btn.dataset.id;
+    try {
+      const res  = await fetch(`/api/admin/users/${uid}/toggle`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) { showToast(data.error || 'Erreur'); return; }
+      showToast(data.is_active ? 'Compte activé' : 'Compte désactivé');
+      loadUsers();
+    } catch { showToast('Erreur réseau'); }
+  }
+
+  // ── Utilitaires ───────────────────────────────────────────────
+  function fmtDate(iso) {
+    const d = new Date(iso);
+    return d.toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  }
+  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  loadInvitations();
+  loadUsers();
+})();
+</script>
+</body>
+</html>
