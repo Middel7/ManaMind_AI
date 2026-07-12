@@ -303,12 +303,14 @@ from manamind.routers.auth import router as auth_router
 from manamind.routers.collection import router as collection_router
 from manamind.routers.decks import router as decks_router
 from manamind.routers.engine import router as engine_router
+from manamind.routers.import_deck import router as import_router
 from manamind.routers.pages import router as pages_router
 
 app.include_router(auth_router)
 app.include_router(collection_router)
 app.include_router(decks_router)
 app.include_router(engine_router)
+app.include_router(import_router)
 app.include_router(pages_router)
 
 

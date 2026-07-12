@@ -24,8 +24,8 @@ load_dotenv(ROOT / ".env")
 # ── Modèles ────────────────────────────────────────────────────────────────────
 # On importe Base et tous les modèles AVANT d'utiliser target_metadata.
 # Sans ces imports, Alembic ne peut pas détecter les tables lors de l'autogenerate.
-from mtgdb.db.base import Base  # noqa: E402
-import mtgdb.db.models  # noqa: E402, F401 — déclenche l'enregistrement des modèles
+from src.manamind.db.base import Base  # noqa: E402
+import src.manamind.db.models  # noqa: E402, F401 — déclenche l'enregistrement des modèles
 
 # ── Config Alembic ──────────────────────────────────────────────────────────────
 config = context.config
@@ -59,11 +59,9 @@ def run_migrations_offline() -> None:
 
 # ── Mode online (connexion directe à la base) ──────────────────────────────────
 def run_migrations_online() -> None:
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,  # NullPool : pas de connexions persistantes pendant les migrations
-    )
+    from sqlalchemy import create_engine
+    url = os.getenv("DATABASE_URL") or config.get_main_option("sqlalchemy.url")
+    connectable = create_engine(url, poolclass=pool.NullPool)
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
