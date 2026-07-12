@@ -8,15 +8,17 @@ from sqlalchemy.orm import sessionmaker
 # Le package mtgdb crée l'engine sans pool_size/max_overflow/pool_recycle, ce qui peut
 # provoquer des fuites de connexions sous charge. On le surcharge ici.
 if DATABASE_URL:
-    engine = create_engine(
-        DATABASE_URL,
-        pool_size=5,
-        max_overflow=10,
-        pool_timeout=30,
-        pool_pre_ping=True,   # Détecte les connexions mortes avant utilisation
-        pool_recycle=1800,    # Recycle les connexions après 30 min
-        echo=False,
-    )
+    _is_sqlite = DATABASE_URL.startswith("sqlite")
+    _engine_kwargs: dict = {"echo": False}
+    if not _is_sqlite:
+        _engine_kwargs.update({
+            "pool_size": 5,
+            "max_overflow": 10,
+            "pool_timeout": 30,
+            "pool_pre_ping": True,
+            "pool_recycle": 1800,
+        })
+    engine = create_engine(DATABASE_URL, **_engine_kwargs)
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 else:
     engine = None
