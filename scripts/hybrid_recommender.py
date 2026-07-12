@@ -209,13 +209,22 @@ class HybridEngine:
         log.info("  Tag-Cluster : NB entraîné")
 
         # ── Voisins Card2Vec ──────────────────────────────────────────────────
-        # Format : card_name, rank, neighbor, similarity (format long)
-        neighbors_df = pd.read_csv(EMB_DIR / "card_neighbors.csv", encoding="utf-8")
+        # Chargement depuis la DB (table card_neighbors)
         self.card_neighbors: dict[str, list[str]] = {}
-        for card, grp in neighbors_df.groupby("card_name"):
-            self.card_neighbors[card] = (
-                grp.sort_values("rank")["neighbor"].tolist()
-            )
+        try:
+            with SessionLocal() as s:
+                nb_rows = s.execute(text(
+                    "SELECT card_name, neighbor FROM card_neighbors ORDER BY card_name, rank"
+                )).fetchall()
+            for r in nb_rows:
+                self.card_neighbors.setdefault(r.card_name, []).append(r.neighbor)
+            log.info("  Voisins : %d cartes (DB card_neighbors)", len(self.card_neighbors))
+        except Exception as _e_cn:
+            log.warning("  card_neighbors indisponible (%s) — fallback CSV", _e_cn)
+            # Fallback CSV (TODO: supprimer quand toutes les DB sont à jour)
+            # neighbors_df = pd.read_csv(EMB_DIR / "card_neighbors.csv", encoding="utf-8")
+            # for card, grp in neighbors_df.groupby("card_name"):
+            #     self.card_neighbors[card] = grp.sort_values("rank")["neighbor"].tolist()
 
         elapsed = time.perf_counter() - t0
         log.info("  Moteur prêt en %.1fs", elapsed)

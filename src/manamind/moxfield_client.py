@@ -177,8 +177,25 @@ def _read_local_txt(commander_name: str) -> list[tuple[str, int]]:
     return result
 
 
-def add_card_to_deck(commander_name: str, card_name: str) -> None:
-    """Ajoute une carte (qty 1) au .txt local du commandant."""
+def add_card_to_deck(commander_name: str, card_name: str, user_id: int = 1) -> None:
+    """Ajoute une carte (qty 1) dans user_deck_cards (DB) pour le commandant.
+    Maintient aussi la synchronisation avec le .txt local (legacy).
+    """
+    # Écriture principale en DB
+    try:
+        from sqlalchemy import text as _text
+        from manamind.db.engine import SessionLocal as _SessionLocal
+        with _SessionLocal() as s:
+            s.execute(_text("""
+                INSERT INTO user_deck_cards (user_id, commander, card_name, quantity)
+                VALUES (:uid, :cmd, :name, 1)
+                ON CONFLICT (user_id, commander, card_name) DO UPDATE
+                  SET quantity = user_deck_cards.quantity + 1
+            """), {"uid": user_id, "cmd": commander_name, "name": card_name})
+            s.commit()
+    except Exception:
+        pass
+    # Synchronisation .txt local (TODO: supprimer après migration)
     cards = _read_local_txt(commander_name)
     norm_new = _normalize(card_name)
     for i, (name, qty) in enumerate(cards):
@@ -190,8 +207,43 @@ def add_card_to_deck(commander_name: str, card_name: str) -> None:
     _write_local_txt(commander_name, cards)
 
 
-def remove_card_from_deck(commander_name: str, card_name: str) -> bool:
-    """Retire une carte du .txt local du commandant. Retourne False si la carte est absente."""
+def remove_card_from_deck(commander_name: str, card_name: str, user_id: int = 1) -> bool:
+    """Retire une carte de user_deck_cards (DB) pour le commandant.
+    Maintient aussi la synchronisation avec le .txt local (legacy).
+    Retourne False si la carte est absente.
+    """
+    # Suppression principale en DB
+    db_found = False
+    try:
+        from sqlalchemy import text as _text
+        from manamind.db.engine import SessionLocal as _SessionLocal
+        with _SessionLocal() as s:
+            row = s.execute(_text("""
+                SELECT quantity FROM user_deck_cards
+                WHERE user_id = :uid
+                  AND LOWER(TRIM(commander)) = LOWER(TRIM(:cmd))
+                  AND LOWER(TRIM(card_name)) = LOWER(TRIM(:name))
+            """), {"uid": user_id, "cmd": commander_name, "name": card_name}).fetchone()
+            if row is not None:
+                db_found = True
+                if row.quantity <= 1:
+                    s.execute(_text("""
+                        DELETE FROM user_deck_cards
+                        WHERE user_id = :uid
+                          AND LOWER(TRIM(commander)) = LOWER(TRIM(:cmd))
+                          AND LOWER(TRIM(card_name)) = LOWER(TRIM(:name))
+                    """), {"uid": user_id, "cmd": commander_name, "name": card_name})
+                else:
+                    s.execute(_text("""
+                        UPDATE user_deck_cards SET quantity = quantity - 1
+                        WHERE user_id = :uid
+                          AND LOWER(TRIM(commander)) = LOWER(TRIM(:cmd))
+                          AND LOWER(TRIM(card_name)) = LOWER(TRIM(:name))
+                    """), {"uid": user_id, "cmd": commander_name, "name": card_name})
+                s.commit()
+    except Exception:
+        pass
+    # Synchronisation .txt local (TODO: supprimer après migration)
     cards = _read_local_txt(commander_name)
     norm_target = _normalize(card_name)
     found = False
@@ -203,28 +255,52 @@ def remove_card_from_deck(commander_name: str, card_name: str) -> bool:
                 new_cards.append((name, qty - 1))
         else:
             new_cards.append((name, qty))
-    if not found:
-        return False
-    _write_local_txt(commander_name, new_cards)
-    return True
+    if found:
+        _write_local_txt(commander_name, new_cards)
+    return db_found or found
 
 
-def get_local_txt_content(commander_name: str) -> str | None:
-    """Retourne le contenu brut du .txt local, ou None si inexistant."""
+def get_local_txt_content(commander_name: str, user_id: int = 1) -> str | None:
+    """Retourne le contenu texte de la decklist, depuis DB en priorité puis .txt local."""
+    # Lecture depuis DB
+    try:
+        from manamind.user_decks import get_deck_txt_content
+        content = get_deck_txt_content(user_id, commander_name)
+        if content:
+            return content
+    except Exception:
+        pass
+    # Fallback .txt local (TODO: supprimer après migration)
     path = _local_txt_path(commander_name)
     if not path.exists():
         return None
     return path.read_text(encoding="utf-8")
 
 
+def get_decklist_for_commander_db(commander_name: str, user_id: int = 1) -> list[tuple[str, int]] | None:
+    """Retourne la decklist depuis user_deck_cards (DB), ou None si absente."""
+    try:
+        from manamind.user_decks import get_deck_cards
+        entries = get_deck_cards(user_id, commander_name)
+        return entries if entries else None
+    except Exception:
+        return None
+
+
 # ── Récupération decklist ────────────────────────────────────────────────────
 
-def get_decklist_for_commander(commander_name: str) -> list[tuple[str, int]] | None:
+def get_decklist_for_commander(commander_name: str, user_id: int = 1) -> list[tuple[str, int]] | None:
     """
     Retourne la decklist du commandant sous forme [(card_name, qty), ...].
-    Priorité : .txt local (modifiable) > cache JSON Moxfield.
-    Retourne None si le commandant n'est pas dans la config Moxfield.
+    Priorité : DB user_deck_cards > .txt local > cache JSON Moxfield.
+    Retourne None si le commandant est introuvable dans toutes les sources.
     """
+    # 1. DB user_deck_cards (source principale après migration)
+    db_entries = get_decklist_for_commander_db(commander_name, user_id)
+    if db_entries is not None:
+        return db_entries
+
+    # 2. Config Moxfield (legacy JSON) : .txt local puis cache JSON
     norm = _normalize(commander_name)
     decks = load_config()
     entry = next((d for d in decks if _normalize(d["commander"]) == norm), None)

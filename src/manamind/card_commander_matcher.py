@@ -4,8 +4,8 @@ import unicodedata
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+# TODO: supprimer après migration — My_commanders.txt et My decks/ ne sont plus la source principale
 COMMANDERS_FILE = ROOT / "data" / "My_commanders.txt"
-MY_DECKS_DIR = ROOT / "data" / "My decks"
 
 
 def _normalize(name: str) -> str:
@@ -13,9 +13,12 @@ def _normalize(name: str) -> str:
     return "".join(c for c in name if not unicodedata.combining(c)).lower().strip()
 
 
-def _deck_contains_card(commander_name: str, card_norm: str) -> bool:
-    """Retourne True si la carte est déjà présente dans le deck du commandant."""
-    # Priorité Moxfield
+def _deck_contains_card(commander_name: str, card_norm: str, user_id: int = 1) -> bool:
+    """Retourne True si la carte est déjà présente dans le deck du commandant.
+
+    Priorité : Moxfield (legacy JSON) > user_deck_cards (DB).
+    """
+    # 1. Priorité Moxfield (legacy)
     try:
         from manamind.moxfield_client import get_decklist_for_commander
         entries = get_decklist_for_commander(commander_name)
@@ -24,54 +27,47 @@ def _deck_contains_card(commander_name: str, card_norm: str) -> bool:
     except Exception:
         pass
 
-    # Fallback .txt local
-    import re
-    _re = re.compile(r"[^a-z0-9 ]")
-
-    def _strip(s: str) -> str:
-        return _re.sub(r" ", _normalize(s))
-
-    cmd_clean = _strip(commander_name)
-    if not MY_DECKS_DIR.exists():
+    # 2. DB user_deck_cards
+    try:
+        from sqlalchemy import text as _text
+        from manamind.db.engine import SessionLocal as _SessionLocal
+        with _SessionLocal() as s:
+            row = s.execute(_text("""
+                SELECT 1 FROM user_deck_cards
+                WHERE user_id = :uid
+                  AND LOWER(TRIM(commander)) = LOWER(TRIM(:cmd))
+                  AND LOWER(TRIM(card_name)) = :card_norm
+                LIMIT 1
+            """), {"uid": user_id, "cmd": commander_name, "card_norm": card_norm}).fetchone()
+        return row is not None
+    except Exception:
         return False
 
-    files = list(MY_DECKS_DIR.glob("*.txt"))
-    deck_file = None
-    words = [w for w in cmd_clean.split() if len(w) >= 4]
-    for f in files:
-        if cmd_clean.strip() in _strip(f.stem):
-            deck_file = f
-            break
-    if deck_file is None and words:
-        for f in files:
-            if all(w in _strip(f.stem) for w in words):
-                deck_file = f
-                break
-    if deck_file is None and words:
-        for f in files:
-            if words[0] in _strip(f.stem):
-                deck_file = f
-                break
 
-    if deck_file is None:
-        return False
+def load_allowed_commanders(user_id: int = 1) -> set[str]:
+    """Retourne l'ensemble des noms de commandants depuis user_moxfield_decks (DB).
+    Fallback sur My_commanders.txt si la DB est vide ou indisponible.
+    """
+    result: set[str] = set()
 
-    for line in deck_file.read_text(encoding="utf-8", errors="replace").splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        parts = line.split(None, 1)
-        name = parts[1] if len(parts) == 2 and parts[0].isdigit() else line
-        if _normalize(name) == card_norm:
-            return True
-    return False
+    # 1. DB user_moxfield_decks
+    try:
+        from sqlalchemy import text as _text
+        from manamind.db.engine import SessionLocal as _SessionLocal
+        with _SessionLocal() as s:
+            rows = s.execute(_text(
+                "SELECT DISTINCT commander FROM user_moxfield_decks WHERE user_id = :uid AND commander IS NOT NULL"
+            ), {"uid": user_id}).fetchall()
+        result = {row.commander for row in rows if row.commander}
+    except Exception:
+        pass
 
+    # 2. Fallback My_commanders.txt (TODO: supprimer après migration)
+    if not result and COMMANDERS_FILE.exists():
+        lines = COMMANDERS_FILE.read_text(encoding="utf-8").splitlines()
+        result = {line.strip() for line in lines if line.strip()}
 
-def load_allowed_commanders() -> set[str]:
-    if not COMMANDERS_FILE.exists():
-        return set()
-    lines = COMMANDERS_FILE.read_text(encoding="utf-8").splitlines()
-    return {line.strip() for line in lines if line.strip()}
+    return result
 
 
 def suggest_commanders(card_name: str, top_n: int = 3) -> list[dict]:

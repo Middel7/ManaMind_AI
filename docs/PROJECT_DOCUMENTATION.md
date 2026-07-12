@@ -7,6 +7,9 @@
 ```powershell
 uv run python server.py
 # → http://localhost:8080
+Email : admin@manamind.app
+Mot de passe : admin123
+
 ```
 
 ---
