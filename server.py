@@ -10,9 +10,18 @@ import unicodedata
 
 from contextlib import asynccontextmanager
 
+from dotenv import load_dotenv
+load_dotenv()
+
+import os as _os_server
+import traceback as _traceback_mod
+
 from fastapi import FastAPI, File, Form, Query, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response
 import json as _json
+
+_DEBUG = _os_server.environ.get("DEBUG", "").lower() in ("1", "true")
+_SECURE_COOKIE = _os_server.environ.get("HTTPS_ENABLED", "").lower() in ("1", "true", "yes")
 
 def _json_response(data: dict, status_code: int = 200) -> Response:
     """JSONResponse avec support UTF-8 complet (pas d'échappement ASCII)."""
@@ -22,6 +31,11 @@ def _json_response(data: dict, status_code: int = 200) -> Response:
         media_type="application/json; charset=utf-8",
     )
 from fastapi.staticfiles import StaticFiles
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
+limiter = Limiter(key_func=get_remote_address)
 
 ROOT = Path(__file__).resolve().parent
 UPLOADS_DIR = ROOT / "uploads"
@@ -177,9 +191,37 @@ except Exception:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    try:
+        result = subprocess.run(
+            ["uv", "run", "alembic", "upgrade", "head"],
+            capture_output=True, text=True, cwd=str(ROOT)
+        )
+        if result.returncode != 0:
+            print(f"[WARN] Alembic upgrade failed:\n{result.stderr[:500]}")
+        else:
+            print("[OK] Migrations Alembic appliquées")
+    except Exception as e:
+        print(f"[WARN] Impossible de lancer alembic : {e}")
     yield
 
+from fastapi.middleware.cors import CORSMiddleware
+
+_ALLOWED_ORIGINS = [
+    o.strip()
+    for o in _os_server.environ.get("CORS_ORIGINS", "http://localhost:8080,http://localhost:3000").split(",")
+    if o.strip()
+]
+
 app = FastAPI(lifespan=lifespan)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
+)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # ── Deck Improvement Engine — singleton préchargé au démarrage ───────────────
 _deck_engine = None
@@ -203,6 +245,31 @@ def _get_deck_engine():
     return _deck_engine
 
 
+@app.get("/health")
+def health_check() -> JSONResponse:
+    from sqlalchemy import text as _health_text
+    status: dict = {"status": "ok", "db": "ok", "engine": "not_loaded"}
+    http_status = 200
+
+    try:
+        if SessionLocal is not None:
+            with SessionLocal() as s:
+                s.execute(_health_text("SELECT 1"))
+        else:
+            status["db"] = "unavailable"
+            status["status"] = "degraded"
+            http_status = 503
+    except Exception as e:
+        status["db"] = f"error: {str(e)[:100]}"
+        status["status"] = "degraded"
+        http_status = 503
+
+    if _deck_engine is not None:
+        status["engine"] = "ready"
+
+    return _json_response(status, status_code=http_status)
+
+
 @app.get("/")
 def index() -> FileResponse:
     return FileResponse(
@@ -223,14 +290,33 @@ def results_page() -> FileResponse:
     )
 
 
+import uuid as _uuid
+
+_ALLOWED_UPLOAD_EXT = {".txt"}
+_MAX_UPLOAD_BYTES = 500 * 1024  # 500 Ko
+
+
 @app.post("/upload-deck")
 async def upload_deck(
     deckfile: UploadFile = File(...),
     algo: str = Form(default="v1"),
 ) -> JSONResponse:
-    filename = Path(deckfile.filename).name
+    # Validation de l'extension
+    ext = Path(deckfile.filename or "").suffix.lower()
+    if ext not in _ALLOWED_UPLOAD_EXT:
+        return _json_response({"error": "Seuls les fichiers .txt sont acceptés."}, status_code=400)
+
+    # Lecture et validation de la taille
+    content = await deckfile.read()
+    if len(content) > _MAX_UPLOAD_BYTES:
+        return _json_response({"error": "Fichier trop volumineux (max 500 Ko)."}, status_code=400)
+
+    # Sanitisation du nom : caractères autorisés uniquement, préfixé par UUID pour unicité
+    raw_stem = Path(deckfile.filename or "deck").stem
+    safe_stem = re.sub(r"[^a-zA-Z0-9_\-\.]", "_", raw_stem)
+    filename = f"{safe_stem}_{_uuid.uuid4().hex[:8]}.txt"
     deck_path = UPLOADS_DIR / filename
-    deck_path.write_bytes(await deckfile.read())
+    deck_path.write_bytes(content)
 
     stem = Path(filename).stem
 
@@ -422,11 +508,10 @@ async def api_deck_analyze(request: Request) -> JSONResponse:
         result = await loop.run_in_executor(None, _run_analysis)
         return _json_response(result)
     except Exception as exc:
-        import traceback
-        return _json_response(
-            {"error": f"Erreur analyse : {exc}", "detail": traceback.format_exc()},
-            status_code=500,
-        )
+        resp_500 = {"error": f"Erreur analyse : {exc}"}
+        if _DEBUG:
+            resp_500["detail"] = _traceback_mod.format_exc()
+        return _json_response(resp_500, status_code=500)
 
 
 # ── GET /api/deck/explanation ─────────────────────────────────────────────────
@@ -1532,6 +1617,7 @@ def register_page() -> FileResponse:
 
 
 @app.post("/auth/login")
+@limiter.limit("10/minute")
 async def auth_login(request: Request) -> Response:
     from manamind.auth import get_user_by_email, verify_password, create_token, COOKIE_NAME, EXPIRE_DAYS
     body = await request.json()
@@ -1561,7 +1647,7 @@ async def auth_login(request: Request) -> Response:
     resp = _json_response({"ok": True, "display_name": user["display_name"], "role": user["role"]})
     resp.set_cookie(
         key=COOKIE_NAME, value=token,
-        httponly=True, samesite="lax", secure=False,
+        httponly=True, samesite="lax", secure=_SECURE_COOKIE,
         max_age=EXPIRE_DAYS * 86400,
     )
     return resp
@@ -1576,6 +1662,7 @@ def auth_logout() -> Response:
 
 
 @app.post("/auth/register")
+@limiter.limit("5/minute")
 async def auth_register(request: Request) -> Response:
     from manamind.auth import (validate_invitation, consume_invitation,
                                 create_user, create_token, COOKIE_NAME, EXPIRE_DAYS)
@@ -1612,13 +1699,14 @@ async def auth_register(request: Request) -> Response:
     resp = _json_response({"ok": True, "display_name": display_name or email.split("@")[0]})
     resp.set_cookie(
         key=COOKIE_NAME, value=jwt_token,
-        httponly=True, samesite="lax", secure=False,
+        httponly=True, samesite="lax", secure=_SECURE_COOKIE,
         max_age=EXPIRE_DAYS * 86400,
     )
     return resp
 
 
 @app.get("/auth/me")
+@limiter.limit("60/minute")
 async def auth_me(request: Request) -> Response:
     """Retourne les infos de l'utilisateur connecté (pour les pages HTML)."""
     from manamind.auth import get_current_user, COOKIE_NAME
@@ -1861,17 +1949,38 @@ def api_collection_delete(card_name: str, request: Request) -> JSONResponse:
     return _json_response({"ok": True})
 
 
+# Extensions autorisées pour les fichiers statiques
+_ALLOWED_EXTENSIONS = {".html", ".js", ".css", ".png", ".jpg", ".jpeg", ".avif", ".ico", ".svg", ".webp"}
+_BLOCKED_NAMES = {".env", ".env.example", "alembic.ini", "pyproject.toml", "uv.lock"}
+
+
 @app.get("/{filename:path}")
 def static_file(filename: str) -> FileResponse:
+    from fastapi import HTTPException
+    # Bloquer les fichiers sensibles par nom
+    name = Path(filename).name
+    if name.startswith(".") or name in _BLOCKED_NAMES:
+        raise HTTPException(status_code=404)
+    # S'assurer que le chemin reste dans ROOT (pas de path traversal)
     file_path = ROOT / filename
-    if file_path.exists() and file_path.is_file():
-        return FileResponse(file_path)
-    return JSONResponse({"error": "Not found"}, status_code=404)
+    try:
+        file_path.resolve().relative_to(ROOT.resolve())
+    except ValueError:
+        raise HTTPException(status_code=404)
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=404)
+    suffix = file_path.suffix.lower()
+    if suffix not in _ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=404)
+    return FileResponse(file_path)
 
 
 if __name__ == "__main__":
-    import sys as _sys
     import uvicorn
-    # workers > 1 requiert fork (Linux/macOS uniquement — pas supporté sur Windows)
-    _workers = 4 if _sys.platform != "win32" else 1
-    uvicorn.run("server:app", host="0.0.0.0", port=8080, reload=False, workers=_workers)
+    uvicorn.run(
+        "server:app",
+        host="0.0.0.0",
+        port=int(_os_server.environ.get("PORT", "8080")),
+        workers=1,  # 1 seul worker : le moteur IA (~2 Go RAM) ne supporte pas la duplication
+        log_level="info",
+    )

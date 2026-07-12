@@ -39,8 +39,8 @@
   #app {
     position: relative; z-index: 1;
     max-width: 1920px; margin: 0 auto;
-    padding: 28px 64px 80px;
-    display: flex; flex-direction: column; gap: 32px;
+    padding: 18px 64px 48px;
+    display: flex; flex-direction: column; gap: 18px;
   }
 
   /* ── Header compact ── */
@@ -78,13 +78,13 @@
   .gold-rule-diamond { width: 6px; height: 6px; background: var(--gold); transform: rotate(45deg); opacity: 0.55; }
 
   /* ── Catégories ── */
-  .categories { display: flex; flex-direction: column; gap: 36px; }
-  .category-block { display: flex; flex-direction: column; gap: 14px; }
+  .categories { display: flex; flex-direction: column; gap: 20px; }
+  .category-block { display: flex; flex-direction: column; gap: 8px; }
 
   .category-label { display: flex; align-items: center; gap: 12px; }
   .category-label-text {
-    font-family: var(--serif-engraved); font-size: 0.58rem; letter-spacing: 0.3em;
-    text-transform: uppercase; white-space: nowrap;
+    font-family: var(--serif-display); font-size: 1.35rem; font-style: italic;
+    letter-spacing: 0.01em; white-space: nowrap; text-transform: none;
   }
   .category-label-line { flex: 1; height: 1px; }
 
@@ -107,42 +107,49 @@
 
   /* ── Tuile ── */
   .tile {
-    display: flex; align-items: flex-start; gap: 16px;
-    padding: 18px 20px;
-    background: var(--ink-panel);
+    display: flex; flex-direction: column;
     border-radius: 12px;
     border: 1px solid transparent;
     text-decoration: none; color: inherit;
-    transition: border-color 0.2s, box-shadow 0.2s, transform 0.18s, background 0.2s;
+    overflow: hidden;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.18s;
     animation: fadeUp 0.38s ease both;
   }
-  .tile:hover { transform: translateY(-3px); background: rgba(28, 16, 42, 0.85); }
+  .tile:hover { transform: translateY(-3px); }
 
   .cat-explore  .tile { border-color: var(--teal-line); }
-  .cat-explore  .tile:hover { border-color: var(--teal); box-shadow: 0 6px 28px rgba(0,0,0,0.45), 0 0 0 1px rgba(92,201,184,0.38); }
+  .cat-explore  .tile:hover { border-color: var(--teal); box-shadow: 0 6px 28px rgba(0,0,0,0.55), 0 0 0 1px rgba(92,201,184,0.38); }
   .cat-optimize .tile { border-color: rgba(160,123,224,0.22); }
-  .cat-optimize .tile:hover { border-color: var(--arcane); box-shadow: 0 6px 28px rgba(0,0,0,0.45), 0 0 0 1px rgba(160,123,224,0.42); }
+  .cat-optimize .tile:hover { border-color: var(--arcane); box-shadow: 0 6px 28px rgba(0,0,0,0.55), 0 0 0 1px rgba(160,123,224,0.42); }
   .cat-manage   .tile { border-color: var(--gold-line); }
-  .cat-manage   .tile:hover { border-color: var(--gold); box-shadow: 0 6px 28px rgba(0,0,0,0.45), 0 0 0 1px rgba(201,164,92,0.38); }
+  .cat-manage   .tile:hover { border-color: var(--gold); box-shadow: 0 6px 28px rgba(0,0,0,0.55), 0 0 0 1px rgba(201,164,92,0.38); }
 
-  .tile-icon {
-    flex-shrink: 0; width: 42px; height: 42px;
-    display: grid; place-items: center; border-radius: 9px; font-size: 1.25rem;
+  /* Zone image */
+  .tile-art {
+    width: 100%; height: 130px; flex-shrink: 0;
+    background-size: cover; background-position: center 20%;
+    background-color: var(--ink-850);
+    transition: filter 0.2s;
   }
-  .cat-explore  .tile-icon { background: var(--teal-faint); border: 1px solid var(--teal-line); }
-  .cat-optimize .tile-icon { background: rgba(160,123,224,0.08); border: 1px solid rgba(160,123,224,0.22); }
-  .cat-manage   .tile-icon { background: var(--gold-faint); border: 1px solid var(--gold-line); }
+  .tile:hover .tile-art { filter: brightness(1.08); }
 
-  .tile-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  /* Zone texte */
+  .tile-body {
+    display: flex; flex-direction: column; gap: 4px;
+    padding: 12px 15px 13px;
+    background: var(--ink-panel);
+    border-top: 1px solid rgba(255,255,255,0.05);
+    flex: 1; position: relative;
+  }
   .tile-name {
-    font-family: var(--serif-display); font-size: 1rem; font-weight: 600;
+    font-family: var(--serif-display); font-size: 0.95rem; font-weight: 600;
     color: var(--parch-100); line-height: 1.25;
   }
-  .tile-desc { font-size: 0.8rem; color: var(--parch-500); line-height: 1.5; }
+  .tile-desc { font-size: 0.75rem; color: var(--parch-500); line-height: 1.45; }
 
   .tile-arrow {
-    margin-left: auto; flex-shrink: 0; align-self: center;
-    font-size: 0.95rem; opacity: 0; transition: opacity 0.18s, transform 0.18s;
+    position: absolute; top: 11px; right: 13px;
+    font-size: 0.9rem; opacity: 0; transition: opacity 0.18s, transform 0.18s;
   }
   .cat-explore  .tile-arrow { color: var(--teal); }
   .cat-optimize .tile-arrow { color: var(--arcane); }
@@ -171,12 +178,7 @@
 
   <!-- ── Header compact ── -->
   <header class="site-header" style="display:flex;align-items:center;">
-    <div class="brand-seal">
-      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 2L9.5 8.5H3L8.5 12.5L6 19L12 15L18 19L15.5 12.5L21 8.5H14.5L12 2Z"/>
-      </svg>
-    </div>
-    <span class="brand-name">ManaMind</span>
+<span class="brand-name">ManaMind</span>
     <span class="brand-sep">·</span>
     <span class="brand-tagline" style="flex:1;">Votre gestionnaire de deck et de collection pour le Commander</span>
     <span id="engineHeaderBtn" style="display:none;align-items:center;gap:8px;flex-shrink:0;">
@@ -207,22 +209,22 @@
       </div>
       <div class="tiles-grid">
 
-        <a class="tile" href="/deck-config">
-          <div class="tile-icon">📋</div>
+        <a class="tile" href="/deck-config" data-tile="0">
+          <div class="tile-art"></div>
           <div class="tile-body">
+            <span class="tile-arrow">→</span>
             <div class="tile-name">Mes decklists</div>
             <div class="tile-desc">Gérez vos decklists importées depuis Moxfield ou vos fichiers .txt locaux.</div>
           </div>
-          <span class="tile-arrow">→</span>
         </a>
 
-        <a class="tile" href="/collection-manage">
-          <div class="tile-icon">🗃️</div>
+        <a class="tile" href="/collection-manage" data-tile="1">
+          <div class="tile-art"></div>
           <div class="tile-body">
-            <div class="tile-name">Gérer ma collection</div>
+            <span class="tile-arrow">→</span>
+            <div class="tile-name">Gérer ma collection de cartes MTG</div>
             <div class="tile-desc">Consultez, recherchez et modifiez les quantités de vos cartes en collection.</div>
           </div>
-          <span class="tile-arrow">→</span>
         </a>
 
       </div>
@@ -236,22 +238,22 @@
       </div>
       <div class="tiles-grid">
 
-        <a class="tile" href="/commander-suggest">
-          <div class="tile-icon">🔮</div>
+        <a class="tile" href="/commander-suggest" data-tile="2">
+          <div class="tile-art"></div>
           <div class="tile-body">
+            <span class="tile-arrow">→</span>
             <div class="tile-name">Trouver un commandant pour ma carte</div>
             <div class="tile-desc">Saisissez une carte et découvrez dans quel commandant elle a le plus de chances d'être jouée.</div>
           </div>
-          <span class="tile-arrow">→</span>
         </a>
 
-        <a class="tile" href="/collection-commanders">
-          <div class="tile-icon">💎</div>
+        <a class="tile" href="/collection-commanders" data-tile="3">
+          <div class="tile-art"></div>
           <div class="tile-body">
+            <span class="tile-arrow">→</span>
             <div class="tile-name">Quel deck créer avec ma collection ?</div>
             <div class="tile-desc">Visualisez quels commandants tirent le plus de valeur de vos cartes disponibles.</div>
           </div>
-          <span class="tile-arrow">→</span>
         </a>
 
       </div>
@@ -265,40 +267,40 @@
       </div>
       <div class="tiles-grid">
 
-        <a class="tile" href="/deck-build">
-          <div class="tile-icon">📦</div>
+        <a class="tile" href="/deck-build" data-tile="4">
+          <div class="tile-art"></div>
           <div class="tile-body">
+            <span class="tile-arrow">→</span>
             <div class="tile-name">Améliorer mes decks avec ma collection</div>
             <div class="tile-desc">Trouve les cartes de votre collection non utilisées qui amélioreraient le plus chacun de vos decks.</div>
           </div>
-          <span class="tile-arrow">→</span>
         </a>
 
-        <a class="tile" href="/deck-moves">
-          <div class="tile-icon">🔄</div>
+        <a class="tile" href="/deck-moves" data-tile="5">
+          <div class="tile-art"></div>
           <div class="tile-body">
+            <span class="tile-arrow">→</span>
             <div class="tile-name">Quelle carte fonctionnerait mieux dans un autre deck ?</div>
             <div class="tile-desc">Repère les rares et mythiques présents dans un deck qui seraient statistiquement mieux placés ailleurs.</div>
           </div>
-          <span class="tile-arrow">→</span>
         </a>
 
-        <a class="tile" href="/deck-select?mode=popular">
-          <div class="tile-icon">📊</div>
+        <a class="tile" href="/deck-select?mode=popular" data-tile="6">
+          <div class="tile-art"></div>
           <div class="tile-body">
+            <span class="tile-arrow">→</span>
             <div class="tile-name">Recommandations par popularité</div>
             <div class="tile-desc">Analysez un deck et obtenez des suggestions basées sur les cartes les plus jouées dans la méta.</div>
           </div>
-          <span class="tile-arrow">→</span>
         </a>
 
-        <a class="tile" href="/deck-select?mode=ia">
-          <div class="tile-icon">🤖</div>
+        <a class="tile" href="/deck-select?mode=ia" data-tile="7">
+          <div class="tile-art"></div>
           <div class="tile-body">
+            <span class="tile-arrow">→</span>
             <div class="tile-name">Recommandations par intelligence artificielle</div>
             <div class="tile-desc">Analysez un deck avec l'IA pour obtenir des suggestions contextuelles et personnalisées.</div>
           </div>
-          <span class="tile-arrow">→</span>
         </a>
 
       </div>
@@ -306,8 +308,6 @@
 
   </div>
 
-<div class="gold-rule"><div class="gold-rule-diamond"></div></div>
-  <footer class="site-footer">ManaMind &nbsp;·&nbsp; Powered by Scryfall</footer>
 
 </div>
 
@@ -415,6 +415,67 @@
       c.appendChild(p);
     }
   })();
+</script>
+<script>
+// Arts de secours (utilisés si l'utilisateur n'a pas de decks)
+const FALLBACK_ARTS = [
+  "https://cards.scryfall.io/art_crop/front/f/4/f485596f-3a23-4714-ad7e-4c493ab1b530.jpg?1782695235", // Galadriel
+  "https://cards.scryfall.io/art_crop/front/8/b/8b796a56-1611-4835-ac5b-48b4e9263685.jpg?1782732822", // Anikthea
+  "https://cards.scryfall.io/art_crop/front/8/a/8ae6fc26-cfad-4da8-98d9-49c27c24d293.jpg?1782689144", // Giada
+  "https://cards.scryfall.io/art_crop/front/b/f/bf2af874-1052-4cad-90ed-d80e49d4c68c.jpg?1782697652", // Zimone and Dina
+  "https://cards.scryfall.io/art_crop/front/8/1/812856be-cf51-42de-96d2-4ac91e71d442.jpg?1782684212", // Selvala
+  "https://cards.scryfall.io/art_crop/front/a/9/a98a2fa9-82d6-4cf7-adb4-65b187cd9cda.jpg?1782732819", // Narci
+  "https://cards.scryfall.io/art_crop/front/f/a/fa135775-abcd-4a21-abb7-3aeb5a39df28.jpg?1782733074", // Akiri, Fearless Voyager
+  "https://cards.scryfall.io/art_crop/front/6/0/608cdbdb-6f7e-438a-bab0-0e7782435f0f.jpg?1782694778", // Akroma's Will
+  "https://cards.scryfall.io/art_crop/front/5/4/547f92d4-cd1d-4ca7-a6e2-6473b4d3c832.jpg?1782697127", // Arwen, Mortal Queen
+];
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function applyArts(artUrls) {
+  const tiles = document.querySelectorAll('.tile-art');
+  const pool = shuffle(artUrls);
+  tiles.forEach((el, i) => {
+    el.style.backgroundImage = `url('${pool[i % pool.length]}')`;
+  });
+}
+
+async function fetchCommanderArts(commanders) {
+  const urls = [];
+  await Promise.all(commanders.map(async (name) => {
+    try {
+      const r = await fetch(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}`);
+      const d = await r.json();
+      const url = d?.image_uris?.art_crop;
+      if (url) urls.push(url);
+    } catch {}
+  }));
+  return urls.length > 0 ? urls : null;
+}
+
+(async () => {
+  try {
+    const r = await fetch('/api/moxfield-decks');
+    if (!r.ok) throw new Error();
+    const { decks } = await r.json();
+    const commanders = [...new Set((decks || []).map(d => d.commander).filter(Boolean))];
+    if (commanders.length > 0) {
+      const arts = await fetchCommanderArts(commanders);
+      applyArts(arts || FALLBACK_ARTS);
+    } else {
+      applyArts(FALLBACK_ARTS);
+    }
+  } catch {
+    applyArts(FALLBACK_ARTS);
+  }
+})();
 </script>
 </body>
 </html>

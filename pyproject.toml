@@ -43,6 +43,7 @@ dependencies = [
     "python-jose[cryptography]>=3.3",
     "cryptography>=42,<43",
     "passlib[bcrypt]>=1.7",
+    "slowapi>=0.1.9",
 ]
 
 [[tool.uv.index]]

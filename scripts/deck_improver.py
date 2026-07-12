@@ -210,35 +210,55 @@ class DeckImprovementEngine:
             self.xgb_features = []
 
         # ── TF-IDF ───────────────────────────────────────────────────────────
-        tfidf_df = pd.read_csv(STATS_DIR / "commander_tfidf.csv", encoding="utf-8")
+        # TODO: supprimer — remplacé par requête PostgreSQL sur deck_stat_commander
+        # tfidf_df = pd.read_csv(STATS_DIR / "commander_tfidf.csv", encoding="utf-8")
         self.tfidf_lookup: dict[tuple[str, str], dict] = {}
-        for _, row in tfidf_df.iterrows():
-            self.tfidf_lookup[(row["commander"], row["card_name"])] = {
-                "inclusion_rate": float(row["inclusion_rate"]),
-                "idf":            float(row["idf"]),
-                "tfidf_norm":     float(row["tfidf_norm"]),
-            }
-        self.card_idf: dict[str, float] = (
-            tfidf_df.groupby("card_name")["idf"].first().to_dict()
-        )
-        # Cartes connues par commandant (pour construire le pool de candidats)
-        self.cmd_known_cards: dict[str, set[str]] = (
-            tfidf_df.groupby("commander")["card_name"].apply(set).to_dict()
-        )
+        self.card_idf: dict[str, float] = {}
+        self.cmd_known_cards: dict[str, set[str]] = {}
+        try:
+            with SessionLocal() as _s:
+                _tfidf_rows = _s.execute(text("""
+                    SELECT commander, card_name, inclusion_rate, idf, tfidf, tfidf_norm
+                    FROM deck_stat_commander
+                    WHERE tfidf_norm IS NOT NULL
+                """)).fetchall()
+            for _r in _tfidf_rows:
+                self.tfidf_lookup[(_r.commander, _r.card_name)] = {
+                    "inclusion_rate": float(_r.inclusion_rate or 0.0),
+                    "idf":            float(_r.idf or 0.0),
+                    "tfidf_norm":     float(_r.tfidf_norm or 0.0),
+                }
+                # card_idf : on garde la première valeur rencontrée par carte
+                if _r.card_name not in self.card_idf:
+                    self.card_idf[_r.card_name] = float(_r.idf or 0.0)
+                self.cmd_known_cards.setdefault(_r.commander, set()).add(_r.card_name)
+        except Exception as _e_tfidf:
+            log.warning("  deck_stat_commander indisponible (%s) — tfidf_lookup vide", _e_tfidf)
         log.info("  TF-IDF : %d paires", len(self.tfidf_lookup))
 
         # ── Métadonnées cartes ────────────────────────────────────────────────
-        train_df = pd.read_csv(ML_DIR / "train.csv", encoding="utf-8")
-        self.global_freq: dict[str, float] = (
-            train_df.groupby("card_name")["global_frequency"].first().to_dict()
-        )
-        self.card_mana_value: dict[str, float] = (
-            train_df.groupby("card_name")["mana_value"].first().to_dict()
-        )
-        self.card_color_compat: dict[tuple[str, str], int] = {
-            (row["commander"], row["card_name"]): int(row["color_identity_compat"])
-            for _, row in train_df.iterrows()
-        }
+        # TODO: supprimer — remplacé par requêtes PostgreSQL sur deck_stat_global + cards
+        # train_df = pd.read_csv(ML_DIR / "train.csv", encoding="utf-8")
+        self.global_freq: dict[str, float] = {}
+        self.card_mana_value: dict[str, float] = {}
+        self.card_color_compat: dict[tuple[str, str], int] = {}
+        try:
+            with SessionLocal() as _s:
+                # global_frequency depuis deck_stat_global
+                _gf_rows = _s.execute(text(
+                    "SELECT card_name, global_frequency FROM deck_stat_global"
+                )).fetchall()
+                # mana_value et color_identity depuis cards
+                _card_rows = _s.execute(text(
+                    "SELECT name, mana_value, color_identity FROM cards WHERE mana_value IS NOT NULL"
+                )).fetchall()
+            self.global_freq = {_r.card_name: float(_r.global_frequency or 0.0) for _r in _gf_rows}
+            self.card_mana_value = {_r.name: float(_r.mana_value) for _r in _card_rows}
+            # color_identity depuis cards sert de proxy à color_identity_compat
+            # (1 si la couleur est dans l'identité de couleur, stocké comme liste JSON)
+            self.card_color_compat = {_r.name: _r.color_identity for _r in _card_rows}
+        except Exception as _e_meta:
+            log.warning("  Métadonnées DB indisponibles (%s) — dicts vides", _e_meta)
         # Métadonnées depuis DB (color_identity Scryfall)
         self.cmd_colors: dict[str, frozenset]  = {}
         self.card_colors: dict[str, frozenset] = {}
@@ -287,7 +307,7 @@ class DeckImprovementEngine:
 
         # Profil de clusters du commandant (poids = Σ tfidf_norm par cluster)
         self.cmd_cluster_profile: dict[str, dict[int, float]] = (
-            self._build_cmd_cluster_profiles(tfidf_df)
+            self._build_cmd_cluster_profiles()
         )
 
         # ── Tags → Cluster (Naive Bayes) ─────────────────────────────────────
@@ -350,16 +370,17 @@ class DeckImprovementEngine:
         except Exception as e:
             log.warning("  DB metadata indisponible : %s", e)
 
-    def _build_cmd_cluster_profiles(self, tfidf_df: pd.DataFrame) -> dict[str, dict[int, float]]:
+    def _build_cmd_cluster_profiles(self) -> dict[str, dict[int, float]]:
+        """Construit les profils de clusters par commandant depuis self.tfidf_lookup (en DB)."""
         result: dict[str, dict[int, float]] = {}
-        for cmd, grp in tfidf_df.groupby("commander"):
-            weights: dict[int, float] = {}
-            for _, row in grp.iterrows():
-                cid = self.card_cluster.get(row["card_name"])
-                if cid is not None:
-                    weights[cid] = weights.get(cid, 0.0) + float(row["tfidf_norm"])
-            total = sum(weights.values()) or 1.0
-            result[cmd] = {cid: w / total for cid, w in weights.items()}
+        for (cmd, card_name), td in self.tfidf_lookup.items():
+            cid = self.card_cluster.get(card_name)
+            if cid is not None:
+                weights = result.setdefault(cmd, {})
+                weights[cid] = weights.get(cid, 0.0) + float(td.get("tfidf_norm", 0.0))
+        for cmd in result:
+            total = sum(result[cmd].values()) or 1.0
+            result[cmd] = {cid: w / total for cid, w in result[cmd].items()}
         return result
 
     def _build_tag_model(self):
@@ -437,7 +458,18 @@ class DeckImprovementEngine:
     ) -> float:
         if self.xgb is None:
             return tfidf_norm * 100.0
-        ci_compat = self.card_color_compat.get((commander, card_name), 1)
+        # color_identity_compat : 1 si la carte est compatible avec l'identité couleur du
+        # commandant, 0 sinon. Calculé depuis cmd_colors / card_colors (chargés depuis DB).
+        cmd_col = self.cmd_colors.get(commander)
+        card_col = self.card_colors.get(card_name)
+        if cmd_col is not None and card_col is not None:
+            ci_compat = 1 if card_col <= cmd_col else 0
+        else:
+            # fallback : on suppose compatible (1) si les couleurs sont inconnues
+            ci_compat = self.card_color_compat.get(card_name, 1)
+            if isinstance(ci_compat, (list, set, frozenset)):
+                # card_color_compat stocke color_identity brut (liste) → proxy booléen
+                ci_compat = 1
         mv = self.card_mana_value.get(card_name, 3.0)
         gf = self.global_freq.get(card_name, 0.0)
         vals = {

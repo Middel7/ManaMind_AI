@@ -15,7 +15,15 @@ from sqlalchemy import text
 
 from manamind.db.engine import SessionLocal
 
-SECRET_KEY = os.environ.get("JWT_SECRET", "changeme-set-JWT_SECRET-in-env")
+_DEFAULT_SECRET = "changeme-set-JWT_SECRET-in-env"
+SECRET_KEY: str = os.environ.get("JWT_SECRET", _DEFAULT_SECRET)
+if SECRET_KEY == _DEFAULT_SECRET:
+    import warnings
+    warnings.warn(
+        "JWT_SECRET non défini — utilisation d'une clé par défaut INSECURE. "
+        "Définir la variable d'environnement JWT_SECRET en production.",
+        stacklevel=1,
+    )
 ALGORITHM  = os.environ.get("JWT_ALGORITHM", "HS256")
 EXPIRE_DAYS = int(os.environ.get("JWT_EXPIRE_DAYS", "30"))
 
