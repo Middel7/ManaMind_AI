@@ -756,13 +756,11 @@ def api_card_source(request: Request, name: str = Query(...)) -> JSONResponse:
     if row:
         return _json_response({"source": "collection", "decks": []})
 
-    # 3. C/U dans un set ouvert (Opened.txt) ?
-    opened_file = ROOT / "Opened.txt"
-    if opened_file.exists():
-        from manamind.collection_advisor import load_opened_set_cards
-        opened_cards = load_opened_set_cards()
-        if card_norm in opened_cards:
-            return _json_response({"source": "opened_sets", "decks": []})
+    # 3. C/U dans un set ouvert (user_opened_sets DB) ?
+    from manamind.collection_advisor import load_opened_set_cards
+    opened_cards = load_opened_set_cards(user_id=user["id"])
+    if card_norm in opened_cards:
+        return _json_response({"source": "opened_sets", "decks": []})
 
     return _json_response({"source": None, "decks": []})
 
@@ -796,13 +794,55 @@ def api_card_in_decks(request: Request, name: str = Query(...)) -> JSONResponse:
 
 
 @app.get("/api/opened-sets")
-def api_opened_sets() -> JSONResponse:
-    """Retourne la liste des codes de sets ouverts (Opened.txt)."""
-    opened_file = ROOT / "Opened.txt"
-    if not opened_file.exists():
-        return _json_response({"sets": []})
-    codes = [l.strip().upper() for l in opened_file.read_text(encoding="utf-8").splitlines() if l.strip()]
+def api_opened_sets(request: Request) -> JSONResponse:
+    """Retourne la liste des codes de sets ouverts depuis user_opened_sets (DB)."""
+    from manamind.auth import get_current_user, COOKIE_NAME
+    from sqlalchemy import text as _t
+    from manamind.db.engine import SessionLocal
+    user = get_current_user(mm_token=request.cookies.get(COOKIE_NAME))
+    with SessionLocal() as sess:
+        rows = sess.execute(_t(
+            "SELECT set_code FROM user_opened_sets WHERE user_id = :uid ORDER BY set_code"
+        ), {"uid": user["id"]}).fetchall()
+    codes = [r.set_code.upper() for r in rows]
     return _json_response({"sets": codes})
+
+
+@app.post("/api/opened-sets")
+async def api_opened_sets_post(request: Request) -> JSONResponse:
+    """Ajoute ou supprime des codes de sets dans user_opened_sets (DB).
+
+    Body JSON : { "action": "add"|"remove", "set_code": "ABC" }
+    """
+    from manamind.auth import get_current_user, COOKIE_NAME
+    from sqlalchemy import text as _t
+    from manamind.db.engine import SessionLocal
+    user = get_current_user(mm_token=request.cookies.get(COOKIE_NAME))
+    try:
+        body = await request.json()
+    except Exception:
+        return _json_response({"error": "Corps JSON invalide"}, status_code=400)
+    action = body.get("action", "").strip().lower()
+    set_code = (body.get("set_code") or "").strip().upper()
+    if not set_code:
+        return _json_response({"error": "set_code manquant"}, status_code=400)
+    with SessionLocal() as sess:
+        if action == "add":
+            sess.execute(_t("""
+                INSERT INTO user_opened_sets (user_id, set_code)
+                VALUES (:uid, :code)
+                ON CONFLICT DO NOTHING
+            """), {"uid": user["id"], "code": set_code})
+            sess.commit()
+            return _json_response({"ok": True, "action": "add", "set_code": set_code})
+        elif action == "remove":
+            sess.execute(_t("""
+                DELETE FROM user_opened_sets WHERE user_id = :uid AND set_code = :code
+            """), {"uid": user["id"], "code": set_code})
+            sess.commit()
+            return _json_response({"ok": True, "action": "remove", "set_code": set_code})
+        else:
+            return _json_response({"error": "action doit être 'add' ou 'remove'"}, status_code=400)
 
 
 @app.get("/api/cards/price")

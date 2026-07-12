@@ -6,10 +6,9 @@ import unicodedata
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-COLLECTION_FILE = ROOT / "Ma collection.txt"
+# TODO: supprimer après migration complète — MY_DECKS_DIR et COMMANDERS_FILE sont des fallbacks legacy
 MY_DECKS_DIR    = ROOT / "data" / "My decks"
 COMMANDERS_FILE = ROOT / "data" / "My_commanders.txt"
-OPENED_SETS_FILE = ROOT / "Opened.txt"
 DECKLISTS_DIR   = ROOT / "data" / "Decklists"
 TYPE_AVERAGES_CACHE = ROOT / "data" / "stats" / "deck_type_averages.json"
 
@@ -102,51 +101,60 @@ def _parse_card_line(line: str) -> tuple[str, int] | None:
 
 # ── Chargement des données ────────────────────────────────────────────────────
 
-def load_collection() -> dict[str, int]:
+def load_collection(user_id: int = 1) -> dict[str, int]:
     """
-    Retourne { nom_carte: quantité_totale } depuis Ma collection.txt.
+    Retourne { nom_carte_normalisé: quantité_totale } depuis user_collection (DB).
+    Retourne un dict vide si la DB est indisponible ou la collection vide.
     """
-    result: dict[str, int] = {}
-    if not COLLECTION_FILE.exists():
+    try:
+        from sqlalchemy import text as _text
+        from manamind.db.engine import SessionLocal as _SessionLocal
+        result: dict[str, int] = {}
+        with _SessionLocal() as s:
+            rows = s.execute(_text(
+                "SELECT card_name, quantity FROM user_collection WHERE user_id = :uid"
+            ), {"uid": user_id}).fetchall()
+        for row in rows:
+            name = _normalize(row.card_name)
+            result[name] = result.get(name, 0) + row.quantity
         return result
-    for line in COLLECTION_FILE.read_text(encoding="utf-8", errors="replace").splitlines():
-        parsed = _parse_card_line(line)
-        if parsed:
-            name, qty = parsed
-            norm = _normalize(name)
-            result[norm] = result.get(norm, 0) + qty
-    return result
-
-
-def load_my_decks() -> dict[str, int]:
-    """
-    Retourne { nom_carte_normalisé: nb_decks_où_elle_est_utilisée }.
-    Parcourt tous les .txt de data/My decks/.
-    """
-    usage: dict[str, set[str]] = {}
-    if not MY_DECKS_DIR.exists():
+    except Exception:
         return {}
-    for deck_file in MY_DECKS_DIR.glob("*.txt"):
-        for line in deck_file.read_text(encoding="utf-8", errors="replace").splitlines():
-            parsed = _parse_card_line(line)
-            if parsed:
-                name, _ = parsed
-                norm = _normalize(name)
-                if norm not in usage:
-                    usage[norm] = set()
-                usage[norm].add(deck_file.name)
-    return {k: len(v) for k, v in usage.items()}
 
 
-def load_allowed_commanders() -> dict[str, str]:
+def load_my_decks(user_id: int = 1) -> dict[str, int]:
+    """
+    Retourne { nom_carte_normalisé: nb_decks_où_elle_est_utilisée } depuis user_deck_cards (DB).
+    Retourne un dict vide si la DB est indisponible.
+    """
+    try:
+        from sqlalchemy import text as _text
+        from manamind.db.engine import SessionLocal as _SessionLocal
+        usage: dict[str, set[str]] = {}
+        with _SessionLocal() as s:
+            rows = s.execute(_text(
+                "SELECT card_name, commander FROM user_deck_cards WHERE user_id = :uid"
+            ), {"uid": user_id}).fetchall()
+        for row in rows:
+            name = _normalize(row.card_name)
+            if name not in usage:
+                usage[name] = set()
+            usage[name].add(row.commander)
+        return {k: len(v) for k, v in usage.items()}
+    except Exception:
+        return {}
+
+
+def load_allowed_commanders(user_id: int = 1) -> dict[str, str]:
     """
     Retourne { norm: display } en fusionnant :
     1. Les commandants configurés dans Moxfield (priorité)
-    2. Les commandants dans My_commanders.txt (fallback/complément)
+    2. Les commandants dans user_moxfield_decks (DB, fallback/complément)
+    3. Les commandants dans My_commanders.txt (fallback ultime si fichier présent)
     """
     result: dict[str, str] = {}
 
-    # 1. Moxfield
+    # 1. Moxfield (config locale JSON, legacy)
     try:
         from manamind.moxfield_client import get_all_moxfield_commanders
         for name in get_all_moxfield_commanders():
@@ -155,7 +163,22 @@ def load_allowed_commanders() -> dict[str, str]:
     except Exception:
         pass
 
-    # 2. My_commanders.txt (seulement ceux non déjà couverts par Moxfield)
+    # 2. user_moxfield_decks (DB) — seulement ceux non déjà couverts
+    try:
+        from sqlalchemy import text as _text
+        from manamind.db.engine import SessionLocal as _SessionLocal
+        with _SessionLocal() as s:
+            rows = s.execute(_text(
+                "SELECT DISTINCT commander FROM user_moxfield_decks WHERE user_id = :uid AND commander IS NOT NULL"
+            ), {"uid": user_id}).fetchall()
+        for row in rows:
+            name = row.commander
+            if name and _normalize(name) not in result:
+                result[_normalize(name)] = name
+    except Exception:
+        pass
+
+    # 3. My_commanders.txt (fallback ultime, TODO: supprimer après migration)
     if COMMANDERS_FILE.exists():
         for line in COMMANDERS_FILE.read_text(encoding="utf-8").splitlines():
             name = line.strip()
@@ -165,33 +188,33 @@ def load_allowed_commanders() -> dict[str, str]:
     return result
 
 
-def load_opened_set_cards() -> dict[str, str]:
+def load_opened_set_cards(user_id: int = 1) -> dict[str, str]:
     """
     Retourne { card_norm: card_name } pour toutes les cartes C/UC
-    appartenant aux sets listés dans Opened.txt, via la DB.
+    appartenant aux sets listés dans user_opened_sets (DB), via la DB cartes.
+    Retourne un dict vide si la DB est indisponible ou aucun set enregistré.
     """
-    if not OPENED_SETS_FILE.exists():
-        return {}
-    set_codes = [
-        l.strip().lower()
-        for l in OPENED_SETS_FILE.read_text(encoding="utf-8").splitlines()
-        if l.strip()
-    ]
-    if not set_codes:
-        return {}
     try:
-        import sys as _sys
-        _sys.path.insert(0, str(ROOT / "src"))
-        from src.manamind.db.engine import SessionLocal as _SessionLocal
-        from src.manamind.db.models.card import Card as _Card
-        from src.manamind.db.models.card_printing import CardPrinting as _CardPrinting
+        from sqlalchemy import text as _text
+        from manamind.db.engine import SessionLocal as _SessionLocal
+        with _SessionLocal() as s:
+            codes = [
+                r.set_code.lower()
+                for r in s.execute(_text(
+                    "SELECT set_code FROM user_opened_sets WHERE user_id = :uid"
+                ), {"uid": user_id}).fetchall()
+            ]
+        if not codes:
+            return {}
+        from manamind.db.models.card import Card as _Card
+        from manamind.db.models.card_printing import CardPrinting as _CardPrinting
         from sqlalchemy import select as _select
         with _SessionLocal() as session:
             stmt = (
                 _select(_Card.name, _Card.normalized_name)
                 .join(_CardPrinting, _CardPrinting.card_id == _Card.id)
                 .where(
-                    _CardPrinting.set_code.in_(set_codes),
+                    _CardPrinting.set_code.in_(codes),
                     _CardPrinting.rarity.in_(["common", "uncommon"]),
                     _CardPrinting.lang == "en",
                 )
@@ -362,10 +385,8 @@ def suggest_moves(top_n: int = 30) -> dict:
     # Construire l'ensemble de tous les terrains (basiques + non-basiques) via la DB
     land_norms: set[str] = set()
     try:
-        import sys as _sys
-        _sys.path.insert(0, str(ROOT / "src"))
-        from src.manamind.db.engine import SessionLocal as _SessionLocal
-        from src.manamind.db.models.card import Card as _Card
+        from manamind.db.engine import SessionLocal as _SessionLocal
+        from manamind.db.models.card import Card as _Card
         from sqlalchemy import select as _select
         with _SessionLocal() as _session:
             _stmt = _select(_Card.normalized_name).where(_Card.type_line.ilike("%Land%"))

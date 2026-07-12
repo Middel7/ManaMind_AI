@@ -256,24 +256,34 @@ class DeckImprovementEngine:
             for c in fdata["clusters"]:
                 self.cluster_family[c["cluster_id"]] = family
 
-        # Option C : lire card_cluster_full.csv (inclut les cartes bruit réassignées)
-        # Fallback sur les CSV individuels si le fichier n'existe pas encore.
+        # Lecture depuis DB (table card_clusters_global)
+        # TODO: supprimer le fallback CSV quand toutes les DB sont à jour
         self.card_cluster: dict[str, int] = {}
-        full_path = CLUST_DIR / "card_cluster_full.csv"
-        if full_path.exists():
-            df_full = pd.read_csv(full_path, encoding="utf-8")
-            for _, row in df_full.iterrows():
-                cid = int(row["cluster_id"])
-                if cid != -1:
-                    self.card_cluster[row["card_name"]] = cid
-            log.info("  Clusters : %d cartes (card_cluster_full.csv, fallback cosine inclus)",
-                     len(self.card_cluster))
-        else:
-            for path in sorted((CLUST_DIR / "clusters").glob("cluster_*.csv")):
-                df = pd.read_csv(path, encoding="utf-8")
-                for _, row in df.iterrows():
-                    self.card_cluster[row["card_name"]] = int(row["cluster_id"])
-            log.info("  Clusters : %d cartes clustérisées (CSV individuels)", len(self.card_cluster))
+        try:
+            with SessionLocal() as s:
+                rows = s.execute(text(
+                    "SELECT card_name, cluster_id FROM card_clusters_global"
+                )).fetchall()
+            self.card_cluster = {r.card_name: r.cluster_id for r in rows}
+            log.info("  Clusters : %d cartes (DB card_clusters_global)", len(self.card_cluster))
+        except Exception as _e_ccg:
+            log.warning("  card_clusters_global indisponible (%s) — fallback CSV", _e_ccg)
+            # Fallback CSV (card_cluster_full.csv ou CSV individuels par cluster)
+            full_path = CLUST_DIR / "card_cluster_full.csv"
+            if full_path.exists():
+                df_full = pd.read_csv(full_path, encoding="utf-8")
+                for _, row in df_full.iterrows():
+                    cid = int(row["cluster_id"])
+                    if cid != -1:
+                        self.card_cluster[row["card_name"]] = cid
+                log.info("  Clusters : %d cartes (card_cluster_full.csv, fallback cosine inclus)",
+                         len(self.card_cluster))
+            else:
+                for path in sorted((CLUST_DIR / "clusters").glob("cluster_*.csv")):
+                    df = pd.read_csv(path, encoding="utf-8")
+                    for _, row in df.iterrows():
+                        self.card_cluster[row["card_name"]] = int(row["cluster_id"])
+                log.info("  Clusters : %d cartes clustérisées (CSV individuels)", len(self.card_cluster))
 
         # Profil de clusters du commandant (poids = Σ tfidf_norm par cluster)
         self.cmd_cluster_profile: dict[str, dict[int, float]] = (
@@ -282,18 +292,42 @@ class DeckImprovementEngine:
 
         # ── Tags → Cluster (Naive Bayes) ─────────────────────────────────────
         self._t2c_pivot, self._nb, self._mlb, self._nb_classes = self._build_tag_model()
-        # Tags par carte (depuis tag_cluster_dataset)
+        # Tags par carte (depuis DB card_tag_clusters)
+        # TODO: supprimer le fallback CSV quand toutes les DB sont à jour
         self.card_tags: dict[str, list[str]] = {}
-        tag_ds = pd.read_csv(TAG_DIR / "tag_cluster_dataset.csv", encoding="utf-8")
-        for card, grp in tag_ds.groupby("card_name"):
-            self.card_tags[card] = grp["tag"].tolist()
-        log.info("  Tags : %d cartes avec tags", len(self.card_tags))
+        try:
+            with SessionLocal() as s:
+                tag_rows = s.execute(text(
+                    "SELECT card_name, tag FROM card_tag_clusters ORDER BY card_name"
+                )).fetchall()
+            for r in tag_rows:
+                self.card_tags.setdefault(r.card_name, []).append(r.tag)
+            log.info("  Tags : %d cartes avec tags (DB card_tag_clusters)", len(self.card_tags))
+        except Exception as _e_ctc:
+            log.warning("  card_tag_clusters indisponible (%s) — fallback CSV", _e_ctc)
+            # TODO: supprimer quand toutes les DB sont à jour
+            tag_ds = pd.read_csv(TAG_DIR / "tag_cluster_dataset.csv", encoding="utf-8")
+            for card, grp in tag_ds.groupby("card_name"):
+                self.card_tags[card] = grp["tag"].tolist()
+            log.info("  Tags : %d cartes avec tags (CSV fallback)", len(self.card_tags))
 
         # ── Voisins Card2Vec ──────────────────────────────────────────────────
-        nb_df = pd.read_csv(EMB_DIR / "card_neighbors.csv", encoding="utf-8")
+        # Chargement depuis la DB (table card_neighbors)
         self.card_neighbors: dict[str, list[str]] = {}
-        for card, grp in nb_df.groupby("card_name"):
-            self.card_neighbors[card] = grp.sort_values("rank")["neighbor"].tolist()
+        try:
+            with SessionLocal() as s:
+                nb_rows = s.execute(text(
+                    "SELECT card_name, neighbor FROM card_neighbors ORDER BY card_name, rank"
+                )).fetchall()
+            for r in nb_rows:
+                self.card_neighbors.setdefault(r.card_name, []).append(r.neighbor)
+            log.info("  Voisins : %d cartes (DB card_neighbors)", len(self.card_neighbors))
+        except Exception as _e_cn:
+            log.warning("  card_neighbors indisponible (%s) — fallback CSV", _e_cn)
+            # Fallback CSV (TODO: supprimer quand toutes les DB sont à jour)
+            # nb_df = pd.read_csv(EMB_DIR / "card_neighbors.csv", encoding="utf-8")
+            # for card, grp in nb_df.groupby("card_name"):
+            #     self.card_neighbors[card] = grp.sort_values("rank")["neighbor"].tolist()
 
         elapsed = time.perf_counter() - t0
         log.info("  Moteur prêt en %.1fs", elapsed)
@@ -329,8 +363,24 @@ class DeckImprovementEngine:
         return result
 
     def _build_tag_model(self):
-        t2c = pd.read_csv(TAG_DIR / "tag_to_cluster.csv", encoding="utf-8")
-        dataset = pd.read_csv(TAG_DIR / "tag_cluster_dataset.csv", encoding="utf-8")
+        # ── Lecture depuis DB ─────────────────────────────────────────────────
+        # TODO: supprimer les fallbacks CSV quand toutes les DB sont à jour
+        try:
+            with SessionLocal() as s:
+                t2c_rows = s.execute(text(
+                    "SELECT tag, cluster_id, probability FROM tag_cluster_probabilities"
+                )).fetchall()
+                ds_rows = s.execute(text(
+                    "SELECT card_name, cluster_id, tag FROM card_tag_clusters"
+                )).fetchall()
+            t2c = pd.DataFrame(t2c_rows, columns=["tag", "cluster_id", "probability"])
+            dataset = pd.DataFrame(ds_rows, columns=["card_name", "cluster_id", "tag"])
+        except Exception as _e_tm:
+            log.warning("  DB tag model indisponible (%s) — fallback CSV", _e_tm)
+            # TODO: supprimer quand toutes les DB sont à jour
+            t2c = pd.read_csv(TAG_DIR / "tag_to_cluster.csv", encoding="utf-8")
+            dataset = pd.read_csv(TAG_DIR / "tag_cluster_dataset.csv", encoding="utf-8")
+
         pivot = t2c.pivot_table(
             index="tag", columns="cluster_id", values="probability", fill_value=0.0
         )

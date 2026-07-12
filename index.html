@@ -95,38 +95,10 @@
   .cat-manage   .category-label-text { color: var(--gold); }
   .cat-manage   .category-label-line { background: var(--gold-line); }
 
-  /* ── Bloc moteur IA ── */
-  #engineBlock {
-    display: none;
-    border: 1px solid rgba(212,177,95,0.2);
-    border-radius: 6px;
-    padding: 18px 22px;
-    background: rgba(212,177,95,0.04);
-  }
-  #engineBlock h3 {
-    font-family: var(--serif-engraved); font-size: 0.7rem; letter-spacing: 0.2em;
-    text-transform: uppercase; color: var(--gold); margin: 0 0 8px;
-  }
-  #engineBlock p {
-    font-family: var(--serif-display); font-size: 0.85rem; color: var(--parch-500);
-    margin: 0 0 14px; line-height: 1.5;
-  }
-  #engineStartBtn {
-    font-family: var(--serif-engraved); font-size: 0.68rem; letter-spacing: 0.14em;
-    text-transform: uppercase; cursor: pointer;
-    padding: 9px 20px; border-radius: 4px;
-    border: 1px solid rgba(212,177,95,0.4); color: var(--gold-bright);
-    background: rgba(212,177,95,0.1);
-    transition: background .2s, border-color .2s;
-  }
-  #engineStartBtn:hover:not(:disabled) { background: rgba(212,177,95,0.22); border-color: var(--gold); }
-  #engineStartBtn:disabled { cursor: default; }
-  #engineStatus {
-    font-family: var(--serif-display); font-size: 0.8rem; margin-top: 10px;
-    color: var(--parch-500); font-style: italic; min-height: 1.2em;
-  }
+  #engineStartBtn:hover:not(:disabled) { background: rgba(212,177,95,0.22) !important; border-color: var(--gold) !important; }
+  #engineStartBtn:disabled { cursor: default; opacity: 0.6; }
 
-  /* ── Grilles ── */
+/* ── Grilles ── */
   .tiles-grid {
     display: grid;
     gap: 14px;
@@ -207,6 +179,20 @@
     <span class="brand-name">ManaMind</span>
     <span class="brand-sep">·</span>
     <span class="brand-tagline" style="flex:1;">Votre gestionnaire de deck et de collection pour le Commander</span>
+    <span id="engineHeaderBtn" style="display:none;align-items:center;gap:8px;flex-shrink:0;">
+      <button id="engineStartBtn" style="
+        font-family:var(--serif-engraved);font-size:0.6rem;letter-spacing:0.12em;
+        text-transform:uppercase;cursor:pointer;
+        padding:5px 13px;border-radius:4px;
+        border:1px solid rgba(212,177,95,0.4);color:var(--gold);
+        background:rgba(212,177,95,0.08);
+        transition:background .2s,border-color .2s;white-space:nowrap;
+      ">Lancer le moteur IA</button>
+      <span id="engineStatus" style="
+        font-family:var(--serif-display);font-size:0.75rem;font-style:italic;
+        color:var(--parch-500);white-space:nowrap;
+      "></span>
+    </span>
     <span id="userBadge" style="display:flex;align-items:center;gap:6px;flex-shrink:0;"></span>
   </header>
 
@@ -320,15 +306,7 @@
 
   </div>
 
-  <!-- Bloc moteur IA — visible uniquement pour les admins via JS -->
-  <div id="engineBlock">
-    <h3>Moteur d'intelligence artificielle</h3>
-    <p>Le moteur IA n'est pas chargé automatiquement au démarrage du serveur. Lance-le manuellement quand tu as besoin des recommandations par IA (environ 3 à 4 minutes de chargement).</p>
-    <button id="engineStartBtn">Lancer le moteur IA</button>
-    <div id="engineStatus"></div>
-  </div>
-
-  <div class="gold-rule"><div class="gold-rule-diamond"></div></div>
+<div class="gold-rule"><div class="gold-rule-diamond"></div></div>
   <footer class="site-footer">ManaMind &nbsp;·&nbsp; Powered by Scryfall</footer>
 
 </div>
@@ -357,9 +335,9 @@
   const user = await waitForUser(6000);
   if (!user || user.role !== 'admin') return;
 
-  const block = document.getElementById('engineBlock');
-  if (!block) return;
-  block.style.display = 'block';
+  const headerBtn = document.getElementById('engineHeaderBtn');
+  if (!headerBtn) return;
+  headerBtn.style.display = 'inline-flex';
 
   const btn      = document.getElementById('engineStartBtn');
   const statusEl = document.getElementById('engineStatus');
