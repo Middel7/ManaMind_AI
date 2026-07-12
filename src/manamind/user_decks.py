@@ -86,18 +86,20 @@ def get_deck_cards(user_id: int, commander: str) -> list[tuple[str, int]]:
 
 
 def set_deck_cards(user_id: int, commander: str, cards: list[tuple[str, int]]) -> None:
-    """Remplace toutes les cartes du deck pour ce commandant."""
+    """Remplace toutes les cartes du deck pour ce commandant (opération atomique)."""
     with SessionLocal() as sess:
-        sess.execute(text("""
-            DELETE FROM user_deck_cards
-            WHERE user_id = :uid AND LOWER(TRIM(commander)) = LOWER(TRIM(:cmd))
-        """), {"uid": user_id, "cmd": commander})
-        if cards:
+        with sess.begin():  # transaction atomique — rollback auto si exception
             sess.execute(text("""
-                INSERT INTO user_deck_cards (user_id, commander, card_name, quantity)
-                VALUES (:uid, :cmd, :name, :qty)
-            """), [{"uid": user_id, "cmd": commander, "name": n, "qty": q} for n, q in cards])
-        sess.commit()
+                DELETE FROM user_deck_cards
+                WHERE user_id = :uid AND LOWER(TRIM(commander)) = LOWER(TRIM(:cmd))
+            """), {"uid": user_id, "cmd": commander})
+            if cards:
+                for card_name, qty in cards:
+                    sess.execute(text("""
+                        INSERT INTO user_deck_cards (user_id, commander, card_name, quantity)
+                        VALUES (:uid, :cmd, :name, :qty)
+                    """), {"uid": user_id, "cmd": commander, "name": card_name, "qty": qty})
+        # commit automatique à la sortie du with sess.begin()
 
 
 def add_card_to_deck_db(user_id: int, commander: str, card_name: str) -> None:

@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 import time
 import unicodedata
-import urllib.request
-import urllib.error
 from pathlib import Path
+
+import httpx
 
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG_FILE  = ROOT / "data" / "moxfield_decks.json"
@@ -178,86 +178,50 @@ def _read_local_txt(commander_name: str) -> list[tuple[str, int]]:
 
 
 def add_card_to_deck(commander_name: str, card_name: str, user_id: int = 1) -> None:
-    """Ajoute une carte (qty 1) dans user_deck_cards (DB) pour le commandant.
-    Maintient aussi la synchronisation avec le .txt local (legacy).
-    """
-    # Écriture principale en DB
-    try:
-        from sqlalchemy import text as _text
-        from manamind.db.engine import SessionLocal as _SessionLocal
-        with _SessionLocal() as s:
-            s.execute(_text("""
-                INSERT INTO user_deck_cards (user_id, commander, card_name, quantity)
-                VALUES (:uid, :cmd, :name, 1)
-                ON CONFLICT (user_id, commander, card_name) DO UPDATE
-                  SET quantity = user_deck_cards.quantity + 1
-            """), {"uid": user_id, "cmd": commander_name, "name": card_name})
-            s.commit()
-    except Exception:
-        pass
-    # Synchronisation .txt local (TODO: supprimer après migration)
-    cards = _read_local_txt(commander_name)
-    norm_new = _normalize(card_name)
-    for i, (name, qty) in enumerate(cards):
-        if _normalize(name) == norm_new:
-            cards[i] = (name, qty + 1)
-            break
-    else:
-        cards.append((card_name, 1))
-    _write_local_txt(commander_name, cards)
+    """Ajoute une carte (qty 1) dans user_deck_cards (DB) pour le commandant."""
+    from sqlalchemy import text as _text
+    from manamind.db.engine import SessionLocal as _SessionLocal
+    with _SessionLocal() as s:
+        s.execute(_text("""
+            INSERT INTO user_deck_cards (user_id, commander, card_name, quantity)
+            VALUES (:uid, :cmd, :name, 1)
+            ON CONFLICT (user_id, commander, card_name) DO UPDATE
+              SET quantity = user_deck_cards.quantity + 1
+        """), {"uid": user_id, "cmd": commander_name, "name": card_name})
+        s.commit()
 
 
 def remove_card_from_deck(commander_name: str, card_name: str, user_id: int = 1) -> bool:
     """Retire une carte de user_deck_cards (DB) pour le commandant.
-    Maintient aussi la synchronisation avec le .txt local (legacy).
     Retourne False si la carte est absente.
     """
-    # Suppression principale en DB
-    db_found = False
-    try:
-        from sqlalchemy import text as _text
-        from manamind.db.engine import SessionLocal as _SessionLocal
-        with _SessionLocal() as s:
-            row = s.execute(_text("""
-                SELECT quantity FROM user_deck_cards
+    from sqlalchemy import text as _text
+    from manamind.db.engine import SessionLocal as _SessionLocal
+    with _SessionLocal() as s:
+        row = s.execute(_text("""
+            SELECT quantity FROM user_deck_cards
+            WHERE user_id = :uid
+              AND LOWER(TRIM(commander)) = LOWER(TRIM(:cmd))
+              AND LOWER(TRIM(card_name)) = LOWER(TRIM(:name))
+        """), {"uid": user_id, "cmd": commander_name, "name": card_name}).fetchone()
+        if row is None:
+            return False
+        if row.quantity <= 1:
+            s.execute(_text("""
+                DELETE FROM user_deck_cards
                 WHERE user_id = :uid
                   AND LOWER(TRIM(commander)) = LOWER(TRIM(:cmd))
                   AND LOWER(TRIM(card_name)) = LOWER(TRIM(:name))
-            """), {"uid": user_id, "cmd": commander_name, "name": card_name}).fetchone()
-            if row is not None:
-                db_found = True
-                if row.quantity <= 1:
-                    s.execute(_text("""
-                        DELETE FROM user_deck_cards
-                        WHERE user_id = :uid
-                          AND LOWER(TRIM(commander)) = LOWER(TRIM(:cmd))
-                          AND LOWER(TRIM(card_name)) = LOWER(TRIM(:name))
-                    """), {"uid": user_id, "cmd": commander_name, "name": card_name})
-                else:
-                    s.execute(_text("""
-                        UPDATE user_deck_cards SET quantity = quantity - 1
-                        WHERE user_id = :uid
-                          AND LOWER(TRIM(commander)) = LOWER(TRIM(:cmd))
-                          AND LOWER(TRIM(card_name)) = LOWER(TRIM(:name))
-                    """), {"uid": user_id, "cmd": commander_name, "name": card_name})
-                s.commit()
-    except Exception:
-        pass
-    # Synchronisation .txt local (TODO: supprimer après migration)
-    cards = _read_local_txt(commander_name)
-    norm_target = _normalize(card_name)
-    found = False
-    new_cards = []
-    for name, qty in cards:
-        if _normalize(name) == norm_target:
-            found = True
-            if qty > 1:
-                new_cards.append((name, qty - 1))
+            """), {"uid": user_id, "cmd": commander_name, "name": card_name})
         else:
-            new_cards.append((name, qty))
-    if found:
-        _write_local_txt(commander_name, new_cards)
-    return db_found or found
+            s.execute(_text("""
+                UPDATE user_deck_cards SET quantity = quantity - 1
+                WHERE user_id = :uid
+                  AND LOWER(TRIM(commander)) = LOWER(TRIM(:cmd))
+                  AND LOWER(TRIM(card_name)) = LOWER(TRIM(:name))
+            """), {"uid": user_id, "cmd": commander_name, "name": card_name})
+        s.commit()
+    return True
 
 
 def get_local_txt_content(commander_name: str, user_id: int = 1) -> str | None:
@@ -328,12 +292,12 @@ def get_all_moxfield_commanders() -> list[str]:
 
 def _fetch_from_api(deck_id: str) -> dict:
     url = MOXFIELD_API.format(deck_id=deck_id)
-    req = urllib.request.Request(url, headers=HEADERS)
     try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            return json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        raise ValueError(f"Erreur Moxfield HTTP {e.code} pour le deck {deck_id}")
+        resp = httpx.get(url, headers=HEADERS, timeout=10.0, follow_redirects=True)
+        resp.raise_for_status()
+        return resp.json()
+    except httpx.HTTPStatusError as e:
+        raise ValueError(f"Erreur Moxfield HTTP {e.response.status_code} pour le deck {deck_id}")
     except Exception as e:
         raise ValueError(f"Impossible de contacter Moxfield : {e}")
 
