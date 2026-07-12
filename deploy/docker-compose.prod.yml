@@ -1,0 +1,55 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER:-manamind}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-manamind}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./deploy/postgres-backup:/backup
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-manamind}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    image: manamind:latest
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-manamind}:${DB_PASSWORD}@db:5432/${DB_NAME:-manamind}
+      JWT_SECRET: ${JWT_SECRET}
+      HTTPS_ENABLED: "true"
+      DEBUG: "false"
+      PORT: "8080"
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://ton-domaine.com}
+    volumes:
+      - ./uploads:/app/uploads
+      - ./data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"  # Bind uniquement sur localhost — Caddy fait le frontal
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"  # HTTP/3
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - /var/log/caddy:/var/log/caddy
+    restart: unless-stopped
+    depends_on:
+      - app
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:

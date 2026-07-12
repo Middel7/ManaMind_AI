@@ -25,7 +25,7 @@ if SECRET_KEY == _DEFAULT_SECRET:
         stacklevel=1,
     )
 ALGORITHM  = os.environ.get("JWT_ALGORITHM", "HS256")
-EXPIRE_DAYS = int(os.environ.get("JWT_EXPIRE_DAYS", "30"))
+EXPIRE_DAYS = int(os.environ.get("JWT_EXPIRE_DAYS", "7"))
 
 COOKIE_NAME = "mm_token"
 
@@ -157,3 +157,73 @@ def consume_invitation(invitation_id: int, user_id: int) -> None:
             {"uid": user_id, "iid": invitation_id},
         )
         sess.commit()
+
+
+def register_with_invitation(token: str, email: str, password: str, display_name: str | None = None) -> tuple[int, str]:
+    """
+    Crée un utilisateur et consomme l'invitation dans une seule transaction atomique.
+    Retourne (user_id, display_name).
+    Lève HTTPException si l'invitation est invalide/déjà utilisée, ou l'email déjà pris.
+    """
+    pw_hash = hash_password(password)
+    dn = display_name or email.split("@")[0]
+
+    with SessionLocal() as sess:
+        # 1. Tenter de consommer l'invitation atomiquement
+        #    UPDATE ... WHERE used_at IS NULL → 0 lignes = déjà utilisée
+        row = sess.execute(
+            text("""
+                UPDATE invitations
+                SET used_at = NOW()
+                WHERE token = :token
+                  AND used_at IS NULL
+                  AND (expires_at IS NULL OR expires_at > NOW())
+                RETURNING id
+            """),
+            {"token": token},
+        ).fetchone()
+
+        if row is None:
+            # Vérifier si elle existe mais est utilisée/expirée pour un meilleur message
+            inv = sess.execute(
+                text("SELECT used_at, expires_at FROM invitations WHERE token = :token"),
+                {"token": token},
+            ).fetchone()
+            if inv is None:
+                raise HTTPException(status_code=400, detail="Lien d'invitation invalide")
+            if inv.used_at is not None:
+                raise HTTPException(status_code=400, detail="Ce lien d'invitation a déjà été utilisé")
+            raise HTTPException(status_code=400, detail="Ce lien d'invitation a expiré")
+
+        inv_id = row.id
+
+        # 2. Vérifier unicité email dans la même transaction
+        existing = sess.execute(
+            text("SELECT id FROM users WHERE LOWER(email) = LOWER(:email)"),
+            {"email": email},
+        ).fetchone()
+        if existing is not None:
+            # Rollback implicite via le context manager — invitation non consommée
+            sess.rollback()
+            raise HTTPException(status_code=400, detail="Cet email est déjà utilisé")
+
+        # 3. Créer l'utilisateur
+        user_row = sess.execute(
+            text("""
+                INSERT INTO users (email, password_hash, display_name, role)
+                VALUES (:email, :pw, :name, 'user')
+                RETURNING id
+            """),
+            {"email": email, "pw": pw_hash, "name": dn},
+        ).fetchone()
+        user_id = user_row[0]
+
+        # 4. Lier l'invitation à l'utilisateur
+        sess.execute(
+            text("UPDATE invitations SET used_by = :uid WHERE id = :iid"),
+            {"uid": user_id, "iid": inv_id},
+        )
+
+        sess.commit()
+
+    return user_id, dn
