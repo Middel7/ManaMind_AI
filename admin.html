@@ -4,240 +4,541 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-<title>ManaMind — Admin</title>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Cormorant+Garamond:wght@400;500;600&family=Spectral:wght@300;400;500&display=swap" rel="stylesheet" />
+<title>ManaMind — Administration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Spectral:wght@300;400;500&display=swap" rel="stylesheet" />
 <style>
-  :root {
-    --ink-900:#0c0910; --ink-850:#120c1a; --ink-800:#17101f; --ink-700:#1d1529;
-    --ink-panel:rgba(20,13,28,0.62);
-    --parch-100:#efe6d6; --parch-300:#cdbfa8; --parch-500:#9c8e79; --parch-600:#7c715f;
-    --gold:#c9a45c; --gold-soft:#d8bd83; --gold-line:rgba(201,164,92,0.42); --gold-faint:rgba(201,164,92,0.16);
-    --teal:#5cc9b8; --teal-faint:rgba(92,201,184,0.12); --teal-line:rgba(92,201,184,0.35);
-    --red:rgba(220,60,60,0.8); --red-faint:rgba(220,60,60,0.1); --red-line:rgba(220,60,60,0.4);
-    --serif-display:"Cormorant Garamond",Georgia,serif;
-    --serif-engraved:"Cinzel",Georgia,serif;
-    --serif-body:"Spectral",Georgia,serif;
-  }
-  *{box-sizing:border-box;}
-  html,body{margin:0;min-height:100%;background:var(--ink-900);color:var(--parch-100);font-family:var(--serif-body);}
-  .page-wrap{max-width:1920px;margin:0 auto;padding:32px 48px;min-height:100vh;
-    background:linear-gradient(160deg,var(--ink-850) 0%,var(--ink-900) 60%);}
+:root {
+  --ink-900: #0c0910; --ink-850: #120c1a; --ink-800: #17101f;
+  --ink-card: #0f1624;
+  --parch-100: #efe6d6; --parch-300: #cdbfa8; --parch-500: #9c8e79; --parch-600: #7c715f;
+  --gold: #c9a45c; --gold-soft: #d8bd83; --gold-line: rgba(201,164,92,.38); --gold-faint: rgba(201,164,92,.12);
+  --blue: #70b8f0; --blue-dim: rgba(100,180,255,.12); --blue-border: rgba(100,180,255,.32);
+  --teal: #5cc9b8; --teal-faint: rgba(92,201,184,.12); --teal-line: rgba(92,201,184,.3);
+  --green: #4ade80; --green-faint: rgba(74,222,128,.12);
+  --red: #e07b7b; --red-faint: rgba(220,80,80,.1);
+  --amber: #f59e0b; --amber-faint: rgba(245,158,11,.12);
+  --border: rgba(255,255,255,.07);
+  --serif-engraved: "Cinzel", Georgia, serif;
+  --serif-display: "Cormorant Garamond", Georgia, serif;
+  --serif-body: "Spectral", Georgia, serif;
+  --mono: "Cascadia Code", "Fira Code", Consolas, monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body { font-family: var(--serif-body); background: var(--ink-900); color: var(--parch-100); min-height: 100vh; line-height: 1.55; }
 
-  header{display:flex;align-items:center;gap:24px;padding:16px 0;border-bottom:1px solid var(--gold-line);margin-bottom:32px;}
-  header a.back{font-family:var(--serif-engraved);font-size:0.72rem;letter-spacing:0.12em;color:var(--gold);text-decoration:none;opacity:0.8;flex-shrink:0;}
-  header a.back:hover{opacity:1;}
-  header h1{margin:0;flex:1;text-align:center;font-family:var(--serif-display);font-size:clamp(1.4rem,3vw,2rem);font-weight:600;}
-  .header-spacer{flex-shrink:0;visibility:hidden;font-size:0.72rem;}
+.page { max-width: 1400px; margin: 0 auto; padding: 0 24px 60px; }
 
-  .section{margin-bottom:40px;}
-  .section-title{font-family:var(--serif-engraved);font-size:0.75rem;letter-spacing:0.14em;color:var(--parch-500);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--gold-line);}
+/* ── Header ── */
+.adm-header { display: flex; align-items: center; gap: 16px; padding: 18px 0 14px; border-bottom: 1px solid var(--gold-line); margin-bottom: 28px; }
+.adm-back { font-family: var(--serif-engraved); font-size: .62rem; letter-spacing: .1em; text-transform: uppercase; color: var(--parch-500); text-decoration: none; padding: 5px 12px; border-radius: 4px; border: 1px solid var(--gold-line); background: var(--gold-faint); transition: .2s; flex-shrink: 0; }
+.adm-back:hover { border-color: var(--gold); color: var(--gold-soft); }
+.adm-title { font-family: var(--serif-engraved); font-size: 1rem; font-weight: 600; color: var(--gold-soft); letter-spacing: .07em; }
+.adm-sub { font-family: var(--serif-display); font-size: .9rem; font-style: italic; color: var(--parch-500); margin-left: 4px; }
+.adm-user { margin-left: auto; font-size: .7rem; color: var(--parch-500); display: flex; align-items: center; gap: 8px; }
+.adm-user strong { color: var(--blue); font-family: var(--serif-engraved); font-weight: 500; }
 
-  /* Invitations */
-  .inv-actions{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
-  .btn{padding:9px 18px;border-radius:6px;font-family:var(--serif-engraved);font-size:0.7rem;letter-spacing:0.1em;cursor:pointer;transition:all 0.2s;border:none;}
-  .btn-gold{background:var(--gold-faint);border:1px solid var(--gold-line);color:var(--gold-soft);}
-  .btn-gold:hover{background:rgba(201,164,92,0.22);border-color:var(--gold);color:var(--gold);}
+/* ── Stats cards ── */
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+@media (max-width: 900px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
+.stat-card { background: var(--ink-card); border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; }
+.stat-label { font-family: var(--serif-engraved); font-size: .57rem; letter-spacing: .12em; text-transform: uppercase; color: var(--parch-600); margin-bottom: 6px; }
+.stat-val { font-size: 1.9rem; font-weight: 300; font-variant-numeric: tabular-nums; color: var(--parch-100); line-height: 1; }
+.stat-val.loading { color: var(--parch-600); }
+.stat-val.c-blue  { color: var(--blue); }
+.stat-val.c-teal  { color: var(--teal); }
+.stat-val.c-amber { color: var(--amber); }
 
-  .inv-link-box{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:8px;background:var(--ink-panel);border:1px solid var(--teal-line);margin-bottom:16px;}
-  .inv-link-box input{flex:1;background:none;border:none;color:var(--teal);font-family:var(--serif-body);font-size:0.85rem;outline:none;}
-  .btn-copy{padding:6px 12px;border-radius:4px;border:1px solid var(--teal-line);background:var(--teal-faint);color:var(--teal);font-size:0.72rem;font-family:var(--serif-engraved);cursor:pointer;white-space:nowrap;}
-  .btn-copy:hover{background:rgba(92,201,184,0.2);}
-  .inv-expires{font-size:0.72rem;color:var(--parch-500);margin-top:4px;}
+/* ── Panels ── */
+.panels-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px; }
+@media (max-width: 800px) { .panels-row { grid-template-columns: 1fr; } }
+.panel { background: var(--ink-card); border: 1px solid var(--border); border-radius: 10px; padding: 22px 24px; }
+.panel-title { font-family: var(--serif-engraved); font-size: .65rem; letter-spacing: .13em; text-transform: uppercase; color: var(--parch-600); margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.panel-hint { font-size: .7rem; color: var(--parch-600); font-style: italic; margin-top: 8px; }
 
-  /* Table invitations */
-  .inv-table{width:100%;border-collapse:collapse;font-size:0.82rem;}
-  .inv-table th{padding:8px 12px;text-align:left;font-family:var(--serif-engraved);font-size:0.65rem;letter-spacing:0.1em;color:var(--parch-500);border-bottom:1px solid var(--gold-line);}
-  .inv-table td{padding:8px 12px;border-bottom:1px solid rgba(201,164,92,0.08);}
-  .badge-used{padding:2px 8px;border-radius:10px;font-size:0.68rem;font-family:var(--serif-engraved);background:var(--teal-faint);border:1px solid var(--teal-line);color:var(--teal);}
-  .badge-pending{padding:2px 8px;border-radius:10px;font-size:0.68rem;font-family:var(--serif-engraved);background:var(--gold-faint);border:1px solid var(--gold-line);color:var(--gold-soft);}
-  .badge-expired{padding:2px 8px;border-radius:10px;font-size:0.68rem;font-family:var(--serif-engraved);background:var(--red-faint);border:1px solid var(--red-line);color:var(--red);}
+/* ── Form ── */
+.form-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label { font-size: .6rem; color: var(--parch-600); font-family: var(--serif-engraved); letter-spacing: .08em; text-transform: uppercase; }
+.field input[type=number] { width: 90px; padding: 7px 10px; border-radius: 5px; border: 1px solid rgba(100,180,255,.22); background: rgba(0,0,0,.3); color: var(--parch-100); font-family: var(--mono); font-size: .82rem; outline: none; transition: border-color .2s; }
+.field input[type=number]:focus { border-color: var(--blue); }
 
-  /* Table users */
-  .user-table{width:100%;border-collapse:collapse;font-size:0.85rem;}
-  .user-table th{padding:10px 12px;text-align:left;font-family:var(--serif-engraved);font-size:0.65rem;letter-spacing:0.1em;color:var(--parch-500);border-bottom:1px solid var(--gold-line);}
-  .user-table td{padding:10px 12px;border-bottom:1px solid rgba(201,164,92,0.08);vertical-align:middle;}
-  .user-table tr:hover td{background:var(--gold-faint);}
-  .role-admin{color:var(--gold);font-family:var(--serif-engraved);font-size:0.7rem;}
-  .role-user{color:var(--parch-500);font-size:0.78rem;}
-  .status-active{color:var(--teal);}
-  .status-inactive{color:var(--red);}
+/* ── Buttons ── */
+.btn { padding: 8px 18px; border-radius: 5px; cursor: pointer; border: none; font-family: var(--serif-engraved); font-size: .6rem; letter-spacing: .1em; text-transform: uppercase; transition: opacity .2s, background .2s; }
+.btn:disabled { opacity: .38; cursor: default; }
+.btn-blue { background: var(--blue-dim); color: var(--blue); border: 1px solid var(--blue-border); }
+.btn-blue:hover:not(:disabled) { background: rgba(100,180,255,.22); }
+.btn-teal { background: var(--teal-faint); color: var(--teal); border: 1px solid var(--teal-line); }
+.btn-teal:hover:not(:disabled) { background: rgba(92,201,184,.2); }
+.btn-ghost { background: none; color: var(--parch-500); border: 1px solid var(--border); }
+.btn-ghost:hover:not(:disabled) { background: rgba(255,255,255,.04); }
 
-  .btn-toggle{padding:5px 12px;border-radius:4px;border:1px solid rgba(220,60,60,0.35);background:var(--red-faint);color:var(--red);font-size:0.7rem;font-family:var(--serif-engraved);cursor:pointer;transition:all 0.15s;}
-  .btn-toggle:hover{background:rgba(220,60,60,0.2);}
-  .btn-toggle.activate{border-color:var(--teal-line);background:var(--teal-faint);color:var(--teal);}
-  .btn-toggle.activate:hover{background:rgba(92,201,184,0.2);}
+/* ── Panel states ── */
+.panel-state { margin-top: 14px; }
+.running-box { display: flex; align-items: center; gap: 10px; font-size: .78rem; color: var(--parch-500); }
+.spinner { width: 18px; height: 18px; flex-shrink: 0; border: 2px solid rgba(100,180,255,.18); border-top-color: var(--blue); border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.log-line { margin-top: 7px; font-family: var(--mono); font-size: .65rem; color: var(--parch-600); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.done-badge { display: inline-block; font-size: .6rem; font-family: var(--serif-engraved); letter-spacing: .1em; text-transform: uppercase; color: var(--green); border: 1px solid rgba(74,222,128,.28); background: var(--green-faint); border-radius: 3px; padding: 2px 8px; margin-bottom: 10px; }
+.report-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: .8rem; }
+.report-row:last-child { border-bottom: none; }
+.report-label { color: var(--parch-500); }
+.report-val { font-variant-numeric: tabular-nums; font-weight: 500; }
+.v-green { color: var(--green); } .v-blue { color: var(--blue); } .v-red { color: var(--red); } .v-teal { color: var(--teal); }
+.error-box { margin-top: 10px; padding: 10px 14px; border-radius: 6px; background: var(--red-faint); border: 1px solid rgba(220,80,80,.22); font-family: var(--mono); font-size: .67rem; color: var(--red); word-break: break-all; }
 
-  .state-msg{text-align:center;padding:40px;color:var(--parch-500);font-style:italic;}
-  .spinner{display:inline-block;width:24px;height:24px;border:2px solid var(--gold-faint);border-top-color:var(--gold);border-radius:50%;animation:spin 0.8s linear infinite;}
-  @keyframes spin{to{transform:rotate(360deg);}}
+/* ── Commander section header ── */
+.sec-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+.sec-title { font-family: var(--serif-engraved); font-size: .65rem; letter-spacing: .13em; text-transform: uppercase; color: var(--parch-500); }
+.sec-count { font-size: .7rem; color: var(--parch-600); background: rgba(255,255,255,.05); border-radius: 3px; padding: 1px 7px; font-variant-numeric: tabular-nums; }
+.btn-xs { font-size: .58rem; padding: 5px 12px; }
+.ml-auto { margin-left: auto; }
 
-  #toast{position:fixed;bottom:24px;right:24px;z-index:9999;padding:10px 18px;border-radius:6px;background:var(--ink-700);border:1px solid var(--gold-line);color:var(--parch-100);font-size:0.85rem;opacity:0;transition:opacity 0.3s;pointer-events:none;}
-  #toast.show{opacity:1;}
+/* ── Filter ── */
+.filter-bar { margin-bottom: 12px; }
+.filter-bar input { padding: 7px 12px; border-radius: 5px; border: 1px solid var(--border); background: rgba(0,0,0,.25); color: var(--parch-100); font-family: var(--serif-body); font-size: .82rem; outline: none; width: 240px; transition: border-color .2s; }
+.filter-bar input:focus { border-color: var(--blue-border); }
+.filter-bar input::placeholder { color: var(--parch-600); }
+
+/* ── Table ── */
+.table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
+table { width: 100%; border-collapse: collapse; font-size: .78rem; min-width: 620px; }
+thead { background: rgba(255,255,255,.03); }
+th { padding: 10px 14px; text-align: left; font-family: var(--serif-engraved); font-size: .57rem; letter-spacing: .1em; text-transform: uppercase; color: var(--parch-600); border-bottom: 1px solid var(--border); white-space: nowrap; }
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:hover { color: var(--parch-300); }
+th.sort-active { color: var(--blue); }
+td { padding: 9px 14px; color: var(--parch-300); border-bottom: 1px solid rgba(255,255,255,.04); vertical-align: middle; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: rgba(255,255,255,.02); }
+td.n-name { color: var(--parch-100); font-weight: 500; }
+td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
+
+/* ── Color pips ── */
+.ci-pips { display: flex; gap: 4px; align-items: center; }
+.ci-pip { width: 10px; height: 10px; border-radius: 50%; border: 1px solid rgba(255,255,255,.15); flex-shrink: 0; }
+.pip-W { background: #f5f3e0; } .pip-U { background: #4a8cd4; } .pip-B { background: #5a5564; }
+.pip-R { background: #c8453a; } .pip-G { background: #357a42; } .pip-C { background: #8a8898; }
+
+/* ── Badges ── */
+.badge { display: inline-block; font-family: var(--serif-engraved); font-size: .55rem; letter-spacing: .08em; text-transform: uppercase; border-radius: 3px; padding: 2px 8px; white-space: nowrap; }
+.b-never  { color: var(--red);   background: var(--red-faint);   border: 1px solid rgba(220,80,80,.22); }
+.b-stale  { color: var(--amber); background: var(--amber-faint); border: 1px solid rgba(245,158,11,.22); }
+.b-recent { color: var(--green); background: var(--green-faint); border: 1px solid rgba(74,222,128,.22); }
+.empty-msg td { text-align: center; color: var(--parch-600); padding: 28px; font-style: italic; }
 </style>
 </head>
 <body>
-<div class="page-wrap">
-  <header>
-    <a href="/" class="back">← Accueil</a>
-    <h1>Panneau d'administration</h1>
-    <span class="header-spacer">← Accueil</span>
+<div class="page">
+
+  <!-- Header -->
+  <header class="adm-header">
+    <a href="/" class="adm-back">← Accueil</a>
+    <div>
+      <span class="adm-title">ManaMind</span>
+      <span class="adm-sub">— Administration Scraping</span>
+    </div>
+    <div class="adm-user" id="userInfo" style="display:none;">
+      Connecté : <strong id="userEmail">—</strong>
+    </div>
   </header>
 
-  <!-- Invitations -->
-  <div class="section">
-    <div class="section-title">INVITATIONS</div>
-    <div class="inv-actions">
-      <button class="btn btn-gold" id="genInvBtn">+ Générer un lien d'invitation</button>
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Décks en base</div>
+      <div class="stat-val c-blue loading" id="statDecks">—</div>
     </div>
-    <div id="newInvWrap" style="display:none;"></div>
-    <div id="invListWrap"><div class="state-msg"><div class="spinner"></div></div></div>
+    <div class="stat-card">
+      <div class="stat-label">Commandants enregistrés</div>
+      <div class="stat-val c-teal loading" id="statCommanders">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Jamais scrapés</div>
+      <div class="stat-val c-amber loading" id="statPending">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Commandants uniques détectés</div>
+      <div class="stat-val loading" id="statUniq">—</div>
+    </div>
   </div>
 
-  <!-- Utilisateurs -->
-  <div class="section">
-    <div class="section-title">UTILISATEURS</div>
-    <div id="userListWrap"><div class="state-msg"><div class="spinner"></div></div></div>
+  <!-- Panels -->
+  <div class="panels-row">
+
+    <!-- Scrape récents -->
+    <div class="panel">
+      <div class="panel-title">Scraper les décks récents</div>
+      <div class="form-row">
+        <div class="field">
+          <label>Nb de décks</label>
+          <input type="number" id="recentLimit" min="10" max="2000" value="300" />
+        </div>
+        <button class="btn btn-blue" id="recentLaunchBtn">Lancer</button>
+      </div>
+
+      <div class="panel-state" id="recentState" style="display:none;">
+        <div id="recentRunning" style="display:none; margin-top:14px;">
+          <div class="running-box"><div class="spinner"></div><span>Scrape en cours…</span></div>
+          <div class="log-line" id="recentLog"></div>
+        </div>
+        <div id="recentDone" style="display:none; margin-top:14px;">
+          <div class="done-badge">Terminé</div>
+          <div id="recentReport"></div>
+          <div style="margin-top:12px;"><button class="btn btn-ghost btn-xs" id="recentResetBtn">Nouveau scrape</button></div>
+        </div>
+        <div id="recentError" style="display:none;" class="error-box"></div>
+      </div>
+    </div>
+
+    <!-- Scrape par commandant -->
+    <div class="panel">
+      <div class="panel-title">
+        Scraper par commandant
+        <span style="font-family:var(--serif-display);font-style:italic;font-size:.82rem;color:var(--parch-600);letter-spacing:normal;text-transform:none;">— les plus anciens en priorité</span>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label>Nb commandants</label>
+          <input type="number" id="staleCount" min="1" max="100" value="1" />
+        </div>
+        <div class="field">
+          <label>Décks / cmd.</label>
+          <input type="number" id="staleLimitPer" min="10" max="1000" value="200" />
+        </div>
+        <button class="btn btn-teal" id="staleLaunchBtn">Lancer</button>
+      </div>
+      <p class="panel-hint">Cible automatiquement les commandants dont le dernier scrape est le plus ancien (NULL en premier).</p>
+
+      <div class="panel-state" id="staleState" style="display:none;">
+        <div id="staleRunning" style="display:none; margin-top:14px;">
+          <div class="running-box"><div class="spinner"></div><span>Scrape en cours…</span></div>
+          <div class="log-line" id="staleLog"></div>
+        </div>
+        <div id="staleDone" style="display:none; margin-top:14px;">
+          <div class="done-badge">Terminé</div>
+          <div id="staleReport"></div>
+          <div style="margin-top:12px;"><button class="btn btn-ghost btn-xs" id="staleResetBtn">Nouveau scrape</button></div>
+        </div>
+        <div id="staleError" style="display:none;" class="error-box"></div>
+      </div>
+    </div>
+
   </div>
+
+  <!-- Commander list -->
+  <div class="sec-header">
+    <span class="sec-title">Liste des commandants</span>
+    <span class="sec-count" id="cmdCount">—</span>
+    <button class="btn btn-ghost btn-xs ml-auto" id="syncBtn">Synchroniser depuis décks</button>
+    <button class="btn btn-ghost btn-xs" id="refreshCmdBtn">Rafraîchir</button>
+  </div>
+
+  <div class="filter-bar">
+    <input type="text" id="cmdFilter" placeholder="Filtrer par nom…" />
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="sortable" data-col="rank" style="width:60px;">#</th>
+          <th class="sortable" data-col="name">Commandant</th>
+          <th style="width:90px;">CI</th>
+          <th class="sortable n-num" data-col="decks_in_db" style="width:110px;">En base</th>
+          <th class="sortable n-num" data-col="decks_extracted" style="width:100px;">Extraits</th>
+          <th class="sortable" data-col="last_scraped_at" style="width:140px;">Dernier scrape</th>
+          <th style="width:120px;">Statut</th>
+        </tr>
+      </thead>
+      <tbody id="cmdTableBody">
+        <tr class="empty-msg"><td colspan="7">Chargement…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
 </div>
-<div id="toast"></div>
 
+<script src="/auth-guard.js"></script>
 <script>
-(() => {
-  const NOW = Date.now();
+(async () => {
 
-  // ── Chargement invitations ────────────────────────────────────
-  async function loadInvitations() {
-    const wrap = document.getElementById('invListWrap');
+  // ── Auth ──────────────────────────────────────────────────────────────
+  async function getUser() {
     try {
-      const res  = await fetch('/api/admin/invitations');
-      if (res.status === 401 || res.status === 403) { location.href = '/login?next=/admin'; return; }
-      const data = await res.json();
-      const invs = data.invitations || [];
-      if (invs.length === 0) {
-        wrap.innerHTML = '<div class="state-msg">Aucune invitation générée.</div>';
-        return;
-      }
-      wrap.innerHTML = `
-        <table class="inv-table">
-          <thead><tr>
-            <th>Token</th><th>Statut</th><th>Expiration</th><th>Créé par</th><th>Utilisé par</th>
-          </tr></thead>
-          <tbody>
-            ${invs.map(inv => {
-              const expired = inv.expires_at && new Date(inv.expires_at) < new Date();
-              const badge = inv.used_at
-                ? '<span class="badge-used">Utilisé</span>'
-                : expired ? '<span class="badge-expired">Expiré</span>'
-                : '<span class="badge-pending">En attente</span>';
-              return `<tr>
-                <td style="font-family:monospace;font-size:0.78rem;color:var(--parch-500)">${inv.token.slice(0,16)}…</td>
-                <td>${badge}</td>
-                <td>${inv.expires_at ? fmtDate(inv.expires_at) : '—'}</td>
-                <td>${esc(inv.created_by || '—')}</td>
-                <td>${esc(inv.used_by || '—')}</td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-        </table>`;
-    } catch { wrap.innerHTML = '<div class="state-msg">Erreur de chargement.</div>'; }
+      const u = JSON.parse(sessionStorage.getItem('_mm_user'));
+      if (u) return u;
+    } catch {}
+    try {
+      const r = await fetch('/auth/me');
+      const d = await r.json();
+      return d.authenticated ? d.user : null;
+    } catch { return null; }
   }
 
-  // ── Générer une invitation ────────────────────────────────────
-  document.getElementById('genInvBtn').addEventListener('click', async () => {
-    const newWrap = document.getElementById('newInvWrap');
+  const t0 = Date.now();
+  let user = null;
+  while (!user && Date.now() - t0 < 6000) {
+    user = await getUser();
+    if (!user) await new Promise(r => setTimeout(r, 150));
+  }
+
+  if (!user || user.role !== 'admin') { window.location.href = '/'; return; }
+
+  document.getElementById('userInfo').style.display = 'flex';
+  document.getElementById('userEmail').textContent = user.email || user.display_name || 'Admin';
+
+  // ── Stats ─────────────────────────────────────────────────────────────
+  async function loadStats() {
     try {
-      const res  = await fetch('/api/admin/invitations', { method: 'POST' });
-      if (res.status === 401 || res.status === 403) { location.href = '/login?next=/admin'; return; }
-      const data = await res.json();
-      newWrap.style.display = 'block';
-      newWrap.innerHTML = `
-        <div class="inv-link-box">
-          <input id="invLinkInput" type="text" value="${esc(data.link)}" readonly />
-          <button class="btn-copy" onclick="copyInv()">Copier</button>
-        </div>
-        <div class="inv-expires">Expire le ${fmtDate(data.expires_at)} · Usage unique</div>`;
-      loadInvitations();
-    } catch { showToast('Erreur lors de la génération.'); }
+      const r = await fetch('/api/admin/stats');
+      if (!r.ok) return;
+      const d = await r.json();
+      const fmt = n => (n ?? 0).toLocaleString('fr-FR');
+      setText('statDecks',       fmt(d.total_decks),                false, true);
+      setText('statCommanders',  fmt(d.total_commanders),           false, true);
+      setText('statPending',     fmt(d.pending_commanders),         false, true);
+      setText('statUniq',        fmt(d.unique_commanders_in_decks), false, true);
+    } catch {}
+  }
+
+  function setText(id, val, err, rmLoading) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = val;
+    if (rmLoading) el.classList.remove('loading');
+    if (err) el.style.color = 'var(--red)';
+  }
+
+  // ── Commander table ───────────────────────────────────────────────────
+  let _cmds = [], _sortCol = 'last_scraped_at', _sortAsc = true, _filter = '';
+  const CI_CLS = { W:'pip-W', U:'pip-U', B:'pip-B', R:'pip-R', G:'pip-G', C:'pip-C' };
+
+  function relTime(iso) {
+    if (!iso) return null;
+    const d = Math.floor((Date.now() - new Date(iso)) / 86400000);
+    const h = Math.floor(((Date.now() - new Date(iso)) % 86400000) / 3600000);
+    const m = Math.floor(((Date.now() - new Date(iso)) % 3600000) / 60000);
+    if (d > 0) return `Il y a ${d}j`;
+    if (h > 0) return `Il y a ${h}h`;
+    if (m > 0) return `Il y a ${m}min`;
+    return "À l'instant";
+  }
+
+  function badge(iso) {
+    if (!iso) return '<span class="badge b-never">Jamais</span>';
+    const days = (Date.now() - new Date(iso)) / 86400000;
+    if (days > 30) return '<span class="badge b-stale">À rafraîchir</span>';
+    return '<span class="badge b-recent">Récent</span>';
+  }
+
+  function pips(ci) {
+    if (!ci) return '<span style="color:var(--parch-600)">—</span>';
+    return '<div class="ci-pips">' +
+      [...ci].map(c => `<div class="ci-pip ${CI_CLS[c] || 'pip-C'}" title="${c}"></div>`).join('') +
+    '</div>';
+  }
+
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function renderTable() {
+    let data = [..._cmds];
+    if (_filter) {
+      const q = _filter.toLowerCase();
+      data = data.filter(c => c.name.toLowerCase().includes(q));
+    }
+    data.sort((a, b) => {
+      let va = a[_sortCol], vb = b[_sortCol];
+      if (va == null) va = _sortAsc ? '\x00' : '￿';
+      if (vb == null) vb = _sortAsc ? '\x00' : '￿';
+      if (typeof va === 'string') {
+        const r = va.localeCompare(vb);
+        return _sortAsc ? r : -r;
+      }
+      return _sortAsc ? (va - vb) : (vb - va);
+    });
+
+    const cnt = data.length;
+    document.getElementById('cmdCount').textContent = `${cnt} commandant${cnt > 1 ? 's' : ''}`;
+
+    if (!cnt) {
+      document.getElementById('cmdTableBody').innerHTML =
+        '<tr class="empty-msg"><td colspan="7">Aucun commandant.</td></tr>';
+      return;
+    }
+
+    const fmt = n => n != null ? Number(n).toLocaleString('fr-FR') : '—';
+    document.getElementById('cmdTableBody').innerHTML = data.map(c => `
+      <tr>
+        <td class="n-num">${c.rank ?? '—'}</td>
+        <td class="n-name">${esc(c.name)}</td>
+        <td>${pips(c.color_identity)}</td>
+        <td class="n-num">${fmt(c.decks_in_db)}</td>
+        <td class="n-num">${fmt(c.decks_extracted)}</td>
+        <td style="color:var(--parch-500);white-space:nowrap;">${relTime(c.last_scraped_at) || '<span style="color:var(--parch-600)">Jamais</span>'}</td>
+        <td>${badge(c.last_scraped_at)}</td>
+      </tr>
+    `).join('');
+  }
+
+  async function loadCommanders() {
+    document.getElementById('cmdTableBody').innerHTML =
+      '<tr class="empty-msg"><td colspan="7">Chargement…</td></tr>';
+    try {
+      const r = await fetch('/api/admin/commanders');
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      _cmds = (await r.json()).commanders || [];
+      renderTable();
+    } catch (e) {
+      document.getElementById('cmdTableBody').innerHTML =
+        `<tr class="empty-msg"><td colspan="7" style="color:var(--red)">Erreur : ${esc(e.message)}</td></tr>`;
+    }
+  }
+
+  document.querySelectorAll('th.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.col;
+      if (_sortCol === col) _sortAsc = !_sortAsc; else { _sortCol = col; _sortAsc = true; }
+      document.querySelectorAll('th.sort-active').forEach(t => t.classList.remove('sort-active'));
+      th.classList.add('sort-active');
+      renderTable();
+    });
   });
 
-  window.copyInv = () => {
-    const inp = document.getElementById('invLinkInput');
-    inp.select();
-    navigator.clipboard.writeText(inp.value).then(() => showToast('Lien copié !'));
-  };
+  document.getElementById('cmdFilter').addEventListener('input', e => {
+    _filter = e.target.value.trim();
+    renderTable();
+  });
 
-  // ── Chargement utilisateurs ───────────────────────────────────
-  async function loadUsers() {
-    const wrap = document.getElementById('userListWrap');
+  document.getElementById('refreshCmdBtn').addEventListener('click', async () => {
+    await Promise.all([loadStats(), loadCommanders()]);
+  });
+
+  document.getElementById('syncBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('syncBtn');
+    btn.disabled = true; btn.textContent = 'Synchronisation…';
     try {
-      const res  = await fetch('/api/admin/users');
-      if (res.status === 401 || res.status === 403) { location.href = '/login?next=/admin'; return; }
-      const data = await res.json();
-      const users = data.users || [];
-      wrap.innerHTML = `
-        <table class="user-table">
-          <thead><tr>
-            <th>ID</th><th>Email</th><th>Pseudo</th><th>Rôle</th><th>Statut</th>
-            <th>Collection</th><th>Decks</th><th>Créé le</th><th>Dernière connexion</th><th></th>
-          </tr></thead>
-          <tbody>
-            ${users.map(u => {
-              const roleHtml = u.role === 'admin'
-                ? '<span class="role-admin">Admin</span>'
-                : '<span class="role-user">Utilisateur</span>';
-              const statusHtml = u.is_active
-                ? '<span class="status-active">Actif</span>'
-                : '<span class="status-inactive">Désactivé</span>';
-              const toggleLabel = u.is_active ? 'Désactiver' : 'Activer';
-              const toggleClass = u.is_active ? '' : 'activate';
-              const isAdmin = u.role === 'admin';
-              return `<tr>
-                <td style="color:var(--parch-500)">#${u.id}</td>
-                <td>${esc(u.email)}</td>
-                <td>${esc(u.display_name || '—')}</td>
-                <td>${roleHtml}</td>
-                <td>${statusHtml}</td>
-                <td style="text-align:center">${u.collection_count}</td>
-                <td style="text-align:center">${u.deck_count}</td>
-                <td style="color:var(--parch-500);font-size:0.78rem">${u.created_at ? fmtDate(u.created_at) : '—'}</td>
-                <td style="color:var(--parch-500);font-size:0.78rem">${u.last_login_at ? fmtDate(u.last_login_at) : 'Jamais'}</td>
-                <td>${isAdmin ? '' : `<button class="btn-toggle ${toggleClass}" data-id="${u.id}" data-active="${u.is_active}">${toggleLabel}</button>`}</td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-        </table>`;
+      const r = await fetch('/api/admin/commanders/sync', { method: 'POST' });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const d = await r.json();
+      btn.textContent = `+${d.added} ajouté${d.added > 1 ? 's' : d.added === 0 ? 's' : ''}`;
+      await Promise.all([loadStats(), loadCommanders()]);
+    } catch (e) {
+      btn.textContent = 'Erreur';
+    }
+    setTimeout(() => { btn.disabled = false; btn.textContent = 'Synchroniser depuis décks'; }, 3000);
+  });
 
-      wrap.querySelectorAll('.btn-toggle').forEach(btn => {
-        btn.addEventListener('click', () => toggleUser(btn));
-      });
-    } catch { wrap.innerHTML = '<div class="state-msg">Erreur de chargement.</div>'; }
+  // ── Job polling ───────────────────────────────────────────────────────
+  function showPanel(prefix, section) {
+    ['Running','Done','Error'].forEach(s => {
+      const el = document.getElementById(`${prefix}${s}`);
+      if (el) el.style.display = s === section ? 'block' : 'none';
+    });
+    document.getElementById(`${prefix}State`).style.display = 'block';
   }
 
-  async function toggleUser(btn) {
-    const uid = btn.dataset.id;
+  function resetPanel(prefix, btnId) {
+    document.getElementById(`${prefix}State`).style.display = 'none';
+    document.getElementById(btnId).disabled = false;
+  }
+
+  function pollJob(jobId, prefix, reportFn) {
+    showPanel(prefix, 'Running');
+    const logEl = document.getElementById(`${prefix}Log`);
+
+    const iv = setInterval(async () => {
+      try {
+        const r = await fetch(`/api/admin/scrape/status/${jobId}`);
+        const d = await r.json();
+
+        if (d.log && d.log.length) logEl.textContent = d.log[d.log.length - 1];
+
+        if (d.status === 'done') {
+          clearInterval(iv);
+          showPanel(prefix, 'Done');
+          document.getElementById(`${prefix}Report`).innerHTML = reportFn(d.stats);
+          await Promise.all([loadStats(), loadCommanders()]);
+        } else if (d.status === 'error') {
+          clearInterval(iv);
+          showPanel(prefix, 'Error');
+          document.getElementById(`${prefix}Error`).textContent = d.error || 'Erreur inconnue';
+        }
+      } catch {}
+    }, 2000);
+  }
+
+  // ── Scrape récents ────────────────────────────────────────────────────
+  function reportRecent(s) {
+    const rows = [
+      ['URLs collectées',   s.seen,       ''],
+      ['Déjà en base',      s.skipped,    ''],
+      ['HTML parsés',       s.fetched,    ''],
+      ['Incomplets',        s.incomplete, 'v-red'],
+      ['Décks créés',       s.created,    'v-green'],
+      ['Décks mis à jour',  s.updated,    'v-blue'],
+    ];
+    return rows.map(([l, v, c]) =>
+      `<div class="report-row"><span class="report-label">${l}</span><span class="report-val ${c}">${(v??0).toLocaleString('fr-FR')}</span></div>`
+    ).join('');
+  }
+
+  document.getElementById('recentLaunchBtn').addEventListener('click', async () => {
+    const limit = parseInt(document.getElementById('recentLimit').value, 10) || 300;
+    const btn = document.getElementById('recentLaunchBtn');
+    btn.disabled = true;
     try {
-      const res  = await fetch(`/api/admin/users/${uid}/toggle`, { method: 'POST' });
-      const data = await res.json();
-      if (!res.ok) { showToast(data.error || 'Erreur'); return; }
-      showToast(data.is_active ? 'Compte activé' : 'Compte désactivé');
-      loadUsers();
-    } catch { showToast('Erreur réseau'); }
+      const r = await fetch(`/api/admin/scrape/recent?limit=${limit}`, { method: 'POST' });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      pollJob((await r.json()).job_id, 'recent', reportRecent);
+    } catch (e) {
+      btn.disabled = false;
+      document.getElementById('recentState').style.display = 'block';
+      showPanel('recent', 'Error');
+      document.getElementById('recentError').textContent = String(e);
+    }
+  });
+  document.getElementById('recentResetBtn').addEventListener('click', () => resetPanel('recent', 'recentLaunchBtn'));
+
+  // ── Scrape par commandant ─────────────────────────────────────────────
+  function reportStale(s) {
+    const rows = [
+      ['Commandants traités', s.commanders_processed, 'v-teal'],
+      ['URLs collectées',     s.seen,                 ''],
+      ['HTML parsés',         s.fetched,              ''],
+      ['Incomplets',          s.incomplete,           'v-red'],
+      ['Décks créés',         s.created,              'v-green'],
+      ['Décks mis à jour',    s.updated,              'v-blue'],
+    ];
+    return rows.map(([l, v, c]) =>
+      `<div class="report-row"><span class="report-label">${l}</span><span class="report-val ${c}">${(v??0).toLocaleString('fr-FR')}</span></div>`
+    ).join('');
   }
 
-  // ── Utilitaires ───────────────────────────────────────────────
-  function fmtDate(iso) {
-    const d = new Date(iso);
-    return d.toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
-  }
-  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-  function showToast(msg) {
-    const t = document.getElementById('toast');
-    t.textContent = msg; t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 2500);
-  }
+  document.getElementById('staleLaunchBtn').addEventListener('click', async () => {
+    const count    = parseInt(document.getElementById('staleCount').value, 10) || 1;
+    const limitPer = parseInt(document.getElementById('staleLimitPer').value, 10) || 200;
+    const btn = document.getElementById('staleLaunchBtn');
+    btn.disabled = true;
+    try {
+      const r = await fetch(`/api/admin/scrape/stale?count=${count}&limit_per=${limitPer}`, { method: 'POST' });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      pollJob((await r.json()).job_id, 'stale', reportStale);
+    } catch (e) {
+      btn.disabled = false;
+      document.getElementById('staleState').style.display = 'block';
+      showPanel('stale', 'Error');
+      document.getElementById('staleError').textContent = String(e);
+    }
+  });
+  document.getElementById('staleResetBtn').addEventListener('click', () => resetPanel('stale', 'staleLaunchBtn'));
 
-  loadInvitations();
-  loadUsers();
+  // ── Init ──────────────────────────────────────────────────────────────
+  document.querySelector('th[data-col="last_scraped_at"]').classList.add('sort-active');
+  await Promise.all([loadStats(), loadCommanders()]);
+
 })();
 </script>
 </body>

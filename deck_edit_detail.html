@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<title>ManaMind — Éditer un deck</title>
+<style>
+  :root {
+    --ink-900: #0c0910;
+    --ink-panel: rgba(20, 13, 28, 0.62);
+    --parch-100: #efe6d6;
+    --parch-300: #cdbfa8;
+    --parch-500: #9c8e79;
+    --parch-600: #7c715f;
+    --arcane: #a07be0;
+    --arcane-deep: #6c4bb0;
+    --arcane-glow: rgba(160, 123, 224, 0.55);
+    --gold: #c9a45c;
+    --gold-soft: #d8bd83;
+    --gold-line: rgba(201, 164, 92, 0.42);
+    --gold-faint: rgba(201, 164, 92, 0.16);
+    --serif-display: "Cormorant Garamond", Georgia, serif;
+    --serif-engraved: "Cinzel", Georgia, serif;
+    --serif-body: "Spectral", Georgia, serif;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { color: var(--parch-100); font-family: var(--serif-body); background: var(--ink-900); min-height: 100vh; }
+
+  #scene {
+    position: fixed; inset: 0;
+    background-image:
+      radial-gradient(120% 80% at 50% 0%, rgba(12,9,16,0.30), rgba(12,9,16,0.86) 62%, rgba(12,9,16,0.97) 100%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
+    background-color: var(--ink-900);
+    z-index: 0; pointer-events: none;
+  }
+
+  #app {
+    position: relative; z-index: 1;
+    width: 100%; max-width: 1200px; margin: 0 auto;
+    padding: 48px 32px 80px;
+    display: flex; flex-direction: column; gap: 32px;
+  }
+
+  .site-header {
+    display: flex; align-items: center; gap: 24px;
+    padding-bottom: 16px; border-bottom: 1px solid var(--gold-line);
+  }
+  .back-link {
+    font-family: var(--serif-engraved); font-size: 0.72rem; letter-spacing: 0.12em;
+    color: var(--gold); text-decoration: none; opacity: 0.8; flex-shrink: 0;
+  }
+  .back-link:hover { opacity: 1; }
+  .page-title {
+    font-family: var(--serif-display); font-size: clamp(1.4rem, 3vw, 2rem);
+    font-weight: 600; color: var(--parch-100); margin: 0; flex: 1; text-align: center;
+  }
+
+  /* ── Layout principal ── */
+  #mainRow {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 28px;
+    align-items: start;
+  }
+  @media (max-width: 800px) {
+    #mainRow { grid-template-columns: 1fr; }
+  }
+
+  /* ── Panneau ── */
+  .panel {
+    background: var(--ink-panel); border: 1px solid var(--gold-line); border-radius: 12px;
+    padding: 24px 24px; backdrop-filter: blur(8px);
+  }
+  .panel-title {
+    font-family: var(--serif-engraved); font-size: 0.68rem; letter-spacing: 0.2em;
+    color: var(--gold); text-transform: uppercase; margin: 0 0 20px;
+  }
+
+  /* ── Rename ── */
+  .rename-row {
+    display: flex; gap: 10px; align-items: center; margin-bottom: 20px;
+    padding-bottom: 20px; border-bottom: 1px solid var(--gold-faint);
+  }
+  .rename-input {
+    flex: 1; padding: 10px 14px;
+    font-family: var(--serif-body); font-size: 0.95rem; color: var(--parch-100);
+    background: rgba(12,9,16,0.55); border: 1px solid var(--gold-line); border-radius: 8px;
+    outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .rename-input:focus { border-color: var(--arcane); box-shadow: 0 0 0 3px var(--arcane-glow); }
+
+  /* ── Boutons ── */
+  .btn {
+    font-family: var(--serif-engraved); font-size: 0.68rem; letter-spacing: 0.14em;
+    text-transform: uppercase; padding: 9px 18px;
+    border: none; border-radius: 8px; cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s;
+  }
+  .btn:hover { opacity: 0.85; transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn-gold { color: var(--ink-900); background: linear-gradient(135deg, var(--gold) 0%, var(--gold-soft) 100%); }
+  .btn-ghost { color: var(--parch-500); background: transparent; border: 1px solid var(--gold-faint); }
+  .btn-ghost:hover { color: var(--parch-300); border-color: var(--gold-line); }
+  .btn-danger { color: #e07b7b; background: transparent; border: 1px solid rgba(224,123,123,0.3); }
+  .btn-danger:hover { background: rgba(224,123,123,0.08); border-color: rgba(224,123,123,0.6); }
+
+  /* ── Liste cartes ── */
+  .cards-list {
+    display: flex; flex-direction: column; gap: 1px;
+  }
+
+  .card-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 4px 10px; border-radius: 6px;
+    transition: background 0.12s;
+  }
+  .card-row:hover { background: rgba(255,255,255,0.04); }
+  .card-qty {
+    font-family: var(--serif-engraved); font-size: 0.78rem; color: var(--gold);
+    min-width: 22px; text-align: right; flex-shrink: 0;
+  }
+  .card-name {
+    flex: 1; font-size: 0.9rem; color: var(--parch-300);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    cursor: pointer; transition: color 0.15s;
+  }
+  .card-name:hover { color: var(--parch-100); }
+  .card-actions { display: flex; gap: 4px; flex-shrink: 0; }
+  .qty-btn {
+    width: 26px; height: 26px; border-radius: 6px; border: 1px solid var(--gold-faint);
+    background: transparent; color: var(--parch-500); cursor: pointer;
+    font-size: 1rem; line-height: 1; display: flex; align-items: center; justify-content: center;
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+  }
+  .qty-btn:hover { background: rgba(201,164,92,0.1); color: var(--gold); border-color: var(--gold-line); }
+
+  .commander-badge {
+    font-family: var(--serif-engraved); font-size: 0.55rem; letter-spacing: 0.1em;
+    padding: 2px 8px; border-radius: 10px;
+    background: rgba(201,164,92,0.12); color: var(--gold); border: 1px solid var(--gold-faint);
+    flex-shrink: 0;
+  }
+
+  /* ── Recherche / ajout ── */
+  .search-section { display: flex; flex-direction: column; gap: 16px; }
+  .field-label {
+    font-family: var(--serif-engraved); font-size: 0.68rem; letter-spacing: 0.18em;
+    color: var(--gold); display: block; margin-bottom: 8px;
+  }
+  .input-wrap { position: relative; }
+  .card-input {
+    width: 100%; padding: 12px 16px;
+    font-family: var(--serif-body); font-size: 1rem; color: var(--parch-100);
+    background: rgba(12,9,16,0.55); border: 1px solid var(--gold-line); border-radius: 8px;
+    outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .card-input::placeholder { color: var(--parch-600); }
+  .card-input:focus { border-color: var(--arcane); box-shadow: 0 0 0 3px var(--arcane-glow); }
+
+  .autocomplete-dropdown {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 99999;
+    background: #1a1125; border: 1px solid var(--gold-line); border-radius: 8px;
+    overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.6); display: none;
+  }
+  .autocomplete-dropdown.open { display: block; }
+  .ac-item {
+    padding: 10px 16px; font-family: var(--serif-body); font-size: 0.95rem;
+    color: var(--parch-300); cursor: pointer; transition: background 0.12s, color 0.12s;
+    border-bottom: 1px solid rgba(201,164,92,0.08);
+  }
+  .ac-item:last-child { border-bottom: none; }
+  .ac-item:hover, .ac-item.active { background: rgba(160,123,224,0.12); color: var(--parch-100); }
+  .ac-item mark { background: none; color: var(--gold); font-weight: 600; }
+
+  /* ── Visuel carte sticky ── */
+  #cardVisual {
+    position: sticky; top: 24px; align-self: start;
+    display: none; flex-direction: column; align-items: center; gap: 12px;
+    background: var(--ink-panel); border: 1px solid var(--gold-line); border-radius: 12px;
+    padding: 18px; backdrop-filter: blur(8px);
+  }
+  #cardVisual.show { display: flex; }
+  #cardVisualImg {
+    width: 100%; border-radius: 10px;
+    box-shadow: 0 10px 36px rgba(0,0,0,0.7), 0 0 24px rgba(160,123,224,0.25);
+    border: 1px solid var(--gold-line);
+  }
+  #cardVisualName {
+    font-family: var(--serif-display); font-size: 1rem; color: var(--gold-soft);
+    text-align: center; font-weight: 600;
+  }
+
+  /* ── Feedback toast ── */
+  #toast {
+    position: fixed; bottom: 28px; right: 28px; z-index: 9999;
+    padding: 12px 20px; border-radius: 10px; font-family: var(--serif-engraved);
+    font-size: 0.72rem; letter-spacing: 0.1em;
+    opacity: 0; transition: opacity 0.25s; pointer-events: none;
+  }
+  #toast.ok  { background: rgba(39,174,96,0.2); border: 1px solid rgba(39,174,96,0.5); color: #6fcf97; }
+  #toast.err { background: rgba(224,123,123,0.2); border: 1px solid rgba(224,123,123,0.5); color: #e07b7b; }
+  #toast.show { opacity: 1; }
+
+  .state-msg { text-align: center; padding: 32px; color: var(--parch-500); font-style: italic; }
+
+  .delete-zone {
+    padding-top: 20px; border-top: 1px solid var(--gold-faint); margin-top: 20px;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<div id="scene"></div>
+<div id="toast"></div>
+
+<div id="app">
+
+  <header class="site-header">
+    <a href="/deck-edit" class="back-link">← Mes decklists</a>
+    <h1 class="page-title" id="pageTitle">Éditer le deck</h1>
+    <span id="userBadge" style="display:flex;align-items:center;gap:6px;flex-shrink:0;"></span>
+  </header>
+
+  <div id="mainRow">
+    <!-- Colonne gauche : gestion du deck -->
+    <div id="leftCol" style="display:flex;flex-direction:column;gap:24px;">
+
+      <!-- Nom du deck -->
+      <div class="panel">
+        <p class="panel-title">Informations</p>
+        <div class="rename-row">
+          <input type="text" id="deckName" class="rename-input" placeholder="Nom du deck…" />
+          <button class="btn btn-gold" onclick="saveName()">Enregistrer</button>
+        </div>
+        <div style="font-size:0.82rem;color:var(--parch-500);">
+          Commandant : <span id="cmdLabel" style="color:var(--parch-300);"></span>
+        </div>
+      </div>
+
+      <!-- Ajouter une carte -->
+      <div class="panel">
+        <p class="panel-title">Ajouter une carte</p>
+        <div class="search-section">
+          <div>
+            <label class="field-label" for="addInput">Nom de la carte</label>
+            <div class="input-wrap">
+              <input
+                id="addInput"
+                class="card-input"
+                type="text"
+                placeholder="Ex : Sol Ring, Cultivate…"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <div class="autocomplete-dropdown" id="acDropdown"></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <label class="field-label" style="margin:0;white-space:nowrap;">Quantité</label>
+            <input type="number" id="addQty" value="1" min="1" max="10" style="width:60px;padding:8px 10px;font-family:var(--serif-body);font-size:0.95rem;color:var(--parch-100);background:rgba(12,9,16,0.55);border:1px solid var(--gold-line);border-radius:8px;outline:none;" />
+            <button class="btn btn-gold" onclick="addCard()" style="margin-left:auto;">Ajouter</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Liste des cartes -->
+      <div class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <p class="panel-title" style="margin:0;">Cartes du deck</p>
+          <span id="cardCount" style="font-family:var(--serif-engraved);font-size:0.68rem;color:var(--parch-500);letter-spacing:0.1em;"></span>
+        </div>
+        <div class="cards-list" id="cardsList">
+          <div class="state-msg">Chargement…</div>
+        </div>
+      </div>
+
+      <!-- Danger zone -->
+      <div class="panel">
+        <p class="panel-title" style="color:#e07b7b;">Zone de danger</p>
+        <div class="delete-zone">
+          <button class="btn btn-danger" onclick="deleteDeck()">Supprimer ce deck</button>
+          <p style="font-size:0.78rem;color:var(--parch-600);margin:10px 0 0;">Cette action est irréversible.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Colonne droite : visuel de la carte survolée -->
+    <div id="cardVisual">
+      <img id="cardVisualImg" alt="" />
+      <div id="cardVisualName"></div>
+    </div>
+  </div>
+
+</div>
+
+<script src="/auth-guard.js"></script>
+<script>
+// ── Utilitaires ─────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function toast(msg, ok = true) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show ' + (ok ? 'ok' : 'err');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => { t.className = t.className.replace('show','').trim(); }, 2800);
+}
+
+// ── Récupération deck_id depuis l'URL ────────────────────────────────────────
+const deckId = decodeURIComponent(location.pathname.split('/').pop());
+let deckCommander = '';
+let deckNameValue = '';
+
+// ── Badge utilisateur ────────────────────────────────────────────────────────
+(function () {
+  const badge = document.getElementById('userBadge');
+  fetch('/auth/me').then(r => r.json()).then(d => {
+    const u = d.user || {};
+    badge.innerHTML = `<span style="font-family:var(--serif-engraved);font-size:0.68rem;letter-spacing:0.12em;color:var(--parch-500);">${u.display_name||u.email||''}</span>
+      <a href="/logout" style="font-family:var(--serif-engraved);font-size:0.65rem;letter-spacing:0.1em;color:var(--gold);text-decoration:none;padding:4px 10px;border:1px solid var(--gold-faint);border-radius:6px;margin-left:6px;">Déconnexion</a>`;
+  }).catch(() => {});
+})();
+
+// ── Chargement deck ──────────────────────────────────────────────────────────
+async function loadDeck() {
+  try {
+    const res = await fetch(`/api/deck-detail/${encodeURIComponent(deckId)}`);
+    if (!res.ok) { document.getElementById('cardsList').innerHTML = '<div class="state-msg">Deck introuvable.</div>'; return; }
+    const data = await res.json();
+    deckCommander = data.commander || '';
+    deckNameValue = data.name || '';
+    document.getElementById('pageTitle').textContent = deckCommander || 'Éditer le deck';
+    document.getElementById('deckName').value = deckNameValue;
+    document.getElementById('cmdLabel').textContent = deckCommander;
+    renderCards(data.cards || []);
+  } catch (e) {
+    document.getElementById('cardsList').innerHTML = '<div class="state-msg">Erreur de chargement.</div>';
+  }
+}
+
+function renderCards(cards) {
+  const list = document.getElementById('cardsList');
+  const count = document.getElementById('cardCount');
+  const total = cards.reduce((s, c) => s + (c.quantity || 1), 0);
+  count.textContent = `${cards.length} carte${cards.length > 1 ? 's' : ''} · ${total} copie${total > 1 ? 's' : ''}`;
+
+  if (!cards.length) {
+    list.innerHTML = '<div class="state-msg">Aucune carte dans ce deck.</div>';
+    return;
+  }
+
+  list.innerHTML = cards.map(c => `
+    <div class="card-row" id="row-${esc(c.card_name)}">
+      <span class="card-qty">${c.quantity}</span>
+      <span class="card-name" onclick="previewCard('${esc(c.card_name)}')">${esc(c.card_name)}</span>
+      <div class="card-actions">
+        <button class="qty-btn" title="Retirer une copie" onclick="changeQty('${esc(c.card_name)}', -1)">−</button>
+        <button class="qty-btn" title="Ajouter une copie" onclick="changeQty('${esc(c.card_name)}', +1)">+</button>
+      </div>
+    </div>`).join('');
+}
+
+// ── Changer quantité ─────────────────────────────────────────────────────────
+async function changeQty(cardName, delta) {
+  const endpoint = delta > 0 ? '/api/deck-card/add' : '/api/deck-card/remove';
+  try {
+    const r = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ commander: deckCommander, card_name: cardName }),
+    });
+    const d = await r.json();
+    if (!r.ok || d.error) { toast(d.error || 'Erreur', false); return; }
+    toast(delta > 0 ? `${cardName} ajoutée` : `${cardName} retirée`);
+    loadDeck();
+  } catch (e) { toast('Erreur réseau', false); }
+}
+
+// ── Ajouter carte depuis le champ ────────────────────────────────────────────
+async function addCard() {
+  const name = document.getElementById('addInput').value.trim();
+  const qty  = parseInt(document.getElementById('addQty').value, 10) || 1;
+  if (!name) { toast('Saisissez un nom de carte', false); return; }
+
+  for (let i = 0; i < qty; i++) {
+    await fetch('/api/deck-card/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ commander: deckCommander, card_name: name }),
+    });
+  }
+  toast(`${qty}× ${name} ajoutée${qty > 1 ? 's' : ''}`);
+  document.getElementById('addInput').value = '';
+  document.getElementById('addQty').value = '1';
+  closeDropdown();
+  loadDeck();
+}
+
+// ── Renommer ─────────────────────────────────────────────────────────────────
+async function saveName() {
+  const newName = document.getElementById('deckName').value.trim();
+  if (!newName) { toast('Le nom ne peut pas être vide', false); return; }
+  try {
+    const r = await fetch(`/api/deck-rename/${encodeURIComponent(deckId)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newName }),
+    });
+    const d = await r.json();
+    if (!r.ok || d.error) { toast(d.error || 'Erreur', false); return; }
+    deckNameValue = newName;
+    toast('Nom enregistré');
+  } catch (e) { toast('Erreur réseau', false); }
+}
+
+// ── Supprimer ────────────────────────────────────────────────────────────────
+async function deleteDeck() {
+  if (!confirm(`Supprimer le deck "${deckNameValue || deckCommander}" ? Cette action est irréversible.`)) return;
+  try {
+    const r = await fetch(`/api/moxfield-decks/${encodeURIComponent(deckId)}`, { method: 'DELETE' });
+    const d = await r.json();
+    if (!r.ok || !d.ok) { toast('Erreur lors de la suppression', false); return; }
+    toast('Deck supprimé');
+    setTimeout(() => { location.href = '/deck-edit'; }, 1000);
+  } catch (e) { toast('Erreur réseau', false); }
+}
+
+// ── Prévisualisation carte ───────────────────────────────────────────────────
+const scryfallCache = new Map();
+async function previewCard(name) {
+  const visual = document.getElementById('cardVisual');
+  const img    = document.getElementById('cardVisualImg');
+  const label  = document.getElementById('cardVisualName');
+
+  if (scryfallCache.has(name)) {
+    const url = scryfallCache.get(name);
+    img.src = url || ''; img.style.display = url ? '' : 'none';
+    label.textContent = name;
+    visual.classList.add('show');
+    return;
+  }
+
+  try {
+    const r = await fetch(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}`);
+    const d = await r.json();
+    const url = d?.image_uris?.normal || d?.card_faces?.[0]?.image_uris?.normal || null;
+    scryfallCache.set(name, url);
+    img.src = url || ''; img.style.display = url ? '' : 'none';
+    label.textContent = name;
+    visual.classList.add('show');
+  } catch { visual.classList.remove('show'); }
+}
+
+// ── Autocomplete ─────────────────────────────────────────────────────────────
+let acController = null;
+let acIndex = -1;
+const addInput  = document.getElementById('addInput');
+const acDropdown = document.getElementById('acDropdown');
+
+addInput.addEventListener('input', () => { acIndex = -1; fetchAc(addInput.value.trim()); });
+addInput.addEventListener('keydown', e => {
+  const items = acDropdown.querySelectorAll('.ac-item');
+  if (e.key === 'ArrowDown') { e.preventDefault(); acIndex = Math.min(acIndex+1, items.length-1); highlightAc(items); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); acIndex = Math.max(acIndex-1, -1); highlightAc(items); }
+  else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (acIndex >= 0 && items[acIndex]) { selectAc(items[acIndex].dataset.name); }
+    else { addCard(); }
+  }
+  else if (e.key === 'Escape') closeDropdown();
+});
+document.addEventListener('click', e => { if (!e.target.closest('.input-wrap')) closeDropdown(); });
+
+async function fetchAc(q) {
+  if (q.length < 2) { closeDropdown(); return; }
+  if (acController) acController.abort();
+  acController = new AbortController();
+  try {
+    const r = await fetch(`/api/cards/autocomplete?q=${encodeURIComponent(q)}&limit=8`, { signal: acController.signal });
+    const data = await r.json();
+    renderAc(data.names || [], q);
+  } catch {}
+}
+
+function highlightQ(text, q) {
+  const idx = text.toLowerCase().indexOf(q.toLowerCase());
+  if (idx < 0) return esc(text);
+  return esc(text.slice(0,idx)) + '<mark>' + esc(text.slice(idx, idx+q.length)) + '</mark>' + esc(text.slice(idx+q.length));
+}
+
+function renderAc(names, q) {
+  if (!names.length) { closeDropdown(); return; }
+  acDropdown.innerHTML = names.map(n =>
+    `<div class="ac-item" data-name="${esc(n)}">${highlightQ(n, q)}</div>`
+  ).join('');
+  acDropdown.querySelectorAll('.ac-item').forEach(el => {
+    el.addEventListener('mousedown', e => { e.preventDefault(); selectAc(el.dataset.name); });
+    el.addEventListener('mouseover', () => {
+      previewCard(el.dataset.name);
+    });
+  });
+  acDropdown.classList.add('open');
+}
+
+function highlightAc(items) {
+  items.forEach((el, i) => el.classList.toggle('active', i === acIndex));
+  if (acIndex >= 0 && items[acIndex]) {
+    addInput.value = items[acIndex].dataset.name;
+    previewCard(items[acIndex].dataset.name);
+  }
+}
+
+function selectAc(name) {
+  addInput.value = name;
+  closeDropdown();
+  previewCard(name);
+}
+
+function closeDropdown() {
+  acDropdown.classList.remove('open');
+  acDropdown.innerHTML = '';
+  acIndex = -1;
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+loadDeck();
+</script>
+</body>
+</html>

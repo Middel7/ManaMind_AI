@@ -36,6 +36,24 @@ def deck_trim_page() -> FileResponse:
     )
 
 
+@router.get("/deck-edit")
+def deck_edit_page() -> FileResponse:
+    return FileResponse(
+        ROOT / "deck_edit.html",
+        media_type="text/html",
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+    )
+
+
+@router.get("/deck-edit/{deck_id}")
+def deck_edit_detail_page(deck_id: str) -> FileResponse:
+    return FileResponse(
+        ROOT / "deck_edit_detail.html",
+        media_type="text/html",
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+    )
+
+
 @router.get("/deck-config")
 def deck_config_page() -> FileResponse:
     return FileResponse(

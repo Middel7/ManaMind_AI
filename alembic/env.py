@@ -35,6 +35,13 @@ if config.config_file_name is not None:
 # Métadonnées de toutes les tables → Alembic les compare à la base réelle
 target_metadata = Base.metadata
 
+
+def include_object(object: object, name: str, type_: str, reflected: bool, compare_to: object) -> bool:  # noqa: A002
+    """Exclut les tables mox_* gérées par moxfield_scraper.init_schema()."""
+    if type_ == "table" and isinstance(name, str) and name.startswith("mox_"):
+        return False
+    return True
+
 # Injecte DATABASE_URL depuis .env (priorité sur alembic.ini)
 database_url = os.getenv("DATABASE_URL")
 if database_url:
@@ -49,9 +56,9 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        # Compare les types de colonnes pour détecter les changements
         compare_type=True,
         compare_server_default=True,
+        include_object=include_object,
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -68,6 +75,7 @@ def run_migrations_online() -> None:
             target_metadata=target_metadata,
             compare_type=True,
             compare_server_default=True,
+            include_object=include_object,
         )
         with context.begin_transaction():
             context.run_migrations()

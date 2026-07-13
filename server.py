@@ -218,8 +218,11 @@ except Exception:
 async def lifespan(app: FastAPI):
     # ── 1. Migrations Alembic avec timeout ──────────────────────────────────
     try:
+        alembic_bin = ROOT / ".venv" / "Scripts" / "alembic.exe"
+        if not alembic_bin.exists():
+            alembic_bin = ROOT / ".venv" / "bin" / "alembic"
         result = subprocess.run(
-            ["uv", "run", "alembic", "upgrade", "head"],
+            [str(alembic_bin), "upgrade", "head"],
             capture_output=True, text=True, cwd=str(ROOT),
             timeout=120,  # 2 min max — si plus long, c'est une migration problématique
         )
@@ -305,6 +308,7 @@ from manamind.routers.decks import router as decks_router
 from manamind.routers.engine import router as engine_router
 from manamind.routers.import_deck import router as import_router
 from manamind.routers.pages import router as pages_router
+from manamind.routers.scrape import router as scrape_router
 
 app.include_router(auth_router)
 app.include_router(collection_router)
@@ -312,6 +316,7 @@ app.include_router(decks_router)
 app.include_router(engine_router)
 app.include_router(import_router)
 app.include_router(pages_router)
+app.include_router(scrape_router)
 
 
 # ── Route racine ─────────────────────────────────────────────────────────────

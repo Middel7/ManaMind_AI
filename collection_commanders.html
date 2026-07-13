@@ -164,7 +164,7 @@
     flex-shrink: 0; width: 72px; height: 72px; border-radius: 6px;
     border: 1px solid var(--gold-line); overflow: hidden;
     background: rgba(255,255,255,0.05);
-    position: relative;
+    position: relative; cursor: zoom-in;
   }
   .cmd-portrait img { width: 100%; height: 100%; object-fit: cover; object-position: center 15%; display: block; }
   .cmd-portrait .portrait-placeholder {
@@ -263,7 +263,7 @@
         <div>
           <div class="eyebrow">Collection</div>
           <h1 class="hero">Commandants <em>compatibles</em></h1>
-          <p class="lede">Top 10 commandants pour lesquels ta collection couvre le plus de valeur parmi leurs 100 cartes les plus jouées.</p>
+          <p class="lede">Top 24 commandants pour lesquels ta collection couvre le plus de valeur parmi leurs 100 cartes les plus jouées.</p>
         </div>
         <div class="mode-toggle" id="modeToggle">
           <button class="mode-btn active" data-mode="available">Cartes disponibles</button>
@@ -305,7 +305,7 @@
           <div class="loader-label">Analyse en cours…</div>
         </div>`;
       try {
-        const res = await fetch('/api/collection-commanders?top=10&mode=' + currentMode);
+        const res = await fetch('/api/collection-commanders?top=24&mode=' + currentMode);
         const data = await res.json();
         render(data.commanders || []);
       } catch(e) {
@@ -352,7 +352,7 @@
 
         card.innerHTML = `
           <div class="cmd-header">
-            <div class="cmd-portrait">
+            <div class="cmd-portrait"${cmd.commander_image ? ` data-img="${esc(cmd.commander_image)}"` : ''}>
               <span class="cmd-rank">#${i + 1}</span>
               ${portrait}
             </div>
@@ -382,10 +382,11 @@
       el.innerHTML = '';
       el.appendChild(grid);
 
-      // Lightbox sur les miniatures
+      // Lightbox sur les miniatures de cartes et les portraits de commandants
       el.addEventListener('click', e => {
-        const thumb = e.target.closest('.card-thumb[data-img]');
+        const thumb = e.target.closest('.card-thumb[data-img], .cmd-portrait[data-img]');
         if (!thumb) return;
+        e.stopPropagation();
         document.getElementById('lightboxImg').src = thumb.dataset.img;
         document.getElementById('lightbox').classList.add('visible');
       });

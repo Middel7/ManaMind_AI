@@ -784,6 +784,19 @@ async def api_collection_update(card_name: str, request: Request) -> JSONRespons
     return _json_response({"ok": True, "card_name": card_name, "quantity": qty})
 
 
+@router.delete("/api/collection")
+def api_collection_clear(request: Request) -> JSONResponse:
+    """Vide entièrement la collection de l'utilisateur."""
+    from manamind.auth import get_current_user, COOKIE_NAME
+    user = get_current_user(mm_token=request.cookies.get(COOKIE_NAME))
+    from sqlalchemy import text as _t
+    from manamind.db.engine import SessionLocal
+    with SessionLocal() as sess:
+        sess.execute(_t("DELETE FROM user_collection WHERE user_id = :uid"), {"uid": user["id"]})
+        sess.commit()
+    return _json_response({"ok": True})
+
+
 @router.delete("/api/collection/{card_name}")
 def api_collection_delete(card_name: str, request: Request) -> JSONResponse:
     """Supprime une carte de la collection."""

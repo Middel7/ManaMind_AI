@@ -5,6 +5,8 @@ Arena, Moxfield export, MTGO texte, format simple, sections structurées.
 
 from __future__ import annotations
 
+import re
+
 from ..models import (
     CanonicalDeckImport,
     CanonicalEntry,
@@ -13,6 +15,13 @@ from ..models import (
     Zone,
 )
 from .base import MAX_ENTRIES, MAX_LINES, BaseParser
+
+# En-têtes de métadonnées Moxfield/Arena à ignorer silencieusement
+_RE_META_NAME = re.compile(r'^Name\s+"?([^"]+)"?\s*$', re.IGNORECASE)
+_META_SKIP_LINES = re.compile(
+    r'^(About|Description|Format|Deck\s+Description)\s*$',
+    re.IGNORECASE,
+)
 
 
 class TextParser(BaseParser):
@@ -69,6 +78,17 @@ class TextParser(BaseParser):
             stripped = line.strip()
 
             if not stripped or stripped.startswith("//") or stripped.startswith("#"):
+                continue
+
+            # Ligne de métadonnée "Name ..." → nom du deck
+            m_name = _RE_META_NAME.match(stripped)
+            if m_name:
+                if not result.deck_name:
+                    result.deck_name = m_name.group(1).strip()
+                continue
+
+            # En-têtes de section non-carte à ignorer (About, Description…)
+            if _META_SKIP_LINES.match(stripped):
                 continue
 
             # Zone header ?

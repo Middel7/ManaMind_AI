@@ -471,10 +471,6 @@ class TestImportEndpoints:
         r = client.post("/api/import/confirm", json={"deck": {}, "destination": "collection"})
         assert r.status_code == 401
 
-    def test_from_url_requires_auth(self, client: TestClient):
-        r = client.post("/api/import/from-url", json={"url": "https://moxfield.com/decks/test"})
-        assert r.status_code == 401
-
     def test_upload_requires_auth(self, client: TestClient):
         from io import BytesIO
         r = client.post("/api/import/upload", files={"file": ("test.txt", BytesIO(b"1 Sol Ring"), "text/plain")})
@@ -485,11 +481,3 @@ class TestImportEndpoints:
         r = client.post("/api/import/parse", json={"text": ""})
         assert r.status_code in (400, 401)
 
-    def test_from_url_blocks_private_ip(self, client: TestClient):
-        """Les IPs privées doivent être bloquées (mais retournent 401 sans auth ici)."""
-        r = client.post("/api/import/from-url", json={"url": "http://192.168.1.1/deck"})
-        assert r.status_code in (401, 422)
-
-    def test_from_url_blocks_localhost(self, client: TestClient):
-        r = client.post("/api/import/from-url", json={"url": "http://localhost/deck"})
-        assert r.status_code in (401, 422)

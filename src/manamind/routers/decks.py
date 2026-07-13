@@ -82,52 +82,6 @@ def api_moxfield_list(request: Request) -> JSONResponse:
     return _json_response({"decks": decks})
 
 
-@router.post("/api/moxfield-decks")
-async def api_moxfield_add(request: Request) -> JSONResponse:
-    from manamind.auth import get_current_user, COOKIE_NAME
-    user = get_current_user(mm_token=request.cookies.get(COOKIE_NAME))
-    body = await request.json()
-    url = (body.get("url") or "").strip()
-    if not url:
-        return _json_response({"error": "URL manquante"}, status_code=400)
-    try:
-        from manamind.moxfield_client import add_or_update_deck, _deck_id_from_url, _fetch_from_api, _extract_commander, _parse_cards
-        from manamind.user_decks import save_deck_for_user, set_deck_cards
-        deck_id = _deck_id_from_url(url)
-        if not deck_id:
-            return _json_response({"error": "URL Moxfield invalide"}, status_code=400)
-        data = _fetch_from_api(deck_id)
-        commander = _extract_commander(data)
-        name = data.get("name", "")
-        save_deck_for_user(user["id"], deck_id, url, commander, name)
-        cards = _parse_cards(data)
-        set_deck_cards(user["id"], commander, cards)
-        return _json_response({"ok": True, "deck": {"deck_id": deck_id, "url": url, "commander": commander, "name": name}})
-    except ValueError as e:
-        return _json_response({"error": str(e)}, status_code=400)
-
-
-@router.post("/api/moxfield-decks/{deck_id}/refresh")
-def api_moxfield_refresh(deck_id: str, request: Request) -> JSONResponse:
-    from manamind.auth import get_current_user, COOKIE_NAME
-    user = get_current_user(mm_token=request.cookies.get(COOKIE_NAME))
-    try:
-        from manamind.user_decks import load_config_for_user, save_deck_for_user, set_deck_cards, mark_locally_modified
-        from manamind.moxfield_client import _fetch_from_api, _extract_commander, _parse_cards
-        decks = load_config_for_user(user["id"])
-        entry = next((d for d in decks if d["deck_id"] == deck_id), None)
-        if not entry:
-            return _json_response({"error": "Deck introuvable"}, status_code=404)
-        data = _fetch_from_api(deck_id)
-        commander = _extract_commander(data)
-        name = data.get("name", entry.get("name", ""))
-        save_deck_for_user(user["id"], deck_id, entry.get("url", ""), commander, name)
-        set_deck_cards(user["id"], commander, _parse_cards(data))
-        mark_locally_modified(user["id"], deck_id, False)
-        return _json_response({"ok": True, "deck": {"deck_id": deck_id, "commander": commander, "name": name}})
-    except ValueError as e:
-        return _json_response({"error": str(e)}, status_code=400)
-
 
 @router.delete("/api/moxfield-decks/{deck_id}")
 def api_moxfield_delete(deck_id: str, request: Request) -> JSONResponse:
@@ -136,6 +90,61 @@ def api_moxfield_delete(deck_id: str, request: Request) -> JSONResponse:
     from manamind.user_decks import remove_deck_for_user
     ok = remove_deck_for_user(user["id"], deck_id)
     return _json_response({"ok": ok})
+
+
+@router.get("/api/deck-detail/{deck_id}")
+def api_deck_detail(deck_id: str, request: Request) -> JSONResponse:
+    from manamind.auth import get_current_user, COOKIE_NAME
+    user = get_current_user(mm_token=request.cookies.get(COOKIE_NAME))
+    from manamind.user_decks import load_config_for_user, get_deck_cards
+    decks = load_config_for_user(user["id"])
+    entry = next((d for d in decks if d["deck_id"] == deck_id), None)
+    if not entry:
+        return _json_response({"error": "Deck introuvable"}, status_code=404)
+    cards_raw = get_deck_cards(user["id"], entry["commander"])
+    cards = [{"card_name": name, "quantity": qty} for name, qty in sorted(cards_raw, key=lambda x: x[0])]
+    result = dict(entry)
+    if result.get("fetched_at") and hasattr(result["fetched_at"], "isoformat"):
+        result["fetched_at"] = result["fetched_at"].isoformat()
+    result["cards"] = cards
+    return _json_response(result)
+
+
+@router.post("/api/deck-rename/{deck_id}")
+async def api_deck_rename(deck_id: str, request: Request) -> JSONResponse:
+    from manamind.auth import get_current_user, COOKIE_NAME
+    user = get_current_user(mm_token=request.cookies.get(COOKIE_NAME))
+    try:
+        body = await request.json()
+    except Exception:
+        return _json_response({"error": "Corps JSON invalide"}, status_code=400)
+    new_name = (body.get("name") or "").strip()
+    if not new_name:
+        return _json_response({"error": "Nom vide"}, status_code=400)
+    from sqlalchemy import text as _t
+    from manamind.db.engine import SessionLocal
+    with SessionLocal() as sess:
+        result = sess.execute(_t("""
+            UPDATE user_moxfield_decks SET name = :name
+            WHERE user_id = :uid AND deck_id = :did
+        """), {"name": new_name, "uid": user["id"], "did": deck_id})
+        sess.commit()
+    if result.rowcount == 0:
+        return _json_response({"error": "Deck introuvable"}, status_code=404)
+    return _json_response({"ok": True})
+
+
+@router.get("/api/deck-txt/{deck_id}")
+def api_deck_txt(deck_id: str, request: Request) -> JSONResponse:
+    from manamind.auth import get_current_user, COOKIE_NAME
+    user = get_current_user(mm_token=request.cookies.get(COOKIE_NAME))
+    from manamind.user_decks import load_config_for_user, get_deck_txt_content
+    decks = load_config_for_user(user["id"])
+    entry = next((d for d in decks if d["deck_id"] == deck_id), None)
+    if not entry:
+        return _json_response({"error": "Deck introuvable"}, status_code=404)
+    content = get_deck_txt_content(user["id"], entry["commander"])
+    return _json_response({"ok": True, "content": content or "", "commander": entry["commander"]})
 
 
 @router.post("/api/deck-card/add")
@@ -173,29 +182,6 @@ async def api_deck_card_remove(request: Request) -> JSONResponse:
     except Exception as e:
         return _json_response({"error": str(e)}, status_code=500)
 
-
-@router.get("/api/deck-txt/{deck_id}")
-def api_deck_txt(deck_id: str, request: Request) -> JSONResponse:
-    from manamind.auth import get_current_user, COOKIE_NAME
-    user = get_current_user(mm_token=request.cookies.get(COOKIE_NAME))
-    from manamind.user_decks import load_config_for_user, get_deck_txt_content
-    decks = load_config_for_user(user["id"])
-    entry = next((d for d in decks if d["deck_id"] == deck_id), None)
-    if not entry:
-        return _json_response({"error": "Deck introuvable"}, status_code=404)
-    content = get_deck_txt_content(user["id"], entry["commander"])
-    return _json_response({"ok": True, "content": content or "", "commander": entry["commander"]})
-
-
-@router.post("/api/deck-txt/{deck_id}/mark-synced")
-def api_deck_mark_synced(deck_id: str) -> JSONResponse:
-    from manamind.moxfield_client import load_config, mark_as_synced
-    decks = load_config()
-    entry = next((d for d in decks if d["deck_id"] == deck_id), None)
-    if not entry:
-        return _json_response({"error": "Deck introuvable"}, status_code=404)
-    ok = mark_as_synced(deck_id, entry["commander"])
-    return _json_response({"ok": ok})
 
 
 @router.get("/api/opened-sets")
