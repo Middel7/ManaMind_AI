@@ -29,7 +29,34 @@ def load_config_for_user(user_id: int) -> list[dict]:
             WHERE user_id = :uid
             ORDER BY commander
         """), {"uid": user_id}).fetchall()
-    return [dict(r._mapping) for r in rows]
+        decks = [dict(r._mapping) for r in rows]
+
+        # Commandants dans user_deck_cards sans entrée dans user_moxfield_decks
+        known_commanders = {d["commander"] for d in decks}
+        orphan_rows = sess.execute(text("""
+            SELECT DISTINCT commander FROM user_deck_cards
+            WHERE user_id = :uid AND commander IS NOT NULL
+            ORDER BY commander
+        """), {"uid": user_id}).fetchall()
+
+        for r in orphan_rows:
+            cmd = r[0]
+            if cmd not in known_commanders:
+                import uuid as _uuid
+                deck_id = f"legacy-{_uuid.uuid5(_uuid.NAMESPACE_DNS, f'{user_id}-{cmd}').hex[:12]}"
+                # Insérer dans user_moxfield_decks pour le rendre persistant
+                sess.execute(text("""
+                    INSERT INTO user_moxfield_decks (user_id, deck_id, moxfield_url, commander, name)
+                    VALUES (:uid, :did, '', :cmd, :name)
+                    ON CONFLICT (user_id, deck_id) DO NOTHING
+                """), {"uid": user_id, "did": deck_id, "cmd": cmd, "name": cmd})
+                decks.append({
+                    "deck_id": deck_id, "url": "", "commander": cmd,
+                    "name": cmd, "locally_modified": False, "fetched_at": None,
+                })
+        sess.commit()
+
+    return sorted(decks, key=lambda d: d.get("commander") or "")
 
 
 def save_deck_for_user(user_id: int, deck_id: str, url: str, commander: str, name: str) -> None:

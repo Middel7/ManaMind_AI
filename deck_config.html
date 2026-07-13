@@ -4,412 +4,435 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-<title>ManaMind — Mes Decklists</title>
+<title>ManaMind — Importer une Decklist</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
 <style>
   :root {
-    --ink-900: #0c0910; --ink-850: #120c1a; --ink-800: #17101f; --ink-700: #1d1529;
-    --ink-panel: rgba(20, 13, 28, 0.62);
-    --parch-100: #efe6d6; --parch-300: #cdbfa8; --parch-500: #9c8e79; --parch-600: #7c715f;
-    --arcane: #a07be0; --arcane-deep: #6c4bb0; --arcane-glow: rgba(160, 123, 224, 0.55);
-    --gold: #c9a45c; --gold-soft: #d8bd83; --gold-line: rgba(201, 164, 92, 0.42); --gold-faint: rgba(201, 164, 92, 0.16);
-    --red: #c0392b; --red-soft: rgba(192,57,43,0.15);
-    --green: #27ae60; --green-soft: rgba(39,174,96,0.15);
-    --serif-display: "Cormorant Garamond", Georgia, serif;
-    --serif-engraved: "Cinzel", Georgia, serif;
-    --serif-body: "Spectral", Georgia, serif;
+    --ink-900:#0c0910;--ink-850:#120c1a;--ink-800:#17101f;--ink-700:#1d1529;
+    --ink-panel:rgba(20,13,28,0.62);
+    --parch-100:#efe6d6;--parch-300:#cdbfa8;--parch-500:#9c8e79;--parch-600:#7c715f;
+    --arcane:#a07be0;--arcane-deep:#6c4bb0;--arcane-glow:rgba(160,123,224,0.55);
+    --gold:#c9a45c;--gold-soft:#d8bd83;--gold-line:rgba(201,164,92,0.42);--gold-faint:rgba(201,164,92,0.16);
+    --teal:#3db8a8;--teal-soft:rgba(61,184,168,0.18);
+    --red:#c0392b;--red-soft:rgba(192,57,43,0.15);
+    --green:#27ae60;--green-soft:rgba(39,174,96,0.15);
+    --serif-display:"Cormorant Garamond",Georgia,serif;
+    --serif-engraved:"Cinzel",Georgia,serif;
+    --serif-body:"Spectral",Georgia,serif;
   }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; min-height: 100%; }
-  body { color: var(--parch-100); font-family: var(--serif-body); background: var(--ink-900); min-height: 100vh; }
+  *{box-sizing:border-box;}
+  html,body{margin:0;min-height:100%;}
+  body{color:var(--parch-100);font-family:var(--serif-body);background:var(--ink-900);min-height:100vh;}
+  #particles{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
+  .particle{position:absolute;border-radius:50%;background:var(--arcane);opacity:0;animation:float linear infinite;}
+  @keyframes float{0%{transform:translateY(100vh) scale(0);opacity:0;}10%{opacity:0.6;}90%{opacity:0.3;}100%{transform:translateY(-10vh) scale(1.2);opacity:0;}}
+  #app{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:40px 32px 80px;display:flex;flex-direction:column;gap:24px;}
 
-  #scene {
-    position: fixed; inset: 0; z-index: 0; pointer-events: none;
-    background-image:
-      radial-gradient(120% 80% at 50% 0%, rgba(12,9,16,0.30), rgba(12,9,16,0.86) 62%, rgba(12,9,16,0.97) 100%),
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2020/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
-    background-color: var(--ink-900);
-  }
-  #particles { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-  .particle { position: absolute; border-radius: 50%; background: var(--arcane); opacity: 0; animation: float linear infinite; }
-  @keyframes float { 0% { transform: translateY(100vh) scale(0); opacity: 0; } 10% { opacity: 0.6; } 90% { opacity: 0.3; } 100% { transform: translateY(-10vh) scale(1.2); opacity: 0; } }
+  .site-header{display:flex;align-items:center;justify-content:space-between;padding-bottom:16px;border-bottom:1px solid var(--gold-line);}
+  .back-link{font-family:var(--serif-engraved);font-size:0.72rem;letter-spacing:0.12em;color:var(--gold);text-decoration:none;opacity:0.8;transition:opacity 0.2s;}
+  .back-link:hover{opacity:1;}
+  h1{margin:0;font-family:var(--serif-display);font-size:clamp(1.4rem,3vw,2rem);font-weight:600;color:var(--parch-100);text-align:center;flex:1;}
 
-  #app {
-    position: relative; z-index: 1;
-    max-width: 1920px; margin: 0 auto;
-    padding: 48px 48px 80px;
-    display: flex; flex-direction: column; gap: 28px;
-  }
+  .steps{display:flex;align-items:center;gap:0;justify-content:center;}
+  .step-item{display:flex;align-items:center;gap:8px;}
+  .step-num{width:28px;height:28px;border-radius:50%;border:2px solid var(--gold-line);display:flex;align-items:center;justify-content:center;font-family:var(--serif-engraved);font-size:0.62rem;color:var(--parch-500);transition:all 0.3s;flex-shrink:0;}
+  .step-label{font-family:var(--serif-engraved);font-size:0.58rem;letter-spacing:0.12em;color:var(--parch-600);text-transform:uppercase;white-space:nowrap;}
+  .step-sep{width:32px;height:1px;background:var(--gold-line);margin:0 4px;flex-shrink:0;}
+  .step-item.active .step-num{border-color:var(--gold);color:var(--gold);background:var(--gold-faint);}
+  .step-item.active .step-label{color:var(--gold);}
+  .step-item.done .step-num{border-color:var(--teal);color:var(--teal);background:var(--teal-soft);}
+  .step-item.done .step-label{color:var(--teal);}
 
-  .site-header { display: flex; align-items: center; justify-content: space-between; }
-  .back-link { font-family: var(--serif-engraved); font-size: 0.72rem; letter-spacing: 0.12em; color: var(--gold); text-decoration: none; opacity: 0.8; transition: opacity 0.2s; }
-  .back-link:hover { opacity: 1; }
+  .panel{background:var(--ink-panel);border:1px solid var(--gold-line);border-radius:14px;padding:28px 32px;backdrop-filter:blur(8px);}
+  .panel-title{font-family:var(--serif-engraved);font-size:0.62rem;letter-spacing:0.22em;color:var(--gold);text-transform:uppercase;margin:0 0 16px;}
 
-  /* ── Panneau ── */
-  .panel {
-    background: var(--ink-panel); border: 1px solid var(--gold-line);
-    border-radius: 14px; padding: 28px 32px; backdrop-filter: blur(8px);
-  }
-  .panel-title {
-    font-family: var(--serif-engraved); font-size: 0.62rem; letter-spacing: 0.22em;
-    color: var(--gold); text-transform: uppercase; margin: 0 0 6px;
-  }
-  .panel-heading {
-    font-family: var(--serif-display); font-size: 1.8rem; font-weight: 600;
-    color: var(--parch-100); margin: 0 0 24px; line-height: 1.1;
-  }
+  .btn{padding:10px 24px;font-family:var(--serif-engraved);font-size:0.66rem;letter-spacing:0.16em;border:none;border-radius:8px;cursor:pointer;transition:opacity 0.2s,transform 0.15s;white-space:nowrap;}
+  .btn:hover{opacity:0.88;transform:translateY(-1px);}
+  .btn:active{transform:translateY(0);}
+  .btn-gold{color:var(--ink-900);background:linear-gradient(135deg,var(--gold) 0%,var(--gold-soft) 100%);}
+  .btn-ghost{color:var(--parch-500);background:rgba(255,255,255,0.05);border:1px solid var(--gold-line);}
+  .btn-teal{color:var(--ink-900);background:linear-gradient(135deg,var(--teal) 0%,#5dcbbf 100%);}
+  .btn:disabled{opacity:0.35;cursor:not-allowed;transform:none;}
 
-  /* ── Formulaire ajout ── */
-  .add-row { display: flex; gap: 12px; }
-  .url-input {
-    flex: 1; padding: 11px 16px; font-family: var(--serif-body); font-size: 0.9rem;
-    color: var(--parch-100); background: rgba(12,9,16,0.55);
-    border: 1px solid var(--gold-line); border-radius: 8px; outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
-  }
-  .url-input:focus { border-color: var(--arcane); box-shadow: 0 0 0 3px var(--arcane-glow); }
-  .url-input::placeholder { color: var(--parch-600); }
-  .btn {
-    padding: 11px 28px; font-family: var(--serif-engraved); font-size: 0.68rem; letter-spacing: 0.16em;
-    border: none; border-radius: 8px; cursor: pointer; transition: opacity 0.2s, transform 0.15s; white-space: nowrap;
-  }
-  .btn:hover { opacity: 0.88; transform: translateY(-1px); }
-  .btn:active { transform: translateY(0); }
-  .btn-gold { color: var(--ink-900); background: linear-gradient(135deg, var(--gold) 0%, var(--gold-soft) 100%); }
-  .btn-ghost { color: var(--parch-500); background: rgba(255,255,255,0.05); border: 1px solid var(--gold-line); }
-  .btn-danger { color: #fff; background: rgba(192,57,43,0.7); border: 1px solid rgba(192,57,43,0.4); }
-  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .tabs{display:flex;gap:4px;margin-bottom:16px;}
+  .tab{padding:8px 18px;font-family:var(--serif-engraved);font-size:0.6rem;letter-spacing:0.14em;border-radius:6px 6px 0 0;cursor:pointer;border:1px solid transparent;border-bottom:none;color:var(--parch-500);background:transparent;transition:all 0.2s;}
+  .tab.active{color:var(--gold);border-color:var(--gold-line);background:var(--ink-panel);}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
 
-  /* ── Message feedback ── */
-  #feedback {
-    padding: 10px 16px; border-radius: 8px; font-size: 0.88rem;
-    display: none;
-  }
-  #feedback.ok  { background: var(--green-soft); border: 1px solid rgba(39,174,96,0.3); color: #6fcf97; }
-  #feedback.err { background: var(--red-soft);   border: 1px solid rgba(192,57,43,0.3); color: #eb5757; }
+  textarea{width:100%;padding:14px 16px;font-family:var(--serif-body);font-size:0.9rem;color:var(--parch-100);background:rgba(12,9,16,0.55);border:1px solid var(--gold-line);border-radius:8px;outline:none;resize:vertical;transition:border-color 0.2s,box-shadow 0.2s;}
+  textarea:focus{border-color:var(--arcane);box-shadow:0 0 0 3px var(--arcane-glow);}
+  textarea::placeholder{color:var(--parch-600);}
+  input[type="url"],input[type="text"]{width:100%;padding:11px 16px;font-family:var(--serif-body);font-size:0.9rem;color:var(--parch-100);background:rgba(12,9,16,0.55);border:1px solid var(--gold-line);border-radius:8px;outline:none;transition:border-color 0.2s,box-shadow 0.2s;}
+  input[type="url"]:focus,input[type="text"]:focus{border-color:var(--arcane);box-shadow:0 0 0 3px var(--arcane-glow);}
+  input::placeholder{color:var(--parch-600);}
 
-  /* ── Liste des decks ── */
-  .deck-list { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
-  .deck-row {
-    display: flex; align-items: center; gap: 16px;
-    background: rgba(12,9,16,0.4); border: 1px solid var(--gold-line);
-    border-radius: 10px; padding: 14px 18px;
-  }
-  .deck-row-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-  .deck-commander {
-    font-family: var(--serif-display); font-size: 1.05rem; font-weight: 600;
-    color: var(--parch-100); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .deck-meta { font-size: 0.7rem; color: var(--parch-600); }
-  .deck-meta a { color: var(--gold); opacity: 0.7; text-decoration: none; }
-  .deck-meta a:hover { opacity: 1; }
-  .source-pill {
-    font-family: var(--serif-engraved); font-size: 0.48rem; letter-spacing: 0.12em;
-    padding: 2px 8px; border-radius: 20px; text-transform: uppercase; flex-shrink: 0;
-  }
-  .source-pill.moxfield { background: rgba(160,123,224,0.2); color: var(--arcane); border: 1px solid rgba(160,123,224,0.3); }
-  .source-pill.local    { background: rgba(201,164,92,0.1);  color: var(--gold);   border: 1px solid var(--gold-line); }
-  .deck-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .drop-zone{border:2px dashed var(--gold-line);border-radius:12px;padding:40px;text-align:center;cursor:pointer;transition:all 0.2s;color:var(--parch-500);}
+  .drop-zone:hover,.drop-zone.drag-over{border-color:var(--arcane);background:rgba(160,123,224,0.06);color:var(--arcane);}
+  .drop-zone input[type="file"]{display:none;}
 
-  /* Bouton copier en état "modifié localement" */
-  .btn-copy-urgent {
-    color: var(--ink-900) !important;
-    background: linear-gradient(135deg, #e67e22 0%, #f39c12 100%) !important;
-    border: none !important;
-    animation: pulse-orange 1.8s ease-in-out infinite;
-  }
-  @keyframes pulse-orange {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(230,126,34,0.5); }
-    50%       { box-shadow: 0 0 0 6px rgba(230,126,34,0); }
-  }
+  .detect-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:20px;font-family:var(--serif-engraved);font-size:0.58rem;letter-spacing:0.1em;border:1px solid var(--gold-line);background:var(--gold-faint);color:var(--gold);}
+  .confidence-bar{height:4px;border-radius:2px;background:var(--gold-line);margin-top:8px;overflow:hidden;}
+  .confidence-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--teal),var(--gold));transition:width 0.4s;}
 
-  /* Badge "modifié localement" */
-  .modified-pill {
-    font-family: var(--serif-engraved); font-size: 0.45rem; letter-spacing: 0.1em;
-    padding: 2px 8px; border-radius: 20px; text-transform: uppercase; flex-shrink: 0;
-    background: rgba(230,126,34,0.15); color: #e67e22; border: 1px solid rgba(230,126,34,0.4);
-  }
+  .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:12px;margin:16px 0;}
+  .stat-card{background:rgba(12,9,16,0.4);border:1px solid var(--gold-line);border-radius:8px;padding:12px;text-align:center;}
+  .stat-num{font-family:var(--serif-display);font-size:1.6rem;font-weight:600;color:var(--gold);}
+  .stat-label{font-size:0.65rem;color:var(--parch-600);font-family:var(--serif-engraved);letter-spacing:0.1em;text-transform:uppercase;}
 
-  .empty-state { text-align: center; padding: 32px; color: var(--parch-500); font-style: italic; }
+  .zone-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+  .zone-chip{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;border:1px solid var(--gold-line);background:var(--gold-faint);cursor:pointer;font-family:var(--serif-engraved);font-size:0.58rem;letter-spacing:0.1em;color:var(--gold);transition:all 0.2s;}
+  .zone-chip input{display:none;}
+  .zone-chip.checked{background:var(--gold);color:var(--ink-900);}
 
-  .spinner-inline {
-    display: inline-block; width: 12px; height: 12px;
-    border: 2px solid rgba(255,255,255,0.2); border-top-color: #fff;
-    border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-left: 6px;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
+  .res-table-wrap{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:0.82rem;}
+  th{font-family:var(--serif-engraved);font-size:0.54rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);padding:8px 10px;border-bottom:1px solid var(--gold-line);text-align:left;white-space:nowrap;}
+  td{padding:8px 10px;border-bottom:1px solid rgba(201,164,92,0.1);color:var(--parch-100);vertical-align:middle;}
+  tr:hover td{background:rgba(201,164,92,0.04);}
+  .status-pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.6rem;font-family:var(--serif-engraved);letter-spacing:0.08em;}
+  .status-exact{background:rgba(39,174,96,0.15);color:#6fcf97;border:1px solid rgba(39,174,96,0.3);}
+  .status-prob{background:rgba(201,164,92,0.15);color:var(--gold);border:1px solid rgba(201,164,92,0.3);}
+  .status-ambig{background:rgba(230,126,34,0.15);color:#e67e22;border:1px solid rgba(230,126,34,0.3);}
+  .status-unres{background:var(--red-soft);color:#eb5757;border:1px solid rgba(192,57,43,0.3);}
+
+  .dest-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .dest-card{border:2px solid var(--gold-line);border-radius:12px;padding:20px;cursor:pointer;transition:all 0.2s;text-align:center;}
+  .dest-card:hover{border-color:var(--gold);background:var(--gold-faint);}
+  .dest-card.selected{border-color:var(--gold);background:var(--gold-faint);}
+  .dest-icon{font-size:1.8rem;margin-bottom:8px;}
+  .dest-title{font-family:var(--serif-engraved);font-size:0.7rem;letter-spacing:0.14em;color:var(--gold);text-transform:uppercase;}
+  .dest-desc{font-size:0.75rem;color:var(--parch-500);margin-top:4px;}
+
+  .feedback{padding:10px 16px;border-radius:8px;font-size:0.88rem;display:none;margin-top:12px;}
+  .feedback.ok{background:var(--green-soft);border:1px solid rgba(39,174,96,0.3);color:#6fcf97;}
+  .feedback.err{background:var(--red-soft);border:1px solid rgba(192,57,43,0.3);color:#eb5757;}
+
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.2);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-left:6px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .row-actions{display:flex;justify-content:space-between;align-items:center;margin-top:20px;}
+  .mox-link{display:block;text-align:center;margin-top:8px;font-size:0.75rem;color:var(--gold);text-decoration:none;font-family:var(--serif-engraved);letter-spacing:0.08em;opacity:0.6;}
+  .mox-link:hover{opacity:1;}
+  .deck-name-row{display:flex;flex-direction:column;gap:6px;margin-top:16px;}
+  .deck-name-row label{font-family:var(--serif-engraved);font-size:0.6rem;letter-spacing:0.14em;color:var(--gold);text-transform:uppercase;}
+  .warn-list{list-style:none;padding:0;margin:8px 0 0;display:flex;flex-direction:column;gap:4px;}
+  .warn-list li{font-size:0.76rem;color:#e67e22;padding:4px 8px;background:rgba(230,126,34,0.1);border-radius:4px;border-left:2px solid rgba(230,126,34,0.5);}
 </style>
 </head>
 <body>
-<div id="scene"></div>
 <div id="particles"></div>
-
 <div id="app">
 
-  <header class="site-header" style="display:flex;align-items:center;gap:24px;padding-bottom:16px;border-bottom:1px solid var(--gold-line);">
-    <a href="/" class="back-link" style="flex-shrink:0;">← Accueil</a>
-    <h1 style="margin:0;flex:1;text-align:center;font-family:var(--serif-display);font-size:clamp(1.4rem,3vw,2rem);font-weight:600;color:var(--parch-100);">Gérer mes Decklists</h1>
-    <button onclick="refreshAll()" id="refreshAllBtn" class="btn btn-gold" style="flex-shrink:0;">↻ Tout mettre à jour</button>
+  <header class="site-header">
+    <a href="/" class="back-link">&#8592; Accueil</a>
+    <h1>Importer une Decklist</h1>
+    <span style="width:80px"></span>
   </header>
 
-  <div class="panel">
-    <p class="panel-title" style="display:none;"></p>
-    <h1 class="panel-heading" style="display:none;"></h1>
-
-    <div class="add-row">
-      <input type="url" id="urlInput" class="url-input" placeholder="https://moxfield.com/decks/..." />
-      <button class="btn btn-gold" id="addBtn" onclick="addDeck()">Ajouter</button>
-    </div>
-    <div id="feedback" style="margin-top:12px;"></div>
+  <div class="steps">
+    <div class="step-item active" id="stp1"><div class="step-num">1</div><div class="step-label">Source</div></div>
+    <div class="step-sep"></div>
+    <div class="step-item" id="stp2"><div class="step-num">2</div><div class="step-label">Detection</div></div>
+    <div class="step-sep"></div>
+    <div class="step-item" id="stp3"><div class="step-num">3</div><div class="step-label">Validation</div></div>
+    <div class="step-sep"></div>
+    <div class="step-item" id="stp4"><div class="step-num">4</div><div class="step-label">Destination</div></div>
   </div>
 
-  <div class="panel">
-    <p class="panel-title">Decks configurés</p>
-    <div class="deck-list" id="deckList">
-      <div class="empty-state">Chargement…</div>
+  <!-- STEP 1 -->
+  <div id="step1" class="panel">
+    <p class="panel-title">Source de la decklist</p>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('paste')">Coller</button>
+      <button class="tab" onclick="switchTab('file')">Fichier</button>
     </div>
+
+    <div class="tab-panel active" id="tab-paste">
+      <textarea id="pasteArea" rows="14" placeholder="Collez votre decklist ici...&#10;Formats acceptes : Arena, MTGO, XMage, Forge, Cockatrice, CSV, JSON, texte simple&#10;&#10;Exemples :&#10;  4 Lightning Bolt&#10;  1 Sol Ring (CMM) 396&#10;  Commander&#10;  1 Atraxa, Praetor's Voice"></textarea>
+    </div>
+
+    <div class="tab-panel" id="tab-file">
+      <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <input type="file" id="fileInput" accept=".txt,.csv,.tsv,.dek,.cod,.dck,.xml,.json" onchange="onFileSelect(event)" />
+        <div style="font-size:2rem;margin-bottom:8px;">&#128194;</div>
+        <div style="font-family:var(--serif-engraved);font-size:0.7rem;letter-spacing:0.12em;color:var(--gold);">Glisser-deposer ou cliquer</div>
+        <div style="font-size:0.72rem;margin-top:6px;color:var(--parch-600);">.txt .csv .tsv .dek .cod .dck .xml .json</div>
+        <div id="fileChosen" style="margin-top:10px;font-size:0.8rem;color:var(--teal);display:none;"></div>
+      </div>
+    </div>
+
+    <div class="row-actions" style="margin-top:16px;">
+      <span></span>
+      <button class="btn btn-gold" id="btnParse" onclick="doParse()">Analyser &#8594;</button>
+    </div>
+<div class="feedback" id="fb1"></div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div id="step2" class="panel" style="display:none;">
+    <p class="panel-title">Detection du format</p>
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
+      <div class="detect-badge" id="formatBadge">&#8212;</div>
+      <div style="flex:1;">
+        <div style="font-size:0.72rem;color:var(--parch-600);margin-bottom:4px;">Confiance</div>
+        <div class="confidence-bar"><div class="confidence-fill" id="confFill" style="width:0%"></div></div>
+      </div>
+    </div>
+    <div class="stats-grid" id="statsGrid"></div>
+    <div id="zonesSection">
+      <div style="font-family:var(--serif-engraved);font-size:0.58rem;letter-spacing:0.14em;color:var(--gold);text-transform:uppercase;margin-bottom:8px;">Zones a importer</div>
+      <div class="zone-list" id="zoneList"></div>
+    </div>
+    <ul class="warn-list" id="warnList2" style="margin-top:12px;"></ul>
+    <div class="row-actions">
+      <button class="btn btn-ghost" onclick="goStep(1)">&#8592; Retour</button>
+      <button class="btn btn-gold" id="btnResolve" onclick="doResolve()">Resoudre les cartes &#8594;</button>
+    </div>
+    <div class="feedback" id="fb2"></div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div id="step3" class="panel" style="display:none;">
+    <p class="panel-title">Resolution des cartes</p>
+    <div class="res-table-wrap">
+      <table id="resTable">
+        <thead><tr><th>Qte</th><th>Nom</th><th>Zone</th><th>Set</th><th>Statut</th></tr></thead>
+        <tbody id="resBody"></tbody>
+      </table>
+    </div>
+    <ul class="warn-list" id="warnList3" style="margin-top:12px;"></ul>
+    <div class="row-actions">
+      <button class="btn btn-ghost" onclick="goStep(2)">&#8592; Retour</button>
+      <button class="btn btn-gold" onclick="goStep(4)">Choisir la destination &#8594;</button>
+    </div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div id="step4" class="panel" style="display:none;">
+    <p class="panel-title">Destination</p>
+    <div class="dest-cards">
+      <div class="dest-card selected" id="destDeck" onclick="selectDest('deck')">
+        <div class="dest-icon">&#128194;</div>
+        <div class="dest-title">Deck</div>
+        <div class="dest-desc">Ajouter comme nouveau deck</div>
+      </div>
+      <div class="dest-card" id="destCollection" onclick="selectDest('collection')">
+        <div class="dest-icon">&#128230;</div>
+        <div class="dest-title">Collection</div>
+        <div class="dest-desc">Ajouter a ma collection de cartes</div>
+      </div>
+    </div>
+    <div class="deck-name-row" id="deckNameRow">
+      <label>Nom du deck</label>
+      <input type="text" id="deckNameInput" placeholder="Mon deck Commander..." />
+    </div>
+    <div style="margin-top:20px;padding:14px;background:rgba(12,9,16,0.4);border:1px solid var(--gold-line);border-radius:8px;">
+      <div style="font-family:var(--serif-engraved);font-size:0.58rem;letter-spacing:0.14em;color:var(--gold);text-transform:uppercase;margin-bottom:10px;">Resume de l'import</div>
+      <div id="importSummary" style="font-size:0.82rem;color:var(--parch-300);line-height:1.7;"></div>
+    </div>
+    <div class="row-actions">
+      <button class="btn btn-ghost" onclick="goStep(3)">&#8592; Retour</button>
+      <button class="btn btn-teal" id="btnConfirm" onclick="doConfirm()">Confirmer l'import</button>
+    </div>
+    <div class="feedback" id="fb4"></div>
   </div>
 
 </div>
-
 <script src="/auth-guard.js"></script>
 <script>
-  // Particules
-  (function () {
-    const c = document.getElementById('particles');
-    for (let i = 0; i < 18; i++) {
-      const p = document.createElement('div'); p.className = 'particle';
-      const s = Math.random() * 3 + 1;
-      p.style.cssText = `width:${s}px;height:${s}px;left:${Math.random()*100}%;animation-duration:${8+Math.random()*14}s;animation-delay:${Math.random()*12}s`;
-      c.appendChild(p);
-    }
-  })();
-
-  function escHtml(str) {
-    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+(function(){
+  var c=document.getElementById('particles');
+  for(var i=0;i<18;i++){
+    var p=document.createElement('div');p.className='particle';
+    var s=Math.random()*3+1;
+    p.style.cssText='width:'+s+'px;height:'+s+'px;left:'+(Math.random()*100)+'%;animation-duration:'+(8+Math.random()*14)+'s;animation-delay:'+(Math.random()*12)+'s';
+    c.appendChild(p);
   }
+})();
 
-  function showFeedback(msg, isOk) {
-    const el = document.getElementById('feedback');
-    el.textContent = msg;
-    el.className = isOk ? 'ok' : 'err';
-    el.style.display = '';
-    setTimeout(() => { el.style.display = 'none'; }, 4000);
-  }
+var _deck=null,_destinations=new Set(['deck']),_activeTab='paste',_fileContent=null;
+var _checkedZones=new Set(['commander','mainboard']);
 
-  // ── Chargement de la liste ────────────────────────────────────────────────
-  async function loadDecks() {
-    const list = document.getElementById('deckList');
-    try {
-      const res  = await fetch('/api/moxfield-decks');
-      const data = await res.json();
-      const decks = data.decks || [];
+function switchTab(tab){
+  _activeTab=tab;
+  var tabs=document.querySelectorAll('.tab');
+  var names=['paste','file','url'];
+  tabs.forEach(function(t,i){t.classList.toggle('active',names[i]===tab);});
+  document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active');});
+  document.getElementById('tab-'+tab).classList.add('active');
+}
 
-      if (decks.length === 0) {
-        list.innerHTML = `<div class="empty-state">Aucun deck Moxfield configuré.</div>`;
-        return;
-      }
+function onFileSelect(e){
+  var f=e.target.files[0];if(!f)return;
+  var lbl=document.getElementById('fileChosen');
+  lbl.textContent=f.name+' ('+(f.size/1024).toFixed(1)+' KB)';lbl.style.display='';
+  var reader=new FileReader();
+  reader.onload=function(ev){_fileContent=ev.target.result;};
+  reader.readAsText(f,'utf-8');
+}
 
-      decks.sort((a, b) => (a.commander || '').localeCompare(b.commander || ''));
+var dz=document.getElementById('dropZone');
+dz.addEventListener('dragover',function(e){e.preventDefault();dz.classList.add('drag-over');});
+dz.addEventListener('dragleave',function(){dz.classList.remove('drag-over');});
+dz.addEventListener('drop',function(e){
+  e.preventDefault();dz.classList.remove('drag-over');
+  var f=e.dataTransfer.files[0];if(!f)return;
+  onFileSelect({target:{files:[f]}});
+  var lbl=document.getElementById('fileChosen');
+  lbl.textContent=f.name;lbl.style.display='';
+  var reader=new FileReader();
+  reader.onload=function(ev){_fileContent=ev.target.result;};
+  reader.readAsText(f,'utf-8');
+});
 
-      list.innerHTML = decks.map(d => {
-        const mod = d.locally_modified;
-        const id  = escHtml(d.deck_id);
-        return `
-        <div class="deck-row" id="row-${id}">
-          <div class="deck-row-info">
-            <div class="deck-commander">${escHtml(d.commander || 'Commandant inconnu')}</div>
-            <div class="deck-meta">
-              ${d.name ? escHtml(d.name) + ' · ' : ''}
-              <a href="${escHtml(d.url)}" target="_blank">${escHtml(d.url)}</a>
-            </div>
-          </div>
-          ${mod ? '<span class="modified-pill">Modifié localement</span>' : '<span class="source-pill moxfield">Moxfield</span>'}
-          <div class="deck-actions">
-            <button class="btn ${mod ? 'btn-copy-urgent' : 'btn-ghost'}" id="copy-${id}"
-              onclick="copyDeckTxt('${id}', this)" title="${mod ? 'Des modifications locales n\'ont pas été copiées vers Moxfield' : 'Copier la decklist'}">
-              ${mod ? '⚠ Copier' : 'Copier'}
-            </button>
-            <button class="btn btn-ghost" onclick="refreshDeck('${id}')"
-              ${mod ? 'disabled title="Copie les modifications vers Moxfield avant de mettre à jour"' : ''}>
-              Mettre à jour
-            </button>
-            <button class="btn btn-danger" id="del-${id}" onclick="deleteDeck('${id}')"
-              disabled title="Copie d\'abord la decklist pour pouvoir supprimer">
-              Supprimer
-            </button>
-          </div>
-        </div>`;
-      }).join('');
-    } catch (e) {
-      list.innerHTML = `<div class="empty-state">Erreur de chargement.</div>`;
-    }
-  }
-
-  // ── Ajout ─────────────────────────────────────────────────────────────────
-  async function addDeck() {
-    const input = document.getElementById('urlInput');
-    const btn   = document.getElementById('addBtn');
-    const url   = input.value.trim();
-    if (!url) return;
-
-    btn.disabled = true;
-    btn.innerHTML = `Ajout en cours<span class="spinner-inline"></span>`;
-
-    try {
-      const res  = await fetch('/api/moxfield-decks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
-      });
-      const data = await res.json();
-      if (!res.ok || data.error) {
-        showFeedback(data.error || 'Erreur inconnue', false);
-      } else {
-        showFeedback(`✓ Deck ajouté : ${data.deck.commander}`, true);
-        input.value = '';
-        loadDecks();
-      }
-    } catch (e) {
-      showFeedback('Erreur réseau', false);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Ajouter';
-    }
-  }
-
-  // ── Mise à jour ───────────────────────────────────────────────────────────
-  async function refreshDeck(deckId) {
-    const btn = document.querySelector(`#row-${deckId} .btn-ghost`);
-    if (btn) { btn.disabled = true; btn.innerHTML = `Mise à jour<span class="spinner-inline"></span>`; }
-
-    try {
-      const res  = await fetch(`/api/moxfield-decks/${deckId}/refresh`, { method: 'POST' });
-      const data = await res.json();
-      if (!res.ok || data.error) {
-        showFeedback(data.error || 'Erreur lors de la mise à jour', false);
-        if (btn) { btn.disabled = false; btn.textContent = 'Mettre à jour'; }
-      } else {
-        showFeedback(`✓ Deck mis à jour : ${data.deck.commander}`, true);
-        loadDecks();
-      }
-    } catch (e) {
-      showFeedback('Erreur réseau', false);
-      if (btn) { btn.disabled = false; btn.textContent = 'Mettre à jour'; }
-    }
-  }
-
-  // ── Mise à jour de tous les decks ────────────────────────────────────────
-  async function refreshAll() {
-    const btn = document.getElementById('refreshAllBtn');
-    btn.disabled = true;
-    btn.textContent = '↻ Mise à jour…';
-
-    const rows = document.querySelectorAll('[id^="row-"]');
-    const deckIds = Array.from(rows).map(r => r.id.replace('row-', ''));
-    if (!deckIds.length) {
-      showFeedback('Aucun deck Moxfield configuré.', false);
-      btn.disabled = false; btn.textContent = '↻ Tout mettre à jour';
-      return;
-    }
-
-    let ok = 0, fail = 0;
-    for (const deckId of deckIds) {
-      try {
-        const res = await fetch(`/api/moxfield-decks/${deckId}/refresh`, { method: 'POST' });
-        const data = await res.json();
-        if (!res.ok || data.error) { fail++; } else { ok++; }
-      } catch { fail++; }
-    }
-
-    showFeedback(`✓ ${ok} deck${ok > 1 ? 's' : ''} mis à jour${fail ? ` · ${fail} échec${fail > 1 ? 's' : ''}` : ''}`, fail === 0);
-    loadDecks();
-    btn.disabled = false;
-    btn.textContent = '↻ Tout mettre à jour';
-  }
-
-  // ── Suppression ───────────────────────────────────────────────────────────
-  async function deleteDeck(deckId) {
-    if (!confirm('Supprimer ce deck de la configuration ?')) return;
-    try {
-      const res  = await fetch(`/api/moxfield-decks/${deckId}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.ok) {
-        showFeedback('Deck supprimé.', true);
-        loadDecks();
-      } else {
-        showFeedback('Deck introuvable.', false);
-      }
-    } catch (e) {
-      showFeedback('Erreur réseau', false);
-    }
-  }
-
-  // ── Copier le TXT ─────────────────────────────────────────────────────────
-  async function copyDeckTxt(deckId, btn) {
-    btn.disabled = true;
-    try {
-      const res  = await fetch(`/api/deck-txt/${deckId}`);
-      const data = await res.json();
-      if (!res.ok || !data.content) {
-        showFeedback('Contenu introuvable.', false);
-        btn.disabled = false;
-        return;
-      }
-      await navigator.clipboard.writeText(data.content);
-
-      // Marquer comme synchronisé côté serveur (met à jour le mtime du cache)
-      await fetch(`/api/deck-txt/${deckId}/mark-synced`, { method: 'POST' });
-
-      // Mettre à jour l'UI : retirer l'état "modifié localement"
-      btn.textContent = '✓ Copié !';
-      btn.className = btn.className.replace('btn-copy-urgent', 'btn-ghost');
-      btn.style.animation = 'none';
-      btn.title = 'Copier la decklist';
-
-      const row = document.getElementById(`row-${deckId}`);
-      if (row) {
-        const pill = row.querySelector('.modified-pill');
-        if (pill) {
-          const newPill = document.createElement('span');
-          newPill.className = 'source-pill moxfield';
-          newPill.textContent = 'Moxfield';
-          pill.replaceWith(newPill);
-        }
-        // Réactiver "Mettre à jour"
-        const updateBtn = row.querySelector('.btn-ghost[onclick*="refreshDeck"]');
-        if (updateBtn) { updateBtn.disabled = false; updateBtn.title = ''; }
-        // Réactiver "Mettre à jour" (sélecteur plus large au cas où)
-        row.querySelectorAll('button').forEach(b => {
-          if (b.textContent.includes('Mettre à jour')) {
-            b.disabled = false;
-            b.removeAttribute('title');
-          }
-        });
-      }
-
-      // Débloquer le bouton supprimer
-      const delBtn = document.getElementById(`del-${deckId}`);
-      if (delBtn) { delBtn.disabled = false; delBtn.title = 'Supprimer ce deck'; }
-
-      setTimeout(() => {
-        btn.textContent = 'Copier';
-        btn.disabled = false;
-      }, 2000);
-    } catch (e) {
-      showFeedback('Erreur lors de la copie.', false);
-      btn.disabled = false;
-    }
-  }
-
-  // Entrée clavier sur le champ URL
-  document.getElementById('urlInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter') addDeck();
+function goStep(n){
+  [1,2,3,4].forEach(function(i){
+    document.getElementById('step'+i).style.display=i===n?'':'none';
+    var s=document.getElementById('stp'+i);
+    s.className='step-item'+(i===n?' active':i<n?' done':'');
   });
+  if(n===4)buildSummary();
+}
 
-  loadDecks();
+function showFeedback(id,msg,isOk){
+  var el=document.getElementById(id);
+  el.textContent=msg;el.className='feedback '+(isOk?'ok':'err');el.style.display='';
+  if(isOk)setTimeout(function(){el.style.display='none';},5000);
+}
+function hideFeedback(id){document.getElementById(id).style.display='none';}
+
+async function doParse(){
+  var btn=document.getElementById('btnParse');
+  btn.disabled=true;btn.innerHTML='Analyse...<span class="spinner"></span>';
+  hideFeedback('fb1');
+  try{
+    var resp,data;
+    if(_activeTab==='file'){
+      if(!_fileContent){showFeedback('fb1','Selectionnez un fichier.',false);return;}
+      resp=await fetch('/api/import/parse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:_fileContent})});
+      data=await resp.json();
+      if(!resp.ok||data.error){showFeedback('fb1',data.error||'Erreur',false);return;}
+      _deck=data.deck;showDetection(data.detection);
+    } else {
+      var text=document.getElementById('pasteArea').value;
+      if(!text.trim()){showFeedback('fb1','Collez une decklist.',false);return;}
+      resp=await fetch('/api/import/parse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:text})});
+      data=await resp.json();
+      if(!resp.ok||data.error){showFeedback('fb1',data.error||'Erreur',false);return;}
+      _deck=data.deck;showDetection(data.detection);
+    }
+    buildStep2();goStep(2);
+  } catch(e){showFeedback('fb1','Erreur reseau : '+e.message,false);}
+  finally{btn.disabled=false;btn.textContent='Analyser →';}
+}
+
+function showDetection(det){
+  if(!det)return;
+  document.getElementById('formatBadge').textContent=det.source_format||det.source;
+  document.getElementById('confFill').style.width=(det.confidence||0)+'%';
+}
+
+function buildStep2(){
+  if(!_deck)return;
+  var s=_deck.statistics||{};
+  document.getElementById('statsGrid').innerHTML=[
+    ['Lignes',s.lines_received||0],['Cartes',s.cards_detected||0],
+    ['Copies',s.copies_detected||0],['Entrees',(_deck.entries||[]).length]
+  ].map(function(x){return '<div class="stat-card"><div class="stat-num">'+x[1]+'</div><div class="stat-label">'+x[0]+'</div></div>';}).join('');
+
+  var zones=_deck.detected_zones||['mainboard'];
+  var zoneLabels={commander:'Commandant',mainboard:'Maindeck',sideboard:'Sideboard',maybeboard:'Maybeboard',companion:'Compagnon',token:'Jetons'};
+  document.getElementById('zoneList').innerHTML=zones.map(function(z){
+    var checked=_checkedZones.has(z);
+    return '<label class="zone-chip'+(checked?' checked':'')+'" onclick="toggleZone(\''+z+'\',this)"><input type="checkbox"'+(checked?' checked':'')+'/>'+(zoneLabels[z]||z)+'</label>';
+  }).join('');
+
+  var wl=document.getElementById('warnList2');
+  wl.innerHTML=(_deck.warnings||[]).map(function(w){return '<li>'+escHtml(w)+'</li>';}).join('');
+
+  if(!document.getElementById('formatBadge').textContent||document.getElementById('formatBadge').textContent==='—'){
+    document.getElementById('formatBadge').textContent=_deck.source_format||_deck.source||'?';
+    document.getElementById('confFill').style.width='70%';
+  }
+}
+
+function toggleZone(z,el){
+  if(_checkedZones.has(z)){_checkedZones.delete(z);el.classList.remove('checked');}
+  else{_checkedZones.add(z);el.classList.add('checked');}
+}
+
+async function doResolve(){
+  var btn=document.getElementById('btnResolve');
+  btn.disabled=true;btn.innerHTML='Resolution...<span class="spinner"></span>';
+  try{
+    var resp=await fetch('/api/import/resolve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({deck:_deck})});
+    var data=await resp.json();
+    if(!resp.ok||data.error){showFeedback('fb2',data.error||'Erreur',false);return;}
+    _deck=data.deck;buildStep3();goStep(3);
+  } catch(e){showFeedback('fb2','Erreur reseau : '+e.message,false);}
+  finally{btn.disabled=false;btn.textContent='Resoudre les cartes →';}
+}
+
+function buildStep3(){
+  var entries=(_deck.entries||[]).filter(function(e){return _checkedZones.has(e.zone);});
+  var sc={exact_identifier:'status-exact',exact_printing:'status-exact',exact_card_unknown_printing:'status-prob',probable_match:'status-prob',ambiguous:'status-ambig',unresolved:'status-unres',unsupported_digital_card:'status-unres',ignored_zone:'status-unres',invalid_line:'status-unres'};
+  var sl={exact_identifier:'Exact',exact_printing:'Exact',exact_card_unknown_printing:'Impression ?',probable_match:'Probable',ambiguous:'Ambigu',unresolved:'Non resolu',unsupported_digital_card:'Digital',ignored_zone:'Ignore',invalid_line:'Invalide'};
+  var zl={commander:'Cmd',mainboard:'Main',sideboard:'SB',maybeboard:'Maybe',companion:'Cmpn',token:'Token',other:'Autre'};
+  document.getElementById('resBody').innerHTML=entries.map(function(e){
+    return '<tr><td>'+e.quantity+'</td><td>'+escHtml(e.canonical_name||e.raw_name)+'</td><td>'+(zl[e.zone]||e.zone)+'</td><td>'+(e.set_code?escHtml(e.set_code):'')+'</td><td><span class="status-pill '+(sc[e.resolution_status]||'status-unres')+'">'+(sl[e.resolution_status]||e.resolution_status)+'</span></td></tr>';
+  }).join('');
+  var wl=document.getElementById('warnList3');
+  wl.innerHTML=(_deck.warnings||[]).slice(0,10).map(function(w){return '<li>'+escHtml(w)+'</li>';}).join('');
+}
+
+function selectDest(d){
+  if(_destinations.has(d))_destinations.delete(d);else _destinations.add(d);
+  if(_destinations.size===0)_destinations.add(d); // au moins une sélection
+  document.getElementById('destDeck').classList.toggle('selected',_destinations.has('deck'));
+  document.getElementById('destCollection').classList.toggle('selected',_destinations.has('collection'));
+  document.getElementById('deckNameRow').style.display=_destinations.has('deck')?'':'none';
+}
+
+function buildSummary(){
+  if(!_deck)return;
+  var entries=(_deck.entries||[]).filter(function(e){return _checkedZones.has(e.zone);});
+  var total=entries.reduce(function(s,e){return s+e.quantity;},0);
+  var exact=entries.filter(function(e){return['exact_identifier','exact_printing','exact_card_unknown_printing'].indexOf(e.resolution_status)>=0;}).length;
+  var ambig=entries.filter(function(e){return e.resolution_status==='ambiguous';}).length;
+  var unres=entries.filter(function(e){return e.resolution_status==='unresolved';}).length;
+  document.getElementById('importSummary').innerHTML=
+    entries.length+' cartes uniques &middot; '+total+' copies<br>'+
+    '✓ '+exact+' resolues'+
+    (ambig?' &middot; ⚠ '+ambig+' ambigues':'')+
+    (unres?' &middot; ✗ '+unres+' non resolues':'');
+  var cmd=entries.find(function(e){return e.zone==='commander';});
+  var ni=document.getElementById('deckNameInput');
+  if(cmd&&!ni.value)ni.value=cmd.canonical_name||cmd.raw_name||'';
+}
+
+async function doConfirm(){
+  var btn=document.getElementById('btnConfirm');
+  btn.disabled=true;btn.innerHTML='Import...<span class="spinner"></span>';
+  var deckName=document.getElementById('deckNameInput').value.trim()||(_deck&&_deck.deck_name)||'Deck importe';
+  try{
+    var resp=await fetch('/api/import/confirm',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({deck:_deck,destinations:Array.from(_destinations),destination:Array.from(_destinations)[0],deck_name:deckName,zones:Array.from(_checkedZones)})
+    });
+    var data=await resp.json();
+    if(!resp.ok||data.error){showFeedback('fb4',data.error||'Erreur',false);btn.disabled=false;btn.textContent="Confirmer l'import";return;}
+    var destLabel=_destinations.has('deck')&&_destinations.has('collection')?'le deck et la collection':_destinations.has('deck')?'le deck':'la collection';
+    showFeedback('fb4','✓ '+data.imported+' carte(s) importee(s) dans '+destLabel+(data.skipped?' ('+data.skipped+' ignoree(s))':''),true);
+    btn.textContent='✓ Importe !';
+    var redir=_destinations.has('deck')?'/deck-config':'/collection-manage';
+    setTimeout(function(){window.location.href=redir;},2500);
+  } catch(e){showFeedback('fb4','Erreur reseau : '+e.message,false);btn.disabled=false;btn.textContent="Confirmer l'import";}
+}
+
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 </script>
 </body>
 </html>

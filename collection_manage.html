@@ -234,6 +234,12 @@
     </div>
 
     <div class="stats-bar" id="statsBar">—</div>
+    <button id="clearCollectionBtn" onclick="clearCollection()" style="
+      font-family:var(--serif-engraved);font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;
+      padding:6px 14px;border-radius:6px;cursor:pointer;white-space:nowrap;
+      border:1px solid rgba(220,80,80,0.4);color:#e07b7b;background:rgba(220,80,80,0.08);
+      transition:background .2s,border-color .2s;
+    ">Vider la collection</button>
   </div>
 
   <div class="table-wrap">
@@ -460,6 +466,19 @@
       allCards = allCards.filter(c => c.card_name !== cardName);
       renderTable();
       showToast(`${cardName} supprimé`);
+    } catch (e) {
+      showToast('Erreur lors de la suppression.', true);
+    }
+  }
+
+  // ── Vider la collection ───────────────────────────────────────
+  async function clearCollection() {
+    if (!confirm(`Vider entièrement votre collection ? Cette action est irréversible.`)) return;
+    try {
+      await fetch('/api/collection', { method: 'DELETE' });
+      allCards = [];
+      renderTable();
+      showToast('Collection vidée.');
     } catch (e) {
       showToast('Erreur lors de la suppression.', true);
     }

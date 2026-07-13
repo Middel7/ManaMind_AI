@@ -5,8 +5,6 @@ import time
 import unicodedata
 from pathlib import Path
 
-import httpx
-
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG_FILE  = ROOT / "data" / "moxfield_decks.json"
 CACHE_DIR    = ROOT / "data" / "moxfield_cache"
@@ -14,27 +12,9 @@ LOCAL_DIR    = ROOT / "data" / "My decks"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 LOCAL_DIR.mkdir(parents=True, exist_ok=True)
 
-MOXFIELD_API = "https://api2.moxfield.com/v3/decks/all/{deck_id}"
-HEADERS = {
-    "User-Agent": "ManaMind/1.0 (personal collection tool)",
-    "Accept": "application/json",
-}
-
-
 def _normalize(name: str) -> str:
     name = unicodedata.normalize("NFKD", name)
     return "".join(c for c in name if not unicodedata.combining(c)).lower().strip()
-
-
-def _deck_id_from_url(url: str) -> str | None:
-    """Extrait l'ID du deck depuis une URL Moxfield."""
-    url = url.strip().rstrip("/")
-    parts = url.split("/")
-    if "decks" in parts:
-        idx = parts.index("decks")
-        if idx + 1 < len(parts):
-            return parts[idx + 1]
-    return None
 
 
 # ── État local ────────────────────────────────────────────────────────────────
@@ -84,37 +64,6 @@ def save_config(decks: list[dict]) -> None:
     )
 
 
-def add_or_update_deck(url: str) -> dict:
-    """
-    Ajoute ou met à jour un deck depuis son URL Moxfield.
-    Appelle l'API pour récupérer le commandant. Retourne l'entrée créée.
-    """
-    deck_id = _deck_id_from_url(url)
-    if not deck_id:
-        raise ValueError(f"URL Moxfield invalide : {url}")
-
-    data = _fetch_from_api(deck_id)
-    commander = _extract_commander(data)
-    name = data.get("name", "")
-
-    decks = load_config()
-    existing = next((d for d in decks if d["deck_id"] == deck_id), None)
-    entry = {
-        "deck_id":   deck_id,
-        "url":       url.strip(),
-        "commander": commander,
-        "name":      name,
-    }
-    if existing:
-        existing.update(entry)
-    else:
-        decks.append(entry)
-    save_config(decks)
-    _write_cache(deck_id, data)
-    _write_local_txt(commander, _parse_cards(data))
-    return entry
-
-
 def remove_deck(deck_id: str) -> bool:
     decks = load_config()
     new = [d for d in decks if d["deck_id"] != deck_id]
@@ -125,21 +74,6 @@ def remove_deck(deck_id: str) -> bool:
     if cache.exists():
         cache.unlink()
     return True
-
-
-def refresh_deck(deck_id: str) -> dict:
-    """Re-télécharge le deck depuis Moxfield, met à jour le cache et le .txt local."""
-    decks = load_config()
-    entry = next((d for d in decks if d["deck_id"] == deck_id), None)
-    if not entry:
-        raise ValueError(f"Deck {deck_id} introuvable dans la config")
-    data = _fetch_from_api(deck_id)
-    entry["commander"] = _extract_commander(data)
-    entry["name"] = data.get("name", entry.get("name", ""))
-    save_config(decks)
-    _write_cache(deck_id, data)
-    _write_local_txt(entry["commander"], _parse_cards(data))
-    return entry
 
 
 def _local_txt_path(commander_name: str) -> Path:
@@ -289,18 +223,6 @@ def get_all_moxfield_commanders() -> list[str]:
 
 
 # ── Interne ───────────────────────────────────────────────────────────────────
-
-def _fetch_from_api(deck_id: str) -> dict:
-    url = MOXFIELD_API.format(deck_id=deck_id)
-    try:
-        resp = httpx.get(url, headers=HEADERS, timeout=10.0, follow_redirects=True)
-        resp.raise_for_status()
-        return resp.json()
-    except httpx.HTTPStatusError as e:
-        raise ValueError(f"Erreur Moxfield HTTP {e.response.status_code} pour le deck {deck_id}")
-    except Exception as e:
-        raise ValueError(f"Impossible de contacter Moxfield : {e}")
-
 
 def _write_cache(deck_id: str, data: dict) -> None:
     payload = {"fetched_at": time.time(), "data": data}

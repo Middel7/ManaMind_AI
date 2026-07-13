@@ -5,11 +5,14 @@
 > Dernière mise à jour : 2026-06-25
 
 ```powershell
-uv run python server.py
+# Activer le venv, puis lancer le serveur
+.venv\Scripts\Activate.ps1
+python server.py
 # → http://localhost:8080
-Email : admin@manamind.app
-Mot de passe : admin123
+# Email : admin@manamind.app / Mot de passe : admin123
 
+# ⚠ Ne PAS utiliser `uv run` : numba 0.53.1 (dépendance de umap-learn) est
+# incompatible Python 3.12 et fait échouer la résolution de l'environnement uv.
 ```
 
 ---

@@ -1,14 +1,12 @@
 """
 Router d'import de decklists.
-Endpoints : /api/import/parse, /api/import/resolve, /api/import/confirm, /api/import/from-url
+Endpoints : /api/import/parse, /api/import/resolve, /api/import/confirm
 """
 
 from __future__ import annotations
 
 import logging
 import uuid
-from typing import Any
-
 from fastapi import APIRouter, Request, UploadFile
 from fastapi.responses import JSONResponse
 
@@ -17,7 +15,6 @@ from ..deck_import.detector import detect
 from ..deck_import.models import CanonicalDeckImport, Zone
 from ..deck_import.parsers.registry import parse as parse_deck
 from ..deck_import.resolver import resolve
-from ..deck_import.url_adapter import import_from_url
 from ._shared import _json_response
 
 log = logging.getLogger(__name__)
@@ -186,12 +183,13 @@ async def api_import_confirm(request: Request) -> JSONResponse:
         return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
 
     deck_dict = body.get("deck")
-    destination = body.get("destination", "deck")
+    # Supporte destinations (liste) et destination (compatibilité)
+    destinations_raw = body.get("destinations") or [body.get("destination", "deck")]
+    destinations = [d for d in destinations_raw if d in ("deck", "collection")]
+    if not destinations:
+        destinations = ["deck"]
     deck_name = body.get("deck_name", "")
     included_zones: list[str] = body.get("zones", ["commander", "mainboard"])
-
-    if destination not in ("deck", "collection"):
-        return JSONResponse({"error": "destination must be 'deck' or 'collection'"}, status_code=400)
 
     try:
         deck = _deck_from_dict(deck_dict)
@@ -209,58 +207,28 @@ async def api_import_confirm(request: Request) -> JSONResponse:
     skipped = 0
     errors: list[str] = []
 
-    if destination == "collection":
-        imported, skipped, errors = _save_to_collection(user_id, filtered)
-    else:
-        commander = next(
-            (e.canonical_name or e.raw_name for e in filtered if e.zone == Zone.COMMANDER),
-            None,
-        )
-        name = deck_name or deck.deck_name or commander or "Deck importé"
-        imported, skipped, errors = _save_to_deck(user_id, commander or "Unknown", name, filtered)
+    commander = next(
+        (e.canonical_name or e.raw_name for e in filtered if e.zone == Zone.COMMANDER),
+        None,
+    )
+    name = deck_name or deck.deck_name or commander or "Deck importé"
+
+    for destination in destinations:
+        if destination == "collection":
+            i, s, e = _save_to_collection(user_id, filtered)
+        else:
+            i, s, e = _save_to_deck(user_id, commander or "Unknown", name, filtered)
+        imported += i
+        skipped += s
+        errors += e
 
     return _json_response({
         "ok": True,
-        "destination": destination,
+        "destination": destinations[0],
+        "destinations": destinations,
         "imported": imported,
         "skipped": skipped,
         "errors": errors,
-    })
-
-
-# ── POST /api/import/from-url ─────────────────────────────────────────────────
-
-@router.post("/api/import/from-url")
-async def api_import_from_url(request: Request) -> JSONResponse:
-    """
-    Import depuis une URL publique.
-    Retourne soit le modèle canonique (si OK), soit une erreur + fallback_message.
-    """
-    try:
-        _require_user(request)
-    except Exception:
-        return JSONResponse({"error": "Unauthorized"}, status_code=401)
-
-    try:
-        body = await request.json()
-    except Exception:
-        return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
-
-    url: str = body.get("url", "").strip()
-    if not url:
-        return JSONResponse({"error": "Missing 'url'"}, status_code=400)
-
-    result = import_from_url(url)
-
-    if not result.ok:
-        payload: dict[str, Any] = {"ok": False, "error": result.error}
-        if result.fallback_message:
-            payload["fallback_message"] = result.fallback_message
-        return _json_response(payload, status_code=422)
-
-    return _json_response({
-        "ok": True,
-        "deck": _deck_to_response(result.deck),
     })
 
 
@@ -319,7 +287,7 @@ def _save_to_deck(user_id: int, commander: str, deck_name: str, entries) -> tupl
         save_deck_for_user(
             user_id=user_id,
             deck_id=deck_id,
-            moxfield_url="",
+            url="",
             commander=commander,
             name=deck_name,
         )
@@ -327,14 +295,14 @@ def _save_to_deck(user_id: int, commander: str, deck_name: str, entries) -> tupl
         return 0, 0, [f"Could not create deck: {exc}"]
 
     # Sérialisation des cartes dans user_deck_cards
-    cards: list[dict] = []
+    cards: list[tuple[str, int]] = []
     for entry in entries:
         if entry.zone == Zone.COMMANDER:
             continue  # commander déjà stocké dans user_moxfield_decks.commander
-        name = entry.canonical_name or entry.raw_name
-        if not name:
+        card_name = entry.canonical_name or entry.raw_name
+        if not card_name:
             continue
-        cards.append({"card_name": name, "quantity": entry.quantity})
+        cards.append((card_name, entry.quantity))
 
     imported = 0
     skipped = 0

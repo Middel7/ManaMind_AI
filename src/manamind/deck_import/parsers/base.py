@@ -68,8 +68,8 @@ _RE_CARD = re.compile(
         |
         \s*[\(\[]\s*(?P<set2>[A-Za-z0-9]{2,8})\s*[\)\]]
     )?
-    # numéro de collection hors parenthèses (doit commencer par un chiffre ou ★)
-    (?:\s+(?P<num2>[\d★][A-Za-z0-9★\-]*))?
+    # numéro de collection hors parenthèses : chiffre/★ en tête, ou format alphanum-digits (ex: AFR-6, M21-22)
+    (?:\s+(?P<num2>[\d★][A-Za-z0-9★\-]*|[A-Za-z][A-Za-z0-9]{1,4}-\d+[a-z]?))?
     # marqueurs commander/companion
     (?:\s+(?P<marker>\*?(?:CMDR|COMMANDER|COMMANDANT|CMPN|COMPANION|PARTNER|BACKGROUND)\*?))?
     # quantité après le nom (format "Sol Ring x4" ou "Sol Ring (4)")
@@ -81,6 +81,17 @@ _RE_CARD = re.compile(
 
 # SB: préfixe (MTGO / XMage)
 _RE_SB_PREFIX = re.compile(r"^SB:\s+", re.IGNORECASE)
+
+# Annotations de type MTG en fin de ligne : [Sorcery], [Creature], [Commander{top}], etc.
+_RE_TYPE_ANNOTATION = re.compile(
+    r"\s*\[\s*(?:Creature|Instant|Sorcery|Enchantment|Artifact|Land|Planeswalker|Battle|Tribal"
+    r"|Legendary\s+\w+.*?|Basic\s+Land.*?"
+    r"|Commander(?:\{[^}]*\})?|Commandant(?:\{[^}]*\})?)\s*\]\s*$",
+    re.IGNORECASE,
+)
+
+# Annotations pipe-séparées en fin de ligne : |Commander|top|, |foil|, |top|", etc.
+_RE_PIPE_ANNOTATION = re.compile(r'\s*\|[A-Za-z][^\r\n]*$')
 
 # Foil annotation *F* ou [FOIL] etc.
 _RE_FOIL = re.compile(r"\*[Ff]\*|\[foil\]", re.IGNORECASE)
@@ -154,6 +165,21 @@ class BaseParser(ABC):
             finish = "foil"
         line = _RE_FOIL.sub("", _RE_ETCHED.sub("", line)).strip()
 
+        # Supprime les annotations de type MTG en fin de ligne : [Sorcery], [Creature], [Commander{top}], etc.
+        # Extrait le marqueur commander si présent avant suppression
+        type_match = _RE_TYPE_ANNOTATION.search(line)
+        type_is_cmdr = bool(type_match and re.search(
+            r"\bcommander\b|\bcommandant\b", type_match.group(), re.IGNORECASE
+        ))
+        line = _RE_TYPE_ANNOTATION.sub("", line).strip()
+        # Supprime les annotations pipe : |Commander|top|", |foil|, etc.
+        # Extrait le marqueur commander si présent avant suppression
+        pipe_match = _RE_PIPE_ANNOTATION.search(line)
+        pipe_is_cmdr = bool(pipe_match and re.search(
+            r"\b(?:commander|commandant|cmdr)\b", pipe_match.group(), re.IGNORECASE
+        ))
+        line = _RE_PIPE_ANNOTATION.sub("", line).strip()
+
         m = _RE_CARD.match(line.strip())
         if not m:
             return None
@@ -185,7 +211,7 @@ class BaseParser(ABC):
         zone = default_zone
         if marker_raw in _COMPANION_MARKERS:
             zone = Zone.COMPANION
-        elif marker_raw in _CMDR_MARKERS:
+        elif marker_raw in _CMDR_MARKERS or pipe_is_cmdr or type_is_cmdr:
             zone = Zone.COMMANDER
 
         return {
