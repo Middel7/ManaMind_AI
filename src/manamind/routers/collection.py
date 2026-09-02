@@ -579,14 +579,18 @@ def api_collection_commanders(
     deck_usage = _load_deck_usage_for_user(user["id"]) if mode == "available" else {}
 
     with SessionLocal() as s:
-        collection_rows = s.execute(text(
-            "SELECT card_name, quantity FROM user_collection WHERE user_id = :uid"
-        ), {"uid": user["id"]}).fetchall()
+        # Agréger par nom : une même carte peut exister en plusieurs exemplaires
+        # (éditions, finitions) sur des lignes distinctes.
+        collection_rows = s.execute(text("""
+            SELECT LOWER(TRIM(card_name)) AS name, SUM(quantity) AS quantity
+            FROM user_collection WHERE user_id = :uid
+            GROUP BY 1
+        """), {"uid": user["id"]}).fetchall()
 
         # Construire la collection selon le mode
         coll: dict[str, int] = {}
         for r in collection_rows:
-            name_lower = r.card_name.strip().lower()
+            name_lower = r.name
             if mode == "available":
                 dispo = r.quantity - deck_usage.get(name_lower, 0)
                 if dispo > 0:

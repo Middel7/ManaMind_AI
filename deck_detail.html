@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>ManaMind — Deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/app.css">
+<style>
+  .curve { display: flex; align-items: flex-end; gap: 4px; height: 68px; }
+  .curve__bar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .curve__fill {
+    width: 100%;
+    background: linear-gradient(180deg, var(--accent), var(--accent-deep));
+    border-radius: 3px 3px 0 0;
+    min-height: 2px;
+    transition: height var(--dur-slow) var(--ease-out);
+  }
+  .curve__label { font-size: 10px; color: var(--text-3); }
+
+  .type-group { margin-bottom: var(--sp-6); }
+  .type-group__head {
+    display: flex; align-items: baseline; gap: var(--sp-3);
+    padding-bottom: var(--sp-2); margin-bottom: var(--sp-3);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .card-line {
+    display: flex; align-items: center; gap: var(--sp-3);
+    padding: 5px var(--sp-2);
+    border-radius: var(--r-sm);
+    transition: background var(--dur-fast) var(--ease);
+  }
+  .card-line:hover { background: var(--surface); }
+  .card-line__qty {
+    min-width: 22px; text-align: right;
+    font-variant-numeric: tabular-nums; color: var(--text-3); font-size: var(--text-sm);
+  }
+  .card-line__name { flex: 1; min-width: 0; font-size: var(--text-sm); }
+  .card-line--missing .card-line__name { color: var(--accent); }
+  .card-line__remove { opacity: 0; transition: opacity var(--dur-fast) var(--ease); }
+  .card-line:hover .card-line__remove { opacity: 1; }
+
+  /* Apercu de la carte au survol, comme sur les sites de decklists */
+  .peek {
+    position: fixed; z-index: var(--z-modal);
+    width: 244px; pointer-events: none;
+    border-radius: 4.6% / 3.3%;
+    box-shadow: var(--shadow-lg);
+    display: none;
+  }
+  @media (hover: none) { .peek { display: none !important; } }
+</style>
+</head>
+<body>
+
+<div id="page">
+  <section class="hero" id="hero" style="min-height:240px">
+    <div class="hero__body">
+      <div class="skeleton skeleton--text" style="width:320px;height:36px"></div>
+      <div class="skeleton skeleton--text" style="width:220px;margin-top:12px"></div>
+    </div>
+  </section>
+
+  <div id="content"></div>
+</div>
+
+<img class="peek" id="peek" alt="">
+
+<script src="/static/js/mm.js"></script>
+<script>
+(async () => {
+  const deckId = decodeURIComponent(location.pathname.split('/').filter(Boolean).pop());
+
+  const user = await MM.boot({ title: 'Deck', nav: 'decks', back: '/decks' });
+  if (!user) return;
+
+  let data;
+  try {
+    data = await MM.api.get(`/api/v2/decks/${encodeURIComponent(deckId)}`);
+  } catch (err) {
+    MM.el('#hero').innerHTML = `<div class="hero__body">
+      <h2 class="hero__title">Deck introuvable</h2>
+      <p class="muted">${MM.esc(err.message)}</p>
+      <div class="hero__actions"><a class="btn" href="/decks">Retour à mes decks</a></div>
+    </div>`;
+    return;
+  }
+
+  const deck = data.deck;
+  let cards = data.cards;
+  document.title = `ManaMind — ${deck.name}`;
+  MM.el('.topbar__title').textContent = deck.name;
+
+  /* ── Hero ─────────────────────────────────────────────────────────────── */
+
+  function renderHero() {
+    const commanderCard = cards.find((card) =>
+      card.card_name.toLowerCase() === (deck.commander || '').toLowerCase())
+      || cards.find((card) => card.scryfall_id);
+    const art = commanderCard && commanderCard.scryfall_id
+      ? MM.scryfallArt(commanderCard.scryfall_id) : null;
+    const missing = deck.card_count - deck.owned_count;
+
+    MM.el('#hero').innerHTML = `
+      ${art ? `<div class="hero__art" style="background-image:url('${MM.esc(art)}')"></div>` : ''}
+      <div class="hero__body">
+        <p class="eyebrow">${MM.esc(deck.commander || 'Deck')}</p>
+        <h2 class="hero__title">${MM.esc(deck.name)}</h2>
+        <div class="hero__stats">
+          <span class="hero__stat"><b>${MM.fmt.int(deck.card_count)}</b>
+            <span class="muted small">cartes</span></span>
+          <span class="hero__stat"><b>${Math.round(deck.owned_ratio * 100)} %</b>
+            <span class="muted small">en collection</span></span>
+          ${missing ? `<span class="hero__stat"><b class="accent">${MM.fmt.int(missing)}</b>
+            <span class="muted small">manquantes</span></span>` : ''}
+          <span class="hero__stat"><b>${MM.fmt.eur(deck.value_eur, { compact: true })}</b>
+            <span class="muted small">de valeur</span></span>
+        </div>
+        <div class="hero__actions">
+          <a class="btn btn--primary" href="/decks/ameliorer?deck=${encodeURIComponent(deckId)}">
+            ${MM.icons.sparkle} Améliorer avec ma collection</a>
+          <a class="btn" href="/decks/alleger?deck=${encodeURIComponent(deckId)}">Alléger</a>
+          <a class="btn" href="/decks/commandant?deck=${encodeURIComponent(deckId)}">
+            Changer de commandant</a>
+          <a class="btn btn--ghost" href="/decks/analyse?deck=${encodeURIComponent(deckId)}">
+            Analyser</a>
+        </div>
+      </div>`;
+  }
+
+  /* ── Regroupement par type ────────────────────────────────────────────── */
+
+  const TYPE_ORDER = [
+    ['Commandant', (card) =>
+      card.card_name.toLowerCase() === (deck.commander || '').toLowerCase()],
+    ['Créatures', (card) => /Creature/i.test(card.type_line)],
+    ['Éphémères', (card) => /Instant/i.test(card.type_line)],
+    ['Rituels', (card) => /Sorcery/i.test(card.type_line)],
+    ['Artefacts', (card) => /Artifact/i.test(card.type_line)],
+    ['Enchantements', (card) => /Enchantment/i.test(card.type_line)],
+    ['Planeswalkers', (card) => /Planeswalker/i.test(card.type_line)],
+    ['Terrains', (card) => /Land/i.test(card.type_line)],
+    ['Autres', () => true],
+  ];
+
+  function group(list) {
+    const groups = [];
+    const remaining = list.slice();
+    TYPE_ORDER.forEach(([label, test]) => {
+      const matched = [];
+      for (let i = remaining.length - 1; i >= 0; i -= 1) {
+        if (test(remaining[i])) matched.unshift(remaining.splice(i, 1)[0]);
+      }
+      if (matched.length) {
+        groups.push([label, matched.sort((a, b) =>
+          a.card_name.localeCompare(b.card_name, 'fr'))]);
+      }
+    });
+    return groups;
+  }
+
+  function manaCurve(list) {
+    const buckets = [0, 0, 0, 0, 0, 0, 0, 0];
+    list.forEach((card) => {
+      if (/Land/i.test(card.type_line)) return;
+      const value = Math.min(7, Math.floor(card.mana_value ?? 0));
+      buckets[value] += card.quantity;
+    });
+    const max = Math.max(...buckets, 1);
+    return `<div class="curve">${buckets.map((count, index) => `
+      <span class="curve__bar" title="${count} carte${count > 1 ? 's' : ''} à ${index}${index === 7 ? '+' : ''}">
+        <span class="curve__fill" style="height:${(count / max) * 46}px"></span>
+        <span class="curve__label">${index === 7 ? '7+' : index}</span>
+      </span>`).join('')}</div>`;
+  }
+
+  function render() {
+    renderHero();
+    const missing = cards.filter((card) => card.owned < card.quantity);
+
+    MM.el('#content').innerHTML = `
+      <div class="grid-2" style="align-items:start;grid-template-columns:minmax(0,2fr) minmax(280px,1fr)">
+        <div class="stack-6">
+          <div class="panel">
+            <div class="panel__head">
+              <h2 class="h3">Liste du deck</h2>
+              <div class="cluster-2">
+                <button class="btn btn--sm" id="addCard">Ajouter une carte</button>
+                <button class="btn btn--sm btn--ghost" id="exportDeck">Exporter</button>
+              </div>
+            </div>
+            <div class="panel__body" id="cardList"></div>
+          </div>
+        </div>
+
+        <div class="stack-6">
+          <div class="panel">
+            <div class="panel__head"><h2 class="h3">Courbe de mana</h2></div>
+            <div class="panel__body">${manaCurve(cards)}</div>
+          </div>
+
+          <div class="panel">
+            <div class="panel__head">
+              <h2 class="h3">Cartes manquantes</h2>
+              <span class="badge ${missing.length ? 'badge--warn' : 'badge--ok'}">
+                ${missing.length}</span>
+            </div>
+            <div class="panel__body panel__body--flush" id="missingList"></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel__head"><h2 class="h3">Réglages</h2></div>
+            <div class="panel__body stack">
+              <div class="field">
+                <label class="label" for="deckName">Nom du deck</label>
+                <input class="input" id="deckName" type="text"
+                       value="${MM.esc(deck.name)}" maxlength="120">
+              </div>
+              <button class="btn btn--sm" id="renameDeck">Renommer</button>
+              ${deck.url ? `<a class="btn btn--sm btn--ghost" href="${MM.esc(deck.url)}"
+                target="_blank" rel="noopener">Voir la source ${MM.icons.external}</a>` : ''}
+              <hr class="divider">
+              <button class="btn btn--sm btn--danger" id="deleteDeck">Supprimer ce deck</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+
+    renderCards();
+    renderMissing(missing);
+    bind();
+  }
+
+  function renderCards() {
+    MM.el('#cardList').innerHTML = group(cards).map(([label, list]) => {
+      const copies = list.reduce((sum, card) => sum + card.quantity, 0);
+      return `
+        <div class="type-group">
+          <div class="type-group__head">
+            <h3 class="h4">${MM.esc(label)}</h3>
+            <span class="xs dim">${copies}</span>
+          </div>
+          ${list.map((card) => `
+            <div class="card-line ${card.owned < card.quantity ? 'card-line--missing' : ''}"
+                 data-name="${MM.esc(card.card_name)}"
+                 data-image="${MM.esc(card.image_normal || '')}">
+              <span class="card-line__qty">${card.quantity}</span>
+              <span class="card-line__name truncate">${MM.esc(card.card_name)}</span>
+              ${card.game_changer
+                ? '<span class="badge badge--warn" title="Carte à fort impact">GC</span>' : ''}
+              ${card.owned < card.quantity
+                ? '<span class="badge badge--warn">à acquérir</span>' : ''}
+              <span class="xs dim num" style="min-width:52px;text-align:right">
+                ${card.unit_price != null ? MM.fmt.eur(card.unit_price) : '—'}</span>
+              <button class="btn btn--ghost btn--icon btn--sm card-line__remove"
+                      data-remove="${MM.esc(card.card_name)}"
+                      aria-label="Retirer ${MM.esc(card.card_name)}">${MM.icons.close}</button>
+            </div>`).join('')}
+        </div>`;
+    }).join('');
+  }
+
+  function renderMissing(missing) {
+    if (!missing.length) {
+      MM.el('#missingList').innerHTML =
+        '<p class="small muted" style="padding:var(--sp-4)">Vous possédez toutes les cartes de ce deck.</p>';
+      return;
+    }
+    const total = missing.reduce((sum, card) =>
+      sum + (card.unit_price || 0) * (card.quantity - card.owned), 0);
+
+    MM.el('#missingList').innerHTML = `
+      <div class="rows">
+        ${missing.slice(0, 30).map((card) => `
+          <div class="row" data-name="${MM.esc(card.card_name)}"
+               data-image="${MM.esc(card.image_normal || '')}">
+            ${card.image_small
+              ? `<img class="row__thumb" src="${MM.esc(card.image_small)}" alt="" loading="lazy">`
+              : '<span class="row__thumb"></span>'}
+            <span class="row__main">
+              <span class="row__title truncate">${MM.esc(card.card_name)}</span>
+              <span class="row__sub">${MM.esc(card.set_code || '')}
+                ${card.rarity ? '· ' + MM.esc(MM.fmt.rarity(card.rarity)) : ''}</span>
+            </span>
+            <span class="row__aside">
+              <span class="small num">${card.unit_price != null
+                ? MM.fmt.eur(card.unit_price) : '—'}</span>
+            </span>
+          </div>`).join('')}
+      </div>
+      <div class="panel__body between" style="border-top:1px solid var(--line)">
+        <span class="muted small">Coût pour compléter</span>
+        <span class="strong num">${MM.fmt.eur(total)}</span>
+      </div>`;
+  }
+
+  /* ── Aperçu au survol ─────────────────────────────────────────────────── */
+
+  const peek = MM.el('#peek');
+  document.addEventListener('mouseover', (event) => {
+    const holder = event.target.closest('[data-image]');
+    if (!holder || !holder.dataset.image) { peek.style.display = 'none'; return; }
+    peek.src = holder.dataset.image;
+    peek.style.display = 'block';
+  });
+  document.addEventListener('mousemove', (event) => {
+    if (peek.style.display !== 'block') return;
+    const x = Math.min(event.clientX + 20, window.innerWidth - 260);
+    const y = Math.min(event.clientY - 60, window.innerHeight - 350);
+    peek.style.left = `${x}px`;
+    peek.style.top = `${Math.max(10, y)}px`;
+  });
+  document.addEventListener('mouseout', (event) => {
+    if (!event.relatedTarget || !event.relatedTarget.closest('[data-image]')) {
+      peek.style.display = 'none';
+    }
+  });
+
+  /* ── Actions ──────────────────────────────────────────────────────────── */
+
+  async function reload() {
+    const fresh = await MM.api.get(`/api/v2/decks/${encodeURIComponent(deckId)}`);
+    cards = fresh.cards;
+    Object.assign(deck, fresh.deck);
+    render();
+  }
+
+  function bind() {
+    MM.el('#cardList').addEventListener('click', async (event) => {
+      const button = event.target.closest('[data-remove]');
+      if (!button) return;
+      const name = button.dataset.remove;
+      const ok = await MM.confirm({
+        title: 'Retirer cette carte ?',
+        text: `« ${name} » sera retirée de ${deck.name}. Votre collection n'est pas modifiée.`,
+        confirmLabel: 'Retirer', danger: true,
+      });
+      if (!ok) return;
+      try {
+        await MM.api.post('/api/deck-card/remove',
+          { commander: deck.commander, card_name: name });
+        MM.toast('Carte retirée du deck.');
+        await reload();
+      } catch (err) { MM.toast.error(err.message); }
+    });
+
+    MM.el('#addCard').addEventListener('click', () => {
+      const modal = MM.modal({
+        title: 'Ajouter une carte au deck',
+        body: `<div class="field">
+                 <label class="label" for="newCard">Nom de la carte</label>
+                 <div class="autocomplete">
+                   <input class="input" id="newCard" type="text" autocomplete="off"
+                          placeholder="Rechercher…">
+                 </div>
+               </div>`,
+      });
+      MM.autocomplete(MM.el('#newCard', modal.root), async (card) => {
+        try {
+          await MM.api.post('/api/deck-card/add',
+            { commander: deck.commander, card_name: card.name });
+          MM.toast.ok(`${card.name} ajoutée au deck.`);
+          modal.close();
+          await reload();
+        } catch (err) { MM.toast.error(err.message); }
+      });
+    });
+
+    MM.el('#renameDeck').addEventListener('click', async (event) => {
+      const name = MM.el('#deckName').value.trim();
+      if (!name) return MM.toast.error('Le nom ne peut pas être vide.');
+      event.target.disabled = true;
+      try {
+        await MM.api.post(`/api/deck-rename/${encodeURIComponent(deckId)}`, { name });
+        deck.name = name;
+        document.title = `ManaMind — ${name}`;
+        MM.el('.topbar__title').textContent = name;
+        renderHero();
+        MM.toast.ok('Deck renommé.');
+      } catch (err) { MM.toast.error(err.message); }
+      finally { event.target.disabled = false; }
+    });
+
+    MM.el('#deleteDeck').addEventListener('click', async () => {
+      const ok = await MM.confirm({
+        title: 'Supprimer ce deck ?',
+        text: `${deck.name} et sa liste seront supprimés. Votre collection est conservée.`,
+        confirmLabel: 'Supprimer', danger: true,
+      });
+      if (!ok) return;
+      try {
+        await MM.api.del(`/api/moxfield-decks/${encodeURIComponent(deckId)}`);
+        MM.toast.ok('Deck supprimé.');
+        setTimeout(() => { location.href = '/decks'; }, 700);
+      } catch (err) { MM.toast.error(err.message); }
+    });
+
+    MM.el('#exportDeck').addEventListener('click', async () => {
+      try {
+        const result = await MM.api.get(`/api/deck-txt/${encodeURIComponent(deckId)}`);
+        const content = result.content
+          || cards.map((card) => `${card.quantity} ${card.card_name}`).join('\n');
+        const modal = MM.modal({
+          title: 'Exporter la liste',
+          body: `<textarea class="textarea" readonly style="min-height:320px"
+                   id="exportArea">${MM.esc(content)}</textarea>`,
+          footer: '<button class="btn btn--primary" data-copy>Copier</button>',
+        });
+        MM.el('[data-copy]', modal.root).addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(content);
+            MM.toast.ok('Liste copiée.');
+          } catch {
+            MM.el('#exportArea', modal.root).select();
+            MM.toast('Sélectionnez puis copiez le texte.');
+          }
+        });
+      } catch (err) { MM.toast.error(err.message); }
+    });
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>

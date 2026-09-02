@@ -1,408 +1,189 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>ManaMind — Collection &amp; Commandants</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>ManaMind — Decks à construire</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/app.css">
 <style>
-  :root {
-    --ink-900: #0c0910; --ink-850: #120c1a; --ink-800: #17101f; --ink-700: #1d1529;
-    --ink-panel: rgba(20, 13, 28, 0.62);
-    --parch-100: #efe6d6; --parch-300: #cdbfa8; --parch-500: #9c8e79; --parch-600: #7c715f;
-    --arcane: #a07be0; --arcane-deep: #6c4bb0; --arcane-glow: rgba(160,123,224,0.55);
-    --gold: #c9a45c; --gold-soft: #d8bd83; --gold-line: rgba(201,164,92,0.42); --gold-faint: rgba(201,164,92,0.16);
-    --serif-display: "Georgia", serif;
-    --serif-engraved: "Georgia", serif;
-    --serif-body: "Georgia", serif;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; }
-  body { color: var(--parch-100); font-family: var(--serif-body); background: var(--ink-900); min-height: 100vh; }
-
-  #scene {
-    position: fixed; inset: 0;
-    background-image:
-      radial-gradient(120% 80% at 50% 0%, rgba(12,9,16,0.30), rgba(12,9,16,0.86) 62%, rgba(12,9,16,0.97) 100%),
-      url('assets/grimoire-bg.avif'),
-      url('chandra-jace-and-nissa-from-magic-the-gathering.avif');
-    background-size: cover; background-position: center 28%;
-    filter: saturate(0.78) brightness(0.62); z-index: 0;
-  }
-  #grain {
-    position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0.05;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  }
-
-  .frame {
-    position: relative; z-index: 2;
-    width: min(96vw, 1640px); margin: 0 auto;
-    padding: clamp(16px,2.2vh,26px) 0 clamp(24px,3vh,40px);
-    display: flex; flex-direction: column;
-    gap: clamp(14px,2vh,24px);
-  }
-
-  /* Nav */
-  .codex-nav {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 12px 22px; border: 1px solid var(--gold-line); border-radius: 4px;
-    background: linear-gradient(180deg, rgba(24,16,33,0.82), rgba(14,10,18,0.82));
-    box-shadow: 0 10px 30px rgba(0,0,0,0.45), inset 0 1px 0 rgba(216,189,131,0.10);
-    backdrop-filter: blur(7px);
-  }
-  .brand { display: flex; align-items: center; gap: 14px; text-decoration: none; }
-  .seal {
-    width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%;
-    border: 1px solid var(--gold-line);
-    background: radial-gradient(circle at 50% 35%, rgba(160,123,224,0.30), rgba(20,13,28,0.9) 70%);
-    box-shadow: inset 0 0 12px rgba(160,123,224,0.35), 0 0 14px rgba(160,123,224,0.18);
-  }
-  .seal svg { width: 21px; height: 21px; }
-  .brand-name { font-family: var(--serif-engraved); font-weight: 600; font-size: 1.16rem; letter-spacing: 0.16em; color: var(--parch-100); }
-  .brand-name b { color: var(--gold-soft); }
-  .brand-tag { font-size: 0.66rem; letter-spacing: 0.34em; text-transform: uppercase; color: var(--parch-500); margin-top: 1px; }
-  .nav-tabs { display: flex; align-items: center; gap: 6px; }
-  .nav-tabs a {
-    font-family: var(--serif-engraved); font-size: 0.74rem; letter-spacing: 0.16em; text-transform: uppercase;
-    color: var(--parch-300); text-decoration: none; padding: 9px 16px; border-radius: 3px;
-    border: 1px solid transparent; display: inline-flex; align-items: center; gap: 8px;
-    transition: color .18s, border-color .18s, background .18s;
-  }
-  .nav-tabs a:hover { color: var(--parch-100); background: rgba(160,123,224,0.07); }
-  .nav-tabs a.active { color: var(--gold-soft); border-color: var(--gold-line); background: rgba(201,164,92,0.06); box-shadow: inset 0 0 10px rgba(201,164,92,0.08); }
-  .nav-tabs a svg { width: 14px; height: 14px; opacity: 0.85; }
-  .nav-sep { width: 1px; height: 22px; background: var(--gold-faint); }
-
-  /* Grimoire */
-  .grimoire {
-    position: relative;
-    border: 1px solid var(--gold-line); border-radius: 6px;
-    background:
-      radial-gradient(140% 120% at 0% 0%, rgba(40,26,56,0.55), transparent 55%),
-      radial-gradient(140% 120% at 100% 100%, rgba(34,22,48,0.5), transparent 55%),
-      linear-gradient(180deg, rgba(20,13,28,0.78), rgba(12,9,16,0.86));
-    box-shadow: 0 36px 90px rgba(0,0,0,0.6), inset 0 1px 0 rgba(216,189,131,0.12), inset 0 0 120px rgba(0,0,0,0.5);
-    overflow: hidden;
-    padding: clamp(28px,4vh,52px) clamp(28px,4vw,60px);
-  }
-  .grimoire::before {
-    content: ""; position: absolute; inset: 12px;
-    border: 1px solid var(--gold-faint); border-radius: 3px; pointer-events: none; z-index: 1;
-  }
-  .corner { position: absolute; width: 26px; height: 26px; z-index: 2; border-color: var(--gold-line); opacity: 0.8; }
-  .corner.tl { top: 18px; left: 18px; border-top: 1px solid; border-left: 1px solid; }
-  .corner.tr { top: 18px; right: 18px; border-top: 1px solid; border-right: 1px solid; }
-  .corner.bl { bottom: 18px; left: 18px; border-bottom: 1px solid; border-left: 1px solid; }
-  .corner.br { bottom: 18px; right: 18px; border-bottom: 1px solid; border-right: 1px solid; }
-
-  /* En-tête */
-  .page-header {
-    display: flex; align-items: flex-start; justify-content: space-between;
-    flex-wrap: wrap; gap: 16px; margin-bottom: 28px;
-  }
-  .eyebrow {
-    font-size: 0.72rem; letter-spacing: 0.3em; text-transform: uppercase;
-    color: var(--gold-soft); display: flex; align-items: center; gap: 12px; margin-bottom: 8px;
-  }
-  .eyebrow::before { content: ""; width: 30px; height: 1px; background: var(--gold-line); }
-  h1.hero {
-    font-size: clamp(1.8rem, 3.5vw, 3rem); line-height: 1.1; color: var(--parch-100); font-weight: 400;
-  }
-  h1.hero em { font-style: italic; color: var(--gold-soft); }
-  .lede { margin-top: 6px; font-size: 0.92rem; line-height: 1.6; color: var(--parch-500); }
-
-  /* Toggle mode */
-  .mode-toggle {
-    display: flex; align-items: center; gap: 0;
-    border: 1px solid var(--gold-line); border-radius: 4px; overflow: hidden;
-    flex-shrink: 0; align-self: center;
-  }
-  .mode-btn {
-    font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase;
-    padding: 9px 18px; cursor: pointer; border: none; outline: none;
-    background: transparent; color: var(--parch-500);
-    transition: background .18s, color .18s;
-    font-family: var(--serif-engraved);
-  }
-  .mode-btn + .mode-btn { border-left: 1px solid var(--gold-faint); }
-  .mode-btn.active { background: rgba(201,164,92,0.12); color: var(--gold-soft); }
-  .mode-btn:hover:not(.active) { color: var(--parch-300); background: rgba(255,255,255,0.04); }
-
-  /* Loader */
-  .loader {
-    display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 60px 0;
-  }
-  .loader-ring {
-    width: 52px; height: 52px; border: 2px solid rgba(201,164,92,0.18);
-    border-top-color: var(--arcane); border-radius: 50%;
-    animation: spin .9s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .loader-label { font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--parch-500); }
-
-  /* Grille commandants */
-  .commanders-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-    gap: 20px;
-  }
-
-  /* Carte commandant */
   .cmd-card {
-    border: 1px solid var(--gold-faint); border-radius: 8px;
-    background: linear-gradient(180deg, rgba(24,16,34,0.80), rgba(14,10,20,0.90));
+    position: relative;
+    display: flex; flex-direction: column;
+    border-radius: var(--r-lg);
+    border: 1px solid var(--line);
+    background: var(--bg-raised);
     overflow: hidden;
-    transition: border-color .2s, box-shadow .2s, transform .15s;
+    isolation: isolate;
+    transition: border-color var(--dur) var(--ease);
   }
-  .cmd-card:hover { border-color: var(--gold-line); box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 24px rgba(201,164,92,0.08); transform: translateY(-2px); }
-  .cmd-card.open { border-color: rgba(160,123,224,0.4); box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 30px rgba(160,123,224,0.12); }
+  .cmd-card:hover { border-color: var(--line-accent); }
 
-  /* Header de la carte commandant */
-  .cmd-header {
-    display: flex; gap: 14px; padding: 14px; cursor: pointer; align-items: flex-start;
+  .cmd-card__head { position: relative; min-height: 128px; display: flex; align-items: flex-end; padding: var(--sp-4); }
+  .cmd-card__art { position: absolute; inset: 0; z-index: -2; background-size: cover; background-position: center 22%; opacity: 0.5; }
+  .cmd-card__head::after {
+    content: ""; position: absolute; inset: 0; z-index: -1;
+    background: linear-gradient(0deg, var(--bg-raised) 8%, rgba(14,14,21,0.35) 100%);
   }
-  .cmd-portrait {
-    flex-shrink: 0; width: 72px; height: 72px; border-radius: 6px;
-    border: 1px solid var(--gold-line); overflow: hidden;
-    background: rgba(255,255,255,0.05);
-    position: relative; cursor: zoom-in;
+  .cmd-card__rank {
+    position: absolute; top: var(--sp-3); left: var(--sp-3);
+    width: 26px; height: 26px; display: grid; place-items: center;
+    border-radius: var(--r-full);
+    background: var(--overlay); border: 1px solid var(--line-strong);
+    font-size: var(--text-xs); font-weight: 700;
   }
-  .cmd-portrait img { width: 100%; height: 100%; object-fit: cover; object-position: center 15%; display: block; }
-  .cmd-portrait .portrait-placeholder {
-    width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
-    font-size: 1.8rem; opacity: 0.3;
-  }
-  .cmd-rank {
-    position: absolute; top: 3px; left: 3px;
-    font-size: 0.68rem; font-weight: 700; color: var(--gold-soft);
-    background: rgba(12,9,16,0.75); border-radius: 3px; padding: 1px 5px;
-    line-height: 1.4;
-  }
-  .cmd-info { flex: 1; min-width: 0; }
-  .cmd-name {
-    font-size: 1rem; font-weight: 600; color: var(--parch-100);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    margin-bottom: 4px;
-  }
-  .cmd-meta { font-size: 0.76rem; color: var(--parch-500); margin-bottom: 6px; }
-  .cmd-value-row { display: flex; align-items: baseline; gap: 6px; }
-  .cmd-total { font-size: 1.4rem; font-weight: 600; color: var(--gold-soft); }
-  .cmd-currency { font-size: 0.8rem; color: var(--parch-600); }
-  .cmd-chevron {
-    flex-shrink: 0; color: var(--gold-faint);
-    transition: transform .2s, color .2s; align-self: center;
-  }
-  .cmd-card.open .cmd-chevron { transform: rotate(180deg); color: var(--gold-line); }
-
-  /* Liste des cartes (dépliable) */
-  .cmd-cards-panel {
-    display: none;
-    border-top: 1px solid var(--gold-faint);
-  }
-  .cmd-card.open .cmd-cards-panel { display: block; }
-
-  .cards-scroll {
-    max-height: 420px; overflow-y: auto;
-    padding: 10px 14px 14px;
-    scrollbar-width: thin; scrollbar-color: var(--gold-faint) transparent;
-  }
-  .cards-scroll::-webkit-scrollbar { width: 4px; }
-  .cards-scroll::-webkit-scrollbar-track { background: transparent; }
-  .cards-scroll::-webkit-scrollbar-thumb { background: var(--gold-faint); border-radius: 2px; }
-
-  .card-row {
-    display: flex; align-items: center; gap: 10px;
-    padding: 7px 0;
-    border-bottom: 1px solid rgba(201,164,92,0.06);
-  }
-  .card-row:last-child { border-bottom: none; }
-
-  .card-thumb {
-    flex-shrink: 0; width: 36px; height: 50px; border-radius: 3px;
-    border: 1px solid rgba(201,164,92,0.2); overflow: hidden;
-    background: rgba(255,255,255,0.04);
-    cursor: pointer; position: relative;
-  }
-  .card-thumb img { width: 100%; height: 100%; object-fit: cover; object-position: center 10%; display: block; }
-  .card-thumb .thumb-ph { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:1rem; opacity:0.25; }
-
-  .card-info { flex: 1; min-width: 0; }
-  .card-name { font-size: 0.86rem; color: var(--parch-300); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .card-qty { font-size: 0.72rem; color: var(--parch-600); margin-top: 2px; }
-  .card-price { flex-shrink: 0; font-size: 1rem; font-weight: 600; color: var(--gold-soft); text-align: right; }
-  .card-price.zero { color: var(--parch-600); font-size: 0.78rem; font-weight: 400; }
-
-  /* Lightbox image */
-  .lightbox {
-    display: none; position: fixed; inset: 0; z-index: 1000;
-    background: rgba(0,0,0,0.85); backdrop-filter: blur(4px);
-    align-items: center; justify-content: center;
-    cursor: pointer;
-  }
-  .lightbox.visible { display: flex; }
-  .lightbox img { max-height: 88vh; max-width: 90vw; border-radius: 12px; box-shadow: 0 0 60px rgba(0,0,0,0.8); }
-
-  .empty-msg { text-align: center; color: var(--parch-600); font-size: 0.9rem; padding: 40px 0; }
+  .cmd-card__body { padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3); }
+  .cmd-thumbs { display: flex; gap: 4px; overflow: hidden; }
+  .cmd-thumbs img { width: 34px; aspect-ratio: var(--card-ratio); object-fit: cover; border-radius: 3px; flex-shrink: 0; }
 </style>
 </head>
 <body>
-  <div id="scene"></div>
-  <div id="grain"></div>
 
-  <div class="frame">
-    <header style="display:flex;align-items:center;gap:24px;padding:16px 0;border-bottom:1px solid rgba(201,164,92,0.3);margin-bottom:8px;">
-      <a href="/" style="font-family:var(--serif-engraved);font-size:0.72rem;letter-spacing:0.12em;color:var(--gold);text-decoration:none;opacity:0.8;flex-shrink:0;">← Accueil</a>
-      <h1 style="margin:0;flex:1;text-align:center;font-family:var(--serif-display);font-size:clamp(1.4rem,3vw,2rem);font-weight:600;color:var(--parch-100);">Quel deck créer avec ma collection ?</h1>
-      <span id="userBadge" style="display:flex;align-items:center;gap:6px;flex-shrink:0;"></span>
-    </header>
+<div id="page">
+  <div class="stack-2">
+    <h2 class="h2">Quels decks pouvez-vous construire ?</h2>
+    <p class="muted small">
+      Ces commandants sont ceux qui tirent le plus de valeur des cartes que vous
+      possédez déjà, d'après ce que jouent réellement les autres decks.
+    </p>
+  </div>
 
-    <div class="grimoire">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
-
-      <div class="page-header">
-        <div>
-          <div class="eyebrow">Collection</div>
-          <h1 class="hero">Commandants <em>compatibles</em></h1>
-          <p class="lede">Top 24 commandants pour lesquels ta collection couvre le plus de valeur parmi leurs 100 cartes les plus jouées.</p>
-        </div>
-        <div class="mode-toggle" id="modeToggle">
-          <button class="mode-btn active" data-mode="available">Cartes disponibles</button>
-          <button class="mode-btn" data-mode="all">Toute la collection</button>
-        </div>
-      </div>
-
-      <div id="content">
-        <div class="loader">
-          <div class="loader-ring"></div>
-          <div class="loader-label">Analyse en cours…</div>
-        </div>
-      </div>
+  <div class="toolbar">
+    <div class="btn-group" role="group" aria-label="Périmètre">
+      <button class="btn btn--sm" data-mode="available" aria-pressed="true">
+        Cartes disponibles</button>
+      <button class="btn btn--sm" data-mode="all" aria-pressed="false">
+        Toute la collection</button>
     </div>
+    <p class="xs dim" id="modeHint" style="flex:1">
+      Seules les cartes qui ne sont dans aucun de vos decks sont prises en compte.
+    </p>
   </div>
 
-  <!-- Lightbox -->
-  <div class="lightbox" id="lightbox">
-    <img id="lightboxImg" src="" alt="" />
-  </div>
+  <div id="results"></div>
+</div>
 
-  <script src="/auth-guard.js"></script>
-  <script>
-    let currentMode = 'available';
+<script src="/static/js/mm.js"></script>
+<script>
+(async () => {
+  const user = await MM.boot({ title: 'Decks à construire', nav: 'build' });
+  if (!user) return;
 
-    document.getElementById('modeToggle').addEventListener('click', e => {
-      const btn = e.target.closest('.mode-btn');
-      if (!btn || btn.classList.contains('active')) return;
-      document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      currentMode = btn.dataset.mode;
+  const results = MM.el('#results');
+  let mode = 'available';
+
+  MM.els('[data-mode]').forEach((button) => {
+    button.addEventListener('click', () => {
+      mode = button.dataset.mode;
+      MM.els('[data-mode]').forEach((other) =>
+        other.setAttribute('aria-pressed', String(other === button)));
+      MM.el('#modeHint').textContent = mode === 'available'
+        ? 'Seules les cartes qui ne sont dans aucun de vos decks sont prises en compte.'
+        : 'Toutes vos cartes sont prises en compte, y compris celles déjà jouées.';
       load();
     });
+  });
 
-    async function load() {
-      document.getElementById('content').innerHTML = `
-        <div class="loader">
-          <div class="loader-ring"></div>
-          <div class="loader-label">Analyse en cours…</div>
-        </div>`;
-      try {
-        const res = await fetch('/api/collection-commanders?top=24&mode=' + currentMode);
-        const data = await res.json();
-        render(data.commanders || []);
-      } catch(e) {
-        document.getElementById('content').innerHTML =
-          '<p class="empty-msg">Erreur : ' + esc(e.message) + '</p>';
-      }
+  async function load() {
+    results.innerHTML = `<div class="grid-2">${Array.from({ length: 6 }, () =>
+      '<div class="skeleton" style="height:230px"></div>').join('')}</div>`;
+
+    try {
+      const data = await MM.api.get(`/api/collection-commanders?top=24&mode=${mode}`);
+      render(data.commanders || []);
+    } catch (err) {
+      results.innerHTML = MM.empty({
+        icon: 'warning', title: 'Analyse impossible', text: err.message });
+    }
+  }
+
+  function render(commanders) {
+    if (!commanders.length) {
+      results.innerHTML = MM.empty({
+        icon: 'crown',
+        title: 'Pas encore de suggestion',
+        text: 'Importez votre collection pour découvrir quels commandants elle permet '
+          + 'de construire.',
+        action: { href: '/collection/import', label: 'Importer ma collection' },
+      });
+      return;
     }
 
-    function render(commanders) {
-      const el = document.getElementById('content');
-      if (!commanders.length) {
-        el.innerHTML = '<p class="empty-msg">Aucun commandant trouvé.</p>';
-        return;
-      }
-
-      const grid = document.createElement('div');
-      grid.className = 'commanders-grid';
-
-      commanders.forEach((cmd, i) => {
-        const card = document.createElement('div');
-        card.className = 'cmd-card';
-
-        const portrait = cmd.commander_image
-          ? `<img src="${esc(cmd.commander_image)}" alt="${esc(cmd.commander)}" loading="lazy" />`
-          : `<div class="portrait-placeholder">⚔️</div>`;
-
-        const qtyLabel = currentMode === 'available' ? 'disponible' : 'en collection';
-        const cardsHtml = (cmd.cards || []).map(c => {
-          const priceStr = c.low_price > 0 ? parseFloat(c.low_price).toFixed(2) + ' €' : 'N/A';
-          const priceClass = c.low_price > 0 ? '' : ' zero';
-          const thumb = c.image_url
-            ? `<img src="${esc(c.image_url)}" alt="${esc(c.card_name)}" loading="lazy" />`
-            : `<div class="thumb-ph">🃏</div>`;
-          const imgAttr = c.image_url ? ` data-img="${esc(c.image_url)}"` : '';
-          return `<div class="card-row">
-            <div class="card-thumb"${imgAttr}>${thumb}</div>
-            <div class="card-info">
-              <div class="card-name">${esc(c.card_name)}</div>
-              <div class="card-qty">x${c.qty} ${qtyLabel}</div>
+    results.innerHTML = `<div class="grid-2">${commanders.map((entry, index) => {
+      const art = entry.commander_image
+        ? entry.commander_image.replace('/normal/', '/art_crop/') : null;
+      const cards = entry.cards || [];
+      return `
+        <article class="cmd-card">
+          <div class="cmd-card__head">
+            ${art ? `<div class="cmd-card__art"
+              style="background-image:url('${MM.esc(art)}')"></div>` : ''}
+            <span class="cmd-card__rank">${index + 1}</span>
+            <div>
+              <p class="h3">${MM.esc(entry.commander)}</p>
+              <p class="xs muted">${MM.fmt.int(entry.card_count)} de vos cartes ·
+                ${MM.fmt.eur(entry.total_value, { compact: true })}</p>
             </div>
-            <div class="card-price${priceClass}">${priceStr}</div>
-          </div>`;
-        }).join('');
-
-        card.innerHTML = `
-          <div class="cmd-header">
-            <div class="cmd-portrait"${cmd.commander_image ? ` data-img="${esc(cmd.commander_image)}"` : ''}>
-              <span class="cmd-rank">#${i + 1}</span>
-              ${portrait}
-            </div>
-            <div class="cmd-info">
-              <div class="cmd-name">${esc(cmd.commander)}</div>
-              <div class="cmd-meta">${cmd.card_count} carte${cmd.card_count > 1 ? 's' : ''} ${qtyLabel}${cmd.card_count > 1 ? 's' : ''}</div>
-              <div class="cmd-value-row">
-                <span class="cmd-total">${parseFloat(cmd.total_value).toFixed(2)}</span>
-                <span class="cmd-currency">€ valeur collection</span>
-              </div>
-            </div>
-            <svg class="cmd-chevron" viewBox="0 0 24 24" fill="none" width="18" height="18">
-              <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
           </div>
-          <div class="cmd-cards-panel">
-            <div class="cards-scroll">${cardsHtml || '<p class="empty-msg" style="padding:12px 0">Aucune carte avec prix.</p>'}</div>
-          </div>`;
+          <div class="cmd-card__body">
+            <div class="cmd-thumbs">
+              ${cards.slice(0, 9).filter((card) => card.image_url).map((card) => `
+                <img src="${MM.esc(card.image_url)}" alt="${MM.esc(card.card_name)}"
+                     title="${MM.esc(card.card_name)} — ${MM.fmt.eur(card.low_price)}"
+                     loading="lazy">`).join('')}
+            </div>
+            <div class="cluster-2">
+              <button class="btn btn--sm" data-detail="${index}">Voir les cartes</button>
+              <a class="btn btn--sm btn--ghost"
+                 href="/cartes/commandant?card=${encodeURIComponent(entry.commander)}">
+                 Détails du commandant</a>
+            </div>
+          </div>
+        </article>`;
+    }).join('')}</div>`;
 
-        card.querySelector('.cmd-header').addEventListener('click', () => {
-          card.classList.toggle('open');
-        });
-
-        grid.appendChild(card);
-      });
-
-      el.innerHTML = '';
-      el.appendChild(grid);
-
-      // Lightbox sur les miniatures de cartes et les portraits de commandants
-      el.addEventListener('click', e => {
-        const thumb = e.target.closest('.card-thumb[data-img], .cmd-portrait[data-img]');
-        if (!thumb) return;
-        e.stopPropagation();
-        document.getElementById('lightboxImg').src = thumb.dataset.img;
-        document.getElementById('lightbox').classList.add('visible');
-      });
-    }
-
-    document.getElementById('lightbox').addEventListener('click', () => {
-      document.getElementById('lightbox').classList.remove('visible');
+    results.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-detail]');
+      if (button) showCards(commanders[Number(button.dataset.detail)]);
     });
+  }
 
-    function esc(s) {
-      return String(s)
-        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-    }
+  function showCards(entry) {
+    const cards = entry.cards || [];
+    MM.modal({
+      title: entry.commander,
+      wide: true,
+      body: `
+        <div class="stack">
+          <div class="cluster">
+            <span class="badge">${MM.fmt.int(entry.card_count)} cartes possédées</span>
+            <span class="badge badge--warn">${MM.fmt.eur(entry.total_value)} de valeur</span>
+          </div>
+          <div class="card-grid card-grid--sm">
+            ${cards.map((card) => `
+              <article class="mtg-card mtg-card--flat">
+                <div class="mtg-card__frame">
+                  ${MM.img.frame({ card_name: card.card_name, image_normal: card.image_url })}
+                  ${card.qty > 1 ? `<span class="mtg-card__qty">${card.qty}</span>` : ''}
+                </div>
+                <div class="mtg-card__foot">
+                  <span class="mtg-card__name">${MM.esc(card.card_name)}</span>
+                  <span class="mtg-card__meta">
+                    <span class="mtg-card__price">${MM.fmt.eur(card.low_price)}</span>
+                  </span>
+                </div>
+              </article>`).join('')}
+          </div>
+        </div>`,
+    });
+  }
 
-    load();
-  </script>
+  load();
+})();
+</script>
 </body>
 </html>

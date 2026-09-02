@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Recommend cards to add or remove from a decklist using the dataset in data/Decklists.
+Recommande des cartes à ajouter ou retirer d'une decklist en interrogeant
+deck_stat_commander (PostgreSQL).
 
 Usage:
     python src/manamind/recommandation_populaire.py \
@@ -12,22 +13,12 @@ from __future__ import annotations
 
 import argparse
 import csv
+import os
 import re
-from collections import Counter, defaultdict
-from dataclasses import dataclass
 from pathlib import Path
 
-DECKLISTS_ROOT = Path(__file__).resolve().parents[2] / "data" / "Decklists"
-
 LINE_PATTERN = re.compile(r"^(\d+)\s+(.*)$")
-
 BASIC_LANDS = {"Island", "Plains", "Swamp", "Mountain", "Forest", "Wastes"}
-
-
-@dataclass
-class DeckInfo:
-    cards: set[str]
-    commander: str | None
 
 
 def normalize_name(name: str) -> str:
@@ -38,7 +29,12 @@ def normalize_name(name: str) -> str:
 
 
 def parse_decklist_text(path: Path) -> tuple[dict[str, int], str | None]:
-    # Essaie UTF-8 (avec BOM), puis cp1252 (Windows), puis latin-1 en fallback
+    """Parse un fichier de decklist (Arena / MTGO / texte brut).
+
+    Retourne (cartes, commandant). Le commandant est détecté via la dernière
+    section séparée par une ligne vide (zone commander Arena / MTGO).
+    Les partners sont joints par ' // ' pour correspondre au format stocké en base.
+    """
     for enc in ("utf-8-sig", "cp1252", "latin-1"):
         try:
             text = path.read_text(encoding=enc)
@@ -47,6 +43,7 @@ def parse_decklist_text(path: Path) -> tuple[dict[str, int], str | None]:
             continue
     else:
         text = path.read_text(encoding="latin-1", errors="replace")
+
     lines = [line.strip() for line in text.splitlines()]
     sections: list[list[str]] = []
     current: list[str] = []
@@ -68,7 +65,15 @@ def parse_decklist_text(path: Path) -> tuple[dict[str, int], str | None]:
             if m:
                 cmd_parts.append(normalize_name(m.group(2)))
         if cmd_parts:
-            commander = " + ".join(cmd_parts)
+            if len(cmd_parts) == 2:
+                # Appliquer la même heuristique que le parser scraper :
+                # même premier mot → DFC (//) sinon partners (&)
+                w0 = cmd_parts[0].split()[0].rstrip(",")
+                w1 = cmd_parts[1].split()[0].rstrip(",")
+                sep = " // " if w0 == w1 else " & "
+                commander = sep.join(cmd_parts)
+            else:
+                commander = cmd_parts[0]
 
     cards: dict[str, int] = {}
     for line in lines:
@@ -85,127 +90,83 @@ def parse_decklist_text(path: Path) -> tuple[dict[str, int], str | None]:
     return cards, commander
 
 
-def load_deck_dataset(root: Path) -> list[DeckInfo]:
-    decks: list[DeckInfo] = []
-    for deck_file in sorted(root.rglob("*.csv")):
-        try:
-            with deck_file.open("r", encoding="utf-8-sig") as f:
-                reader = csv.DictReader(f, delimiter=";")
-                cards: set[str] = set()
-                commander: str | None = None
-                for row in reader:
-                    raw_name = row.get("Card Name", "").strip()
-                    if not raw_name:
-                        continue
-                    card_name = normalize_name(raw_name)
-                    cards.add(card_name)
-                    if row.get("Commander", "").strip().upper() == "YES":
-                        commander = card_name
-                if cards:
-                    decks.append(DeckInfo(cards=cards, commander=commander))
-        except Exception:
-            continue
-    return decks
+def _query_stats(commander: str) -> list:
+    """Interroge deck_stat_commander pour un commandant donné.
+
+    Retourne des rows (card_name, decks_with_card, total_decks, inclusion_rate)
+    triées par inclusion_rate DESC. Retourne [] en cas d'erreur ou de données absentes.
+    """
+    db_url = os.environ.get("DATABASE_URL", "")
+    if not db_url:
+        return []
+    try:
+        import sqlalchemy as sa
+        engine = sa.create_engine(db_url, pool_pre_ping=True)
+        with engine.connect() as conn:
+            rows = conn.execute(
+                sa.text("""
+                    SELECT card_name, decks_with_card, total_decks, inclusion_rate
+                    FROM deck_stat_commander
+                    WHERE LOWER(TRIM(commander)) = LOWER(TRIM(:cmd))
+                    ORDER BY inclusion_rate DESC
+                """),
+                {"cmd": commander},
+            ).fetchall()
+        engine.dispose()
+        return rows
+    except Exception as exc:
+        print(f"Avertissement DB: {exc}")
+        return []
 
 
-def build_statistics(decks: list[DeckInfo]) -> tuple[Counter, dict[str, list[DeckInfo]], list[DeckInfo]]:
-    deck_frequency = Counter()
-    commander_decks: dict[str, list[DeckInfo]] = defaultdict(list)
-
-    for deck in decks:
-        for card in deck.cards:
-            deck_frequency[card] += 1
-        if deck.commander:
-            commander_decks[deck.commander].append(deck)
-
-    # La co-occurrence n'est plus pré-calculée globalement (trop coûteux sur 28k decks).
-    # On retourne la liste brute pour permettre un calcul local si besoin.
-    return deck_frequency, commander_decks, decks
-
-
-def _build_cooccurrence_for(input_cards: set[str], decks: list[DeckInfo]) -> dict[str, Counter]:
-    """Calcule la co-occurrence uniquement pour les cartes du deck cible."""
-    cooccurrence: dict[str, Counter] = defaultdict(Counter)
-    for deck in decks:
-        relevant = deck.cards & input_cards
-        if not relevant:
-            continue
-        for card in relevant:
-            cooccurrence[card].update(deck.cards - {card})
-    return cooccurrence
-
-
-def recommend_additions(
-    input_cards: set[str],
-    all_cards: set[str],
-    deck_frequency: Counter,
+def recommend_from_db(
+    cards: dict[str, int],
     commander: str | None,
-    commander_decks: dict[str, list[DeckInfo]],
-    all_decks: list[DeckInfo],
     limit: int = 20,
-) -> list[tuple[str, int]]:
-    candidates = all_cards - input_cards - BASIC_LANDS
-    score = Counter()
-    if commander and commander in commander_decks:
-        for deck in commander_decks[commander]:
-            for card in deck.cards:
-                if card not in input_cards and card not in BASIC_LANDS:
-                    score[card] += 1
-        if len(score) >= limit:
-            return score.most_common(limit)
-        # Fallback co-occurrence calculée à la volée sur les cartes du deck uniquement
-        cooccurrence = _build_cooccurrence_for(input_cards, all_decks)
-        fallback = Counter()
-        for card in input_cards:
-            fallback.update(cooccurrence.get(card, Counter()))
-        for card in input_cards:
-            fallback.pop(card, None)
-        for card, extra_score in fallback.items():
-            if card in candidates:
-                score[card] += extra_score
-        return [(card, score[card]) for card in score.most_common(limit) if card in candidates][:limit]
+) -> tuple[list[tuple[str, int, float]], list[tuple[str, int, float]]]:
+    """Retourne (additions, removals) depuis deck_stat_commander.
 
-    cooccurrence = _build_cooccurrence_for(input_cards, all_decks)
-    for card in input_cards:
-        score.update(cooccurrence.get(card, Counter()))
-    for card in input_cards:
-        score.pop(card, None)
-    return [(card, score[card]) for card in score.most_common(limit) if card in candidates][:limit]
+    additions : cartes absentes du deck, inclusion_rate la plus haute.
+    removals  : cartes présentes dans le deck, inclusion_rate la plus basse
+                (candidates à retirer car peu populaires dans ce style de jeu).
 
+    Chaque entrée = (card_name, decks_with_card, inclusion_rate).
+    """
+    if not commander:
+        return [], []
 
-def recommend_removals(
-    input_cards: set[str],
-    deck_frequency: Counter,
-    commander: str | None,
-    commander_decks: dict[str, list[DeckInfo]],
-    all_decks: list[DeckInfo],
-    commander_card: str | None,
-    limit: int = 20,
-) -> list[tuple[str, int, float]]:
+    rows = _query_stats(commander)
+
+    if not rows:
+        return [], []
+
+    deck_card_set = {normalize_name(c) for c in cards}
+    additions: list[tuple[str, int, float]] = []
     removals: list[tuple[str, int, float]] = []
-    candidates = input_cards - {commander_card} if commander_card else input_cards
-    candidates -= BASIC_LANDS
-    if commander and commander in commander_decks:
-        for card in sorted(candidates):
-            support = sum(1 for deck in commander_decks[commander] if card in deck.cards)
-            removals.append((card, support, deck_frequency[card]))
-        removals.sort(key=lambda item: (item[1], item[2], item[0]))
-        return removals[:limit]
 
-    cooccurrence = _build_cooccurrence_for(input_cards, all_decks)
-    for card in sorted(candidates):
-        support = sum(cooccurrence.get(card, Counter()).get(other, 0) for other in candidates if other != card)
-        removals.append((card, support, deck_frequency[card]))
-    removals.sort(key=lambda item: (item[1], item[2], item[0]))
-    return removals[:limit]
+    for row in rows:
+        card = row.card_name
+        if card in BASIC_LANDS:
+            continue
+        cnt = row.decks_with_card or 0
+        rate = float(row.inclusion_rate or 0.0)
+        if card in deck_card_set:
+            removals.append((card, cnt, rate))
+        else:
+            additions.append((card, cnt, rate))
+
+    # Additions : déjà triées par inclusion_rate DESC (ORDER BY dans la requête)
+    # Removals  : inclusion_rate ASC — les cartes les moins populaires en tête
+    removals.sort(key=lambda x: x[2])
+
+    return additions[:limit], removals[:limit]
 
 
 def save_recommendations(
     output_path: Path,
     commander: str | None,
-    additions: list[tuple[str, int]],
+    additions: list[tuple[str, int, float]],
     removals: list[tuple[str, int, float]],
-    deck_size: int,
 ) -> None:
     with output_path.open("w", encoding="utf-8", newline="") as f:
         writer = csv.writer(f)
@@ -213,48 +174,28 @@ def save_recommendations(
         writer.writerow(["Commander", commander or "unknown", "", "", ""])
         writer.writerow([])
         writer.writerow(["Additions", "", "", "", ""])
-        for card, score in additions:
-            writer.writerow(["add", card, score, "", ""])
+        for card, cnt, _rate in additions:
+            writer.writerow(["add", card, cnt, "", ""])
         writer.writerow([])
         writer.writerow(["Removals", "", "", "", ""])
-        for card, support, frequency in removals:
-            writer.writerow(["remove", card, "", support, frequency])
-
-
-def print_recommendations(
-    commander: str | None,
-    additions: list[tuple[str, int]],
-    removals: list[tuple[str, int, float]],
-) -> None:
-    print("Commander:", commander or "unknown")
-    print("\nTop 20 cartes à ajouter:")
-    for rank, (card, score) in enumerate(additions, start=1):
-        print(f"{rank:2d}. {card} (score={score})")
-
-    print("\nTop 20 cartes à retirer:")
-    for rank, (card, support, frequency) in enumerate(removals, start=1):
-        print(f"{rank:2d}. {card} (support={support}, freq={frequency})")
+        for card, cnt, rate in removals:
+            writer.writerow(["remove", card, "", cnt, round(rate, 1)])
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Recommend cards to add/remove from a decklist.")
-    parser.add_argument("--input", required=True, help="Path to the example decklist text file")
-    parser.add_argument("--output", default="recommendations.csv", help="Path to save the recommendation CSV output")
+    parser = argparse.ArgumentParser(description="Recommandations par popularité depuis deck_stat_commander.")
+    parser.add_argument("--input",  required=True,                  help="Decklist texte (.txt)")
+    parser.add_argument("--output", default="recommendations.csv",  help="CSV de sortie")
     args = parser.parse_args()
 
-    input_path = Path(args.input)
-    output_path = Path(args.output)
-    cards, commander = parse_decklist_text(input_path)
-    deck_infos = load_deck_dataset(DECKLISTS_ROOT)
-    deck_frequency, commander_decks, all_decks = build_statistics(deck_infos)
+    cards, commander = parse_decklist_text(Path(args.input))
+    print(f"Commander détecté : {commander or '(aucun)'}")
 
-    all_cards = set(deck_frequency) | set(cards)
-    additions = recommend_additions(set(cards), all_cards, deck_frequency, commander, commander_decks, all_decks)
-    removals = recommend_removals(set(cards), deck_frequency, commander, commander_decks, all_decks, commander)
+    additions, removals = recommend_from_db(cards, commander)
+    print(f"{len(additions)} cartes à ajouter, {len(removals)} cartes à retirer suggérées")
 
-    print_recommendations(commander, additions, removals)
-    save_recommendations(output_path, commander, additions, removals, len(cards))
-    print(f"\nSaved recommendations to {output_path}")
+    save_recommendations(Path(args.output), commander, additions, removals)
+    print(f"Recommandations enregistrées dans {args.output}")
 
 
 if __name__ == "__main__":

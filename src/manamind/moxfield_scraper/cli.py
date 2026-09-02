@@ -101,10 +101,8 @@ def main(argv: list[str] | None = None) -> int:
 
     sub = parser.add_subparsers(dest="command", required=True)
 
-    sub.add_parser("init-db", help="Créer les tables mox_*")
-
     p_import = sub.add_parser("import-commanders",
-                              help="Charger TOPCOMMANDER.csv dans mox_commanders")
+                              help="Charger TOPCOMMANDER.csv dans la table commanders")
     p_import.add_argument("csv_path", type=Path)
 
     p_recent = sub.add_parser("recent", help="Decks récemment mis à jour, tous commandants")
@@ -140,11 +138,6 @@ def main(argv: list[str] | None = None) -> int:
         headless=headless,
         html_cache=args.html_cache,
     )
-
-    if args.command == "init-db":
-        db.init_schema(engine)
-        print("Tables créées.")
-        return 0
 
     if args.command == "import-commanders":
         rows = _read_topcommander(args.csv_path)

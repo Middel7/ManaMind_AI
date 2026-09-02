@@ -1,1665 +1,442 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>ManaMind — Recommandations</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>ManaMind — Résultats d'analyse</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/app.css">
 <style>
-  :root {
-    --ink:        #16111e;
-    --ink-2:      #1d1629;
-    --ink-3:      #241b33;
-    --panel:      rgba(38, 28, 54, 0.46);
-    --panel-edge: rgba(212, 177, 95, 0.16);
-
-    --gold:        #d4b15f;
-    --gold-bright: #ecd28a;
-    --gold-dim:    #8c7335;
-    --gold-faint:  rgba(212, 177, 95, 0.30);
-
-    --arcane:      #7c6ba8;
-    --arcane-br:   #a795d6;
-
-    --text:       #ece2d3;
-    --text-dim:   #a99fb5;
-    --text-faint: #756b88;
-
-    --green:    #2f7d52;
-    --green-br: #5fb583;
-    --copper:   #b5452f;
-    --copper-br:#d77a5e;
-
-    --mana-w: #f4ecd0;
-    --mana-u: #2a6fdb;
-    --mana-b: #3a3340;
-    --mana-r: #c44a2f;
-    --mana-g: #2f7d52;
-
-    --serif-disp: "Cormorant Garamond", Georgia, serif;
-    --serif-cap:  "Cinzel", Georgia, serif;
-    --serif-body: "Spectral", Georgia, serif;
-  }
-
-  * { box-sizing: border-box; }
-
-  html, body { margin: 0; padding: 0; }
-
-  body {
-    background: var(--ink);
-    color: var(--text);
-    font-family: var(--serif-body);
-    font-size: 16px;
-    line-height: 1.5;
-    min-height: 100vh;
-    -webkit-font-smoothing: antialiased;
-    position: relative;
-  }
-
-  /* ── Veiled background artwork + vignette ──────────────────── */
-  .bg-layer {
-    position: fixed; inset: 0; z-index: 0;
-    background-size: cover; background-position: center 22%;
-    opacity: 0; transition: opacity 1.4s ease;
-    filter: saturate(0.7) brightness(0.5);
-  }
-  .bg-layer.show { opacity: 0.22; }
-  .bg-wash {
-    position: fixed; inset: 0; z-index: 1; pointer-events: none;
-    background:
-      radial-gradient(120% 90% at 50% -10%, rgba(86,60,120,0.40) 0%, rgba(22,17,30,0) 55%),
-      radial-gradient(140% 120% at 50% 120%, rgba(10,7,16,0.92) 30%, rgba(22,17,30,0) 75%),
-      linear-gradient(180deg, rgba(22,17,30,0.55) 0%, rgba(22,17,30,0.78) 100%);
-  }
-  .bg-vignette {
-    position: fixed; inset: 0; z-index: 1; pointer-events: none;
-    box-shadow: inset 0 0 320px 60px rgba(0,0,0,0.85);
-  }
-  /* faint parchment grain */
-  .bg-grain {
-    position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0.05;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
-  }
-
-  /* ── Outer gold frame ──────────────────────────────────────── */
-  .frame {
-    position: relative; z-index: 2;
-    margin: 0;
-    border: 1px solid var(--gold-faint);
-    border-radius: 0;
-    box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 24px 80px rgba(0,0,0,0.55);
-    min-height: 100vh;
-  }
-  /* corner brackets */
-  .corner {
-    position: absolute; width: 26px; height: 26px; z-index: 5; pointer-events: none;
-    border: 1px solid var(--gold); opacity: 0.7;
-  }
-  .corner.tl { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
-  .corner.tr { top: -1px; right: -1px; border-left: 0; border-bottom: 0; }
-  .corner.bl { bottom: -1px; left: -1px; border-right: 0; border-top: 0; }
-  .corner.br { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
-
-  /* ── Top navigation ────────────────────────────────────────── */
-  nav {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 20px 30px;
-    border-bottom: 1px solid var(--panel-edge);
-  }
-  .brand { display: flex; align-items: center; gap: 14px; }
-  .seal {
-    width: 42px; height: 42px; flex: 0 0 42px;
-    display: grid; place-items: center;
+  .gauge { display: flex; align-items: center; gap: var(--sp-4); }
+  .gauge__ring {
+    --value: 0;
+    width: 78px; height: 78px; flex-shrink: 0;
     border-radius: 50%;
-    border: 1px solid var(--gold-faint);
-    background: radial-gradient(circle at 35% 30%, rgba(124,107,168,0.5), rgba(30,22,44,0.9));
-    box-shadow: inset 0 0 14px rgba(124,107,168,0.35), 0 0 18px rgba(86,60,120,0.25);
-  }
-  .seal svg { width: 22px; height: 22px; }
-  .brand-text { display: flex; flex-direction: column; line-height: 1; }
-  .brand-name {
-    font-family: var(--serif-cap); font-weight: 600; font-size: 21px;
-    letter-spacing: 0.14em; color: var(--text);
-  }
-  .brand-name b { color: var(--gold-bright); font-weight: 600; }
-  .brand-sub {
-    font-family: var(--serif-cap); font-size: 9.5px; font-weight: 400;
-    letter-spacing: 0.34em; color: var(--text-faint); margin-top: 7px;
-  }
-
-  .nav-right { display: flex; align-items: center; gap: 10px; }
-  .nav-link {
-    display: inline-flex; align-items: center; gap: 8px;
-    font-family: var(--serif-cap); font-size: 11px; letter-spacing: 0.18em;
-    text-transform: uppercase; text-decoration: none;
-    color: var(--text-dim); padding: 10px 16px; border-radius: 3px;
-    border: 1px solid transparent; transition: color .25s, border-color .25s, background .25s;
-  }
-  .nav-link:hover { color: var(--gold-bright); }
-  .nav-link svg { width: 14px; height: 14px; }
-  .nav-link.active {
-    color: var(--gold-bright);
-    border-color: var(--gold-faint);
-    background: linear-gradient(180deg, rgba(212,177,95,0.10), rgba(212,177,95,0.02));
-    box-shadow: inset 0 0 16px rgba(212,177,95,0.08);
-  }
-
-  /* ── Main hybride grid ─────────────────────────────────────── */
-  .stage {
-    display: grid;
-    grid-template-columns: minmax(240px, 0.42fr) 1px minmax(0, 1fr);
-    gap: 0;
-  }
-
-  /* reliure / binding divider */
-  .reliure {
-    position: relative;
-    background:
-      repeating-linear-gradient(180deg, var(--gold-faint) 0 7px, transparent 7px 16px);
-    opacity: 0.6;
-  }
-  .reliure::before, .reliure::after {
-    content: ""; position: absolute; left: 50%; width: 7px; height: 7px;
-    transform: translateX(-50%) rotate(45deg);
-    background: var(--gold); opacity: 0.8;
-  }
-  .reliure::before { top: 90px; }
-  .reliure::after  { bottom: 90px; }
-
-  /* ── LEFT — deck profile ───────────────────────────────────── */
-  .profile {
-    padding: 22px 28px 24px;
-    position: sticky; top: 0; align-self: start;
-    max-height: 100vh; overflow: hidden;
-    display: flex; flex-direction: column;
-  }
-
-  .cmd-art-wrap {
-    position: relative; width: 70%; max-width: 70%; margin: 0 auto 14px;
-    aspect-ratio: 5 / 7; border-radius: 6px; overflow: hidden;
-    flex-shrink: 0;
-    border: 1px solid var(--gold-faint);
-    box-shadow: 0 10px 28px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,0,0,0.5),
-                inset 0 0 20px rgba(0,0,0,0.4);
-    background: linear-gradient(135deg, var(--ink-3), var(--ink-2));
-  }
-  .cmd-art-wrap img { width: 100%; height: 100%; object-fit: contain; display: block; }
-  .cmd-art-wrap::after {
-    content: ""; position: absolute; inset: 0; pointer-events: none;
-    box-shadow: inset 0 -30px 40px rgba(11,8,16,0.65);
-    border-radius: 5px;
-  }
-  .cmd-art-glow {
-    position: absolute; inset: -10px; z-index: -1; border-radius: 10px;
-    background: radial-gradient(circle, rgba(124,107,168,0.45), transparent 70%);
-    filter: blur(6px);
-  }
-
-  .label {
-    font-family: var(--serif-cap); font-size: 10.5px; letter-spacing: 0.32em;
-    text-transform: uppercase; color: var(--gold); opacity: 0.85;
-  }
-  .cmd-name {
-    font-family: var(--serif-disp); font-weight: 600; font-size: 24px;
-    line-height: 1.06; color: var(--text); margin: 5px 0 8px;
-    text-wrap: balance; text-align: center;
-  }
-
-  .mana-id { display: flex; gap: 6px; margin-bottom: 12px; align-items: center; justify-content: center; }
-  .pip {
-    width: 26px; height: 26px; border-radius: 50%;
     display: grid; place-items: center;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.2);
-    overflow: hidden; flex-shrink: 0;
-  }
-  .pip img { width: 100%; height: 100%; display: block; }
-
-  /* ── RIGHT — gallery ──────────────────────────────────────── */
-  .gallery { padding: 34px 40px 56px; min-width: 0; }
-  .gal-head {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 16px; margin-bottom: 26px; flex-wrap: wrap;
-  }
-  .filters { display: flex; gap: 10px; }
-  .pill {
-    font-family: var(--serif-cap); font-size: 12px; letter-spacing: 0.1em;
-    text-transform: uppercase; cursor: pointer;
-    padding: 11px 20px; border-radius: 999px;
-    background: rgba(20,15,28,0.5); color: var(--text-dim);
-    border: 1px solid var(--panel-edge);
-    transition: all .25s ease; white-space: nowrap;
-    display: inline-flex; align-items: center; gap: 9px;
-  }
-  .pill .dot { width: 8px; height: 8px; border-radius: 50%; opacity: 0.6; }
-  .pill[data-f="add"] .dot { background: var(--green-br); }
-  .pill[data-f="rem"] .dot { background: var(--copper-br); }
-  .pill:hover { color: var(--text); border-color: var(--gold-faint); }
-  .pill.active { color: var(--ink); border-color: transparent; box-shadow: 0 6px 18px rgba(0,0,0,0.4); }
-  .pill.active .dot { opacity: 1; }
-  .pill[data-f="add"].active { background: linear-gradient(180deg, #6fc491, var(--green)); }
-  .pill[data-f="rem"].active { background: linear-gradient(180deg, #d98668, var(--copper)); }
-
-  .sort {
-    font-family: var(--serif-body); font-size: 13px; color: var(--text-faint);
-    background: transparent; border: 0; cursor: pointer;
-    letter-spacing: 0.04em;
-  }
-  .sort:hover { color: var(--text-dim); }
-  .algo-badge {
-    font-family: var(--serif-cap); font-size: 9px; letter-spacing: 0.22em;
-    text-transform: uppercase; color: var(--arcane-br);
-    border: 1px solid rgba(167,149,214,0.30); padding: 5px 12px; border-radius: 999px;
-    background: rgba(124,107,168,0.12);
-  }
-
-  .grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
-    gap: 22px;
-  }
-
-  /* ── Flip card container ───────────────────────────────────── */
-  .card {
-    position: relative; border-radius: 7px;
-    background: linear-gradient(180deg, rgba(36,27,51,0.9), rgba(24,18,34,0.95));
-    border: 1px solid var(--panel-edge);
-    box-shadow: 0 14px 32px rgba(0,0,0,0.5);
-    transition: box-shadow .28s ease, border-color .28s ease;
-    display: flex; flex-direction: column;
-    cursor: default;
-  }
-  .card:hover {
-    box-shadow: 0 22px 46px rgba(0,0,0,0.6), 0 0 0 1px var(--gold-faint);
-    border-color: var(--gold-faint);
-  }
-  .card.best { border-color: rgba(236,210,138,0.4); }
-  .card.best::after {
-    content: ""; position: absolute; inset: -1px; border-radius: 7px; pointer-events: none;
-    box-shadow: 0 0 26px rgba(236,210,138,0.28), inset 0 0 14px rgba(236,210,138,0.12);
-    z-index: 4;
-  }
-
-  /* Seul le zone art se retourne */
-  .card-inner {
+    background: conic-gradient(var(--accent) calc(var(--value) * 1%),
+                               var(--surface-3) 0);
     position: relative;
-    aspect-ratio: 5 / 7;
-    perspective: 900px;
-    flex-shrink: 0;
+  }
+  .gauge__ring::after {
+    content: ""; position: absolute; inset: 7px;
+    border-radius: 50%; background: var(--bg-raised);
+  }
+  .gauge__value {
+    position: relative; z-index: 1;
+    font-family: var(--font-display); font-size: var(--text-xl);
+    font-variant-numeric: tabular-nums;
   }
 
-  /* Le plateau (plus de flip au hover — clic sur image = Cardmarket) */
-  .card-flip {
-    position: absolute; inset: 0;
-    transform-style: preserve-3d;
+  .gap-row { display: flex; align-items: center; gap: var(--sp-3); padding: 6px 0; }
+  .gap-row__label { width: 190px; flex-shrink: 0; font-size: var(--text-sm); }
+  .gap-row__track {
+    flex: 1; height: 16px; position: relative;
+    background: var(--surface); border-radius: var(--r-sm); overflow: hidden;
   }
-  .card-inner { cursor: pointer; }
+  .gap-row__deck, .gap-row__meta { position: absolute; top: 0; bottom: 0; }
+  .gap-row__meta { background: var(--surface-3); }
+  .gap-row__deck { background: var(--accent); opacity: 0.85; }
+  .gap-row__delta { width: 68px; text-align: right; font-size: var(--text-xs);
+    font-variant-numeric: tabular-nums; flex-shrink: 0; }
 
-  /* Face avant : l'image */
-  .card-front {
-    position: absolute; inset: 0;
-    backface-visibility: hidden; -webkit-backface-visibility: hidden;
-    border-radius: 7px 7px 0 0; overflow: hidden;
-    background: radial-gradient(circle at 50% 38%, #2a2038, #161020);
+  .swap-row {
+    display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr) auto;
+    gap: var(--sp-3); align-items: center;
+    padding: var(--sp-3) var(--sp-4);
+    border-bottom: 1px solid var(--line);
   }
-
-  /* Face arrière : les scores */
-  .card-back {
-    position: absolute; inset: 0;
-    backface-visibility: hidden; -webkit-backface-visibility: hidden;
-    transform: rotateY(180deg);
-    border-radius: 7px 7px 0 0; overflow: hidden;
-    background: linear-gradient(160deg, rgba(22,14,36,0.98) 0%, rgba(36,24,56,0.98) 100%);
-    border-bottom: 1px solid rgba(212,177,95,0.15);
-    display: flex; flex-direction: column;
-    justify-content: center;
-    padding: 14px 13px;
-    gap: 0;
-  }
-
-  .card-back-name {
-    font-family: var(--serif-disp); font-weight: 600; font-size: 13px;
-    color: var(--gold-bright); margin-bottom: 10px;
-    text-align: center; line-height: 1.2;
-    border-bottom: 1px solid rgba(212,177,95,0.2); padding-bottom: 8px;
-  }
-  .score-final-line {
-    display: flex; justify-content: space-between; align-items: baseline;
-    margin-bottom: 8px;
-    font-family: var(--serif-cap); font-size: 9px; letter-spacing: 0.18em;
-    text-transform: uppercase; color: var(--text-faint);
-  }
-  .score-final-val {
-    font-family: var(--serif-cap); font-size: 18px; letter-spacing: 0.04em;
-    color: var(--gold-bright); font-variant-numeric: tabular-nums;
-  }
-  .flip-score-row {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
-  }
-  .flip-score-row:last-child { border-bottom: none; }
-  .flip-sk {
-    font-family: var(--serif-cap); font-size: 8px; letter-spacing: 0.14em;
-    text-transform: uppercase; color: var(--text-faint);
-  }
-  .flip-bar-wrap {
-    display: flex; align-items: center; gap: 5px;
-  }
-  .flip-bar {
-    width: 52px; height: 4px; border-radius: 2px;
-    background: rgba(255,255,255,0.08); overflow: hidden;
-  }
-  .flip-bar-fill {
-    height: 100%; border-radius: 2px;
-    background: linear-gradient(90deg, var(--arcane), var(--gold));
-  }
-  .flip-sv {
-    font-family: var(--serif-cap); font-size: 10px; color: var(--gold-bright);
-    font-variant-numeric: tabular-nums; min-width: 28px; text-align: right;
-  }
-  .flip-roles {
-    margin-top: 8px; padding-top: 7px; border-top: 1px solid rgba(212,177,95,0.15);
-    font-family: var(--serif-body); font-size: 9.5px; color: var(--arcane-br);
-    line-height: 1.5; text-align: center;
-  }
-  .flip-reason {
-    margin-top: 6px;
-    font-family: var(--serif-body); font-size: 9px; color: var(--text-dim);
-    font-style: italic; line-height: 1.4; text-align: center;
-  }
-  .flip-scryfall {
-    margin-top: 8px; text-align: center;
-    font-family: var(--serif-cap); font-size: 8px; letter-spacing: 0.18em;
-    text-transform: uppercase; text-decoration: none;
-    color: var(--text-faint); transition: color .2s;
-  }
-  .flip-scryfall:hover { color: var(--arcane-br); }
-
-  .card-front img { width: 100%; height: 100%; object-fit: contain; display: block; }
-  .art-fallback {
-    position: absolute; inset: 0; display: grid; place-items: center; padding: 18px;
-    text-align: center; font-family: var(--serif-disp); font-weight: 600; font-size: 17px;
-    color: var(--text-dim);
+  .swap-row:last-child { border-bottom: none; }
+  .swap-row:hover { background: var(--surface); }
+  .swap-row__side { display: flex; align-items: center; gap: var(--sp-3); min-width: 0; }
+  .swap-row__thumb { width: 34px; aspect-ratio: var(--card-ratio); object-fit: cover;
+    border-radius: 3px; background: var(--surface-2); flex-shrink: 0; }
+  @media (max-width: 720px) {
+    .swap-row { grid-template-columns: 1fr; }
+    .swap-row__arrow { display: none; }
   }
 
-  .badge {
-    position: absolute; top: 10px; left: 10px; z-index: 3;
-    width: 28px; height: 28px; border-radius: 50%;
-    display: grid; place-items: center;
-    font-family: var(--serif-cap); font-weight: 700; font-size: 16px; line-height: 1;
-    color: #fff; border: 1px solid rgba(0,0,0,0.4);
-    box-shadow: 0 3px 10px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.3);
-  }
-  .badge.add { background: linear-gradient(180deg, #4aa873, var(--green)); }
-  .badge.rem { background: linear-gradient(180deg, #c96a4e, var(--copper)); }
-
-  .card-body { padding: 13px 14px 14px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
-
-  .card-foot {
-    margin-top: auto; padding-top: 4px;
-    display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  }
-  .price {
-    font-family: var(--serif-body); font-size: 16px; color: var(--text);
-    font-variant-numeric: tabular-nums; font-weight: 500;
-  }
-  .price.na { color: var(--text-faint); font-size: 13px; font-style: italic; }
-  .edhrec-pct {
-    font-family: var(--serif-body); font-size: 11px; color: var(--text-faint);
-    white-space: nowrap; margin-left: 4px;
-  }
-  .buy {
-    font-family: var(--serif-cap); font-size: 10px; letter-spacing: 0.12em;
-    text-transform: uppercase; text-decoration: none;
-    padding: 8px 13px; border-radius: 3px; white-space: nowrap;
-    border: 1px solid var(--gold-faint); color: var(--gold-bright);
-    background: linear-gradient(180deg, rgba(212,177,95,0.12), rgba(212,177,95,0.03));
-    transition: all .22s ease;
-  }
-  .buy:hover { color: var(--ink); background: linear-gradient(180deg, var(--gold-bright), var(--gold)); border-color: transparent; }
-  .card-links {
-    display: flex; gap: 10px; align-self: flex-end; margin-top: 2px;
-  }
-  .scryfall-link, .moxfield-link {
-    font-family: var(--serif-cap); font-size: 9px; letter-spacing: 0.18em;
-    text-transform: uppercase; text-decoration: none;
-    color: var(--text-faint); transition: color .2s;
-  }
-  .scryfall-link:hover { color: var(--arcane-br); }
-  .moxfield-link:hover { color: var(--gold-bright); }
-
-  .rem-freq {
-    font-family: var(--serif-body); font-size: 11px; color: var(--text-faint);
-    text-align: center; padding: 2px 0;
-  }
-  .rem-freq strong { color: var(--copper-br); font-weight: 600; }
-
-  .card-rem .buy { color: var(--copper-br); border-color: rgba(215,122,94,0.32);
-    background: linear-gradient(180deg, rgba(181,69,47,0.14), rgba(181,69,47,0.03)); }
-  .card-rem .buy:hover { color: #2a1410; background: linear-gradient(180deg, var(--copper-br), var(--copper)); border-color: transparent; }
-
-  /* ── Bouton ⓘ + tooltip sous-scores ─────────────────────────────────────── */
-  .score-info-btn {
-    width: 22px; height: 22px; border-radius: 50%; border: 1px solid rgba(212,177,95,0.35);
-    background: rgba(212,177,95,0.07); color: var(--gold-bright);
-    font-size: 12px; line-height: 1; cursor: pointer; flex-shrink: 0;
-    display: inline-flex; align-items: center; justify-content: center;
-    transition: background .18s, border-color .18s; position: relative;
-    font-family: serif;
-  }
-  .score-info-btn:hover { background: rgba(212,177,95,0.18); border-color: var(--gold); }
-
-  .score-tooltip {
-    position: absolute; bottom: calc(100% + 8px); right: 0;
-    width: 240px; z-index: 99;
-    background: var(--card-bg, #1c1812); border: 1px solid rgba(212,177,95,0.25);
-    border-radius: 6px; padding: 10px 12px 10px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.55);
-    font-family: var(--serif-body); font-size: 11px; color: var(--text-faint);
-    display: none; pointer-events: none;
-  }
-  .score-tooltip.open { display: block; }
-  .score-tooltip::after {
-    content: ''; position: absolute; bottom: -5px; right: 9px;
-    width: 9px; height: 9px;
-    background: var(--card-bg, #1c1812); border-right: 1px solid rgba(212,177,95,0.25);
-    border-bottom: 1px solid rgba(212,177,95,0.25); transform: rotate(45deg);
-  }
-  .stt-title {
-    font-family: var(--serif-cap); font-size: 9px; letter-spacing: 0.14em;
-    text-transform: uppercase; color: var(--gold); margin-bottom: 9px;
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  .stt-global { font-size: 15px; font-family: var(--serif-disp); color: var(--text); font-weight: 700; }
-  .stt-row { display: flex; flex-direction: column; gap: 2px; margin-bottom: 7px; }
-  .stt-row:last-child { margin-bottom: 0; }
-  .stt-label { display: flex; justify-content: space-between; font-size: 10px; line-height: 1.4; }
-  .stt-val { color: var(--text); font-variant-numeric: tabular-nums; }
-  .stt-bar-track {
-    height: 4px; border-radius: 2px; background: rgba(255,255,255,0.07); overflow: hidden;
-  }
-  .stt-bar-fill { height: 100%; border-radius: 2px; transition: width .3s; }
-
-  /* badge source booster/collection */
-  .source-tag {
-    position: absolute; bottom: 8px; left: 8px; z-index: 3;
-    font-family: var(--serif-cap); font-size: 8px; letter-spacing: 0.16em;
-    text-transform: uppercase; padding: 3px 8px; border-radius: 3px;
-    pointer-events: none;
-  }
-  .source-tag.booster    { background: var(--gold); color: #12090e; }
-  .source-tag.collection { background: var(--arcane-br); color: #12090e; }
-  .source-tag.in-deck    { background: var(--green-br); color: #0a1a10; }
-
-  /* skeletons */
-  .skeleton { position: relative; overflow: hidden; background: rgba(60,46,82,0.35); border-radius: 3px; }
-  .skeleton::after {
-    content: ""; position: absolute; inset: 0;
-    background: linear-gradient(90deg, transparent, rgba(167,149,214,0.16), transparent);
-    transform: translateX(-100%); animation: shimmer 1.5s infinite;
-  }
-  @keyframes shimmer { 100% { transform: translateX(100%); } }
-  .sk-line { height: 12px; margin-bottom: 8px; }
-  .sk-line.w70 { width: 70%; } .sk-line.w40 { width: 40%; }
-
-  /* empty / error */
-  .notice {
-    grid-column: 1 / -1; text-align: center; padding: 70px 30px; color: var(--text-dim);
-  }
-  .notice .label { display: block; margin-bottom: 14px; }
-  .notice h3 { font-family: var(--serif-disp); font-size: 26px; color: var(--text); margin: 0 0 8px; font-weight: 600; }
-  .notice p { margin: 0 auto; max-width: 420px; font-size: 15px; }
-
-  /* ── V2 : profil stratégique ────────────────────────────────── */
-  .v2-profile {
-    margin-top: 8px; padding: 10px 12px; border-radius: 4px;
-    border: 1px solid var(--panel-edge); background: var(--panel);
-    flex: 1; min-height: 0; overflow-y: auto;
-    scrollbar-width: thin; scrollbar-color: var(--gold-dim) transparent;
-  }
-  .v2-profile::-webkit-scrollbar { width: 4px; }
-  .v2-profile::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 2px; }
-  .v2-profile > .label { display: block; margin-bottom: 8px; }
-  #v2ProfileContent {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 5px 10px;
-    align-items: baseline;
-  }
-  .v2-profile-row {
-    display: contents;
-  }
-  .v2-profile-row .pk {
-    font-family: var(--serif-cap); font-size: 10px; letter-spacing: 0.18em;
-    text-transform: uppercase; color: var(--text-faint);
-    white-space: nowrap; align-self: start; padding-top: 1px;
-  }
-  .v2-profile-row .pv { color: var(--text-dim); line-height: 1.4; font-size: 12.5px; word-break: break-word; }
-
-  /* ── Hybrid : score global ─────────────────────────────────────── */
-  .hybrid-score-wrap {
-    display: none; flex-direction: column; align-items: center;
-    gap: 4px; margin-bottom: 14px;
-  }
-  .hybrid-score-wrap.show { display: flex; }
-  .hybrid-score-ring {
-    position: relative; width: 88px; height: 88px;
-  }
-  .hybrid-score-ring svg { width: 88px; height: 88px; transform: rotate(-90deg); }
-  .hybrid-score-ring circle { fill: none; stroke-width: 6; }
-  .hybrid-score-ring .hs-track { stroke: rgba(212,177,95,0.15); }
-  .hybrid-score-ring .hs-bar {
-    stroke: var(--gold); stroke-linecap: round;
-    stroke-dasharray: 251; stroke-dashoffset: 251;
-    transition: stroke-dashoffset 1s cubic-bezier(.4,0,.2,1);
-    filter: drop-shadow(0 0 6px rgba(212,177,95,0.5));
-  }
-  .hybrid-score-val {
-    position: absolute; inset: 0;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    font-family: var(--serif-cap); font-variant-numeric: tabular-nums;
-  }
-  .hybrid-score-val .hv-num {
-    font-size: 26px; color: var(--gold-bright); line-height: 1;
-  }
-  .hybrid-score-val .hv-den {
-    font-size: 9px; letter-spacing: 0.18em; color: var(--text-faint);
-  }
-  .hybrid-score-label {
-    font-family: var(--serif-cap); font-size: 9px; letter-spacing: 0.26em;
-    text-transform: uppercase; color: var(--gold); opacity: 0.8;
-  }
-  .hybrid-meta-dist {
-    font-family: var(--serif-body); font-size: 11px; color: var(--text-faint);
-    text-align: center;
-  }
-
-  /* ── Hybrid : cluster gap bars ──────────────────────────────────── */
-  .gap-row {
-    display: grid;
-    grid-template-columns: 1fr 42px 42px;
-    align-items: center;
-    gap: 4px 6px;
-    padding: 3px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-  }
-  .gap-row:last-child { border-bottom: none; }
-  .gap-name {
-    font-family: var(--serif-body); font-size: 10.5px; color: var(--text-dim);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .gap-val {
-    font-family: var(--serif-cap); font-size: 9px; letter-spacing: 0.08em;
-    text-align: right; font-variant-numeric: tabular-nums;
-  }
-  .gap-val.deck  { color: var(--arcane-br); }
-  .gap-val.meta  { color: var(--gold); }
-  .gap-val.under { color: var(--copper-br); }
-  .gap-val.over  { color: var(--green-br); }
-
-  /* ── Section remplacements ──────────────────────────────────────── */
-  #replacements-section {
-    display: none;
-    padding: 0 40px 56px;
-  }
-  #replacements-section.show { display: block; }
-  .repl-title {
-    font-family: var(--serif-cap); font-size: 13px; letter-spacing: 0.2em;
-    text-transform: uppercase; color: var(--gold);
-    border-top: 1px solid var(--panel-edge);
-    padding-top: 28px; margin-bottom: 18px;
-    display: flex; align-items: center; gap: 14px;
-  }
-  .repl-title::after {
-    content: ""; flex: 1; height: 1px; background: var(--panel-edge);
-  }
-  .repl-table {
-    width: 100%; border-collapse: collapse;
-    font-family: var(--serif-body); font-size: 13px;
-  }
-  .repl-table th {
-    font-family: var(--serif-cap); font-size: 9px; letter-spacing: 0.22em;
-    text-transform: uppercase; color: var(--text-faint);
-    text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--panel-edge);
-    font-weight: 400;
-  }
-  .repl-table td {
-    padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.04);
-    vertical-align: middle; color: var(--text-dim);
-  }
-  .repl-table tr:hover td { background: rgba(212,177,95,0.04); }
-  .repl-table td.rank { color: var(--text-faint); font-size: 11px; width: 28px; }
-  .repl-cut  { color: var(--copper-br); font-weight: 500; }
-  .repl-add  { color: var(--green-br);  font-weight: 500; }
-  .repl-gain { color: var(--gold-bright); font-family: var(--serif-cap); font-size: 12px; text-align: right; white-space: nowrap; }
-  .repl-arrow { color: var(--text-faint); text-align: center; }
-
-  @media (prefers-reduced-motion: reduce) {
-    * { animation: none !important; transition: none !important; }
-  }
-
-  @media (max-width: 880px) {
-    .stage { grid-template-columns: 1fr; }
-    .reliure { display: none; }
-    .profile { position: static; max-height: none; border-bottom: 1px solid var(--panel-edge); }
-    .cmd-art-wrap { width: 168px; }
-  }
+  .curve { display: flex; align-items: flex-end; gap: 5px; height: 84px; }
+  .curve__bar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .curve__fill { width: 100%; background: linear-gradient(180deg, var(--accent), var(--accent-deep));
+    border-radius: 3px 3px 0 0; min-height: 2px; }
+  .curve__label { font-size: 10px; color: var(--text-3); }
 </style>
 </head>
 <body>
-  <div class="bg-layer" id="bgLayer"></div>
-  <div class="bg-wash"></div>
-  <div class="bg-grain"></div>
-  <div class="bg-vignette"></div>
 
-  <div class="frame">
-    <span class="corner tl"></span><span class="corner tr"></span>
-    <span class="corner bl"></span><span class="corner br"></span>
+<div id="page">
+  <section class="hero" id="hero" style="min-height:200px">
+    <div class="hero__body">
+      <div class="skeleton skeleton--text" style="width:280px;height:32px"></div>
+    </div>
+  </section>
+  <div id="content">
+    <div class="center" style="padding:80px"><span class="spinner spinner--lg"></span></div>
+  </div>
+</div>
 
-    <nav>
-      <a class="brand" href="/" style="text-decoration:none">
-        <span class="seal" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#a795d6" stroke-width="1.3">
-            <path d="M12 2.5 20 7v10l-8 4.5L4 17V7l8-4.5Z"/>
-            <path d="M12 7.2 16 9.5v5L12 16.8 8 14.5v-5L12 7.2Z" stroke="#d4b15f"/>
-            <circle cx="12" cy="12" r="1.4" fill="#d4b15f" stroke="none"/>
-          </svg>
-        </span>
-        <span class="brand-text">
-          <span class="brand-name">Mana<b>Mind</b></span>
-          <span class="brand-sub">Le mentor de tes decks</span>
-        </span>
-      </a>
-      <div class="nav-right">
-        <a class="nav-link" href="/">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M15 6l-6 6 6 6"/></svg>
-          Accueil
-        </a>
-        <a class="nav-link active" href="#" aria-current="page" id="pageLabel">Recommandations</a>
-      </div>
-    </nav>
+<script src="/static/js/mm.js"></script>
+<script>
+(async () => {
+  const user = await MM.boot({
+    title: 'Résultats', nav: 'analyze', back: '/decks/analyse',
+  });
+  if (!user) return;
 
-    <div class="stage">
-      <!-- LEFT: deck profile -->
-      <aside class="profile" id="profile">
-        <div class="cmd-art-wrap" id="cmdArt">
-          <div class="cmd-art-glow"></div>
-          <div class="skeleton" style="position:absolute;inset:0"></div>
+  const params = new URLSearchParams(location.search);
+  const algo = params.get('algo') || 'v1';
+  const content = MM.el('#content');
+
+  let deckInfo = {};
+  try { deckInfo = JSON.parse(sessionStorage.getItem('mm_analysis_deck')) || {}; } catch {}
+
+  function renderHero(subtitle, stats) {
+    const art = deckInfo.scryfall_id ? MM.scryfallArt(deckInfo.scryfall_id) : null;
+    MM.el('#hero').innerHTML = `
+      ${art ? `<div class="hero__art" style="background-image:url('${MM.esc(art)}')"></div>` : ''}
+      <div class="hero__body">
+        <p class="eyebrow">${MM.esc(deckInfo.commander || 'Analyse')}</p>
+        <h2 class="hero__title">${MM.esc(deckInfo.name || "Résultats d’analyse")}</h2>
+        <p class="muted">${MM.esc(subtitle)}</p>
+        ${stats || ''}
+        <div class="hero__actions">
+          ${deckInfo.deck_id
+            ? `<a class="btn" href="/decks/${encodeURIComponent(deckInfo.deck_id)}">
+                 Ouvrir le deck</a>` : ''}
+          <a class="btn btn--ghost" href="/decks/analyse">Nouvelle analyse</a>
         </div>
+      </div>`;
+  }
 
-        <span class="label" style="display:block;text-align:center">Commandant</span>
-        <h1 class="cmd-name" id="cmdName">&nbsp;</h1>
+  function fail(message) {
+    renderHero('Analyse indisponible');
+    content.innerHTML = MM.empty({
+      icon: 'warning', title: 'Résultats indisponibles', text: message,
+      action: { href: '/decks/analyse', label: 'Relancer une analyse' },
+    });
+  }
 
-        <div class="mana-id" id="manaId"></div>
+  /* ═══ Analyse par intelligence artificielle ═══════════════════════════ */
 
-        <!-- Score global Deck Mentor IA -->
-        <div class="hybrid-score-wrap" id="hybridScoreWrap">
-          <div class="hybrid-score-ring">
-            <svg viewBox="0 0 88 88">
-              <circle class="hs-track" cx="44" cy="44" r="40"></circle>
-              <circle class="hs-bar" id="hsBar" cx="44" cy="44" r="40"></circle>
-            </svg>
-            <div class="hybrid-score-val">
-              <span class="hv-num" id="hsNum">—</span>
-              <span class="hv-den">/100</span>
+  if (algo === 'hybrid') {
+    let result;
+    try {
+      result = JSON.parse(sessionStorage.getItem('deckMentorResult'));
+    } catch { result = null; }
+    if (!result) return fail("Les résultats n'ont pas été trouvés. Relancez l'analyse.");
+
+    const score = Math.round((result.deck_score || 0) * 100);
+    const coherence = Math.round((result.coherence || 0) * 100);
+    const distance = Math.round((result.distance_meta || 0) * 100);
+
+    renderHero('Analyse par le moteur d\'intelligence artificielle', `
+      <div class="hero__stats">
+        <span class="hero__stat"><b>${score} / 100</b>
+          <span class="muted small">score du deck</span></span>
+        <span class="hero__stat"><b>${coherence} %</b>
+          <span class="muted small">cohérence interne</span></span>
+        <span class="hero__stat"><b>${distance} %</b>
+          <span class="muted small">écart à la méta</span></span>
+      </div>`);
+
+    const names = [
+      ...(result.top_additions || []).map((c) => c.card_name),
+      ...(result.top_cuts || []).map((c) => c.card_name),
+      ...(result.replacements || []).flatMap((r) => [r.cut_card, r.add_card]),
+    ].filter(Boolean);
+    const resolved = await MM.resolveCards(names);
+
+    const thumb = (name) => {
+      const info = resolved[name] || {};
+      return info.image_small
+        ? `<img class="swap-row__thumb" src="${MM.esc(info.image_small)}" alt="" loading="lazy">`
+        : '<span class="swap-row__thumb"></span>';
+    };
+
+    const gaps = (result.gap || []).slice(0, 10);
+    const curve = (result.profile && result.profile.mana_curve) || {};
+    const curveKeys = Object.keys(curve).sort((a, b) => Number(a) - Number(b));
+    const curveMax = Math.max(...curveKeys.map((k) => curve[k]), 1);
+
+    content.innerHTML = `
+      <div class="grid-2" style="align-items:start">
+        <div class="stack-6">
+          <div class="panel">
+            <div class="panel__head">
+              <h2 class="h3">Remplacements suggérés</h2>
+              <span class="badge">${(result.replacements || []).length}</span>
+            </div>
+            <div class="panel__body panel__body--flush">
+              ${(result.replacements || []).length ? (result.replacements || []).slice(0, 20)
+                .map((swap) => `
+                  <div class="swap-row">
+                    <span class="swap-row__side">
+                      ${thumb(swap.cut_card)}
+                      <span class="truncate small" style="color:var(--danger)">
+                        ${MM.esc(swap.cut_card)}</span>
+                    </span>
+                    <span class="swap-row__arrow accent">→</span>
+                    <span class="swap-row__side">
+                      ${thumb(swap.add_card)}
+                      <span class="truncate small accent">${MM.esc(swap.add_card)}</span>
+                    </span>
+                    <span class="xs dim num">+${(swap.gain_delta || 0).toFixed(0)}</span>
+                  </div>`).join('')
+                : '<p class="muted small" style="padding:var(--sp-5)">Aucun remplacement proposé.</p>'}
             </div>
           </div>
-          <div class="hybrid-score-label">Score du deck</div>
-          <div class="hybrid-meta-dist" id="hsMetaDist"></div>
-        </div>
 
-        <!-- Profil stratégique (V2 et V3 legacy) -->
-        <div class="v2-profile" id="v2Profile" style="display:none">
-          <span class="label" id="v2ProfileLabel">Profil stratégique</span>
-          <div id="v2ProfileContent"></div>
-        </div>
-
-        <!-- Clusters gap (Deck Mentor IA) -->
-        <div class="v2-profile" id="hybridGapPanel" style="display:none">
-          <span class="label" style="display:block;margin-bottom:8px">Clusters · Deck vs Méta</span>
-          <div style="display:grid;grid-template-columns:1fr 34px 34px;gap:0 6px;margin-bottom:4px">
-            <span style="font-family:var(--serif-cap);font-size:8px;letter-spacing:0.18em;color:var(--text-faint);text-transform:uppercase">Cluster</span>
-            <span style="font-family:var(--serif-cap);font-size:8px;letter-spacing:0.12em;color:var(--arcane-br);text-transform:uppercase;text-align:right">Deck</span>
-            <span style="font-family:var(--serif-cap);font-size:8px;letter-spacing:0.12em;color:var(--gold);text-transform:uppercase;text-align:right">Méta</span>
+          <div class="panel">
+            <div class="panel__head">
+              <h2 class="h3">Ajouts recommandés</h2>
+              <span class="badge">${(result.top_additions || []).length}</span>
+            </div>
+            <div class="panel__body">
+              <div class="card-grid card-grid--sm">
+                ${(result.top_additions || []).slice(0, 24).map((card) => `
+                  <article class="mtg-card mtg-card--flat">
+                    <div class="mtg-card__frame">
+                      ${MM.img.frame({ card_name: card.card_name, ...(resolved[card.card_name] || {}) })}
+                    </div>
+                    <div class="mtg-card__foot">
+                      <span class="mtg-card__name">${MM.esc(card.card_name)}</span>
+                      <span class="mtg-card__meta">
+                        <span class="dim">${((card.addition_score || 0) * 100).toFixed(0)} pts</span>
+                        ${(resolved[card.card_name] || {}).unit_price != null
+                          ? `<span class="mtg-card__price">${
+                              MM.fmt.eur(resolved[card.card_name].unit_price)}</span>` : ''}
+                      </span>
+                    </div>
+                  </article>`).join('')}
+              </div>
+            </div>
           </div>
-          <div id="hybridGapContent"></div>
-        </div>
 
-      </aside>
-
-      <div class="reliure" aria-hidden="true"></div>
-
-      <!-- RIGHT: gallery -->
-      <section class="gallery">
-        <div class="gal-head">
-          <div class="filters">
-            <button class="pill active" data-f="add"><span class="dot"></span>À ajouter · <span id="pillAdd">0</span></button>
-            <button class="pill" data-f="rem"><span class="dot"></span>À retirer · <span id="pillRem">0</span></button>
-            <button class="pill" data-f="repl" id="pillReplBtn" style="display:none"><span class="dot" style="background:var(--gold)"></span>Remplacements · <span id="pillRepl">0</span></button>
+          <div class="panel">
+            <div class="panel__head">
+              <h2 class="h3">Retraits suggérés</h2>
+              <span class="badge">${(result.top_cuts || []).length}</span>
+            </div>
+            <div class="panel__body">
+              <div class="card-grid card-grid--sm">
+                ${(result.top_cuts || []).slice(0, 24).map((card) => `
+                  <article class="mtg-card mtg-card--flat">
+                    <div class="mtg-card__frame">
+                      ${MM.img.frame({ card_name: card.card_name, ...(resolved[card.card_name] || {}) })}
+                    </div>
+                    <div class="mtg-card__foot">
+                      <span class="mtg-card__name">${MM.esc(card.card_name)}</span>
+                      <span class="mtg-card__meta">
+                        <span class="dim">${((card.cut_score || 0) * 100).toFixed(0)} pts</span>
+                      </span>
+                    </div>
+                  </article>`).join('')}
+              </div>
+            </div>
           </div>
         </div>
-        <div class="grid" id="grid"></div>
-      </section>
-    </div>
 
-    <!-- Section remplacements (Deck Mentor IA uniquement) -->
-    <section id="replacements-section">
-      <div style="padding: 0 40px">
-        <div class="repl-title">Top 30 remplacements recommandés</div>
-        <table class="repl-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Retirer</th>
-              <th></th>
-              <th>Ajouter</th>
-              <th style="text-align:right">Gain</th>
-              <th>Raison du retrait</th>
-            </tr>
-          </thead>
-          <tbody id="replTableBody"></tbody>
-        </table>
-      </div>
-    </section>
-  </div>
+        <div class="stack-6">
+          <div class="panel">
+            <div class="panel__head"><h2 class="h3">Score global</h2></div>
+            <div class="panel__body stack">
+              <div class="gauge">
+                <div class="gauge__ring" style="--value:${score}">
+                  <span class="gauge__value">${score}</span>
+                </div>
+                <div class="stack-2">
+                  <p class="small">Cohérence <strong>${coherence} %</strong></p>
+                  <p class="small">Écart à la méta <strong>${distance} %</strong></p>
+                  <p class="xs dim">Plus l'écart est faible, plus le deck ressemble
+                    à ce qui se joue habituellement.</p>
+                </div>
+              </div>
+            </div>
+          </div>
 
-<script>
-/* ───────────────────────── Demo data (Eluge, blue control-tempo) ─────────── */
-const DEMO_CSV = `Section,Card Name,Score,Support,Deck Frequency
-Commander,"Eluge, the Shoreless Sea",,,
-Add,Mystic Sanctuary,1958,,
-Add,Arcane Signet,1854,,
-Add,Reliquary Tower,1823,,
-Add,High Tide,1594,,
-Add,Frantic Search,1404,,
-Add,Displacer Kitten,1355,,
-Add,Cyclonic Rift,1320,,
-Add,Rhystic Study,1290,,
-Add,Mystic Remora,1255,,
-Add,Brainstorm,1190,,
-Add,Counterspell,1140,,
-Add,Ponder,1080,,
-Add,Preordain,1040,,
-Add,Mana Drain,990,,
-Add,Force of Will,950,,
-Add,Sol Ring,920,,
-Add,Swan Song,880,,
-Add,Pongify,840,,
-Add,Fierce Guardianship,800,,
-Add,Consecrated Sphinx,760,,
-Remove,Compulsive Research,,,20
-Remove,Divination,,,28
-Remove,Mind Rot,,,12
-Remove,Cancel,,,34
-Remove,Negate,,,41
-Remove,Tome Scour,,,8
-Remove,Wall of Frost,,,15
-Remove,Aether Adept,,,22
-Remove,Sleep,,,9
-Remove,Mind Sculpt,,,6
-Remove,Glimmerpoint Stag,,,11
-Remove,Coral Merfolk,,,4
-Remove,Sea Gate Oracle,,,18
-Remove,Inspiration,,,7`;
+          ${curveKeys.length ? `
+            <div class="panel">
+              <div class="panel__head"><h2 class="h3">Courbe de mana</h2></div>
+              <div class="panel__body">
+                <div class="curve">
+                  ${curveKeys.map((key) => `
+                    <span class="curve__bar" title="${curve[key]} cartes à ${key}">
+                      <span class="curve__fill"
+                            style="height:${(curve[key] / curveMax) * 60}px"></span>
+                      <span class="curve__label">${MM.esc(key)}</span>
+                    </span>`).join('')}
+                </div>
+              </div>
+            </div>` : ''}
 
-const $ = (s, el=document) => el.querySelector(s);
-const grid = $('#grid');
-let state = { commander:null, add:[], rem:[], filter:'add' };
-
-/* ── CSV parsing ──────────────────────────────────────────────────────────── */
-function splitCSVLine(line) {
-  // Parser CSV respectant les champs quotés (RFC 4180)
-  const cells = []; let cur = ''; let q = false;
-  for (let j = 0; j < line.length; j++) {
-    const c = line[j];
-    if (q) {
-      if (c === '"') { if (line[j+1] === '"') { cur += '"'; j++; } else q = false; }
-      else cur += c;
-    } else {
-      if (c === '"') q = true;
-      else if (c === ',') { cells.push(cur); cur = ''; }
-      else cur += c;
-    }
+          ${gaps.length ? `
+            <div class="panel">
+              <div class="panel__head">
+                <div class="stack-2">
+                  <h2 class="h3">Écarts par famille</h2>
+                  <p class="xs dim">Votre deck comparé à la moyenne des decks du
+                    même commandant.</p>
+                </div>
+              </div>
+              <div class="panel__body">
+                ${gaps.map((gap) => {
+                  const deck = (gap.deck_share || 0) * 100;
+                  const meta = (gap.meta_share || 0) * 100;
+                  const max = Math.max(deck, meta, 1);
+                  const delta = (gap.delta || 0) * 100;
+                  return `
+                    <div class="gap-row">
+                      <span class="gap-row__label truncate"
+                            title="${MM.esc(gap.cluster_name)}">
+                        ${MM.esc(gap.cluster_name)}</span>
+                      <span class="gap-row__track">
+                        <span class="gap-row__meta" style="width:${(meta / max) * 100}%"></span>
+                        <span class="gap-row__deck" style="width:${(deck / max) * 100}%"></span>
+                      </span>
+                      <span class="gap-row__delta ${delta < 0 ? 'accent' : 'dim'}">
+                        ${delta > 0 ? '+' : ''}${delta.toFixed(1)} pt</span>
+                    </div>`;
+                }).join('')}
+                <p class="xs dim" style="margin-top:var(--sp-3)">
+                  Barre claire : la méta. Barre dorée : votre deck.
+                  Un écart négatif signale une famille sous-représentée chez vous.
+                </p>
+              </div>
+            </div>` : ''}
+        </div>
+      </div>`;
+    return;
   }
-  cells.push(cur);
-  return cells;
-}
 
-function parseCSV(text){
-  const rows = [];
-  const lines = text.replace(/^﻿/,'').replace(/\r/g,'').split('\n').filter(l => l.length);
-  if (!lines.length) return rows;
+  /* ═══ Analyse par popularité (CSV) ════════════════════════════════════ */
 
-  // Lire le header pour mapper les colonnes par nom
-  const headers = splitCSVLine(lines[0]).map(h => h.trim().toLowerCase().replace(/\s+/g,'_'));
-  const idx = h => headers.indexOf(h);
+  const csv = params.get('csv');
+  if (!csv) return fail('Aucun résultat à afficher.');
 
-  // Détecter le format : V3 a une colonne "algorithm"
-  const algoCol = idx('algorithm');
-  const isV3Format = algoCol !== -1;
-
-  for (let i = 1; i < lines.length; i++) {
-    const cells = splitCSVLine(lines[i]);
-    const get = col => (cells[idx(col)] || '').trim();
-
-    if (!cells[idx('card_name')] && !cells[1]) continue;
-    const name = get('card_name') || cells[1] || '';
-    if (!name) continue;
-
-    const section = get('section') || cells[0] || '';
-    const algo    = isV3Format ? get('algorithm') : '';
-    const isV3    = algo === 'v3' || isV3Format;
-
-    if (isV3) {
-      rows.push({
-        section,
-        name,
-        score:      get('score'),
-        popularity: get('support'),           // decklist_popularity
-        strategy:   get('deck_frequency'),    // strategic_role
-        similarity: get('vector_score'),      // vector_similarity
-        synergy:    get('synergy'),
-        edhrec:     get('edhrec'),
-        manacurve:  get('mana_curve'),
-        quality:    get('quality'),
-        roles:      get('roles'),
-        reason:     get('reason'),
-        isV3: true,
-      });
-    } else {
-      rows.push({
-        section, name,
-        score:        get('score'),
-        support:      get('support'),
-        freq:         get('deck_frequency'),
-        popularity:   cells[idx('popularity')]  || cells[5] || '',
-        specificity:  cells[idx('specificity')] || cells[6] || '',
-        synergy:      cells[idx('synergy')]     || cells[7] || '',
-        strategy:     cells[idx('strategy')]    || cells[8] || '',
-        structure:    cells[idx('structure')]   || cells[9] || '',
-        similarity:   cells[idx('similarity')]  || cells[10] || '',
-        reason:       (cells[idx('reason')]     || cells[11] || '').trim(),
-        isV3: false,
-      });
-    }
-  }
-  return rows;
-}
-
-function ingest(rows){
-  const add=[], rem=[]; let commander=null;
-  for (const r of rows){
-    if (!r.name) continue;
-    const sec=(r.section||'').trim().toLowerCase();
-    if (sec==='commander') commander={ name:r.name.trim() };
-    else if (sec==='add') {
-      if (r.isV3) {
-        add.push({
-          name:r.name.trim(), score:parseInt(r.score)||0,
-          popularity:parseFloat(r.popularity)||0,
-          strategy:parseFloat(r.strategy)||0,
-          similarity:parseFloat(r.similarity)||0,
-          synergy:parseFloat(r.synergy)||0,
-          edhrec:parseFloat(r.edhrec)||0,
-          manacurve:parseFloat(r.manacurve)||0,
-          quality:parseFloat(r.quality)||0,
-          roles:(r.roles||'').split('|').filter(Boolean),
-          reason:r.reason||'',
-          isV3:true,
-        });
-      } else {
-        add.push({
-          name:r.name.trim(), score:parseInt(r.score)||0,
-          popularity:parseFloat(r.popularity)||0, specificity:parseFloat(r.specificity)||0,
-          synergy:parseFloat(r.synergy)||0, strategy:parseFloat(r.strategy)||0,
-          structure:parseFloat(r.structure)||0, similarity:parseFloat(r.similarity)||0,
-          reason:r.reason||'',
-          isV3:false,
-        });
-      }
-    }
-    else if (sec==='remove') rem.push({
-        name: r.name.trim(),
-        freq: parseFloat(r.popularity) || parseFloat(r.freq) || null,
-        reason: r.reason || '',
-      });
-  }
-  add.sort((a,b)=>b.score-a.score);
-  // Trier les retraits par taux croissant (les moins joués en premier)
-  rem.sort((a,b)=> (a.freq||0) - (b.freq||0));
-  state.commander=commander;
-  state.add=add.slice(0,20);
-  state.rem=rem.slice(0,25);
-}
-
-function cardSourceTag(source, decks) {
-  if (source === 'in_deck') {
-    const title = (decks || []).join(', ');
-    return `<span class="source-tag in-deck" title="${title}">Dans un deck</span>`;
-  }
-  if (source === 'collection') return `<span class="source-tag collection">Collection</span>`;
-  if (source === 'opened_sets') return `<span class="source-tag booster">Boosters</span>`;
-  return '';
-}
-
-/* ── Taux EDHREC par carte (chargé en batch après parse CSV) ─────────────── */
-const edhrecRates = new Map(); // card_name → pct (float)
-
-async function loadEdhrecRates() {
-  if (!state.commander || !state.add.length) return;
-  const algo = new URLSearchParams(location.search).get('algo') || 'v1';
-  if (algo !== 'v1') return; // uniquement pour l'algo popularité
+  let rows;
   try {
-    const res = await fetch('/api/deck-freq', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        commander: state.commander.name,
-        cards: state.add.map(c => c.name),
-      }),
-    });
-    if (!res.ok) return;
-    const { rates } = await res.json();
-    for (const [name, pct] of Object.entries(rates || {})) {
-      edhrecRates.set(name, pct);
-    }
-  } catch (_) {}
-}
+    const response = await fetch(csv);
+    if (!response.ok) throw new Error('Fichier de résultats introuvable');
+    rows = parseCsv(await response.text());
+  } catch (err) {
+    return fail(err.message);
+  }
 
-/* ── Lookup via endpoints locaux (image + prix) ───────────────────────────── */
-const cache = new Map();
-function scryfall(name) {
-  if (cache.has(name)) return cache.get(name);
-  const p = Promise.all([
-    fetch(`/api/cards/image?name=${encodeURIComponent(name)}`).then(r => r.ok ? r.json() : null).catch(() => null),
-    fetch(`/api/cards/price?name=${encodeURIComponent(name)}`).then(r => r.ok ? r.json() : null).catch(() => null),
-  ]).then(([imgData, priceData]) => {
-    const url = imgData?.url || null;
-    const eur = priceData?.price != null ? String(Number(priceData.price).toFixed(2)) : null;
-    return {
-      art:          url,
-      normal:       url,
-      cheap:        url,
-      eur:          eur,
-      colors:       imgData?.colors || [],
-      rarity:       imgData?.rarity || null,
-      set:          imgData?.set || null,
-      scryfall_uri: null,
+  /** Le script de recommandation produit un CSV Section,Card Name,Score,Support,… */
+  function parseCsv(text) {
+    const lines = text.replace(/^﻿/, '').replace(/\r/g, '').split('\n')
+      .filter((line) => line.trim().length);
+    if (!lines.length) return [];
+
+    const split = (line) => {
+      const cells = [];
+      let current = '';
+      let quoted = false;
+      for (let i = 0; i < line.length; i += 1) {
+        const char = line[i];
+        if (quoted) {
+          if (char === '"') {
+            if (line[i + 1] === '"') { current += '"'; i += 1; } else quoted = false;
+          } else current += char;
+        } else if (char === '"') quoted = true;
+        else if (char === ',') { cells.push(current); current = ''; }
+        else current += char;
+      }
+      cells.push(current);
+      return cells;
     };
-  });
-  cache.set(name, p);
-  return p;
-}
 
-const cardmarket = name =>
-  'https://www.cardmarket.com/en/Magic/Products/Search?category=-1&searchString='+
-  encodeURIComponent(name)+'&searchMode=v2';
+    const headers = split(lines[0]).map((h) => h.trim().toLowerCase().replace(/\s+/g, '_'));
+    const at = (cells, name) => (cells[headers.indexOf(name)] || '').trim();
 
-const moxfield = name =>
-  'https://moxfield.com/search/cards?q=' + encodeURIComponent(name) + '&advanced=';
-const fmtEur = v => v==null ? null : '€'+Number(v).toFixed(2).replace('.', ',');
-
-/* ── Commander profile render ─────────────────────────────────────────────── */
-async function renderCommander(){
-  $('#pillAdd').textContent = state.add.length;
-  $('#pillRem').textContent = state.rem.length;
-  if (!state.commander){ return; }
-  $('#cmdName').textContent = state.commander.name;
-  const data = await scryfall(state.commander.name);
-  if (!data) return;
-  if (data.normal){
-    const w=$('#cmdArt');
-    w.querySelector('.skeleton')?.remove();
-    const img=new Image(); img.alt=state.commander.name; img.src=data.normal;
-    img.onload=()=>{ w.appendChild(img); };
-  }
-  if (data.art){
-    const bg=$('#bgLayer'); bg.style.backgroundImage=`url("${data.art}")`;
-    setTimeout(()=>bg.classList.add('show'), 40);
-  }
-  const order=['W','U','B','R','G'];
-  const ids=(data.colors&&data.colors.length)? order.filter(c=>data.colors.includes(c)) : ['U'];
-  // Symboles SVG officiels Scryfall — ordre WUBRG standard
-  const MANA_ORDER = ['W','U','B','R','G','C'];
-  const sorted = ids.slice().sort((a,b) => MANA_ORDER.indexOf(a) - MANA_ORDER.indexOf(b));
-  $('#manaId').innerHTML = sorted.map(c => {
-    const sym = encodeURIComponent(`{${c}}`);
-    return `<span class="pip"><img src="https://svgs.scryfall.io/card-symbols/${c}.svg" alt="${c}" title="${{W:'Blanc',U:'Bleu',B:'Noir',R:'Rouge',G:'Vert',C:'Incolore'}[c]||c}" onerror="this.parentElement.textContent='${c}'"/></span>`;
-  }).join('');
-}
-
-/* ── Gallery render ───────────────────────────────────────────────────────── */
-function skeletonCard(){
-  const el=document.createElement('article'); el.className='card';
-  el.innerHTML=`
-    <div class="card-inner">
-      <div class="card-flip">
-        <div class="card-front"><div class="skeleton" style="position:absolute;inset:0;border-radius:7px 7px 0 0"></div></div>
-      </div>
-    </div>
-    <div class="card-body"><div class="card-foot">
-      <div class="skeleton sk-line" style="width:54px;margin:0"></div>
-      <div class="skeleton sk-line" style="width:64px;height:30px;margin:0"></div>
-    </div></div>`;
-  return el;
-}
-
-function renderGallery(){
-  grid.innerHTML='';
-  const isAdd = state.filter==='add';
-  const list = isAdd ? state.add : state.rem;
-
-  if (!list.length){
-    const remMsg = new URLSearchParams(location.search).get('algo') === 'v3'
-      ? 'Les retraits sont calculés à partir du deck uploadé. Charge ta decklist pour obtenir des suggestions de cartes à retirer.'
-      : 'Le mentor n\'a relevé aucune recommandation de ce type pour ce deck.';
-    grid.innerHTML = `<div class="notice"><span class="label">Le grimoire reste muet</span>
-      <h3>Aucune carte ${isAdd?'à ajouter':'à retirer'}</h3>
-      <p>${isAdd ? 'Le mentor n\'a relevé aucune recommandation de ce type pour ce deck.' : remMsg}</p></div>`;
-    return;
+    return lines.slice(1).map(split)
+      .map((cells) => ({
+        section: at(cells, 'section') || cells[0] || '',
+        name: at(cells, 'card_name') || cells[1] || '',
+        score: at(cells, 'score'),
+        support: at(cells, 'support'),
+        frequency: at(cells, 'deck_frequency'),
+      }))
+      .filter((row) => row.name);
   }
 
-  list.forEach((c,idx)=>{
-    const el=skeletonCard();
-    if (isAdd && idx===0) el.classList.add('best');
-    if (!isAdd) el.classList.add('card-rem');
-    grid.appendChild(el);
-    hydrate(el, c, isAdd);
-  });
-
-  // Pour les retraits : re-trier par prix décroissant à égalité de taux, une fois tous les prix chargés
-  if (!isAdd && list.length > 0) {
-    Promise.all(list.map(c => scryfall(c.name).then(d => {
-      c._eur = d && d.eur ? parseFloat(d.eur) : 0;
-    }))).then(() => {
-      const sorted = [...list].sort((a,b) => {
-        const fa = Math.round((a.freq||0)*100), fb = Math.round((b.freq||0)*100);
-        if (fa !== fb) return fa - fb;           // taux croissant
-        return (b._eur||0) - (a._eur||0);        // prix décroissant à égalité
-      });
-      // Re-rendre seulement si l'ordre a changé
-      const namesOld = list.map(c=>c.name).join(',');
-      const namesNew = sorted.map(c=>c.name).join(',');
-      if (namesOld !== namesNew && state.filter === 'rem') {
-        state.rem = sorted;
-        renderGallery();
-      }
-    });
-  }
-}
-
-/* ── Tooltip sous-scores ──────────────────────────────────────────────────── */
-function buildScoreTooltipHtml(c) {
-  const global100 = c.score_100 ?? Math.round((c.addition_score || 0) * 100);
-  const sub = c.sub_scores || {};
-
-  // Couleur de barre selon valeur
-  function barColor(v) {
-    if (v >= 70) return '#4ade80';
-    if (v >= 40) return '#e2b96f';
-    return '#e07b7b';
-  }
-
-  function row(label, val, desc) {
-    const v = Math.min(Math.max(Math.round(val || 0), 0), 100);
-    return `
-      <div class="stt-row">
-        <div class="stt-label"><span>${label}</span><span class="stt-val">${v}/100</span></div>
-        <div class="stt-bar-track"><div class="stt-bar-fill" style="width:${v}%;background:${barColor(v)}"></div></div>
-        ${desc ? `<div style="font-size:9px;color:var(--text-faint);opacity:0.7;margin-top:1px;line-height:1.35">${desc}</div>` : ''}
-      </div>`;
-  }
-
-  const rows = [
-    {
-      label: 'Pertinence pour ce commandant',
-      val: sub.hybrid,
-      desc: 'Cette carte apparaît souvent dans des decks avec ce commandant (TF-IDF + Card2Vec + tags MTG).',
-    },
-    {
-      label: 'Popularité dans les decks Commander',
-      val: sub.edhrec,
-      desc: 'Estimation du % de decks Commander qui incluent cette carte, basée sur les statistiques de decks.',
-    },
-    {
-      label: 'Comble un manque du deck',
-      val: sub.gap,
-      desc: 'Le deck a moins de cartes de cet archétype que la moyenne méta — cette carte rééquilibre.',
-    },
-    {
-      label: 'Cohérence avec le deck actuel',
-      val: sub.synergy,
-      desc: 'Cette carte "ressemble" aux cartes déjà dans le deck selon les co-occurrences (Card2Vec).',
-    },
-  ];
-
-  return `
-    <div class="stt-title">
-      <span>Pourquoi cette carte ?</span>
-      <span class="stt-global">${global100}<span style="font-size:9px;color:var(--text-faint)">/100</span></span>
-    </div>
-    ${rows.map(r => row(r.label, r.val, r.desc)).join('')}`;
-}
-
-function attachScoreTooltip(btn, c) {
-  const tip = btn.querySelector('.score-tooltip');
-  if (!tip) return;
-  tip.innerHTML = buildScoreTooltipHtml(c);
-
-  let closeTimer = null;
-
-  function open(e) {
-    e.stopPropagation();
-    // Fermer tous les autres tooltips ouverts
-    document.querySelectorAll('.score-tooltip.open').forEach(t => { if (t !== tip) t.classList.remove('open'); });
-    tip.classList.toggle('open');
-  }
-
-  btn.addEventListener('click', open);
-
-  // Fermer au clic ailleurs
-  document.addEventListener('click', () => tip.classList.remove('open'));
-}
-
-const hydrateV1 = async function(el, c, isAdd){
-  let data, cardSource = null, cardSourceDecks = [];
-  try {
-    [data] = await Promise.all([
-      scryfall(c.name),
-      fetch(`/api/card-source?name=${encodeURIComponent(c.name)}`)
-        .then(r => r.ok ? r.json() : {source: null, decks: []})
-        .then(d => { cardSource = d.source; cardSourceDecks = d.decks || []; })
-        .catch(() => {}),
-    ]);
-  } catch(e) {
-    el.innerHTML = `<div class="art-fallback" style="color:#e07b7b">${c.name}<br><small>${e.message}</small></div>`;
-    return;
-  }
-  // Cartes à ajouter → édition la plus chère (premium)
-  // Cartes à retirer → édition la moins chère (budget)
-  const full = data ? (isAdd ? (data.normal || data.art) : (data.cheap || data.normal || data.art)) : null;
-  const price = data ? fmtEur(data.eur) : null;
-  const priceHtml = price ? `<span class="price">${price}</span>` : `<span class="price na">N/A</span>`;
-  const pct = isAdd ? edhrecRates.get(c.name) : null;
-  const pctHtml = pct != null ? `<span class="edhrec-pct">· ${pct}% des decks</span>` : '';
-  const btnLabel = isAdd ? 'Acheter ↗' : 'Vendre ↗';
-  const scryfallUri = data?.scryfall_uri
-    || `https://scryfall.com/search?q=!"${encodeURIComponent(c.name)}"`;
-  const boosterTag = cardSourceTag(cardSource, cardSourceDecks);
-  const artHtml = full
-    ? `<img alt="${c.name}" src="${full}" />`
-    : `<div class="art-fallback">${c.name}</div>`;
-
-  // ── Face arrière : scores ──────────────────────────────────────────
-  const buildBack = () => {
-    if (isAdd && c.isV3) {
-      const pct  = v => v > 0 ? (v * 100).toFixed(0) + '%' : '—';
-      const bar  = v => `<div class="flip-bar"><div class="flip-bar-fill" style="width:${Math.min(100,Math.round(v*100))}%"></div></div>`;
-      const finalScore = c.score ? (c.score / 2000).toFixed(3) : '—';
-      const rows = [
-        ['Decklists ×25%',  c.popularity, pct(c.popularity)],
-        ['Rôle strat. ×25%',c.strategy,   pct(c.strategy)],
-        ['Synergie ×20%',   c.synergy,    pct(c.synergy)],
-        ['Vectoriel ×15%',  c.similarity, pct(c.similarity)],
-        ['Popularité ×10%', c.edhrec,     pct(c.edhrec)],
-        ['Courbe ×3%',      c.manacurve,  pct(c.manacurve)],
-        ['Qualité ×2%',     c.quality,    pct(c.quality)],
-      ];
-      const rolesStr = c.roles && c.roles.length ? c.roles.slice(0,4).join(' · ') : '';
-      // Première raison lisible uniquement
-      const firstReason = c.reason
-        ? c.reason.split('|')[0].trim()
-        : '';
-      return `
-        <div class="card-back-name">${c.name}</div>
-        <div class="score-final-line">
-          <span>Score final</span>
-          <span class="score-final-val">${finalScore}</span>
-        </div>
-        ${rows.map(([label, val, display]) => `
-          <div class="flip-score-row">
-            <span class="flip-sk">${label}</span>
-            <div class="flip-bar-wrap">${bar(val)}<span class="flip-sv">${display}</span></div>
-          </div>`).join('')}
-        ${rolesStr ? `<div class="flip-roles">${rolesStr}</div>` : ''}
-        ${firstReason ? `<div class="flip-reason">${firstReason}</div>` : ''}
-        <div style="display:flex;gap:10px;justify-content:center;margin-top:8px">
-          <a class="flip-scryfall" href="${scryfallUri}" target="_blank" rel="noopener noreferrer">Scryfall ↗</a>
-          <a class="flip-scryfall" href="${moxfield(c.name)}" target="_blank" rel="noopener noreferrer">Moxfield ↗</a>
-        </div>`;
-    }
-    // Carte à retirer ou V1/V2 : juste le nom + lien
-    return `
-      <div class="card-back-name">${c.name}</div>
-      <div style="flex:1;display:flex;align-items:center;justify-content:center">
-        <a class="flip-scryfall" style="font-size:10px" href="${scryfallUri}" target="_blank" rel="noopener noreferrer">Scryfall ↗</a>
-        <a class="flip-scryfall" style="font-size:10px" href="${moxfield(c.name)}" target="_blank" rel="noopener noreferrer">Moxfield ↗</a>
-      </div>`;
+  // Le CSV mêle des en-têtes de section ("Additions", "Removals") et les lignes
+  // de données, dont la colonne Section vaut "add" ou "remove".
+  const inSection = (row, ...labels) => {
+    const section = row.section.trim().toLowerCase();
+    return labels.some((label) => section === label);
   };
 
-  const cmdrSuggestUrl = `/commander-suggest?card=${encodeURIComponent(c.name)}`;
-  const infoBtnV1 = isAdd && c.sub_scores
-    ? `<button class="score-info-btn" title="Pourquoi cette carte ?">ⓘ<div class="score-tooltip"></div></button>`
-    : '';
-  el.innerHTML = `
-    <div class="card-inner" onclick="window.open('${cardmarket(c.name)}','_blank')" title="Voir sur Cardmarket">
-      <div class="card-flip">
-        <div class="card-front">${artHtml}${boosterTag}</div>
-      </div>
-    </div>
-    <div class="card-body">
-      <div class="card-meta-name" style="font-family:var(--serif-disp);font-size:14px;font-weight:600;color:var(--text);line-height:1.2;margin-bottom:2px">
-        <a href="${cmdrSuggestUrl}" target="_blank" style="color:inherit;text-decoration:none;border-bottom:1px solid rgba(212,177,95,0.3);transition:border-color .2s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='rgba(212,177,95,0.3)'">${c.name}</a>
-      </div>
-      <div class="card-foot">
-        <span style="display:flex;align-items:baseline;gap:0;flex-wrap:wrap;row-gap:0">${priceHtml}${pctHtml}</span>
-        <span style="display:flex;align-items:center;gap:6px">
-          ${infoBtnV1}
-          <a class="buy" href="${cardmarket(c.name)}" target="_blank" rel="noopener noreferrer">${btnLabel}</a>
-        </span>
-      </div>
-      ${!isAdd && c.reason ? `<div class="rem-freq">${c.reason}</div>` : ''}
-    </div>`;
-  if (isAdd && c.sub_scores) {
-    const btn = el.querySelector('.score-info-btn');
-    if (btn) attachScoreTooltip(btn, c);
-  }
-}
+  const commander = rows.find((row) => inSection(row, 'commander'));
+  const additions = rows.filter((row) => inSection(row, 'add', 'addition'));
+  const removals = rows.filter((row) => inSection(row, 'remove', 'removal', 'cut'));
 
-/* ── Profil stratégique (V2 et V3) ───────────────────────────────────────── */
-function renderCommanderProfile(profile) {
-  const section = $('#v2Profile');
-  if (!section) return;
-  section.style.display = 'block';
+  if (commander && !deckInfo.commander) deckInfo.commander = commander.name;
 
-  // Label adapté selon la source
-  const labelEl = $('#v2ProfileLabel');
-  if (labelEl) {
-    const src = profile.source || '';
-    labelEl.textContent = src === 'manual' ? 'Profil stratégique (manuel)' : 'Profil stratégique';
+  const resolved = await MM.resolveCards(
+    [...additions, ...removals].map((row) => row.name).concat(
+      commander ? [commander.name] : []));
+
+  if (!deckInfo.scryfall_id && commander && resolved[commander.name]) {
+    deckInfo.scryfall_id = resolved[commander.name].scryfall_id;
   }
 
-  const primary   = profile.primary_strategy || profile.primary_theme || '—';
-  const conf      = profile.strategy_confidence != null ? ` (${Math.round(profile.strategy_confidence * 100)}%)` : '';
-  const secondary = (profile.secondary_strategies || profile.secondary_themes || []).slice(0,3).join(', ') || '—';
-  const wantedR   = (profile.wanted_roles || []).slice(0,6).join(', ') || '—';
-  const avoidedR  = (profile.avoided_roles || []).slice(0,4).join(', ') || '—';
-  const wants     = (profile.wants || []).slice(0,4).join(' · ') || '—';
-  const prefTypes = (profile.preferred_card_types || []).join(', ') || '—';
-  const maxMV     = profile.max_preferred_mana_value != null ? profile.max_preferred_mana_value : '—';
+  renderHero('Analyse fondée sur la popularité réelle des cartes', `
+    <div class="hero__stats">
+      <span class="hero__stat"><b>${MM.fmt.int(additions.length)}</b>
+        <span class="muted small">ajouts proposés</span></span>
+      <span class="hero__stat"><b>${MM.fmt.int(removals.length)}</b>
+        <span class="muted small">retraits proposés</span></span>
+    </div>`);
 
-  // Contraintes deckbuilding (top 3 par importance)
-  const constraints = (profile.deckbuilding_constraints || [])
-    .sort((a,b) => (b.importance||0) - (a.importance||0))
-    .slice(0,3)
-    .map(c => c.constraint.replace(/_/g,' '));
-
-  const rows = [
-    ['Stratégie', primary + conf],
-    ['Secondaires', secondary],
-    ['Rôles voulus', wantedR],
-    ['Rôles évités', avoidedR],
-    ...(wants !== '—' ? [['Recherche', wants]] : []),
-    ['Types préférés', prefTypes],
-    ['Mana value max', maxMV],
-    ...(constraints.length ? [['Contraintes', constraints.join(' · ')]] : []),
-  ];
-
-  $('#v2ProfileContent').innerHTML = rows.map(([k,v])=>`
-    <div class="v2-profile-row">
-      <span class="pk">${k}</span>
-      <span class="pv">${v}</span>
-    </div>`).join('');
-}
-
-/* ── Filters ──────────────────────────────────────────────────────────────── */
-document.querySelectorAll('.pill').forEach(p=>{
-  p.addEventListener('click',()=>{
-    document.querySelectorAll('.pill').forEach(x=>x.classList.remove('active'));
-    p.classList.add('active');
-    state.filter=p.dataset.f;
-    renderGallery();
-  });
-});
-
-/* ══════════════════════════════════════════════════════════════════════════════
-   DECK MENTOR IA — rendu hybride
-   Activé quand ?algo=hybrid dans l'URL (données dans sessionStorage)
-   ══════════════════════════════════════════════════════════════════════════════ */
-
-function renderHybridScore(score100, distMeta) {
-  const wrap = document.getElementById('hybridScoreWrap');
-  const bar  = document.getElementById('hsBar');
-  const num  = document.getElementById('hsNum');
-  const dist = document.getElementById('hsMetaDist');
-  if (!wrap) return;
-  wrap.classList.add('show');
-  num.textContent = score100;
-  const circ = 2 * Math.PI * 40;   // r=40 → C≈251.3
-  const offset = circ - (circ * score100 / 100);
-  setTimeout(() => { bar.style.strokeDashoffset = offset; }, 60);
-  dist.textContent = `Distance au méta : ${(distMeta * 100).toFixed(1)}%`;
-}
-
-function renderHybridGap(gapData) {
-  const panel = document.getElementById('hybridGapPanel');
-  const cont  = document.getElementById('hybridGapContent');
-  if (!panel || !cont) return;
-
-  // Trier : meta_share descendant (les clusters les plus présents dans la méta en premier)
-  const sorted = [...gapData].sort((a, b) => b.meta_share - a.meta_share);
-
-  cont.innerHTML = sorted.slice(0, 12).map(g => {
-    const deltaSign = g.delta > 0 ? '+' : '';
-    const deltaClass = g.delta > 0 ? 'over' : 'under';
-    return `<div class="gap-row">
-      <span class="gap-name" title="${g.cluster_name}">${g.cluster_name}</span>
-      <span class="gap-val deck">${g.deck_share}%</span>
-      <span class="gap-val meta ${deltaClass}">${g.meta_share}%</span>
-    </div>`;
-  }).join('');
-
-  panel.style.display = 'block';
-}
-
-function buildHybridBack(card, isAdd, scryfallUri) {
-  if (isAdd) {
-    const pct  = v => v != null ? Math.round(v) + '%' : '—';
-    const bar  = v => {
-      const w = Math.min(100, Math.round((v || 0) * 100));
-      return `<div class="flip-bar"><div class="flip-bar-fill" style="width:${w}%"></div></div>`;
-    };
-    const moxLink = `https://moxfield.com/search/cards?q=${encodeURIComponent(card.name)}&advanced=`;
-
-    const rows = [
-      ['Score hybride',    card.hybrid_score,   (card.hybrid_score * 100).toFixed(1) + '%'],
-      ['Inclusion prédite',card.predicted_ir/100, pct(card.predicted_ir) + ' '],
-      ['Gap cluster',      card.gap_bonus,      (card.gap_bonus * 100).toFixed(0) + '%'],
-      ['Synergie deck',    card.deck_synergy,   (card.deck_synergy * 100).toFixed(0) + '%'],
-    ];
-
-    return `
-      <div class="card-back-name">${card.name}</div>
-      <div class="score-final-line">
-        <span>Score d'ajout</span>
-        <span class="score-final-val">${Math.round(card.score_100)}</span>
+  const section = (title, list, kind) => `
+    <div class="panel">
+      <div class="panel__head">
+        <h2 class="h3">${MM.esc(title)}</h2>
+        <span class="badge ${kind === 'add' ? 'badge--ok' : 'badge--danger'}">
+          ${list.length}</span>
       </div>
-      ${rows.map(([label, val, display]) => `
-        <div class="flip-score-row">
-          <span class="flip-sk">${label}</span>
-          <div class="flip-bar-wrap">${bar(val)}<span class="flip-sv">${display}</span></div>
-        </div>`).join('')}
-      <div class="flip-roles">${card.cluster_name || ''} · ${card.cluster_family || ''}</div>
-      ${card.explanation ? `<div class="flip-reason">${card.explanation.split('|')[0].trim()}</div>` : ''}
-      <div style="display:flex;gap:10px;justify-content:center;margin-top:8px">
-        <a class="flip-scryfall" href="${scryfallUri}" target="_blank" rel="noopener noreferrer">Scryfall ↗</a>
-        <a class="flip-scryfall" href="${moxLink}" target="_blank" rel="noopener noreferrer">Moxfield ↗</a>
-      </div>`;
-  }
-  // Face arrière coupe : raisons
-  const moxLink = `https://moxfield.com/search/cards?q=${encodeURIComponent(card.name)}&advanced=`;
-  const reasonsHtml = (card.reasons || []).slice(0, 2)
-    .map(r => `<div class="flip-reason">${r}</div>`).join('');
-  return `
-    <div class="card-back-name">${card.name}</div>
-    <div class="score-final-line">
-      <span>Score de coupe</span>
-      <span class="score-final-val">${Math.round(card.score_100)}</span>
-    </div>
-    ${reasonsHtml}
-    <div style="flex:1;display:flex;align-items:flex-end;justify-content:center;gap:10px;padding-bottom:6px">
-      <a class="flip-scryfall" href="${scryfallUri}" target="_blank" rel="noopener noreferrer">Scryfall ↗</a>
-      <a class="flip-scryfall" href="${moxLink}" target="_blank" rel="noopener noreferrer">Moxfield ↗</a>
-    </div>`;
-}
-
-function renderHybridReplacements(replacements) {
-  const section = document.getElementById('replacements-section');
-  const tbody   = document.getElementById('replTableBody');
-  const pillBtn = document.getElementById('pillReplBtn');
-  const pillCnt = document.getElementById('pillRepl');
-  if (!section || !tbody) return;
-
-  section.classList.add('show');
-  if (pillBtn)  pillBtn.style.display = '';
-  if (pillCnt) pillCnt.textContent = replacements.length;
-
-  tbody.innerHTML = replacements.slice(0, 30).map(r => `
-    <tr>
-      <td class="rank">${r.rank}</td>
-      <td class="repl-cut">${r.cut_card}</td>
-      <td class="repl-arrow">→</td>
-      <td class="repl-add">${r.add_card}</td>
-      <td class="repl-gain" style="${r.gain_delta < 0 ? 'color:var(--remove-col,#e07070)' : ''}">${r.gain_delta >= 0 ? '+' : ''}${r.gain_delta.toFixed(1)}</td>
-      <td style="color:var(--text-faint);font-size:11px">${(r.cut_reasons || '').slice(0, 60)}</td>
-    </tr>`).join('');
-}
-
-async function bootHybrid(data) {
-  // Commander
-  state.commander = { name: data.commander };
-  await renderCommander();
-
-  // Score global
-  renderHybridScore(data.deck_score_100, data.distance_meta);
-
-  // Gap clusters dans le panneau gauche
-  if (data.gap && data.gap.length) {
-    renderHybridGap(data.gap);
-  }
-
-  // Construire les listes add/rem dans state (format compatible hydrate)
-  state.add = (data.top_additions || []).map(a => ({
-    name:           a.card_name,
-    score:          a.score_100,
-    score_100:      a.score_100,
-    hybrid_score:   a.addition_score,
-    predicted_ir:   a.predicted_ir,
-    gap_bonus:      a.gap_bonus,
-    deck_synergy:   a.deck_synergy,
-    cluster_name:   a.cluster_name,
-    cluster_family: a.cluster_family,
-    explanation:    a.explanation,
-    sub_scores:     a.sub_scores,
-    isHybrid:       true,
-  }));
-  state.rem = (data.top_cuts || []).map(c => ({
-    name:     c.card_name,
-    score_100: c.score_100,
-    reasons:  c.reasons,
-    isHybrid: true,
-  }));
-
-  // Comptes
-  document.getElementById('pillAdd').textContent = state.add.length;
-  document.getElementById('pillRem').textContent = state.rem.length;
-
-  // Galerie cartes (ajouts par défaut)
-  renderGallery();
-
-  // Pre-fetch Scryfall pour les coupes en arrière-plan (sans attendre)
-  // → les images seront dans le cache quand l'utilisateur clique "À retirer"
-  Promise.all(state.rem.map(c => scryfall(c.name))).catch(() => {});
-
-  // Section remplacements
-  if (data.replacements && data.replacements.length) {
-    renderHybridReplacements(data.replacements);
-  }
-}
-
-// Dispatcher : cartes V1 ou hybrid
-async function hydrate(el, c, isAdd) {
-  if (!c.isHybrid) { return hydrateV1(el, c, isAdd); }
-
-  let cardSource = null, cardSourceDecks = [];
-  const [data] = await Promise.all([
-    scryfall(c.name),
-    fetch(`/api/card-source?name=${encodeURIComponent(c.name)}`)
-      .then(r => r.ok ? r.json() : {source: null, decks: []})
-      .then(d => { cardSource = d.source; cardSourceDecks = d.decks || []; })
-      .catch(() => {}),
-  ]);
-  const full = data ? (isAdd ? (data.normal || data.art) : (data.cheap || data.normal || data.art)) : null;
-  const price = data ? fmtEur(data.eur) : null;
-  const priceHtml = price ? `<span class="price">${price}</span>` : `<span class="price na">N/A</span>`;
-  const pct = isAdd ? edhrecRates.get(c.name) : null;
-  const pctHtml = pct != null ? `<span class="edhrec-pct">· ${pct}% des decks</span>` : '';
-  const scryfallUri = data?.scryfall_uri || `https://scryfall.com/search?q=!"${encodeURIComponent(c.name)}"`;
-  const boosterTag = cardSourceTag(cardSource, cardSourceDecks);
-  const artHtml = full
-    ? `<img alt="${c.name}" src="${full}" />`
-    : `<div class="art-fallback">${c.name}</div>`;
-  const moxLink = `https://moxfield.com/search/cards?q=${encodeURIComponent(c.name)}&advanced=`;
-  const cardmarket_url = `https://www.cardmarket.com/en/Magic/Products/Search?category=-1&searchString=${encodeURIComponent(c.name)}&searchMode=v2`;
-  const btnLabel = isAdd ? 'Acheter ↗' : 'Vendre ↗';
-
-  const cmdrSuggestUrlH = `/commander-suggest?card=${encodeURIComponent(c.name)}`;
-  const infoBtnH = isAdd && c.sub_scores
-    ? `<button class="score-info-btn" title="Pourquoi cette carte ?">ⓘ<div class="score-tooltip"></div></button>`
-    : '';
-  el.innerHTML = `
-    <div class="card-inner" onclick="window.open('${cardmarket_url}','_blank')" title="Voir sur Cardmarket">
-      <div class="card-flip">
-        <div class="card-front">${artHtml}${boosterTag}</div>
-      </div>
-    </div>
-    <div class="card-body">
-      <div class="card-meta-name" style="font-family:var(--serif-disp);font-size:14px;font-weight:600;color:var(--text);line-height:1.2;margin-bottom:2px">
-        <a href="${cmdrSuggestUrlH}" target="_blank" style="color:inherit;text-decoration:none;border-bottom:1px solid rgba(212,177,95,0.3);transition:border-color .2s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='rgba(212,177,95,0.3)'">${c.name}</a>
-      </div>
-      <div class="card-foot">
-        <span style="display:flex;align-items:baseline;gap:0;flex-wrap:wrap;row-gap:0">${priceHtml}${pctHtml}</span>
-        <span style="display:flex;align-items:center;gap:6px">
-          ${infoBtnH}
-          <a class="buy" href="${cardmarket_url}" target="_blank" rel="noopener noreferrer">${btnLabel}</a>
-        </span>
+      <div class="panel__body">
+        ${list.length ? `<div class="card-grid card-grid--sm">
+          ${list.map((row) => {
+            const info = resolved[row.name] || {};
+            return `
+              <article class="mtg-card mtg-card--flat">
+                <div class="mtg-card__frame">
+                  ${MM.img.frame({ card_name: row.name, ...info })}
+                  ${info.owned ? `<span class="mtg-card__qty"
+                    title="Déjà en collection">${info.owned}</span>` : ''}
+                </div>
+                <div class="mtg-card__foot">
+                  <span class="mtg-card__name" title="${MM.esc(row.name)}">
+                    ${MM.esc(row.name)}</span>
+                  <span class="mtg-card__meta">
+                    ${row.frequency
+                      ? `<span class="dim" title="Part des decks du commandant">
+                           ${MM.esc(row.frequency)} %</span>`
+                      : (row.score ? `<span class="dim"
+                           title="Score de recommandation">${MM.esc(row.score)}</span>` : '')}
+                    ${info.unit_price != null
+                      ? `<span class="mtg-card__price">${MM.fmt.eur(info.unit_price)}</span>`
+                      : ''}
+                  </span>
+                </div>
+              </article>`;
+          }).join('')}
+        </div>` : '<p class="muted small">Aucune proposition dans cette catégorie.</p>'}
       </div>
     </div>`;
-  if (isAdd && c.sub_scores) {
-    const btn = el.querySelector('.score-info-btn');
-    if (btn) attachScoreTooltip(btn, c);
-  }
-}
 
-/* ── Boot ─────────────────────────────────────────────────────────────────── */
-async function boot(){
-  const algo = new URLSearchParams(location.search).get('algo');
-
-  // ── Titre de la page selon le mode ───────────────────────────────────────
-  const labelEl = document.getElementById('pageLabel');
-  if (labelEl) {
-    labelEl.textContent = algo === 'hybrid'
-      ? 'Recommandations par intelligence artificielle'
-      : 'Recommandations par popularité';
-  }
-  document.title = algo === 'hybrid'
-    ? 'ManaMind — Recommandations par intelligence artificielle'
-    : 'ManaMind — Recommandations par popularité';
-
-  // ── Mode Deck Mentor IA ───────────────────────────────────────────────────
-  if (algo === 'hybrid') {
-    const raw = sessionStorage.getItem('deckMentorResult');
-    if (!raw) {
-      grid.innerHTML = `<div class="notice"><span class="label">Session expirée</span>
-        <h3>Données introuvables</h3>
-        <p>Le résultat de l'analyse a expiré. <a href="/" style="color:var(--gold)">Recharge ta decklist</a>.</p></div>`;
-      return;
-    }
-    let data;
-    try { data = JSON.parse(raw); } catch(e) {
-      grid.innerHTML = `<div class="notice"><h3>Erreur de lecture</h3><p>Données corrompues.</p></div>`;
-      return;
-    }
-    sessionStorage.removeItem('deckMentorResult');
-    await bootHybrid(data);
-    return;
-  }
-
-  // ── Modes legacy (V1, V2, V3) ─────────────────────────────────────────────
-  const algoLabels = {
-    v2: 'Algorithme V2 — score hybride',
-    v3: 'Moteur hybride V2 — rôles · decklists · vectoriel',
-  };
-  const csv = new URLSearchParams(location.search).get('csv');
-
-  // Charger le profil stratégique pour V2 (legacy) et V3 (hybride)
-  if ((algo === 'v2' || algo === 'v3') && csv) {
-    let profileUrl = null;
-    if (algo === 'v2') {
-      // Format legacy : CSV → _profile.json
-      profileUrl = csv.replace(/\.csv$/, '_profile.json');
-    } else {
-      // Format V3 : extraire le slug depuis le nom du CSV
-      // ex: /outputs/recommendations_v2_shadowfax_lord_of_horses.csv → shadowfax_lord_of_horses
-      // Chercher d'abord le profil manuel, sinon le généré
-      const slug = csv.replace(/.*recommendations_v2_/, '').replace(/\.csv$/, '');
-      profileUrl = '/data/commander_profiles/manual/' + slug + '.json';
-      // On tente le manuel en premier ; si échoue, on essaie le généré dans le catch
-      try {
-        const prManual = await fetch(profileUrl);
-        if (prManual.ok) { renderCommanderProfile(await prManual.json()); }
-        else {
-          const prGen = await fetch('/data/commander_profiles/generated/' + slug + '.json');
-          if (prGen.ok) renderCommanderProfile(await prGen.json());
-        }
-      } catch(e) { /* profil optionnel */ }
-      profileUrl = null; // déjà traité
-    }
-    if (profileUrl) {
-      try {
-        const pr = await fetch(profileUrl);
-        if (pr.ok) renderCommanderProfile(await pr.json());
-      } catch(e) { /* profil optionnel */ }
-    }
-  }
-  let text=null;
-  if (csv){
-    try {
-      const r = await fetch(csv);
-      if (r.ok) text = await r.text();
-    } catch(e){ text=null; }
-    if (!text){
-      grid.innerHTML = `<div class="notice"><span class="label">Parchemin introuvable</span>
-        <h3>Impossible de lire ce deck</h3>
-        <p>Le fichier <em>${csv}</em> est introuvable ou illisible. Reviens à l'accueil pour recharger ta decklist.</p></div>`;
-      return;
-    }
-  } else {
-    text = DEMO_CSV;
-  }
-  ingest(parseCSV(text));
-  if (!state.add.length && !state.rem.length){
-    grid.innerHTML = `<div class="notice"><span class="label">Le grimoire reste muet</span>
-      <h3>Aucune recommandation</h3>
-      <p>Le mentor n'a trouvé aucune carte à ajouter ou retirer pour ce deck.</p></div>`;
-    return;
-  }
-
-  // Remplacer les retraits du CSV par suggest_cuts (même algo que /deck-build)
-  if (state.commander) {
-    try {
-      const trimRes = await fetch(`/api/deck-trim?commander=${encodeURIComponent(state.commander.name)}`);
-      if (trimRes.ok) {
-        const trimData = await trimRes.json();
-        const cuts = (trimData.results || []).filter(c => c.inclusion_rate != null);
-        if (cuts.length > 0) {
-          state.rem = cuts.slice(0, 25).map(c => ({
-            name: c.card_name,
-            freq: c.inclusion_rate,
-            reason: `${c.decks_with_card ?? '?'} / ${c.total_decks ?? '?'} decks · ${c.inclusion_rate?.toFixed(1) ?? '—'}%`,
-          }));
-          document.getElementById('pillRem').textContent = state.rem.length;
-        }
-      }
-    } catch(e) { /* fallback CSV conservé */ }
-  }
-
-  await loadEdhrecRates();
-  renderCommander();
-  renderGallery();
-}
-boot();
+  content.innerHTML = `
+    <div class="stack-6">
+      ${section('Cartes à ajouter', additions, 'add')}
+      ${removals.length ? section('Cartes à retirer', removals, 'cut') : ''}
+    </div>`;
+})();
 </script>
 </body>
 </html>

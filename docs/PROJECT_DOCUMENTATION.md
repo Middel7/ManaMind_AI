@@ -6,7 +6,7 @@
 
 ```powershell
 # Activer le venv, puis lancer le serveur
-.venv\Scripts\Activate.ps1
+.venv\Scripts\python.exe server.py
 python server.py
 # → http://localhost:8080
 # Email : admin@manamind.app / Mot de passe : admin123
@@ -59,6 +59,7 @@ ManaMind_AI/
 │
 ├── recommendations_view_slide16.html ← Page d'accueil (/)
 ├── commander_suggest.html           ← /commander-suggest
+├── commander_swap.html              ← /commander-swap (commandant alternatif pour un deck)
 ├── deck_build.html                  ← /deck-build (ajouts depuis collection)
 ├── deck_moves.html                  ← /deck-moves
 ├── deck_config.html                 ← /deck-config (gestion decklists Moxfield)
@@ -185,19 +186,62 @@ uv run python server.py
 
 ### Routes — Pages
 
-| Méthode | Route | Fichier servi |
-|---|---|---|
-| GET | `/` | `recommendations_view_slide16.html` |
-| GET | `/results` | `results.html` |
-| GET | `/commander-suggest` | `commander_suggest.html` |
-| GET | `/deck-build` | `deck_build.html` |
-| GET | `/deck-moves` | `deck_moves.html` |
-| GET | `/deck-config` | `deck_config.html` |
-| GET | `/deck-trim` | `deck_trim.html` |
+L'arborescence est organisée autour des deux objets manipulés par l'utilisateur —
+sa collection et ses decks — plutôt que par outil (refonte du 2026-09-02).
 
-> **Supprimées (2026-06-25)** : `/cards` (`cards.html`) et `/deck-suggest` (`deck_suggest.html`)
+| Route | Fichier servi | Rôle |
+|---|---|---|
+| `/` | `dashboard.html` | Tableau de bord : état de la collection, progression, relances |
+| `/collection` | `collection.html` | Collection : recherche, filtres, édition des exemplaires |
+| `/collection/ajout` | `collection_add.html` | Ajout rapide par recherche illustrée |
+| `/collection/import` | `collection_import.html` | Import fichier ou texte (3 étapes) |
+| `/collection/boosters` | `collection_boosters.html` | Ouverture de boosters par extension |
+| `/collection/commandants` | `collection_commanders.html` | Decks constructibles avec la collection |
+| `/decks` | `decks.html` | Liste des decks, taux de possession |
+| `/decks/{deck_id}` | `deck_detail.html` | Détail d'un deck, courbe de mana, manquantes |
+| `/decks/ameliorer` | `deck_improve.html` | Cartes de la collection à ajouter |
+| `/decks/alleger` | `deck_trim.html` | Cartes les moins jouées à retirer |
+| `/decks/commandant` | `deck_swap.html` | Commandants alternatifs pour un deck |
+| `/decks/deplacements` | `deck_moves.html` | Cartes mieux placées dans un autre deck |
+| `/decks/analyse` | `deck_analyze.html` | Lancement d'une analyse (popularité ou IA) |
+| `/analyse` | `results.html` | Résultats d'analyse |
+| `/cartes/commandant` | `card_commander.html` | Commandants jouant une carte donnée |
+| `/profil` | `profile.html` | Profil, progression, carte fétiche |
+| `/login`, `/register` | `login.html`, `register.html` | Authentification (inscription sur invitation) |
+| `/admin` | `admin.html` | Administration (hors refonte) |
+
+> Les anciennes URL (`/results`, `/deck-config`, `/deck-edit`, `/deck-build`,
+> `/deck-trim`, `/deck-moves`, `/deck-select`, `/commander-suggest`,
+> `/commander-swap`, `/collection-manage`, `/collection-commanders`) répondent
+> en redirection permanente (301) vers leur équivalent, en conservant la
+> querystring.
 
 ### Routes — API
+
+#### API v2 (refonte 2026-09-02)
+
+| Méthode | Route | Description |
+|---|---|---|
+| GET | `/api/dashboard` | Agrégats d'accueil : stats, progression, fraîcheur, decks |
+| GET | `/api/dashboard/highlights` | Cartes dormantes et ajouts récents |
+| GET/PUT | `/api/profile` | Profil : pseudo, carte fétiche, commandant favori |
+| POST | `/api/profile/collection-checked` | Déclare la collection à jour |
+| GET | `/api/v2/collection` | Exemplaires paginés (filtres couleur/type/rareté/édition/finition) |
+| GET | `/api/v2/collection/facets` | Valeurs de filtres avec effectifs |
+| GET | `/api/v2/collection/dormant` | Rares et mythiques dans aucun deck |
+| POST | `/api/v2/collection/items` | Ajout d'un exemplaire ou d'un lot (`entries`) |
+| PATCH/DELETE | `/api/v2/collection/items/{id}` | Modification / suppression d'un exemplaire |
+| DELETE | `/api/v2/collection` | Vide la collection |
+| GET | `/api/v2/cards/suggest?q=` | Autocomplétion illustrée avec quantité possédée |
+| POST | `/api/v2/cards/resolve` | Résout un lot de noms (image, prix, possession) |
+| GET | `/api/v2/cards/{name}/printings` | Éditions disponibles d'une carte |
+| GET | `/api/v2/sets` | Extensions jouables, plus récentes d'abord |
+| GET | `/api/v2/sets/{code}/cards` | Cartes d'une extension avec quantité possédée |
+| GET | `/api/v2/decks` | Decks avec illustration, valeur et taux de possession |
+| GET | `/api/v2/decks/{id}` | Cartes d'un deck enrichies |
+| GET | `/api/v2/decks/{id}/missing` | Cartes manquantes et coût pour compléter |
+
+#### API historique
 
 | Méthode | Route | Description |
 |---|---|---|
@@ -217,6 +261,7 @@ uv run python server.py
 | GET | `/api/deck-card/remove` | Retirer une carte du deck .txt local |
 | GET | `/api/card-inclusion?card=&commander=` | Taux d'inclusion EDHREC d'une carte pour un commandant |
 | GET | `/api/collection-suggest` | Cartes de collection à inclure dans les decks |
+| GET | `/api/commander-swap?commander=&sort=&max_colors=&top=&staple_threshold=&min_inclusion=` | Commandants alternatifs pour un deck, classés par valeur EUR conservée (`sort=value`) ou par valeur pondérée du taux d'inclusion (`sort=affinity`). Une carte compte comme conservée si elle entre dans l'identité couleur du candidat et qu'il la joue dans au moins `min_inclusion` % de ses decks (10 % par défaut). Renvoie aussi, par commandant, les 14 cartes les plus chères qu'il joue dans plus de `missing_min_inclusion` % de ses decks et qui manquent au deck |
 | POST | `/api/deck-suggest-moves` | Déplacements de cartes entre decks |
 
 > **Supprimée (2026-06-25)** : `POST /api/deck-suggest` (alimentait `/deck-suggest`)
@@ -286,52 +331,45 @@ Champs extraits : `boards.mainboard.cards` (quantité + nom), `commanders` pour 
 
 ---
 
-## 7b. Pages de l'interface
+## 7b. Interface
 
-### Page d'accueil — `/` (`recommendations_view_slide16.html`)
+### Socle partagé
 
-Interface en grimoire ouvert (deux colonnes). Page droite restructurée (2026-06-25) :
+| Fichier | Rôle |
+|---|---|
+| `static/css/tokens.css` | Jetons de design : couleurs, typographie, espacements, rayons |
+| `static/css/app.css` | Composants : coquille de navigation, cartes, panneaux, modales |
+| `static/js/mm.js` | Client API, session, navigation, formatage, composants |
 
-**3 onglets de saisie :**
-1. **Deck Moxfield** (défaut) — liste déroulante des decks configurés dans `/deck-config`. Un clic charge la decklist via `GET /api/deck-txt/{id}` et révèle le commandant.
-2. **Coller une liste** — textarea format Moxfield/Archidekt (`1 Card Name`), bouton "Charger cette liste".
-3. **Fichier .txt** — drag & drop ou bouton "Parcourir un fichier".
+`MM.boot({ title, nav, back, actions })` construit la coquille autour de
+`#page` : barre latérale sur desktop, barre d'onglets en bas sur mobile avec
+bouton central d'ajout. Toute page nouvelle se réduit donc à un `#page` et un
+appel à `MM.boot`.
 
-**2 algorithmes disponibles :**
-- **Analyse Populaire** (V1) — `POST /upload-deck` avec FormData
-- **Deck Mentor IA** — `POST /api/deck/analyze` avec JSON
+Fonctions utiles de `mm.js` :
 
-Dans tous les cas, le texte brut de la decklist est normalisé côté JS avant envoi.
+- `MM.api.get/post/patch/del` — client JSON, redirige vers `/login` sur 401
+- `MM.resolveCards(names)` — résout un lot de noms (illustration, prix, possession)
+- `MM.deckPicker(host, onChange)` — sélecteur de deck des pages d'analyse
+- `MM.autocomplete(input, onPick)` — recherche de cartes illustrée
+- `MM.cardTile(item, options)` — vignette de carte
+- `MM.modal`, `MM.confirm`, `MM.toast`, `MM.empty` — composants d'interface
+- `MM.scryfallArt(id)` — illustration seule, pour les visuels de fond
 
-### `/deck-config` — Gestion des decklists Moxfield
+### Direction artistique
 
-- Ajout par URL Moxfield
-- Liste avec détection "Modifié localement" (pill orange)
-- Bouton **Copier** : copie dans le presse-papiers + appel `mark-synced` + mise à jour UI inline
-- Bouton **Mettre à jour** : refetch Moxfield (désactivé si modifié localement)
-- Bouton **Supprimer** : désactivé jusqu'à ce que "Copier" ait été cliqué dans la session
+Interface sombre où l'illustration des cartes porte la couleur ; le chrome
+reste neutre. Typographie Marcellus (titres) et Inter (données). Les visuels
+d'ambiance utilisent le cadrage `art_crop` de Scryfall, dérivé de l'URL
+d'image en remplaçant `/normal/` par `/art_crop/`.
 
-### `/deck-build` — Ajouts depuis la collection
+### Parcours
 
-- Sélection d'un deck Moxfield depuis un dropdown
-- Affichage des cartes en tuiles avec overlay +/− (hover)
-- Clic + : ajoute la carte au .txt local (avec undo via toggle)
-- Clic − : retire la carte du .txt local (avec undo)
-- Barre de recherche manuelle (ajout/retrait par nom, autocomplete starts-with, badge % inclusion EDHREC)
-- Noms de cartes cliquables → ouvre `/commander-suggest?card=NAME` dans un nouvel onglet
-
-### `/commander-suggest` — Trouver un commandant
-
-- Recherche par liste de cartes → commandants compatibles
-- Paramètre URL `?card=NAME` : pré-remplit et lance la recherche automatiquement (utilisé depuis `deck-build`)
-
-### `/deck-moves` — Déplacements entre decks
-
-- Suggestions de transferts de cartes entre decks Moxfield configurés
-
-### `/deck-trim` — Cartes à retirer
-
-- Analyse des cartes du deck les moins populaires relativement au commandant
+Le tableau de bord affiche l'état de la collection, une progression en trois
+jalons (importer sa collection, ajouter un deck, compléter son profil) et une
+relance lorsque la collection n'a pas bougé depuis plus de 30 jours. Les outils
+d'analyse ne sont plus des destinations autonomes : ils sont accessibles depuis
+le deck ou la collection sur lesquels ils agissent.
 
 ---
 
@@ -750,6 +788,39 @@ ruff format src/
 ---
 
 ## 16. Historique des changements majeurs
+
+### 2026-09-02
+
+**Refonte complète du front-end** — nouvelle direction artistique (sombre,
+illustrations en héros), navigation par objets (collection / decks) au lieu
+d'une grille d'outils, parité mobile via barre d'onglets.
+
+- Design system : `static/css/tokens.css`, `static/css/app.css`, `static/js/mm.js`
+- 18 pages réécrites ; anciennes URL redirigées en 301
+- `auth-guard.js` remplacé par `MM.boot` (conservé pour `admin.html` seul)
+
+**Collection par exemplaire** (migration `20260902_collection_v2`) —
+`user_collection` porte désormais édition, numéro de collecteur, finition,
+langue, état, rangement et dates. L'édition présente dans `raw_line` a été
+rétro-remplie ; les doublons ont été fusionnés (4 408 lignes → 2 176
+exemplaires, total d'exemplaires inchangé). Les analyses continuent d'agréger
+par nom de carte.
+
+**Normalisation des noms** (migration `20260903_norm_name`) — la fonction SQL
+`mm_normalize_name()` reproduit `scryfall_cards.normalized_name` (NFD, accents
+supprimés). `LOWER(TRIM())` faisait échouer la jointure pour les 132 cartes
+accentuées (Lórien Revealed, Khârn the Betrayer…).
+
+**Résolution matérialisée** (migration `20260903_coll_card_id`) —
+`user_collection.card_id` et `printing_id` évitent de résoudre le nom à chaque
+lecture. Avec la lecture directe des prix Cardmarket (au lieu de la vue
+`v_cardmarket_latest_prices_by_printing`, qui se matérialise en entier) :
+facettes 4 000 → 47 ms, liste 1 030 → 30 ms, agrégats 1 880 → 74 ms.
+
+**Corrections** — quantités des exemplaires en double additionnées au lieu
+d'être écrasées (`/api/collection-commanders`) ; les lignes non identifiées ne
+sont plus enregistrées à l'import ; le prix d'une carte de deck est le minimum
+de ses impressions et non celui d'une réimpression premium.
 
 ### 2026-06-25
 

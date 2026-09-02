@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>ManaMind — Accueil</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/app.css">
+<style>
+  .hero-dash { min-height: 300px; }
+  .decks-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: var(--sp-3); }
+
+  .deck-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    min-height: 116px;
+    padding: var(--sp-4);
+    border-radius: var(--r-lg);
+    border: 1px solid var(--line);
+    overflow: hidden;
+    isolation: isolate;
+    transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease);
+  }
+  .deck-card:hover { border-color: var(--line-accent); transform: translateY(-2px); }
+  .deck-card__art {
+    position: absolute; inset: 0; z-index: -2;
+    background-size: cover; background-position: center 28%;
+    opacity: 0.42;
+  }
+  .deck-card::after {
+    content: ""; position: absolute; inset: 0; z-index: -1;
+    background: linear-gradient(0deg, var(--bg-raised) 12%, rgba(14,14,21,0.42) 100%);
+  }
+</style>
+</head>
+<body>
+
+<div id="page">
+  <section class="hero hero-dash" id="hero">
+    <div class="hero__body">
+      <div class="skeleton skeleton--text" style="width:180px;height:14px"></div>
+      <div class="skeleton skeleton--text" style="width:420px;max-width:100%;height:38px;margin-top:12px"></div>
+      <div class="skeleton skeleton--text" style="width:300px;height:16px;margin-top:14px"></div>
+    </div>
+  </section>
+
+  <div id="alerts"></div>
+
+  <section class="stats" id="stats">
+    <div class="stat"><div class="skeleton skeleton--text" style="width:60%;height:26px"></div></div>
+    <div class="stat"><div class="skeleton skeleton--text" style="width:60%;height:26px"></div></div>
+    <div class="stat"><div class="skeleton skeleton--text" style="width:60%;height:26px"></div></div>
+    <div class="stat"><div class="skeleton skeleton--text" style="width:60%;height:26px"></div></div>
+  </section>
+
+  <section class="section" id="dormantSection" hidden>
+    <div class="section-head">
+      <div class="section-head__title">
+        <h2 class="h2">Vos cartes dorment</h2>
+        <span class="muted small" id="dormantCount"></span>
+      </div>
+      <a class="btn btn--sm" href="/collection?in_deck=no">Tout voir</a>
+    </div>
+    <p class="muted small" style="margin-top:-8px">
+      Ces rares et mythiques vous appartiennent mais ne figurent dans aucun de vos decks.
+    </p>
+    <div class="card-grid" id="dormantGrid"></div>
+  </section>
+
+  <section class="section" id="decksSection" hidden>
+    <div class="section-head">
+      <div class="section-head__title">
+        <h2 class="h2">Vos decks</h2>
+        <span class="muted small" id="decksCount"></span>
+      </div>
+      <a class="btn btn--sm" href="/decks">Gérer mes decks</a>
+    </div>
+    <div class="decks-strip" id="decksStrip"></div>
+  </section>
+
+  <section class="section" id="recentSection" hidden>
+    <div class="section-head">
+      <div class="section-head__title">
+        <h2 class="h2">Derniers ajouts</h2>
+      </div>
+      <a class="btn btn--sm" href="/collection?sort=recent">Voir la collection</a>
+    </div>
+    <div class="card-grid card-grid--sm" id="recentGrid"></div>
+  </section>
+</div>
+
+<script src="/static/js/mm.js"></script>
+<script>
+(async () => {
+  const user = await MM.boot({ title: 'Accueil', nav: 'home' });
+  if (!user) return;
+
+  let data;
+  try {
+    data = await MM.api.get('/api/dashboard');
+  } catch (err) {
+    MM.el('#hero').innerHTML = `<div class="hero__body">
+      <p class="muted">${MM.esc(err.message)}</p></div>`;
+    return;
+  }
+
+  const { stats, progress, freshness, decks, profile } = data;
+  const empty = stats.copies === 0;
+
+  /* ── Hero ─────────────────────────────────────────────────────────────── */
+
+  const featured = (stats.top_cards && stats.top_cards[0]) || null;
+  const artId = (profile && profile.banner_scryfall_id)
+    || (featured && featured.scryfall_id);
+  const art = artId ? MM.scryfallArt(artId) : null;
+
+  const greeting = user.display_name ? `Bonjour ${user.display_name}` : 'Bonjour';
+
+  const heroStats = empty ? '' : `
+    <div class="hero__stats">
+      <span class="hero__stat"><b>${MM.fmt.int(stats.copies)}</b>
+        <span class="muted small">exemplaires</span></span>
+      <span class="hero__stat"><b>${MM.fmt.int(stats.distinct_cards)}</b>
+        <span class="muted small">cartes différentes</span></span>
+      <span class="hero__stat"><b>${MM.fmt.eur(stats.value_eur, { compact: true })}</b>
+        <span class="muted small">de valeur estimée</span></span>
+      <span class="hero__stat"><b>${MM.fmt.int(stats.decks)}</b>
+        <span class="muted small">decks</span></span>
+    </div>`;
+
+  MM.el('#hero').innerHTML = `
+    ${art ? `<div class="hero__art" style="background-image:url('${MM.esc(art)}')"></div>` : ''}
+    <div class="hero__body">
+      <p class="eyebrow">${MM.esc(greeting)}</p>
+      <h2 class="hero__title">${empty
+        ? 'Votre collection vous attend'
+        : 'Votre collection, prête à être exploitée'}</h2>
+      <p class="muted">${empty
+        ? "Importez vos cartes une fois, et l'outil vous dira quels decks construire, "
+          + 'quelles cartes dorment et lesquelles amélioreraient vos listes.'
+        : `Dernière mise à jour ${MM.esc(MM.fmt.since(stats.last_update) || 'inconnue')}.`}</p>
+      <div class="hero__actions">
+        ${empty
+          ? `<a class="btn btn--primary btn--lg" href="/collection/import">
+               ${MM.icons.upload} Importer ma collection</a>
+             <a class="btn btn--lg" href="/collection/ajout">Ajouter carte par carte</a>`
+          : `<a class="btn btn--primary" href="/collection/ajout">
+               ${MM.icons.plus} Ajouter des cartes</a>
+             <a class="btn" href="/collection">Parcourir ma collection</a>
+             <a class="btn btn--ghost" href="/collection/commandants">Que puis-je construire ?</a>`}
+      </div>
+      ${heroStats}
+    </div>
+    ${featured && !profile.banner_scryfall_id && !empty
+      ? `<span class="hero__credit">${MM.esc(featured.card_name)}</span>` : ''}`;
+
+  /* ── Relances ─────────────────────────────────────────────────────────── */
+
+  const alerts = [];
+
+  if (!progress.complete) {
+    alerts.push(`
+      <div class="panel">
+        <div class="panel__head">
+          <div class="stack-2">
+            <h3 class="h3">Terminez votre installation</h3>
+            <p class="xs dim">${progress.done} étape${progress.done > 1 ? 's' : ''}
+              sur ${progress.total}</p>
+          </div>
+          <div style="width:140px"><div class="progress">
+            <div class="progress__bar" style="width:${progress.percent}%"></div>
+          </div></div>
+        </div>
+        <div class="panel__body">
+          <div class="steps">
+            ${progress.steps.map((step) => `
+              <a class="step ${step.done ? 'step--done' : ''}" href="${MM.esc(step.href)}">
+                <span class="step__mark">${step.done ? MM.icons.check : ''}</span>
+                <span class="step__text">
+                  <span class="step__title">${MM.esc(step.label)}</span>
+                  <span class="step__detail">${MM.esc(step.value || step.detail)}</span>
+                </span>
+                ${step.done ? '' : `<span class="btn btn--sm btn--outline">
+                  ${MM.esc(step.cta)}</span>`}
+              </a>`).join('')}
+          </div>
+        </div>
+      </div>`);
+  }
+
+  if (!empty && freshness.stale) {
+    alerts.push(`
+      <div class="panel panel--accent">
+        <div class="panel__body cluster">
+          <span class="accent">${MM.icons.warning}</span>
+          <div class="grow">
+            <p class="strong">Votre collection n'a pas bougé depuis ${freshness.days} jours</p>
+            <p class="small muted">Ajoutez vos dernières acquisitions pour que les
+              recommandations restent justes.</p>
+          </div>
+          <div class="cluster-2">
+            <a class="btn btn--primary btn--sm" href="/collection/ajout">Mettre à jour</a>
+            <button class="btn btn--sm" id="markChecked">Elle est à jour</button>
+          </div>
+        </div>
+      </div>`);
+  }
+
+  MM.el('#alerts').innerHTML = alerts.join('');
+
+  const markButton = MM.el('#markChecked');
+  if (markButton) {
+    markButton.addEventListener('click', async () => {
+      markButton.disabled = true;
+      try {
+        await MM.api.post('/api/profile/collection-checked');
+        MM.toast.ok('Collection marquée à jour.');
+        markButton.closest('.panel').remove();
+      } catch (err) { MM.toast.error(err.message); markButton.disabled = false; }
+    });
+  }
+
+  /* ── Statistiques ─────────────────────────────────────────────────────── */
+
+  if (empty) {
+    MM.el('#stats').remove();
+  } else {
+    MM.el('#stats').innerHTML = `
+      <a class="stat" href="/collection">
+        <span class="stat__value">${MM.fmt.int(stats.copies)}</span>
+        <span class="stat__label">Exemplaires</span>
+        <span class="stat__note">${MM.fmt.int(stats.distinct_cards)} cartes différentes</span>
+      </a>
+      <a class="stat" href="/collection?in_deck=no">
+        <span class="stat__value">${MM.fmt.int(stats.dormant)}</span>
+        <span class="stat__label">Cartes inutilisées</span>
+        <span class="stat__note">dans aucun de vos decks</span>
+      </a>
+      <a class="stat" href="/decks">
+        <span class="stat__value">${MM.fmt.int(stats.decks)}</span>
+        <span class="stat__label">Decks</span>
+        <span class="stat__note">${stats.last_deck
+          ? 'dernier ' + MM.esc(MM.fmt.since(stats.last_deck)) : 'aucun deck récent'}</span>
+      </a>
+      <div class="stat">
+        <span class="stat__value">${MM.fmt.eur(stats.value_eur, { compact: true })}</span>
+        <span class="stat__label">Valeur estimée</span>
+        <span class="stat__note">${stats.unpriced
+          ? MM.fmt.int(stats.unpriced) + ' cartes sans cours connu'
+          : 'toutes les cartes valorisées'}</span>
+      </div>`;
+  }
+
+  if (empty) return;
+
+  /* ── Decks ────────────────────────────────────────────────────────────── */
+
+  if (decks.length) {
+    MM.el('#decksSection').hidden = false;
+    MM.el('#decksCount').textContent = MM.fmt.plural(stats.decks, 'deck');
+    MM.el('#decksStrip').innerHTML = decks.map((deck) => `
+      <a class="deck-card" href="/decks/${encodeURIComponent(deck.deck_id)}">
+        <div class="deck-card__art" data-commander="${MM.esc(deck.commander || '')}"></div>
+        <p class="strong truncate">${MM.esc(deck.name || deck.commander)}</p>
+        <p class="xs dim truncate">${MM.esc(deck.commander || '')} ·
+          ${MM.fmt.int(deck.card_count)} cartes</p>
+      </a>`).join('');
+
+    // L'illustration du commandant habille chaque vignette de deck
+    MM.els('.deck-card__art').forEach(async (holder) => {
+      const commander = holder.dataset.commander;
+      if (!commander) return;
+      try {
+        const data = await MM.api.get(
+          `/api/v2/cards/suggest?q=${encodeURIComponent(commander.split('//')[0].trim())}&limit=1`);
+        const card = data.cards && data.cards[0];
+        if (card && card.scryfall_id) {
+          holder.style.backgroundImage = `url('${MM.scryfallArt(card.scryfall_id)}')`;
+        }
+      } catch { /* la vignette reste unie */ }
+    });
+  }
+
+  /* ── Mises en avant ───────────────────────────────────────────────────── */
+
+  try {
+    const highlights = await MM.api.get('/api/dashboard/highlights?limit=8');
+
+    if (highlights.dormant.length) {
+      MM.el('#dormantSection').hidden = false;
+      MM.el('#dormantCount').textContent =
+        `${MM.fmt.int(stats.dormant)} au total`;
+      MM.el('#dormantGrid').innerHTML =
+        highlights.dormant.map((item) => MM.cardTile(item)).join('');
+    }
+
+    if (highlights.recent.length) {
+      MM.el('#recentSection').hidden = false;
+      MM.el('#recentGrid').innerHTML =
+        highlights.recent.map((item) => MM.cardTile(item, { price: false })).join('');
+    }
+  } catch { /* les mises en avant sont secondaires */ }
+})();
+</script>
+</body>
+</html>

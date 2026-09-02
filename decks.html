@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>ManaMind — Mes decks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/app.css">
+<style>
+  .deck-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--sp-4); }
+
+  .deck-tile {
+    position: relative;
+    display: flex; flex-direction: column;
+    min-height: 190px;
+    border-radius: var(--r-lg);
+    border: 1px solid var(--line);
+    overflow: hidden;
+    isolation: isolate;
+    transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease);
+  }
+  .deck-tile:hover { border-color: var(--line-accent); transform: translateY(-3px); }
+  .deck-tile__art {
+    position: absolute; inset: 0; z-index: -2;
+    background-size: cover; background-position: center 26%;
+    opacity: 0.46;
+    transition: opacity var(--dur) var(--ease);
+  }
+  .deck-tile:hover .deck-tile__art { opacity: 0.6; }
+  .deck-tile::after {
+    content: ""; position: absolute; inset: 0; z-index: -1;
+    background: linear-gradient(0deg, var(--bg-raised) 24%, rgba(14,14,21,0.5) 78%,
+                                rgba(14,14,21,0.2) 100%);
+  }
+  .deck-tile__body { margin-top: auto; padding: var(--sp-4) var(--sp-5) var(--sp-3); }
+  .deck-tile__actions {
+    display: flex; gap: var(--sp-1); flex-wrap: wrap;
+    padding: 0 var(--sp-4) var(--sp-4);
+  }
+</style>
+</head>
+<body>
+
+<div id="page">
+  <div class="toolbar">
+    <div class="search toolbar__search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+           stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+      <input class="input" id="search" type="search" placeholder="Rechercher un deck…">
+    </div>
+    <select class="select" id="sort" style="width:auto">
+      <option value="recent">Modifié récemment</option>
+      <option value="name">Nom</option>
+      <option value="owned">Taux de possession</option>
+      <option value="size">Nombre de cartes</option>
+    </select>
+    <div class="toolbar__spacer"></div>
+    <a class="btn btn--primary" href="/collection/import">Importer un deck</a>
+  </div>
+
+  <div id="results">
+    <div class="deck-grid" id="grid"></div>
+  </div>
+</div>
+
+<script src="/static/js/mm.js"></script>
+<script>
+(async () => {
+  const user = await MM.boot({ title: 'Mes decks', nav: 'decks' });
+  if (!user) return;
+
+  const state = { decks: [], search: '', sort: 'recent' };
+
+  try {
+    const data = await MM.api.get('/api/v2/decks');
+    state.decks = data.decks;
+  } catch (err) {
+    MM.el('#results').innerHTML = MM.empty({
+      icon: 'warning', title: 'Chargement impossible', text: err.message });
+    return;
+  }
+
+  function sorted(decks) {
+    const copy = decks.slice();
+    switch (state.sort) {
+      case 'name': return copy.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+      case 'owned': return copy.sort((a, b) => b.owned_ratio - a.owned_ratio);
+      case 'size': return copy.sort((a, b) => b.card_count - a.card_count);
+      default: return copy.sort((a, b) =>
+        (b.updated_at || '').localeCompare(a.updated_at || ''));
+    }
+  }
+
+  function render() {
+    const term = state.search.toLowerCase();
+    const decks = sorted(state.decks.filter((deck) =>
+      !term || deck.name.toLowerCase().includes(term)
+      || (deck.commander || '').toLowerCase().includes(term)));
+
+    if (!state.decks.length) {
+      MM.el('#results').innerHTML = MM.empty({
+        icon: 'decks',
+        title: 'Aucun deck pour le moment',
+        text: "Importez une decklist pour croiser vos decks avec votre collection : "
+          + "cartes manquantes, cartes dormantes, améliorations possibles.",
+        action: { href: '/collection/import', label: 'Importer un deck' },
+      });
+      return;
+    }
+
+    if (!decks.length) {
+      MM.el('#results').innerHTML = MM.empty({
+        icon: 'search', title: 'Aucun deck trouvé',
+        text: `Aucun deck ne correspond à « ${state.search} ».` });
+      return;
+    }
+
+    MM.el('#results').innerHTML = `<div class="deck-grid">${decks.map((deck) => {
+      const art = deck.scryfall_id ? MM.scryfallArt(deck.scryfall_id) : null;
+      const missing = deck.card_count - deck.owned_count;
+      const percent = Math.round(deck.owned_ratio * 100);
+      return `
+        <article class="deck-tile">
+          ${art ? `<div class="deck-tile__art" style="background-image:url('${MM.esc(art)}')"></div>` : ''}
+          <a class="deck-tile__body" href="/decks/${encodeURIComponent(deck.deck_id)}">
+            <p class="h3 truncate">${MM.esc(deck.name)}</p>
+            <p class="xs dim truncate" style="margin-bottom:10px">
+              ${MM.esc(deck.commander || '')}</p>
+            <div class="progress" style="margin-bottom:6px">
+              <div class="progress__bar" style="width:${percent}%"></div>
+            </div>
+            <p class="xs muted">
+              ${MM.fmt.int(deck.card_count)} cartes ·
+              <span class="${missing ? 'accent' : ''}">${percent} % en collection</span>
+              ${missing ? `· ${MM.fmt.int(missing)} manquantes` : ''}
+            </p>
+          </a>
+          <div class="deck-tile__actions">
+            <a class="btn btn--sm" href="/decks/ameliorer?deck=${encodeURIComponent(deck.deck_id)}"
+               title="Trouver dans votre collection les cartes qui amélioreraient ce deck">
+               Améliorer</a>
+            <a class="btn btn--sm" href="/decks/alleger?deck=${encodeURIComponent(deck.deck_id)}"
+               title="Repérer les cartes les moins jouées à retirer">Alléger</a>
+            <a class="btn btn--sm" href="/decks/commandant?deck=${encodeURIComponent(deck.deck_id)}"
+               title="Voir quels commandants conserveraient le plus de ces cartes">
+               Commandant</a>
+          </div>
+        </article>`;
+    }).join('')}</div>`;
+  }
+
+  MM.el('#search').addEventListener('input', MM.debounce((event) => {
+    state.search = event.target.value.trim();
+    render();
+  }, 200));
+
+  MM.el('#sort').addEventListener('change', (event) => {
+    state.sort = event.target.value;
+    render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

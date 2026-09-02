@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>ManaMind — Changer de commandant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/app.css">
+<style>
+  .cand {
+    display: grid; grid-template-columns: 190px minmax(0, 1fr);
+    border-radius: var(--r-lg);
+    border: 1px solid var(--line);
+    background: var(--bg-raised);
+    overflow: hidden;
+    transition: border-color var(--dur) var(--ease);
+  }
+  .cand:hover { border-color: var(--line-accent); }
+  @media (max-width: 720px) { .cand { grid-template-columns: 1fr; } }
+
+  .cand__art {
+    position: relative;
+    min-height: 190px;
+    background-size: cover; background-position: center 22%;
+  }
+  .cand__art::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent 55%, var(--bg-raised) 100%);
+  }
+  @media (max-width: 720px) {
+    .cand__art { min-height: 130px; }
+    .cand__art::after { background: linear-gradient(0deg, var(--bg-raised) 4%, transparent 70%); }
+  }
+
+  .cand__rank {
+    position: absolute; top: var(--sp-3); left: var(--sp-3); z-index: 1;
+    width: 26px; height: 26px; display: grid; place-items: center;
+    border-radius: var(--r-full);
+    background: var(--overlay); border: 1px solid var(--line-strong);
+    font-size: var(--text-xs); font-weight: 700;
+  }
+  .cand__body { padding: var(--sp-4) var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-3); }
+  .cand__bars { display: flex; flex-direction: column; gap: var(--sp-2); }
+  .cand__bar { display: flex; align-items: center; gap: var(--sp-3); font-size: var(--text-xs); }
+  .cand__bar .progress { flex: 1; }
+  .thumbs { display: flex; gap: 3px; overflow: hidden; }
+  .thumbs img { width: 30px; aspect-ratio: var(--card-ratio); object-fit: cover; border-radius: 3px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<div id="page">
+  <div class="stack-2">
+    <h2 class="h2">Un autre commandant pour ce deck ?</h2>
+    <p class="muted small">
+      Ces commandants conserveraient le plus de valeur parmi les cartes déjà présentes
+      dans votre deck. Les cartes trop courantes (jouées partout) sont neutralisées
+      pour ne pas fausser la comparaison.
+    </p>
+  </div>
+
+  <div class="toolbar">
+    <div id="deckPicker"></div>
+    <div class="field" style="width:auto">
+      <label class="label" for="sortMode">Classement</label>
+      <select class="select" id="sortMode">
+        <option value="value">Valeur conservée</option>
+        <option value="affinity">Affinité réelle</option>
+      </select>
+    </div>
+    <div class="field" style="width:auto">
+      <label class="label" for="maxColors">Couleurs max</label>
+      <select class="select" id="maxColors">
+        <option value="5">Sans limite</option>
+        <option value="4">4 couleurs</option>
+        <option value="3">3 couleurs</option>
+        <option value="2">2 couleurs</option>
+        <option value="1">Mono-couleur</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="summary"></div>
+  <div id="results"></div>
+</div>
+
+<script src="/static/js/mm.js"></script>
+<script>
+(async () => {
+  const user = await MM.boot({ title: 'Changer de commandant', nav: 'swap' });
+  if (!user) return;
+
+  const results = MM.el('#results');
+  const state = { deck: null, sort: 'value', maxColors: 5, data: null };
+
+  await MM.deckPicker(MM.el('#deckPicker'), (deck) => {
+    state.deck = deck;
+    load();
+  }, { label: 'Deck de départ' });
+
+  MM.el('#sortMode').addEventListener('change', (event) => {
+    state.sort = event.target.value; load();
+  });
+  MM.el('#maxColors').addEventListener('change', (event) => {
+    state.maxColors = Number(event.target.value); load();
+  });
+
+  async function load() {
+    if (!state.deck) return;
+    results.innerHTML = `<div class="stack">${Array.from({ length: 4 }, () =>
+      '<div class="skeleton" style="height:190px"></div>').join('')}</div>`;
+
+    try {
+      const data = await MM.api.get('/api/commander-swap' + MM.api.qs({
+        commander: state.deck.commander,
+        top: 12,
+        sort: state.sort,
+        max_colors: state.maxColors,
+      }));
+      state.data = data;
+      render(data);
+    } catch (err) {
+      results.innerHTML = MM.empty({
+        icon: 'warning', title: 'Analyse impossible', text: err.message });
+      MM.el('#summary').innerHTML = '';
+    }
+  }
+
+  function render(data) {
+    MM.el('#summary').innerHTML = `
+      <div class="stats">
+        <div class="stat">
+          <span class="stat__value">${MM.fmt.int(data.deck_card_count)}</span>
+          <span class="stat__label">Cartes analysées</span>
+          <span class="stat__note">${MM.fmt.int(data.scored_count)} entrent dans le score</span>
+        </div>
+        <div class="stat">
+          <span class="stat__value">${MM.fmt.eur(data.deck_value, { compact: true })}</span>
+          <span class="stat__label">Valeur du deck</span>
+          <span class="stat__note">hors cartes trop courantes</span>
+        </div>
+        <div class="stat">
+          <span class="stat__value">${MM.fmt.int((data.staples || []).length)}</span>
+          <span class="stat__label">Cartes neutres</span>
+          <span class="stat__note">jouées dans plus de ${data.staple_threshold} % des decks</span>
+        </div>
+        <div class="stat">
+          <span class="stat__value">${MM.fmt.int((data.candidates || []).length)}</span>
+          <span class="stat__label">Commandants proposés</span>
+          <span class="stat__note">compatibles avec vos couleurs</span>
+        </div>
+      </div>`;
+
+    const candidates = data.candidates || [];
+    if (!candidates.length) {
+      results.innerHTML = MM.empty({
+        icon: 'swap',
+        title: 'Aucun commandant alternatif',
+        text: 'Aucun commandant ne conserverait suffisamment de cartes de ce deck '
+          + 'avec les critères actuels. Élargissez la limite de couleurs.',
+      });
+      return;
+    }
+
+    const best = Math.max(...candidates.map((c) => c.kept_value || 0)) || 1;
+
+    results.innerHTML = `<div class="stack">${candidates.map((cand, index) => {
+      const art = cand.commander_image
+        ? cand.commander_image.replace('/normal/', '/art_crop/') : null;
+      const kept = (cand.cards && cand.cards.kept) || [];
+      return `
+        <article class="cand">
+          <div class="cand__art" ${art
+            ? `style="background-image:url('${MM.esc(art)}')"` : ''}>
+            <span class="cand__rank">${index + 1}</span>
+          </div>
+          <div class="cand__body">
+            <div class="between">
+              <div style="min-width:0">
+                <p class="h3 truncate">${MM.esc(cand.commander)}</p>
+                <p class="xs dim">${MM.img.pips(cand.color_identity)}
+                  ${MM.fmt.int(cand.total_decks)} decks référencés</p>
+              </div>
+              <div style="text-align:right">
+                <p class="strong num">${MM.fmt.eur(cand.kept_value)}</p>
+                <p class="xs dim">conservés</p>
+              </div>
+            </div>
+
+            <div class="cand__bars">
+              <div class="cand__bar">
+                <span class="dim" style="width:96px">Valeur gardée</span>
+                <span class="progress">
+                  <span class="progress__bar"
+                        style="width:${Math.round((cand.kept_value / best) * 100)}%"></span>
+                </span>
+                <span class="num" style="width:56px;text-align:right">
+                  ${cand.kept_pct} %</span>
+              </div>
+              <div class="cand__bar">
+                <span class="dim" style="width:96px">Cartes gardées</span>
+                <span class="progress">
+                  <span class="progress__bar" style="width:${
+                    Math.round((cand.kept_count / Math.max(1, data.scored_count)) * 100)}%"></span>
+                </span>
+                <span class="num" style="width:56px;text-align:right">
+                  ${cand.kept_count}</span>
+              </div>
+            </div>
+
+            ${kept.length ? `<div class="thumbs">
+              ${kept.slice(0, 12).filter((c) => c.image).map((c) => `
+                <img src="${MM.esc(c.image)}" alt="${MM.esc(c.name)}"
+                     title="${MM.esc(c.name)} — ${MM.fmt.eur(c.price)}" loading="lazy">`).join('')}
+            </div>` : ''}
+
+            <div class="cluster-2">
+              <button class="btn btn--sm" data-detail="${index}">Voir le détail</button>
+              ${cand.missing_value ? `<span class="badge badge--warn">
+                ${MM.fmt.eur(cand.missing_value)} à acquérir</span>` : ''}
+              ${cand.lost_archetype_count ? `<span class="badge">
+                ${cand.lost_archetype_count} cartes perdues</span>` : ''}
+            </div>
+          </div>
+        </article>`;
+    }).join('')}</div>`;
+
+    results.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-detail]');
+      if (button) showDetail(candidates[Number(button.dataset.detail)]);
+    });
+  }
+
+  function showDetail(cand) {
+    const kept = (cand.cards && cand.cards.kept) || [];
+    const missing = cand.missing_cards || [];
+
+    const grid = (list, empty) => list.length
+      ? `<div class="card-grid card-grid--sm">${list.map((card) => `
+          <article class="mtg-card mtg-card--flat">
+            <div class="mtg-card__frame">
+              ${MM.img.frame({ card_name: card.name, image_normal: card.image })}
+            </div>
+            <div class="mtg-card__foot">
+              <span class="mtg-card__name">${MM.esc(card.name)}</span>
+              <span class="mtg-card__meta">
+                <span class="dim">${(card.inclusion_rate || 0).toFixed(0)} %</span>
+                <span class="mtg-card__price">${MM.fmt.eur(card.price)}</span>
+              </span>
+            </div>
+          </article>`).join('')}</div>`
+      : `<p class="muted small">${empty}</p>`;
+
+    MM.modal({
+      title: cand.commander,
+      wide: true,
+      body: `
+        <div class="stack-6">
+          <div class="stack">
+            <div class="between">
+              <h3 class="h4">Cartes conservées</h3>
+              <span class="badge badge--ok">${MM.fmt.eur(cand.kept_value)}</span>
+            </div>
+            ${grid(kept, 'Aucune carte conservée.')}
+          </div>
+          <div class="stack">
+            <div class="between">
+              <h3 class="h4">Cartes à acquérir</h3>
+              <span class="badge badge--warn">${MM.fmt.eur(cand.missing_value)}</span>
+            </div>
+            <p class="xs dim">Cartes très jouées avec ce commandant que vous n'avez pas
+              dans ce deck.</p>
+            ${grid(missing, 'Aucune carte manquante identifiée.')}
+          </div>
+        </div>`,
+    });
+  }
+})();
+</script>
+</body>
+</html>

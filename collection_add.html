@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>ManaMind — Ajouter des cartes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/app.css">
+<style>
+  .add-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: var(--sp-6); align-items: start; }
+  @media (max-width: 1080px) { .add-layout { grid-template-columns: 1fr; } }
+
+  .big-search { position: relative; }
+  .big-search input {
+    width: 100%;
+    padding: 16px 18px 16px 50px;
+    font-size: var(--text-lg);
+    border-radius: var(--r-lg);
+    border: 1px solid var(--line-strong);
+    background: var(--bg-raised);
+    color: var(--text);
+  }
+  .big-search input:focus {
+    outline: none;
+    border-color: var(--line-accent);
+    box-shadow: 0 0 0 4px var(--accent-wash);
+  }
+  .big-search svg {
+    position: absolute; left: 18px; top: 50%; transform: translateY(-50%);
+    width: 20px; height: 20px; color: var(--text-3);
+  }
+
+  /* Les options de l'exemplaire restent visibles : on les regle une fois
+     puis on ajoute en rafale sans y revenir. */
+  .add-options {
+    display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: center;
+    padding: var(--sp-3) var(--sp-4);
+    border-radius: var(--r-md);
+    border: 1px solid var(--line);
+    background: var(--surface);
+  }
+
+  .basket { position: sticky; top: calc(var(--topbar-h) + var(--sp-4)); }
+  .basket__list { max-height: 52vh; overflow-y: auto; }
+
+  .basket-row {
+    display: flex; align-items: center; gap: var(--sp-3);
+    padding: var(--sp-2) var(--sp-3);
+    border-bottom: 1px solid var(--line);
+    animation: fade var(--dur) var(--ease);
+  }
+  .basket-row:last-child { border-bottom: none; }
+  .basket-row img { width: 30px; aspect-ratio: var(--card-ratio); object-fit: cover; border-radius: 3px; }
+
+  .result-card { cursor: pointer; }
+  .result-card .mtg-card__frame::after {
+    content: "+";
+    position: absolute; inset: 0;
+    display: grid; place-items: center;
+    font-size: 2.4rem; font-weight: 300;
+    color: var(--accent-bright);
+    background: rgba(6, 6, 10, 0.62);
+    opacity: 0;
+    transition: opacity var(--dur) var(--ease);
+  }
+  .result-card:hover .mtg-card__frame::after { opacity: 1; }
+  .result-card.is-added .mtg-card__frame { border-color: var(--ok); }
+
+  @media (max-width: 1080px) {
+    .basket { position: static; }
+  }
+</style>
+</head>
+<body>
+
+<div id="page">
+  <div class="add-layout">
+    <div class="stack-6">
+      <div class="stack">
+        <div class="big-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+               stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+          <input id="q" type="search" placeholder="Nom de la carte…" autocomplete="off"
+                 autofocus enterkeyhint="search">
+        </div>
+
+        <div class="add-options">
+          <span class="label" style="margin:0">Ajouter en</span>
+          <div class="btn-group" role="group" aria-label="Finition">
+            <button class="btn btn--sm" data-finish="nonfoil" aria-pressed="true">Normale</button>
+            <button class="btn btn--sm" data-finish="foil" aria-pressed="false">Foil</button>
+            <button class="btn btn--sm" data-finish="etched" aria-pressed="false">Gravée</button>
+          </div>
+          <div class="cluster-2" style="margin-left:auto">
+            <span class="label" style="margin:0">Quantité</span>
+            <span class="stepper">
+              <button id="qtyDown" aria-label="Diminuer">−</button>
+              <span class="stepper__value" id="qtyValue">1</span>
+              <button id="qtyUp" aria-label="Augmenter">+</button>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div id="results">
+        <div class="empty">
+          <span class="empty__mark">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                 stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+          </span>
+          <div class="stack-2" style="align-items:center">
+            <p class="empty__title">Cherchez une carte</p>
+            <p class="empty__text">Tapez les premières lettres d'un nom : cliquez sur une
+              carte pour l'ajouter à votre collection. Les cartes que vous possédez déjà
+              affichent leur quantité.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="basket panel">
+      <div class="panel__head">
+        <div class="stack-2">
+          <h2 class="h3">Cette session</h2>
+          <p class="xs dim" id="sessionSummary">Aucune carte ajoutée</p>
+        </div>
+        <button class="btn btn--ghost btn--sm" id="clearSession" hidden>Effacer</button>
+      </div>
+      <div class="panel__body panel__body--flush">
+        <div class="basket__list" id="basket"></div>
+      </div>
+      <div class="panel__body" style="border-top:1px solid var(--line)">
+        <a class="btn btn--block" href="/collection">Voir ma collection</a>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script src="/static/js/mm.js"></script>
+<script>
+(async () => {
+  const user = await MM.boot({
+    title: 'Ajouter des cartes',
+    nav: 'add',
+    back: '/collection',
+    actions: `<a class="btn btn--sm" href="/collection/import">Importer un fichier</a>`,
+  });
+  if (!user) return;
+
+  const state = { finish: 'nonfoil', quantity: 1, added: [], results: [] };
+
+  /* ── Options d'ajout ──────────────────────────────────────────────────── */
+
+  MM.els('[data-finish]').forEach((button) => {
+    button.addEventListener('click', () => {
+      state.finish = button.dataset.finish;
+      MM.els('[data-finish]').forEach((other) =>
+        other.setAttribute('aria-pressed', String(other === button)));
+    });
+  });
+
+  function setQuantity(value) {
+    state.quantity = Math.max(1, Math.min(99, value));
+    MM.el('#qtyValue').textContent = state.quantity;
+  }
+  MM.el('#qtyUp').addEventListener('click', () => setQuantity(state.quantity + 1));
+  MM.el('#qtyDown').addEventListener('click', () => setQuantity(state.quantity - 1));
+
+  /* ── Recherche ────────────────────────────────────────────────────────── */
+
+  const results = MM.el('#results');
+
+  const search = MM.debounce(async (term) => {
+    if (term.length < 2) return;
+    results.innerHTML = `<div class="card-grid">${MM.cardSkeletons(6)}</div>`;
+    try {
+      const data = await MM.api.get(
+        `/api/v2/cards/suggest?q=${encodeURIComponent(term)}&limit=18`);
+      state.results = data.cards;
+      render(data.cards, term);
+    } catch (err) {
+      results.innerHTML = MM.empty({ icon: 'warning', title: 'Recherche impossible',
+        text: err.message });
+    }
+  }, 240);
+
+  function render(cards, term) {
+    if (!cards.length) {
+      results.innerHTML = MM.empty({
+        icon: 'search',
+        title: 'Aucune carte trouvée',
+        text: `Rien ne correspond à « ${term} ». Vérifiez l'orthographe : les noms sont en anglais.`,
+      });
+      return;
+    }
+    results.innerHTML = `<div class="card-grid">${cards.map((card, index) => `
+      <article class="mtg-card result-card" data-index="${index}" tabindex="0" role="button"
+               aria-label="Ajouter ${MM.esc(card.name)}">
+        <div class="mtg-card__frame">
+          ${MM.img.frame(card)}
+          ${card.owned ? `<span class="mtg-card__qty" title="Déjà en collection">
+            ${card.owned}</span>` : ''}
+        </div>
+        <div class="mtg-card__foot">
+          <span class="mtg-card__name" title="${MM.esc(card.name)}">${MM.esc(card.name)}</span>
+          <span class="mtg-card__meta">
+            <button class="btn btn--sm btn--ghost" data-printings="${index}"
+                    style="padding:0;font-size:var(--text-xs)"
+                    title="Choisir une autre édition">
+              ${MM.esc(card.set_code)} ▾
+            </button>
+            ${card.rarity ? `<span class="dim">${MM.esc(MM.fmt.rarity(card.rarity).slice(0, 1))}</span>` : ''}
+          </span>
+        </div>
+      </article>`).join('')}</div>`;
+  }
+
+  MM.el('#q').addEventListener('input', (event) => {
+    const term = event.target.value.trim();
+    if (term.length < 2) {
+      state.results = [];
+      results.innerHTML = MM.empty({
+        icon: 'search', title: 'Cherchez une carte',
+        text: "Tapez les premières lettres d'un nom pour voir les cartes correspondantes.",
+      });
+      return;
+    }
+    search(term);
+  });
+
+  /* ── Ajout ────────────────────────────────────────────────────────────── */
+
+  results.addEventListener('click', (event) => {
+    const printings = event.target.closest('[data-printings]');
+    if (printings) {
+      event.stopPropagation();
+      return choosePrinting(state.results[Number(printings.dataset.printings)]);
+    }
+    const card = event.target.closest('.result-card');
+    if (card) addCard(state.results[Number(card.dataset.index)], card);
+  });
+
+  results.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    const card = event.target.closest('.result-card');
+    if (card) {
+      event.preventDefault();
+      addCard(state.results[Number(card.dataset.index)], card);
+    }
+  });
+
+  async function addCard(card, node, override) {
+    if (!card) return;
+    const payload = {
+      card_name: card.name,
+      quantity: state.quantity,
+      set_code: (override && override.set_code) || card.set_code,
+      collector_number: (override && override.collector_number) || card.collector_number,
+      finish: state.finish,
+    };
+    try {
+      const result = await MM.api.post('/api/v2/collection/items', payload);
+      card.owned = (card.owned || 0) + state.quantity;
+
+      if (node) {
+        node.classList.add('is-added');
+        const badge = MM.el('.mtg-card__qty', node);
+        if (badge) badge.textContent = card.owned;
+        else MM.el('.mtg-card__frame', node).insertAdjacentHTML('beforeend',
+          `<span class="mtg-card__qty">${card.owned}</span>`);
+        setTimeout(() => node.classList.remove('is-added'), 900);
+      }
+
+      pushToBasket({
+        id: result.item.id,
+        name: card.name,
+        image: card.image_small,
+        quantity: state.quantity,
+        set_code: payload.set_code,
+        finish: state.finish,
+        total: result.item.quantity,
+      });
+    } catch (err) {
+      MM.toast.error(err.message);
+    }
+  }
+
+  /* ── Choix de l'édition ───────────────────────────────────────────────── */
+
+  async function choosePrinting(card) {
+    const modal = MM.modal({
+      title: `Éditions de ${card.name}`,
+      wide: true,
+      body: '<div class="center" style="padding:40px"><span class="spinner spinner--lg"></span></div>',
+    });
+    try {
+      const data = await MM.api.get(
+        `/api/v2/cards/${encodeURIComponent(card.name)}/printings?limit=60`);
+      modal.body.innerHTML = `<div class="card-grid card-grid--sm">
+        ${data.printings.map((printing, index) => `
+          <article class="mtg-card result-card" data-p="${index}">
+            <div class="mtg-card__frame">${MM.img.frame(printing)}</div>
+            <div class="mtg-card__foot">
+              <span class="mtg-card__name">${MM.esc(printing.set_code)}
+                ${printing.collector_number ? '#' + MM.esc(printing.collector_number) : ''}</span>
+              <span class="mtg-card__meta truncate">${MM.esc(printing.set_name || '')}</span>
+            </div>
+          </article>`).join('')}</div>`;
+
+      modal.body.addEventListener('click', async (event) => {
+        const chosen = event.target.closest('[data-p]');
+        if (!chosen) return;
+        const printing = data.printings[Number(chosen.dataset.p)];
+        await addCard(card, null, printing);
+        MM.toast.ok(`${card.name} (${printing.set_code}) ajoutée.`);
+        modal.close();
+      });
+    } catch (err) {
+      modal.body.innerHTML = `<p class="muted">${MM.esc(err.message)}</p>`;
+    }
+  }
+
+  /* ── Journal de session ───────────────────────────────────────────────── */
+
+  function pushToBasket(entry) {
+    state.added.unshift(entry);
+    renderBasket();
+  }
+
+  function renderBasket() {
+    const host = MM.el('#basket');
+    const copies = state.added.reduce((sum, entry) => sum + entry.quantity, 0);
+
+    MM.el('#sessionSummary').textContent = state.added.length
+      ? `${MM.fmt.plural(copies, 'carte')} ajoutée${copies > 1 ? 's' : ''}`
+      : 'Aucune carte ajoutée';
+    MM.el('#clearSession').hidden = !state.added.length;
+
+    if (!state.added.length) {
+      host.innerHTML = `<p class="xs dim" style="padding:var(--sp-4)">
+        Les cartes ajoutées apparaissent ici, avec la possibilité d'annuler.</p>`;
+      return;
+    }
+
+    host.innerHTML = state.added.map((entry, index) => `
+      <div class="basket-row">
+        ${entry.image ? `<img src="${MM.esc(entry.image)}" alt="" loading="lazy">` : ''}
+        <div class="grow" style="min-width:0">
+          <p class="small truncate">${MM.esc(entry.name)}</p>
+          <p class="xs dim">${MM.esc(entry.set_code || '')}
+            ${MM.fmt.finish(entry.finish) ? '· ' + MM.fmt.finish(entry.finish) : ''}
+            · +${entry.quantity}</p>
+        </div>
+        <button class="btn btn--ghost btn--sm btn--icon" data-undo="${index}"
+                aria-label="Annuler cet ajout">${MM.icons.close}</button>
+      </div>`).join('');
+  }
+
+  MM.el('#basket').addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-undo]');
+    if (!button) return;
+    const index = Number(button.dataset.undo);
+    const entry = state.added[index];
+    const remaining = entry.total - entry.quantity;
+    try {
+      if (remaining <= 0) await MM.api.del(`/api/v2/collection/items/${entry.id}`);
+      else await MM.api.patch(`/api/v2/collection/items/${entry.id}`, { quantity: remaining });
+      state.added.splice(index, 1);
+      renderBasket();
+      MM.toast(`Ajout de ${entry.name} annulé.`);
+    } catch (err) { MM.toast.error(err.message); }
+  });
+
+  MM.el('#clearSession').addEventListener('click', () => {
+    state.added = [];
+    renderBasket();
+  });
+
+  renderBasket();
+  MM.el('#q').focus();
+})();
+</script>
+</body>
+</html>

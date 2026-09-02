@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>ManaMind — Ma collection</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/app.css">
+<style>
+  .summary {
+    display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-6);
+    align-items: baseline;
+    padding: var(--sp-4) var(--sp-5);
+    border-radius: var(--r-lg);
+    border: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .summary b { font-size: var(--text-lg); font-variant-numeric: tabular-nums; }
+
+  .filters {
+    display: flex; flex-direction: column; gap: var(--sp-4);
+    padding: var(--sp-4) var(--sp-5);
+    border-radius: var(--r-lg);
+    border: 1px solid var(--line);
+    background: var(--bg-raised);
+  }
+  .filters[hidden] { display: none; }
+  .filter-row { display: flex; gap: var(--sp-4); align-items: flex-start; flex-wrap: wrap; }
+  .filter-row > .stack-2 { min-width: 180px; }
+
+  /* Vue liste : plus dense, utile au-dela de quelques centaines de cartes */
+  .list-view .card-grid { display: block; }
+  .list-view .mtg-card { flex-direction: row; align-items: center; gap: var(--sp-4);
+    padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--line); }
+  .list-view .mtg-card:hover { transform: none; background: var(--surface); }
+  .list-view .mtg-card__frame { width: 42px; flex-shrink: 0; box-shadow: none; }
+  .list-view .mtg-card__actions { position: static; opacity: 1; transform: none;
+    background: none; padding: 0; width: auto; }
+  .list-view .mtg-card__foot { flex-direction: row; align-items: center;
+    gap: var(--sp-4); flex: 1; min-width: 0; }
+  .list-view .mtg-card__name { flex: 1; }
+  .list-view .mtg-card__qty { display: none; }
+  .list-view .mtg-card__badges { position: static; flex-direction: row; }
+
+  .sentinel { height: 40px; }
+</style>
+</head>
+<body>
+
+<div id="page">
+  <div class="summary" id="summary">
+    <div class="skeleton skeleton--text" style="width:260px;height:20px"></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search toolbar__search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+           stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+      <input class="input" id="search" type="search" placeholder="Rechercher une carte…"
+             autocomplete="off">
+    </div>
+
+    <select class="select" id="sort" style="width:auto">
+      <option value="name">Ordre alphabétique</option>
+      <option value="recent">Ajout le plus récent</option>
+      <option value="oldest">Ajout le plus ancien</option>
+      <option value="value">Valeur décroissante</option>
+      <option value="quantity">Quantité</option>
+      <option value="rarity">Rareté</option>
+      <option value="mana">Coût de mana</option>
+    </select>
+
+    <button class="btn" id="toggleFilters" aria-expanded="false">
+      Filtres <span class="badge" id="filterCount" hidden>0</span>
+    </button>
+
+    <div class="btn-group" role="group" aria-label="Affichage">
+      <button class="btn btn--sm" id="viewGrid" aria-pressed="true">Grille</button>
+      <button class="btn btn--sm" id="viewList" aria-pressed="false">Liste</button>
+    </div>
+  </div>
+
+  <div class="filters" id="filters" hidden>
+    <div class="filter-row">
+      <div class="stack-2">
+        <span class="label">Couleurs</span>
+        <div class="chips" id="colorChips"></div>
+      </div>
+      <div class="stack-2">
+        <span class="label">Types</span>
+        <div class="chips" id="typeChips"></div>
+      </div>
+    </div>
+    <div class="filter-row">
+      <div class="stack-2">
+        <span class="label">Rareté</span>
+        <div class="chips" id="rarityChips"></div>
+      </div>
+      <div class="stack-2">
+        <span class="label">Finition</span>
+        <div class="chips" id="finishChips"></div>
+      </div>
+      <div class="stack-2">
+        <span class="label">Utilisation</span>
+        <div class="chips" id="deckChips">
+          <button class="chip" data-deck="yes" aria-pressed="false">Dans un deck</button>
+          <button class="chip" data-deck="no" aria-pressed="false">Inutilisée</button>
+        </div>
+      </div>
+    </div>
+    <div class="filter-row">
+      <div class="stack-2 grow">
+        <span class="label">Extension</span>
+        <select class="select" id="setSelect" style="max-width:340px">
+          <option value="">Toutes les extensions</option>
+        </select>
+      </div>
+      <button class="btn btn--ghost btn--sm" id="clearFilters"
+              style="align-self:flex-end">Tout effacer</button>
+    </div>
+  </div>
+
+  <div id="results">
+    <div class="card-grid" id="grid"></div>
+  </div>
+
+  <div class="sentinel" id="sentinel"></div>
+</div>
+
+<script src="/static/js/mm.js"></script>
+<script>
+(async () => {
+  const user = await MM.boot({
+    title: 'Ma collection',
+    nav: 'collection',
+    actions: `<a class="btn btn--primary btn--sm" href="/collection/ajout">Ajouter</a>`,
+  });
+  if (!user) return;
+
+  const params = new URLSearchParams(location.search);
+  const PAGE_SIZE = 60;
+
+  const state = {
+    search: params.get('search') || '',
+    sort: params.get('sort') || 'name',
+    colors: [], types: [], rarities: [], finishes: [],
+    sets: params.get('set') ? [params.get('set')] : [],
+    in_deck: params.get('in_deck') || '',
+    offset: 0,
+    total: 0,
+    loading: false,
+    done: false,
+    view: localStorage.getItem('mm_collection_view') || 'grid',
+  };
+
+  const results = MM.el('#results');
+
+  /** La grille est remplacee par l'etat vide : on la recree au besoin. */
+  function getGrid() {
+    let node = MM.el('#grid');
+    if (!node) {
+      results.innerHTML = '<div class="card-grid" id="grid"></div>';
+      node = MM.el('#grid');
+    }
+    return node;
+  }
+  MM.el('#search').value = state.search;
+  MM.el('#sort').value = state.sort;
+
+  /* ── Filtres ──────────────────────────────────────────────────────────── */
+
+  const COLOR_LABELS = { W: 'Blanc', U: 'Bleu', B: 'Noir', R: 'Rouge', G: 'Vert', C: 'Incolore' };
+  const FINISH_LABELS = { nonfoil: 'Normale', foil: 'Foil', etched: 'Gravée' };
+
+  function renderChips(host, values, key, labels) {
+    host.innerHTML = values.map((entry) => {
+      const value = entry.value || entry.code;
+      const label = labels ? (labels[value] || value) : MM.fmt.rarity(value);
+      const active = state[key].includes(value);
+      return `<button class="chip ${key === 'colors' ? 'chip--color' : ''}"
+                data-key="${key}" data-value="${MM.esc(value)}"
+                aria-pressed="${active}">
+                ${key === 'colors' ? `<span class="pip pip--${MM.esc(value)}"></span>` : ''}
+                ${MM.esc(label)}
+                <span class="chip__count">${entry.count}</span>
+              </button>`;
+    }).join('');
+  }
+
+  try {
+    const facets = await MM.api.get('/api/v2/collection/facets');
+    const order = ['W', 'U', 'B', 'R', 'G', 'C'];
+    const colors = facets.colors.slice()
+      .sort((a, b) => order.indexOf(a.value) - order.indexOf(b.value));
+    renderChips(MM.el('#colorChips'), colors, 'colors', COLOR_LABELS);
+    renderChips(MM.el('#typeChips'), facets.types, 'types', null);
+    renderChips(MM.el('#rarityChips'),
+      facets.rarities.sort((a, b) =>
+        ['common', 'uncommon', 'rare', 'mythic'].indexOf(a.value)
+        - ['common', 'uncommon', 'rare', 'mythic'].indexOf(b.value)), 'rarities', null);
+    renderChips(MM.el('#finishChips'), facets.finishes, 'finishes', FINISH_LABELS);
+
+    const setSelect = MM.el('#setSelect');
+    facets.sets.forEach((set) => {
+      const option = document.createElement('option');
+      option.value = set.code;
+      option.textContent = `${set.name} (${set.count})`;
+      setSelect.appendChild(option);
+    });
+    if (state.sets.length) setSelect.value = state.sets[0];
+  } catch (err) {
+    MM.toast.error('Filtres indisponibles : ' + err.message);
+  }
+
+  MM.els('#deckChips .chip').forEach((chip) => {
+    if (chip.dataset.deck === state.in_deck) chip.setAttribute('aria-pressed', 'true');
+  });
+
+  MM.el('#filters').addEventListener('click', (event) => {
+    const chip = event.target.closest('.chip');
+    if (!chip) return;
+
+    if (chip.dataset.deck) {
+      const value = chip.dataset.deck;
+      state.in_deck = state.in_deck === value ? '' : value;
+      MM.els('#deckChips .chip').forEach((other) =>
+        other.setAttribute('aria-pressed', other.dataset.deck === state.in_deck));
+    } else {
+      const { key, value } = chip.dataset;
+      const list = state[key];
+      const index = list.indexOf(value);
+      if (index >= 0) list.splice(index, 1); else list.push(value);
+      chip.setAttribute('aria-pressed', index < 0);
+    }
+    reload();
+  });
+
+  MM.el('#setSelect').addEventListener('change', (event) => {
+    state.sets = event.target.value ? [event.target.value] : [];
+    reload();
+  });
+
+  MM.el('#clearFilters').addEventListener('click', () => {
+    state.colors = []; state.types = []; state.rarities = [];
+    state.finishes = []; state.sets = []; state.in_deck = '';
+    MM.els('.chip').forEach((chip) => chip.setAttribute('aria-pressed', 'false'));
+    MM.el('#setSelect').value = '';
+    reload();
+  });
+
+  MM.el('#toggleFilters').addEventListener('click', (event) => {
+    const panel = MM.el('#filters');
+    panel.hidden = !panel.hidden;
+    event.currentTarget.setAttribute('aria-expanded', String(!panel.hidden));
+  });
+
+  MM.el('#search').addEventListener('input', MM.debounce((event) => {
+    state.search = event.target.value.trim();
+    reload();
+  }, 280));
+
+  MM.el('#sort').addEventListener('change', (event) => {
+    state.sort = event.target.value;
+    reload();
+  });
+
+  /* ── Affichage grille / liste ─────────────────────────────────────────── */
+
+  function applyView() {
+    results.classList.toggle('list-view', state.view === 'list');
+    MM.el('#viewGrid').setAttribute('aria-pressed', String(state.view === 'grid'));
+    MM.el('#viewList').setAttribute('aria-pressed', String(state.view === 'list'));
+    localStorage.setItem('mm_collection_view', state.view);
+  }
+  MM.el('#viewGrid').addEventListener('click', () => { state.view = 'grid'; applyView(); });
+  MM.el('#viewList').addEventListener('click', () => { state.view = 'list'; applyView(); });
+  applyView();
+
+  /* ── Chargement ───────────────────────────────────────────────────────── */
+
+  function activeFilterCount() {
+    return state.colors.length + state.types.length + state.rarities.length
+      + state.finishes.length + state.sets.length + (state.in_deck ? 1 : 0);
+  }
+
+  async function load({ reset = false } = {}) {
+    if (state.loading || (state.done && !reset)) return;
+    state.loading = true;
+    if (reset) {
+      state.offset = 0;
+      state.done = false;
+      getGrid().innerHTML = MM.cardSkeletons(12);
+    }
+
+    const query = MM.api.qs({
+      search: state.search, sort: state.sort,
+      colors: state.colors, types: state.types, rarities: state.rarities,
+      finishes: state.finishes, sets: state.sets, in_deck: state.in_deck,
+      limit: PAGE_SIZE, offset: state.offset,
+    });
+
+    try {
+      const data = await MM.api.get('/api/v2/collection' + query);
+      const grid = getGrid();
+      if (reset) grid.innerHTML = '';
+      state.total = data.total;
+
+      if (!data.items.length && reset) {
+        results.innerHTML = MM.empty({
+          icon: activeFilterCount() || state.search ? 'search' : 'box',
+          title: activeFilterCount() || state.search
+            ? 'Aucune carte ne correspond'
+            : 'Votre collection est vide',
+          text: activeFilterCount() || state.search
+            ? 'Élargissez la recherche ou effacez les filtres.'
+            : 'Importez un fichier ou ajoutez vos cartes une à une pour commencer.',
+          action: activeFilterCount() || state.search
+            ? null : { href: '/collection/import', label: 'Importer ma collection' },
+        });
+      } else {
+        grid.insertAdjacentHTML('beforeend',
+          data.items.map((item) => MM.cardTile(item, { actions: true })).join(''));
+        cache = cache.concat(data.items);
+      }
+
+      state.offset += data.items.length;
+      if (data.items.length < PAGE_SIZE) state.done = true;
+      updateSummary();
+    } catch (err) {
+      MM.toast.error(err.message);
+      state.done = true;
+    } finally {
+      state.loading = false;
+    }
+  }
+
+  let cache = [];
+
+  function reload() {
+    cache = [];
+    load({ reset: true });
+
+    const url = new URL(location.href);
+    url.search = MM.api.qs({
+      search: state.search,
+      sort: state.sort === 'name' ? '' : state.sort,
+      in_deck: state.in_deck,
+      set: state.sets[0] || '',
+    }).slice(1);
+    history.replaceState(null, '', url);
+
+    const badge = MM.el('#filterCount');
+    const count = activeFilterCount();
+    badge.hidden = count === 0;
+    badge.textContent = count;
+  }
+
+  function updateSummary() {
+    const filtered = activeFilterCount() || state.search;
+    MM.el('#summary').innerHTML = `
+      <span><b>${MM.fmt.int(state.total)}</b>
+        <span class="muted small">${filtered ? 'résultats' : 'exemplaires distincts'}</span></span>
+      ${stats ? `
+        <span><b>${MM.fmt.int(stats.copies)}</b>
+          <span class="muted small">cartes au total</span></span>
+        <span><b>${MM.fmt.eur(stats.value_eur, { compact: true })}</b>
+          <span class="muted small">de valeur estimée</span></span>
+        <span><b>${MM.fmt.int(stats.dormant)}</b>
+          <span class="muted small">inutilisées</span></span>` : ''}`;
+  }
+
+  let stats = null;
+  try {
+    const dashboard = await MM.api.get('/api/dashboard');
+    stats = dashboard.stats;
+  } catch { /* le résumé se limite au total filtré */ }
+
+  /* ── Actions sur une carte ────────────────────────────────────────────── */
+
+  results.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-act]');
+    if (!button) return;
+    const card = button.closest('.mtg-card');
+    const id = Number(card.dataset.id);
+    const item = cache.find((entry) => entry.id === id);
+    if (!item) return;
+
+    if (button.dataset.act === 'detail') return openDetail(item, card);
+
+    const delta = button.dataset.act === 'inc' ? 1 : -1;
+    const next = item.quantity + delta;
+    button.disabled = true;
+    try {
+      if (next <= 0) {
+        await MM.api.del(`/api/v2/collection/items/${id}`);
+        card.remove();
+        cache = cache.filter((entry) => entry.id !== id);
+        state.total -= 1;
+        MM.toast(`${item.card_name} retirée de la collection.`);
+      } else {
+        await MM.api.patch(`/api/v2/collection/items/${id}`, { quantity: next });
+        item.quantity = next;
+        MM.el('.stepper__value', card).textContent = next;
+        const badge = MM.el('.mtg-card__qty', card);
+        if (badge) badge.textContent = next;
+      }
+      updateSummary();
+    } catch (err) {
+      MM.toast.error(err.message);
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  function openDetail(item, cardNode) {
+    const art = MM.img.card(item);
+    const modal = MM.modal({
+      title: item.card_name,
+      wide: true,
+      body: `
+        <div class="grid-2" style="align-items:start">
+          <div class="mtg-card mtg-card--flat">
+            <div class="mtg-card__frame">${MM.img.frame(item, { lazy: false })}</div>
+          </div>
+          <div class="stack">
+            <div class="cluster-2">
+              ${item.rarity ? `<span class="badge badge--${MM.esc(item.rarity)}">
+                ${MM.esc(MM.fmt.rarity(item.rarity))}</span>` : ''}
+              ${MM.fmt.finish(item.finish)
+                ? `<span class="badge badge--foil">${MM.fmt.finish(item.finish)}</span>` : ''}
+              ${MM.img.pips(item.color_identity)}
+            </div>
+
+            <div class="stack-2">
+              <p class="small muted">${MM.esc(item.type_line)}</p>
+              ${item.set_name ? `<p class="small">
+                ${MM.esc(item.set_name)}
+                <span class="dim">· ${MM.esc(item.set_code || '')}
+                ${item.collector_number ? '#' + MM.esc(item.collector_number) : ''}</span></p>` : ''}
+              ${item.artist ? `<p class="xs dim">Illustration : ${MM.esc(item.artist)}</p>` : ''}
+            </div>
+
+            <hr class="divider">
+
+            <div class="grid-3">
+              <div class="field">
+                <label class="label" for="dQty">Quantité</label>
+                <input class="input" id="dQty" type="number" min="0" value="${item.quantity}">
+              </div>
+              <div class="field">
+                <label class="label" for="dCond">État</label>
+                <select class="select" id="dCond">
+                  <option value="">Non précisé</option>
+                  ${['NM', 'EX', 'GD', 'LP', 'PL', 'PO'].map((c) =>
+                    `<option ${item.condition === c ? 'selected' : ''}>${c}</option>`).join('')}
+                </select>
+              </div>
+              <div class="field">
+                <label class="label" for="dLoc">Rangement</label>
+                <input class="input" id="dLoc" type="text" placeholder="Classeur, boîte…"
+                       value="${MM.esc(item.location || '')}">
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="label" for="dNote">Note</label>
+              <input class="input" id="dNote" type="text" placeholder="Signée, altérée…"
+                     value="${MM.esc(item.note || '')}">
+            </div>
+
+            <hr class="divider">
+
+            <div class="between">
+              <span class="muted small">Valeur unitaire</span>
+              <span class="strong num">${MM.fmt.eur(item.unit_price)}</span>
+            </div>
+            <div class="between">
+              <span class="muted small">Total pour ${item.quantity} exemplaire${item.quantity > 1 ? 's' : ''}</span>
+              <span class="strong num">${MM.fmt.eur(item.total_price)}</span>
+            </div>
+            <div class="between">
+              <span class="muted small">Ajoutée</span>
+              <span class="small">${MM.esc(MM.fmt.since(item.added_at) || '—')}</span>
+            </div>
+
+            ${item.in_decks.length ? `
+              <div class="stack-2">
+                <span class="label">Présente dans</span>
+                <div class="chips">${item.in_decks.map((deck) =>
+                  `<span class="chip">${MM.esc(deck)}</span>`).join('')}</div>
+              </div>` : `<p class="xs dim">Cette carte ne figure dans aucun de vos decks.</p>`}
+
+            ${item.scryfall_uri ? `<a class="btn btn--sm btn--ghost" target="_blank" rel="noopener"
+              href="${MM.esc(item.scryfall_uri)}">Voir sur Scryfall ${MM.icons.external}</a>` : ''}
+          </div>
+        </div>`,
+      footer: `
+        <button class="btn btn--danger" data-remove>Retirer de ma collection</button>
+        <button class="btn btn--primary" data-save>Enregistrer</button>`,
+    });
+
+    MM.el('[data-save]', modal.root).addEventListener('click', async (event) => {
+      event.target.disabled = true;
+      const payload = {
+        quantity: Number(MM.el('#dQty', modal.root).value),
+        condition: MM.el('#dCond', modal.root).value || null,
+        location: MM.el('#dLoc', modal.root).value || null,
+        note: MM.el('#dNote', modal.root).value || null,
+      };
+      try {
+        const result = await MM.api.patch(`/api/v2/collection/items/${item.id}`, payload);
+        if (result.deleted) {
+          cardNode.remove();
+          cache = cache.filter((entry) => entry.id !== item.id);
+          state.total -= 1;
+        } else {
+          Object.assign(item, payload);
+          item.quantity = result.quantity;
+          MM.el('.stepper__value', cardNode).textContent = result.quantity;
+          const badge = MM.el('.mtg-card__qty', cardNode);
+          if (badge) badge.textContent = result.quantity;
+        }
+        updateSummary();
+        MM.toast.ok('Exemplaire mis à jour.');
+        modal.close();
+      } catch (err) {
+        MM.toast.error(err.message);
+        event.target.disabled = false;
+      }
+    });
+
+    MM.el('[data-remove]', modal.root).addEventListener('click', async () => {
+      const ok = await MM.confirm({
+        title: 'Retirer cette carte ?',
+        text: `${item.card_name} sera supprimée de votre collection.`,
+        confirmLabel: 'Retirer', danger: true,
+      });
+      if (!ok) return;
+      try {
+        await MM.api.del(`/api/v2/collection/items/${item.id}`);
+        cardNode.remove();
+        cache = cache.filter((entry) => entry.id !== item.id);
+        state.total -= 1;
+        updateSummary();
+        MM.toast('Carte retirée.');
+        modal.close();
+      } catch (err) { MM.toast.error(err.message); }
+    });
+  }
+
+  /* ── Défilement infini ────────────────────────────────────────────────── */
+
+  new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting) load();
+  }, { rootMargin: '600px' }).observe(MM.el('#sentinel'));
+
+  reload();
+})();
+</script>
+</body>
+</html>

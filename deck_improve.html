@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>ManaMind — Améliorer un deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/app.css">
+<style>
+  .suggestion { position: relative; }
+  .suggestion__rate {
+    position: absolute; top: 6px; left: 6px;
+    padding: 2px 7px; border-radius: var(--r-sm);
+    background: var(--overlay); border: 1px solid var(--line-accent);
+    color: var(--accent-bright);
+    font-size: var(--text-xs); font-weight: 600;
+    backdrop-filter: blur(4px);
+  }
+  .suggestion.is-added .mtg-card__frame { border-color: var(--ok); opacity: 0.6; }
+</style>
+</head>
+<body>
+
+<div id="page">
+  <div class="stack-2">
+    <h2 class="h2">Améliorer un deck avec votre collection</h2>
+    <p class="muted small">
+      Ces cartes vous appartiennent, ne sont pas déjà dans ce deck, et sont fréquemment
+      jouées par les autres decks du même commandant.
+    </p>
+  </div>
+
+  <div class="toolbar">
+    <div id="deckPicker" class="grow"></div>
+  </div>
+
+  <div id="results"></div>
+</div>
+
+<script src="/static/js/mm.js"></script>
+<script>
+(async () => {
+  const user = await MM.boot({ title: 'Améliorer un deck', nav: 'improve' });
+  if (!user) return;
+
+  const results = MM.el('#results');
+  let currentDeck = null;
+  let suggestions = [];
+  let resolved = {};
+
+  await MM.deckPicker(MM.el('#deckPicker'), (deck) => {
+    currentDeck = deck;
+    load();
+  }, { label: 'Deck à améliorer' });
+
+  async function load() {
+    if (!currentDeck) return;
+    results.innerHTML = `<div class="card-grid">${MM.cardSkeletons(12)}</div>`;
+
+    try {
+      const data = await MM.api.get('/api/collection-suggest'
+        + MM.api.qs({ top: 60, commander: currentDeck.commander }));
+      suggestions = data.results || [];
+      resolved = await MM.resolveCards(suggestions.map((card) => card.card_name));
+      render(data);
+    } catch (err) {
+      results.innerHTML = MM.empty({
+        icon: 'warning', title: 'Analyse impossible', text: err.message });
+    }
+  }
+
+  function render(data) {
+    if (!suggestions.length) {
+      results.innerHTML = MM.empty({
+        icon: 'sparkle',
+        title: 'Aucune suggestion pour ce deck',
+        text: "Aucune carte disponible dans votre collection n'améliorerait ce deck "
+          + 'de façon significative. Ajoutez des cartes pour élargir les possibilités.',
+        action: { href: '/collection/ajout', label: 'Ajouter des cartes' },
+      });
+      return;
+    }
+
+    const stats = data.stats || {};
+    results.innerHTML = `
+      <div class="stats" style="margin-bottom:var(--sp-6)">
+        <div class="stat">
+          <span class="stat__value">${MM.fmt.int(suggestions.length)}</span>
+          <span class="stat__label">Cartes proposées</span>
+          <span class="stat__note">issues de votre collection</span>
+        </div>
+        <div class="stat">
+          <span class="stat__value">${MM.fmt.int(stats.available_cards || 0)}</span>
+          <span class="stat__label">Cartes disponibles</span>
+          <span class="stat__note">non utilisées dans vos decks</span>
+        </div>
+        <div class="stat">
+          <span class="stat__value">${Math.round(suggestions[0].inclusion_rate)} %</span>
+          <span class="stat__label">Meilleur taux</span>
+          <span class="stat__note">${MM.esc(suggestions[0].card_name)}</span>
+        </div>
+      </div>
+
+      <div class="card-grid" id="grid"></div>`;
+
+    MM.el('#grid').innerHTML = suggestions.map((card, index) => `
+      <article class="mtg-card suggestion" data-index="${index}"
+               data-name="${MM.esc(card.card_name)}">
+        <div class="mtg-card__frame">
+          ${MM.img.frame({ card_name: card.card_name, ...(resolved[card.card_name] || {}) })}
+          <span class="suggestion__rate">${Math.round(card.inclusion_rate)} %</span>
+          ${card.copies_owned > 1
+            ? `<span class="mtg-card__qty">${card.copies_owned}</span>` : ''}
+        </div>
+        <div class="mtg-card__foot">
+          <span class="mtg-card__name" title="${MM.esc(card.card_name)}">
+            ${MM.esc(card.card_name)}</span>
+          <span class="mtg-card__meta">
+            <span class="dim">${MM.fmt.int(card.decks_with_card)} / ${MM.fmt.int(card.total_decks)} decks</span>
+            ${(resolved[card.card_name] || {}).unit_price != null
+              ? `<span class="mtg-card__price">${MM.fmt.eur(resolved[card.card_name].unit_price)}</span>`
+              : ''}
+          </span>
+          <button class="btn btn--sm btn--outline" data-add="${index}"
+                  style="margin-top:6px">Ajouter au deck</button>
+        </div>
+      </article>`).join('');
+
+  }
+
+  results.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-add]');
+    if (!button) return;
+    const card = suggestions[Number(button.dataset.add)];
+    button.disabled = true;
+    button.textContent = 'Ajout…';
+    try {
+      await MM.api.post('/api/deck-card/add', {
+        commander: currentDeck.commander,
+        card_name: card.card_name,
+      });
+      button.closest('.suggestion').classList.add('is-added');
+      button.textContent = 'Ajoutée ✓';
+      MM.toast.ok(`${card.card_name} ajoutée à ${currentDeck.name}.`);
+    } catch (err) {
+      MM.toast.error(err.message);
+      button.disabled = false;
+      button.textContent = 'Ajouter au deck';
+    }
+  });
+})();
+</script>
+</body>
+</html>

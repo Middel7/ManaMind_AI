@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 
 from ..auth import COOKIE_NAME, get_current_user
 from ..deck_import.detector import detect
-from ..deck_import.models import CanonicalDeckImport, Zone
+from ..deck_import.models import CanonicalDeckImport, ResolutionStatus, Zone
 from ..deck_import.parsers.registry import parse as parse_deck
 from ..deck_import.resolver import resolve
 from ._shared import _json_response
@@ -199,13 +199,26 @@ async def api_import_confirm(request: Request) -> JSONResponse:
     # Filtrer les entrées selon les zones sélectionnées
     filtered = [e for e in deck.entries if e.zone.value in included_zones]
 
+    # Écarter les lignes qu'on n'a pas su identifier : les enregistrer polluerait
+    # la collection de noms qui ne correspondront jamais à une carte réelle.
+    _REJECTED = (
+        ResolutionStatus.UNRESOLVED,
+        ResolutionStatus.INVALID_LINE,
+        ResolutionStatus.UNSUPPORTED_DIGITAL_CARD,
+    )
+    unresolved = [e for e in filtered if e.resolution_status in _REJECTED]
+    filtered = [e for e in filtered if e.resolution_status not in _REJECTED]
+
     if not filtered:
         return JSONResponse({"error": "No entries to import after zone filtering"}, status_code=400)
 
     user_id = user["id"]
     imported = 0
-    skipped = 0
-    errors: list[str] = []
+    skipped = len(unresolved)
+    errors: list[str] = [
+        f"Carte non identifiée, ignorée : {e.raw_name or e.raw_line}"
+        for e in unresolved[:20]
+    ]
 
     commander = next(
         (e.canonical_name or e.raw_name for e in filtered if e.zone == Zone.COMMANDER),
@@ -235,45 +248,38 @@ async def api_import_confirm(request: Request) -> JSONResponse:
 # ── Helpers de persistence ────────────────────────────────────────────────────
 
 def _save_to_collection(user_id: int, entries) -> tuple[int, int, list[str]]:
-    """Sauvegarde les entrées dans user_collection."""
-    from sqlalchemy import text
+    """Sauvegarde les entrées dans user_collection.
+
+    Les parseurs résolvent déjà l'édition, le numéro de collecteur, la finition
+    et la langue : on les conserve pour que chaque exemplaire soit identifiable
+    et valorisable, plutôt que de ne garder que le nom.
+    """
+    from ..collection_store import bulk_add
 
     from ..db.engine import SessionLocal
 
     if SessionLocal is None:
         return 0, 0, ["Database unavailable"]
 
-    imported = 0
+    payload = []
     skipped = 0
-    errors: list[str] = []
+    for entry in entries:
+        name = entry.canonical_name or entry.raw_name
+        if not name:
+            skipped += 1
+            continue
+        payload.append({
+            "name": name,
+            "quantity": entry.quantity,
+            "set_code": entry.set_code,
+            "collector_number": entry.collector_number,
+            "finish": entry.finish or "nonfoil",
+            "language": entry.language or "en",
+            "condition": entry.condition,
+        })
 
-    sess = SessionLocal()
-    try:
-        for entry in entries:
-            name = entry.canonical_name or entry.raw_name
-            if not name:
-                skipped += 1
-                continue
-            try:
-                sess.execute(text("""
-                    INSERT INTO user_collection (card_name, quantity, raw_line, user_id)
-                    VALUES (:name, :qty, :raw, :uid)
-                    ON CONFLICT DO NOTHING
-                """), {
-                    "name": name,
-                    "qty": entry.quantity,
-                    "raw": entry.raw_line,
-                    "uid": user_id,
-                })
-                imported += 1
-            except Exception as exc:
-                errors.append(f"Error saving {name!r}: {exc}")
-                skipped += 1
-        sess.commit()
-    finally:
-        sess.close()
-
-    return imported, skipped, errors
+    result = bulk_add(user_id, payload)
+    return result["added"], skipped + (len(payload) - result["added"]), result["errors"]
 
 
 def _save_to_deck(user_id: int, commander: str, deck_name: str, entries) -> tuple[int, int, list[str]]:

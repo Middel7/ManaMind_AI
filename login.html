@@ -1,155 +1,165 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ManaMind — Connexion</title>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Cormorant+Garamond:wght@400;500;600&family=Spectral:wght@300;400;500&display=swap" rel="stylesheet" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/app.css">
 <style>
-  :root {
-    --ink-900:#0c0910; --ink-850:#120c1a; --ink-800:#17101f;
-    --parch-100:#efe6d6; --parch-300:#cdbfa8; --parch-500:#9c8e79;
-    --gold:#c9a45c; --gold-soft:#d8bd83; --gold-line:rgba(201,164,92,0.42); --gold-faint:rgba(201,164,92,0.12);
-    --arcane:#a07be0;
-    --serif-display:"Cormorant Garamond",Georgia,serif;
-    --serif-engraved:"Cinzel",Georgia,serif;
-    --serif-body:"Spectral",Georgia,serif;
-  }
-  *{box-sizing:border-box;margin:0;padding:0;}
-  html,body{height:100%;background:var(--ink-900);color:var(--parch-100);font-family:var(--serif-body);}
-  body{display:flex;align-items:center;justify-content:center;min-height:100vh;
-    background:radial-gradient(140% 90% at 50% -10%,rgba(100,60,160,0.22) 0%,rgba(12,9,16,0) 55%),var(--ink-900);}
+  .auth { display: grid; grid-template-columns: 1fr 460px; min-height: 100vh; }
+  @media (max-width: 960px) { .auth { grid-template-columns: 1fr; } .auth__art { display: none; } }
 
-  .card{
-    width:100%;max-width:420px;padding:48px 40px;
-    background:rgba(18,12,26,0.9);
-    border:1px solid var(--gold-line);border-radius:14px;
-    box-shadow:0 8px 40px rgba(0,0,0,0.6),inset 0 1px 0 rgba(201,164,92,0.1);
+  .auth__art {
+    position: relative;
+    isolation: isolate;
+    display: flex; flex-direction: column; justify-content: flex-end;
+    padding: var(--sp-12);
+    background: var(--bg-sunken);
+    overflow: hidden;
+  }
+  .auth__art::before {
+    content: ""; position: absolute; inset: 0; z-index: -2;
+    background-image: url('/assets/grimoire-bg.avif');
+    background-size: cover; background-position: center;
+    opacity: 0.55;
+  }
+  .auth__art::after {
+    content: ""; position: absolute; inset: 0; z-index: -1;
+    background: linear-gradient(20deg, var(--bg) 12%,
+                rgba(8,8,12,0.6) 55%, rgba(8,8,12,0.25) 100%);
   }
 
-  .brand{display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:32px;}
-  .brand-seal{
-    width:44px;height:44px;border-radius:50%;
-    display:grid;place-items:center;
-    border:1px solid var(--gold-line);
-    background:radial-gradient(circle at 35% 30%,rgba(124,107,168,0.5),rgba(30,22,44,0.9));
+  .auth__form {
+    display: flex; flex-direction: column; justify-content: center;
+    gap: var(--sp-6);
+    padding: var(--sp-10) var(--sp-8);
+    border-left: 1px solid var(--line);
+    background: var(--bg-raised);
   }
-  .brand-seal svg{width:22px;height:22px;}
-  .brand-name{font-family:var(--serif-engraved);font-size:1.4rem;letter-spacing:0.12em;color:var(--gold-soft);}
 
-  h1{font-family:var(--serif-display);font-size:1.6rem;font-weight:500;text-align:center;margin-bottom:28px;color:var(--parch-100);}
-
-  .field{margin-bottom:18px;}
-  label{display:block;font-family:var(--serif-engraved);font-size:0.65rem;letter-spacing:0.12em;color:var(--parch-500);margin-bottom:6px;}
-  input{
-    width:100%;padding:10px 14px;
-    background:rgba(255,255,255,0.04);border:1px solid var(--gold-line);border-radius:6px;
-    color:var(--parch-100);font-family:var(--serif-body);font-size:0.95rem;
-    outline:none;transition:border-color 0.2s;
-  }
-  input:focus{border-color:var(--gold);}
-  input::placeholder{color:var(--parch-500);}
-
-  .btn-primary{
-    width:100%;padding:12px;margin-top:8px;border:none;border-radius:7px;
-    background:linear-gradient(135deg,rgba(160,123,224,0.3),rgba(201,164,92,0.25));
-    border:1px solid var(--gold-line);
-    color:var(--gold-soft);font-family:var(--serif-engraved);font-size:0.78rem;letter-spacing:0.12em;
-    cursor:pointer;transition:all 0.2s;
-  }
-  .btn-primary:hover{background:linear-gradient(135deg,rgba(160,123,224,0.45),rgba(201,164,92,0.35));border-color:var(--gold);}
-  .btn-primary:disabled{opacity:0.5;cursor:not-allowed;}
-
-  .error-msg{
-    margin-top:14px;padding:10px 14px;border-radius:6px;
-    background:rgba(220,60,60,0.1);border:1px solid rgba(220,60,60,0.35);
-    color:#e08080;font-size:0.85rem;display:none;
-  }
-  .error-msg.show{display:block;}
-
-  .footer-link{
-    margin-top:24px;text-align:center;font-size:0.8rem;color:var(--parch-500);
-  }
-  .footer-link a{color:var(--gold);text-decoration:none;}
-  .footer-link a:hover{text-decoration:underline;}
-
-  .spinner{
-    display:inline-block;width:14px;height:14px;
-    border:2px solid currentColor;border-top-color:transparent;
-    border-radius:50%;animation:spin 0.7s linear infinite;margin-right:6px;vertical-align:middle;
-  }
-  @keyframes spin{to{transform:rotate(360deg);}}
+  .auth__points { display: flex; flex-direction: column; gap: var(--sp-3); max-width: 460px; }
+  .auth__point { display: flex; gap: var(--sp-3); align-items: flex-start; }
+  .auth__point svg { width: 18px; height: 18px; color: var(--accent); flex-shrink: 0; margin-top: 3px; }
 </style>
 </head>
 <body>
-<div class="card">
-  <div class="brand">
-    <div class="brand-seal">
-      <svg viewBox="0 0 24 24" fill="none" stroke="#a795d6" stroke-width="1.3">
-        <path d="M12 2.5 20 7v10l-8 4.5L4 17V7l8-4.5Z"/>
-        <path d="M12 7.2 16 9.5v5L12 16.8 8 14.5v-5L12 7.2Z" stroke="#d4b15f"/>
-        <circle cx="12" cy="12" r="1.4" fill="#d4b15f" stroke="none"/>
-      </svg>
+
+<div class="auth">
+  <div class="auth__art">
+    <div class="stack">
+      <div class="cluster-2">
+        <span class="brand__mark" id="mark"></span>
+        <span class="brand__name" style="font-size:1.5rem">ManaMind</span>
+      </div>
+      <h1 class="h1" style="max-width:520px">
+        Votre collection Magic, enfin exploitable.
+      </h1>
+      <div class="auth__points">
+        <div class="auth__point">
+          <span data-icon="collection"></span>
+          <p class="small muted">Importez votre collection une fois, gardez-la à jour
+            en quelques secondes.</p>
+        </div>
+        <div class="auth__point">
+          <span data-icon="sparkle"></span>
+          <p class="small muted">Découvrez quelles cartes dorment chez vous et lesquelles
+            amélioreraient vos decks.</p>
+        </div>
+        <div class="auth__point">
+          <span data-icon="crown"></span>
+          <p class="small muted">Voyez quels commandants tirent le meilleur parti
+            de ce que vous possédez déjà.</p>
+        </div>
+      </div>
     </div>
-    <span class="brand-name">ManaMind</span>
   </div>
 
-  <h1>Connexion</h1>
-
-  <form id="loginForm">
-    <div class="field">
-      <label for="email">EMAIL</label>
-      <input id="email" type="email" placeholder="votre@email.com" required autocomplete="email" />
+  <div class="auth__form">
+    <div class="stack-2">
+      <h2 class="h2">Connexion</h2>
+      <p class="muted small">Accédez à votre collection et à vos decks.</p>
     </div>
-    <div class="field">
-      <label for="password">MOT DE PASSE</label>
-      <input id="password" type="password" placeholder="••••••••" required autocomplete="current-password" />
-    </div>
-    <button class="btn-primary" type="submit" id="submitBtn">Se connecter</button>
-    <div class="error-msg" id="errorMsg"></div>
-  </form>
 
-  <div class="footer-link">
-    Pas encore de compte ? Un lien d'invitation est requis.
+    <form class="stack" id="form" novalidate>
+      <div class="field">
+        <label class="label" for="email">Adresse e-mail</label>
+        <input class="input" id="email" type="email" required autocomplete="email"
+               placeholder="vous@exemple.com" autofocus>
+      </div>
+      <div class="field">
+        <label class="label" for="password">Mot de passe</label>
+        <input class="input" id="password" type="password" required
+               autocomplete="current-password" placeholder="••••••••">
+      </div>
+
+      <p class="small" id="error" style="color:var(--danger)" hidden></p>
+
+      <button class="btn btn--primary btn--lg btn--block" type="submit" id="submit">
+        Se connecter
+      </button>
+    </form>
+
+    <p class="xs dim">
+      L'accès se fait sur invitation. Si vous avez reçu un lien d'invitation,
+      ouvrez-le pour créer votre compte.
+    </p>
   </div>
 </div>
 
+<script src="/static/js/mm.js"></script>
 <script>
-document.getElementById('loginForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const btn   = document.getElementById('submitBtn');
-  const errEl = document.getElementById('errorMsg');
-  const email    = document.getElementById('email').value.trim();
-  const password = document.getElementById('password').value;
+(() => {
+  MM.el('#mark').innerHTML = MM.icons.sparkle;
+  MM.els('[data-icon]').forEach((holder) => {
+    holder.outerHTML = MM.icons[holder.dataset.icon];
+  });
 
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Connexion…';
-  errEl.classList.remove('show');
+  const form = MM.el('#form');
+  const error = MM.el('#error');
 
-  try {
-    const res  = await fetch('/auth/login', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({email, password}),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      errEl.textContent = data.error || 'Erreur de connexion';
-      errEl.classList.add('show');
-      btn.disabled = false;
-      btn.textContent = 'Se connecter';
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const email = MM.el('#email').value.trim();
+    const password = MM.el('#password').value;
+
+    if (!email || !password) {
+      error.hidden = false;
+      error.textContent = 'Renseignez votre adresse e-mail et votre mot de passe.';
       return;
     }
-    // Redirect vers la page demandée ou l'accueil
-    const next = new URLSearchParams(location.search).get('next') || '/';
-    window.location.href = next;
-  } catch {
-    errEl.textContent = 'Erreur réseau, réessaie.';
-    errEl.classList.add('show');
-    btn.disabled = false;
-    btn.textContent = 'Se connecter';
-  }
-});
+
+    const button = MM.el('#submit');
+    button.disabled = true;
+    button.innerHTML = '<span class="spinner"></span> Connexion…';
+    error.hidden = true;
+
+    try {
+      const response = await fetch('/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || data.detail || 'Identifiants incorrects.');
+      }
+
+      sessionStorage.removeItem('_mm_user');
+      const next = new URLSearchParams(location.search).get('next');
+      location.href = next && next.startsWith('/') ? next : '/';
+    } catch (err) {
+      error.hidden = false;
+      error.textContent = err.message;
+      button.disabled = false;
+      button.textContent = 'Se connecter';
+    }
+  });
+})();
 </script>
 </body>
 </html>

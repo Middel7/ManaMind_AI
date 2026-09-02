@@ -37,8 +37,8 @@ target_metadata = Base.metadata
 
 
 def include_object(object: object, name: str, type_: str, reflected: bool, compare_to: object) -> bool:  # noqa: A002
-    """Exclut les tables mox_* gérées par moxfield_scraper.init_schema()."""
-    if type_ == "table" and isinstance(name, str) and name.startswith("mox_"):
+    """Exclut les tables tierces non gérées par Alembic (mtgtrade, etc.)."""
+    if type_ == "table" and isinstance(name, str) and name.startswith("mtgtrade_"):
         return False
     return True
 

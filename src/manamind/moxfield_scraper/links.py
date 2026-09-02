@@ -20,7 +20,8 @@ BASE_URL = "https://moxfield.com/decks/public"
 LIST_URL = f"{BASE_URL}?fmt=commander&sortType=updated&sortDirection=Descending"
 
 DECK_ID = re.compile(r"/decks/([a-zA-Z0-9_-]{22})")
-PARTNER_SEP = re.compile(r"\s*//\s*")
+_DFC_SEP     = re.compile(r"\s*//\s*")   # double face → un seul champ Commander
+_PARTNER_SEP = re.compile(r"\s*&\s*")    # partners / Background → Commander + Partner
 
 # Moxfield charge le CMP "ncmp", dont la bannière se superpose à la page et
 # avale les clics sur "View more". Il faut la fermer avant toute interaction.
@@ -44,11 +45,25 @@ CONSENT_SELECTORS = [
 Logger = Callable[[str], None]
 
 
+def split_commander(commander: str) -> tuple[str, str | None, bool]:
+    """Décompose un nom de commandant en (face_principale, face2_ou_partner, is_dfc).
+
+    '// ' → DFC  : is_dfc=True  → remplir uniquement le champ Commander.
+    ' & ' → Partners/Background : is_dfc=False → remplir Commander + Partner.
+    """
+    if "//" in commander:
+        parts = _DFC_SEP.split(commander, maxsplit=1)
+        return parts[0].strip(), parts[1].strip() if len(parts) > 1 else None, True
+    if "&" in commander:
+        parts = _PARTNER_SEP.split(commander, maxsplit=1)
+        return parts[0].strip(), parts[1].strip() if len(parts) > 1 else None, False
+    return commander.strip(), None, False
+
+
+# Compatibilité ascendante pour les appels existants hors filtre
 def split_partners(commander: str) -> tuple[str, str | None]:
-    parts = PARTNER_SEP.split(commander, maxsplit=1)
-    if len(parts) == 2:
-        return parts[0].strip(), parts[1].strip()
-    return commander.strip(), None
+    main, partner, _ = split_commander(commander)
+    return main, partner
 
 
 def _extract_ids(page: Page) -> set[str]:
@@ -140,6 +155,7 @@ def _scroll_and_collect(page: Page, seen: set[str]) -> int:
 
 
 def _fill_card_field(page: Page, field_id: str, card_name: str) -> None:
+    """Remplit un champ carte via l'autocomplétion Moxfield et sélectionne la première suggestion."""
     page.wait_for_selector(f"#{field_id}", timeout=10000)
     page.fill(f"#{field_id}", card_name)
     page.wait_for_timeout(2000)
@@ -157,20 +173,19 @@ def _fill_card_field(page: Page, field_id: str, card_name: str) -> None:
 
 
 def _apply_commander_filter(
-    page: Page, commander: str, partner: str | None, log: Logger
+    page: Page, commander: str, partner: str | None, is_dfc: bool, log: Logger
 ) -> None:
     """Passe par l'UI "More Filters" : les paramètres d'URL seuls ne suffisent pas,
-    Moxfield attend l'id interne de la carte, pas son nom."""
-    # Le CMP IAB (privacy dashboard) peut réapparaître après la navigation initiale
-    # et couvrir le bouton des filtres — on le ferme avant tout clic.
+    Moxfield attend l'id interne de la carte, pas son nom.
+
+    is_dfc=True  → commandant double-face : remplir uniquement le champ Commander
+                   (l'autocomplete sélectionne les deux faces d'un coup).
+    is_dfc=False → partners / Background : remplir Commander puis Partner.
+    """
     _dismiss_consent(page, log)
-    # Revenir en haut : le CMP pousse la page vers le bas après acceptation.
     page.evaluate("() => window.scrollTo(0, 0)")
     page.wait_for_timeout(500)
 
-    # Le libellé du bouton a changé au fil des versions de Moxfield :
-    # « More Filters » (ancienne UI) → « Filters » (UI actuelle).
-    # On essaie les deux pour être robuste aux futures mises à jour.
     for label in ("Filters", "More Filters"):
         btn = page.locator(f"button.btn-outline-primary:has-text('{label}')").first
         if btn.count() > 0:
@@ -181,13 +196,14 @@ def _apply_commander_filter(
     page.wait_for_timeout(1500)
 
     _fill_card_field(page, "commanderCardId", commander)
-    if partner:
+    if partner and not is_dfc:
         _fill_card_field(page, "partnerCardId", partner)
 
     page.wait_for_timeout(1500)
     page.click("button.btn-primary:has-text('Save Filters')")
     page.wait_for_timeout(2000)
-    log(f"filtre appliqué : {commander}" + (f" + {partner}" if partner else ""))
+    sep = " // " if is_dfc else " & "
+    log(f"filtre appliqué : {commander}" + (f"{sep}{partner}" if partner else ""))
 
 
 def collect_deck_ids(
@@ -221,8 +237,8 @@ def collect_deck_ids(
             _dismiss_consent(page, log)  # elle peut réapparaître après navigation
 
             if commander:
-                cmd, partner = split_partners(commander)
-                _apply_commander_filter(page, cmd, partner, log)
+                cmd, partner, is_dfc = split_commander(commander)
+                _apply_commander_filter(page, cmd, partner, is_dfc, log)
                 page.wait_for_timeout(2000)
 
             clicks = 0

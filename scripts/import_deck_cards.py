@@ -82,20 +82,19 @@ def reset_commander(conn, commander: str) -> None:
 def bulk_copy(conn, rows: list[tuple]) -> None:
     """Insère rows via COPY FROM STDIN (format texte tabulation)."""
     buf = io.StringIO()
-    for deck_id, commander, card_name, is_commander in rows:
-        # Échapper les caractères spéciaux COPY
+    for deck_id, commander, card_name, is_commander, quantity in rows:
         def esc(s: str) -> str:
             return s.replace("\\", "\\\\").replace("\t", " ").replace("\n", " ").replace("\r", "")
-        buf.write(f"{esc(deck_id)}\t{esc(commander)}\t{esc(card_name)}\t{'t' if is_commander else 'f'}\n")
+        buf.write(f"{esc(deck_id)}\t{esc(commander)}\t{esc(card_name)}\t{'t' if is_commander else 'f'}\t{quantity}\n")
     buf.seek(0)
     with conn.cursor() as cur:
-        cur.copy_from(buf, "deck_cards", columns=("deck_id", "commander", "card_name", "is_commander"))
+        cur.copy_from(buf, "deck_cards", columns=("deck_id", "commander", "card_name", "is_commander", "quantity"))
     conn.commit()
 
 
-def parse_csv(path: Path) -> list[tuple[str, str]]:
+def parse_csv(path: Path) -> list[tuple[str, bool, int]]:
     """
-    Retourne liste de (card_name, is_commander) depuis un CSV deck.
+    Retourne liste de (card_name, is_commander, quantity) depuis un CSV deck.
     Format attendu : Card Name;Quantity;Commander;...
     """
     cards = []
@@ -105,14 +104,26 @@ def parse_csv(path: Path) -> list[tuple[str, str]]:
             for row in reader:
                 name = (row.get("Card Name") or "").strip()
                 is_cmd = (row.get("Commander") or "").strip().upper() == "YES"
+                try:
+                    qty = max(1, int(row.get("Quantity") or 1))
+                except (ValueError, TypeError):
+                    qty = 1
                 if name:
-                    cards.append((name, is_cmd))
+                    cards.append((name, is_cmd, qty))
     except Exception:
         pass
     return cards
 
 
-def import_commander(conn, commander_dir: Path, done: set[str], reset: bool) -> int:
+def get_existing_deck_ids(conn) -> set[str]:
+    """Retourne tous les deck_ids déjà présents dans deck_cards."""
+    with conn.cursor() as cur:
+        cur.execute("SELECT DISTINCT deck_id FROM deck_cards")
+        return {r[0] for r in cur.fetchall()}
+
+
+def import_commander(conn, commander_dir: Path, done: set[str], reset: bool,
+                     existing_deck_ids: set[str] | None = None) -> int:
     """Importe tous les decks d'un commandant. Retourne le nombre de decks importés."""
     commander = commander_dir.name
 
@@ -121,6 +132,12 @@ def import_commander(conn, commander_dir: Path, done: set[str], reset: bool) -> 
 
     if reset:
         reset_commander(conn, commander)
+    else:
+        # Supprimer les lignes existantes avant le COPY pour éviter les doublons
+        # en cas de reprise après crash (le COPY n'a pas d'ON CONFLICT).
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM deck_cards WHERE commander = %s", (commander,))
+        conn.commit()
 
     csv_files = sorted(commander_dir.glob("*.csv"))
     if not csv_files:
@@ -131,11 +148,16 @@ def import_commander(conn, commander_dir: Path, done: set[str], reset: bool) -> 
 
     for csv_path in csv_files:
         deck_id = csv_path.stem
+        # Ignorer un deck_id déjà importé sous un autre commandant
+        if existing_deck_ids is not None and deck_id in existing_deck_ids:
+            continue
         cards = parse_csv(csv_path)
         if not cards:
             continue
-        for card_name, is_cmd in cards:
-            batch.append((deck_id, commander, card_name, is_cmd))
+        for card_name, is_cmd, qty in cards:
+            batch.append((deck_id, commander, card_name, is_cmd, qty))
+        if existing_deck_ids is not None:
+            existing_deck_ids.add(deck_id)
         decks_count += 1
 
         if len(batch) >= BATCH_SIZE:
@@ -169,6 +191,10 @@ def main() -> None:
     done = get_done_commanders(conn)
     log.info("Commandants déjà importés : %d", len(done))
 
+    # Charger les deck_ids déjà en base pour éviter les doublons cross-commandants
+    existing_deck_ids = get_existing_deck_ids(conn)
+    log.info("Deck_ids déjà en base : %d", len(existing_deck_ids))
+
     if args.commander:
         commander_dirs = [CSV_ROOT / args.commander]
         if not commander_dirs[0].exists():
@@ -191,7 +217,7 @@ def main() -> None:
             skipped += 1
             continue
 
-        n = import_commander(conn, cmd_dir, done, args.reset)
+        n = import_commander(conn, cmd_dir, done, args.reset, existing_deck_ids)
         if n > 0:
             total_decks += n
             total_commanders += 1

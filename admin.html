@@ -11,14 +11,15 @@
 <style>
 :root {
   --ink-900: #0c0910; --ink-850: #120c1a; --ink-800: #17101f;
-  --ink-card: #0f1624;
+  --ink-card: #0f1624; --ink-card2: #111820;
   --parch-100: #efe6d6; --parch-300: #cdbfa8; --parch-500: #9c8e79; --parch-600: #7c715f;
   --gold: #c9a45c; --gold-soft: #d8bd83; --gold-line: rgba(201,164,92,.38); --gold-faint: rgba(201,164,92,.12);
   --blue: #70b8f0; --blue-dim: rgba(100,180,255,.12); --blue-border: rgba(100,180,255,.32);
   --teal: #5cc9b8; --teal-faint: rgba(92,201,184,.12); --teal-line: rgba(92,201,184,.3);
-  --green: #4ade80; --green-faint: rgba(74,222,128,.12);
+  --purple: #a78bfa; --purple-faint: rgba(167,139,250,.12); --purple-border: rgba(167,139,250,.3);
+  --green: #4ade80; --green-faint: rgba(74,222,128,.12); --green-border: rgba(74,222,128,.28);
   --red: #e07b7b; --red-faint: rgba(220,80,80,.1);
-  --amber: #f59e0b; --amber-faint: rgba(245,158,11,.12);
+  --amber: #f59e0b; --amber-faint: rgba(245,158,11,.12); --amber-border: rgba(245,158,11,.28);
   --border: rgba(255,255,255,.07);
   --serif-engraved: "Cinzel", Georgia, serif;
   --serif-display: "Cormorant Garamond", Georgia, serif;
@@ -28,7 +29,6 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 14px; }
 body { font-family: var(--serif-body); background: var(--ink-900); color: var(--parch-100); min-height: 100vh; line-height: 1.55; }
-
 .page { max-width: 1400px; margin: 0 auto; padding: 0 24px 60px; }
 
 /* ── Header ── */
@@ -40,19 +40,53 @@ body { font-family: var(--serif-body); background: var(--ink-900); color: var(--
 .adm-user { margin-left: auto; font-size: .7rem; color: var(--parch-500); display: flex; align-items: center; gap: 8px; }
 .adm-user strong { color: var(--blue); font-family: var(--serif-engraved); font-weight: 500; }
 
-/* ── Stats cards ── */
-.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+/* ── Layer header ── */
+.layer-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; margin-top: 22px; }
+.layer-label { font-family: var(--serif-engraved); font-size: .57rem; letter-spacing: .14em; text-transform: uppercase; color: var(--parch-600); }
+.layer-badge { font-family: var(--mono); font-size: .6rem; border-radius: 3px; padding: 1px 8px; }
+.badge-blue   { color: var(--blue);   background: var(--blue-dim);    border: 1px solid var(--blue-border); }
+.badge-purple { color: var(--purple); background: var(--purple-faint); border: 1px solid var(--purple-border); }
+.badge-green  { color: var(--green);  background: var(--green-faint);  border: 1px solid var(--green-border); }
+.layer-rule { flex: 1; height: 1px; background: var(--border); }
+
+/* ── Stats grid ── */
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 4px; }
 @media (max-width: 900px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
-.stat-card { background: var(--ink-card); border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; }
-.stat-label { font-family: var(--serif-engraved); font-size: .57rem; letter-spacing: .12em; text-transform: uppercase; color: var(--parch-600); margin-bottom: 6px; }
-.stat-val { font-size: 1.9rem; font-weight: 300; font-variant-numeric: tabular-nums; color: var(--parch-100); line-height: 1; }
+
+.stat-card {
+  background: var(--ink-card); border: 1px solid var(--border);
+  border-radius: 8px; padding: 16px 20px 14px;
+  position: relative; overflow: hidden;
+  transition: border-color .2s;
+}
+.stat-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: var(--accent, transparent);
+}
+.stat-card.accent-blue  { --accent: var(--blue); }
+.stat-card.accent-teal  { --accent: var(--teal); }
+.stat-card.accent-purple { --accent: var(--purple); }
+.stat-card.accent-green  { --accent: var(--green); }
+.stat-card.accent-amber  { --accent: var(--amber); }
+.stat-card.accent-red    { --accent: var(--red); }
+
+.stat-label { font-family: var(--serif-engraved); font-size: .55rem; letter-spacing: .12em; text-transform: uppercase; color: var(--parch-600); margin-bottom: 8px; }
+.stat-val { font-size: 1.85rem; font-weight: 300; font-variant-numeric: tabular-nums; color: var(--parch-100); line-height: 1; }
 .stat-val.loading { color: var(--parch-600); }
-.stat-val.c-blue  { color: var(--blue); }
-.stat-val.c-teal  { color: var(--teal); }
-.stat-val.c-amber { color: var(--amber); }
+.stat-val.c-blue   { color: var(--blue); }
+.stat-val.c-teal   { color: var(--teal); }
+.stat-val.c-purple { color: var(--purple); }
+.stat-val.c-green  { color: var(--green); }
+.stat-val.c-amber  { color: var(--amber); }
+.stat-val.c-red    { color: var(--red); }
+.stat-sub { margin-top: 6px; font-size: .65rem; color: var(--parch-600); font-family: var(--serif-display); font-style: italic; }
+
+/* ── Alerte commanders vide ── */
+.empty-alert { display: none; margin: 16px 0 0; padding: 12px 18px; border-radius: 7px; background: var(--amber-faint); border: 1px solid var(--amber-border); font-size: .78rem; color: var(--parch-300); }
+.empty-alert strong { color: var(--amber); font-family: var(--serif-engraved); font-size: .65rem; letter-spacing: .08em; text-transform: uppercase; }
 
 /* ── Panels ── */
-.panels-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px; }
+.panels-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 28px; margin-bottom: 32px; }
 @media (max-width: 800px) { .panels-row { grid-template-columns: 1fr; } }
 .panel { background: var(--ink-card); border: 1px solid var(--border); border-radius: 10px; padding: 22px 24px; }
 .panel-title { font-family: var(--serif-engraved); font-size: .65rem; letter-spacing: .13em; text-transform: uppercase; color: var(--parch-600); margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
@@ -64,24 +98,73 @@ body { font-family: var(--serif-body); background: var(--ink-900); color: var(--
 .field label { font-size: .6rem; color: var(--parch-600); font-family: var(--serif-engraved); letter-spacing: .08em; text-transform: uppercase; }
 .field input[type=number] { width: 90px; padding: 7px 10px; border-radius: 5px; border: 1px solid rgba(100,180,255,.22); background: rgba(0,0,0,.3); color: var(--parch-100); font-family: var(--mono); font-size: .82rem; outline: none; transition: border-color .2s; }
 .field input[type=number]:focus { border-color: var(--blue); }
+.field select { padding: 7px 10px; border-radius: 5px; border: 1px solid rgba(100,180,255,.22); background: rgba(0,0,0,.55); color: var(--parch-100); font-family: var(--serif-body); font-size: .78rem; outline: none; cursor: pointer; transition: border-color .2s; }
+.field select:focus { border-color: var(--blue); }
+.field select option { background: var(--ink-850); }
+
+/* ── Toggle headless ── */
+.headless-toggle { display: flex; align-items: center; gap: 8px; margin-top: 12px; cursor: pointer; width: fit-content; }
+.headless-toggle input[type=checkbox] { appearance: none; width: 32px; height: 18px; border-radius: 9px; background: rgba(255,255,255,.1); border: 1px solid var(--border); position: relative; cursor: pointer; transition: background .2s; flex-shrink: 0; }
+.headless-toggle input[type=checkbox]::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--parch-600); transition: transform .2s, background .2s; }
+.headless-toggle input[type=checkbox]:checked { background: var(--amber-faint); border-color: var(--amber-border); }
+.headless-toggle input[type=checkbox]:checked::after { transform: translateX(14px); background: var(--amber); }
+.headless-toggle span { font-size: .68rem; color: var(--parch-600); font-family: var(--serif-engraved); letter-spacing: .07em; text-transform: uppercase; }
+.headless-toggle input:checked + span { color: var(--amber); }
+
+/* ── Step selector (ML retrain) ── */
+.step-list { margin: 10px 0 14px; display: flex; flex-direction: column; gap: 5px; }
+.step-list-header { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.step-list-label { font-size: .62rem; letter-spacing: .1em; text-transform: uppercase; color: var(--parch-600); font-family: var(--serif-engraved); }
+.btn-link { background: none; border: none; padding: 0; font-size: .65rem; color: var(--purple); cursor: pointer; font-family: inherit; line-height: 1; }
+.btn-link:hover { text-decoration: underline; }
+.btn-link-sep { color: var(--border); font-size: .65rem; user-select: none; }
+.step-item { display: flex; align-items: center; gap: 9px; cursor: pointer; font-size: .72rem; color: var(--fg); padding: 6px 9px; border-radius: 4px; border: 1px solid transparent; transition: border-color .15s, background .15s; }
+.step-item:hover { background: var(--purple-faint); border-color: var(--purple-border); }
+.step-item input[type=checkbox] { appearance: none; -webkit-appearance: none; width: 14px; height: 14px; min-width: 14px; border: 1px solid var(--border); border-radius: 3px; background: transparent; cursor: pointer; position: relative; transition: background .15s, border-color .15s; }
+.step-item input[type=checkbox]:checked { background: var(--purple); border-color: var(--purple); }
+.step-item input[type=checkbox]:checked::after { content: ''; position: absolute; left: 4px; top: 1px; width: 4px; height: 8px; border: 2px solid #fff; border-top: none; border-left: none; transform: rotate(45deg); }
+.step-hint { font-size: .64rem; color: var(--parch-600); font-style: italic; margin-left: 2px; }
 
 /* ── Buttons ── */
 .btn { padding: 8px 18px; border-radius: 5px; cursor: pointer; border: none; font-family: var(--serif-engraved); font-size: .6rem; letter-spacing: .1em; text-transform: uppercase; transition: opacity .2s, background .2s; }
 .btn:disabled { opacity: .38; cursor: default; }
-.btn-blue { background: var(--blue-dim); color: var(--blue); border: 1px solid var(--blue-border); }
-.btn-blue:hover:not(:disabled) { background: rgba(100,180,255,.22); }
-.btn-teal { background: var(--teal-faint); color: var(--teal); border: 1px solid var(--teal-line); }
-.btn-teal:hover:not(:disabled) { background: rgba(92,201,184,.2); }
-.btn-ghost { background: none; color: var(--parch-500); border: 1px solid var(--border); }
-.btn-ghost:hover:not(:disabled) { background: rgba(255,255,255,.04); }
+.btn-blue  { background: var(--blue-dim);    color: var(--blue);   border: 1px solid var(--blue-border); }
+.btn-blue:hover:not(:disabled)  { background: rgba(100,180,255,.22); }
+.btn-teal  { background: var(--teal-faint);  color: var(--teal);   border: 1px solid var(--teal-line); }
+.btn-teal:hover:not(:disabled)  { background: rgba(92,201,184,.2); }
+.btn-amber { background: var(--amber-faint); color: var(--amber);  border: 1px solid var(--amber-border); }
+.btn-amber:hover:not(:disabled) { background: rgba(245,158,11,.2); }
+.btn-ghost  { background: none; color: var(--parch-500); border: 1px solid var(--border); }
+.btn-ghost:hover:not(:disabled)  { background: rgba(255,255,255,.04); }
+.btn-purple { background: var(--purple-faint); color: var(--purple); border: 1px solid var(--purple-border); }
+.btn-purple:hover:not(:disabled) { background: rgba(167,139,250,.2); }
+.btn-red   { background: var(--red-faint); color: var(--red); border: 1px solid rgba(220,80,80,.25); }
+.btn-red:hover:not(:disabled)   { background: rgba(220,80,80,.18); }
+.btn-xs { font-size: .58rem; padding: 5px 12px; }
+.ml-auto { margin-left: auto; }
 
 /* ── Panel states ── */
 .panel-state { margin-top: 14px; }
 .running-box { display: flex; align-items: center; gap: 10px; font-size: .78rem; color: var(--parch-500); }
 .spinner { width: 18px; height: 18px; flex-shrink: 0; border: 2px solid rgba(100,180,255,.18); border-top-color: var(--blue); border-radius: 50%; animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.log-line { margin-top: 7px; font-family: var(--mono); font-size: .65rem; color: var(--parch-600); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.done-badge { display: inline-block; font-size: .6rem; font-family: var(--serif-engraved); letter-spacing: .1em; text-transform: uppercase; color: var(--green); border: 1px solid rgba(74,222,128,.28); background: var(--green-faint); border-radius: 3px; padding: 2px 8px; margin-bottom: 10px; }
+.run-elapsed { margin-left: auto; font-family: var(--mono); font-size: .7rem; color: var(--parch-600); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.prog-wrap { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.prog-bar { flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,.07); overflow: hidden; }
+.prog-fill { height: 100%; border-radius: 2px; background: var(--blue); transition: width .4s ease; }
+.prog-label { font-family: var(--mono); font-size: .6rem; color: var(--parch-600); white-space: nowrap; min-width: 110px; }
+.run-commander { display: none; align-items: center; gap: 8px; margin-top: 8px; padding: 5px 10px; background: var(--teal-faint); border: 1px solid var(--teal-line); border-radius: 5px; }
+.run-cmd-idx { font-family: var(--mono); font-size: .62rem; color: var(--teal); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.run-cmd-name { font-size: .75rem; color: var(--parch-300); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.run-log { margin-top: 10px; height: 160px; overflow-y: auto; border: 1px solid var(--border); border-radius: 5px; background: rgba(0,0,0,.25); padding: 8px 10px; font-family: var(--mono); font-size: .6rem; line-height: 1.6; scroll-behavior: smooth; }
+.run-log::-webkit-scrollbar { width: 5px; } .run-log::-webkit-scrollbar-track { background: transparent; } .run-log::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 3px; }
+.log-entry { color: var(--parch-500); white-space: pre-wrap; word-break: break-all; }
+.log-entry .log-ts { color: var(--parch-600); margin-right: 6px; user-select: none; }
+.log-entry.log-ok   { color: var(--green); }
+.log-entry.log-err  { color: var(--red); }
+.log-entry.log-cmd  { color: var(--teal); }
+.done-badge { display: inline-block; font-size: .6rem; font-family: var(--serif-engraved); letter-spacing: .1em; text-transform: uppercase; color: var(--green); border: 1px solid var(--green-border); background: var(--green-faint); border-radius: 3px; padding: 2px 8px; margin-bottom: 10px; }
+.done-badge.stopped { color: var(--amber); border-color: var(--amber-border); background: var(--amber-faint); }
 .report-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: .8rem; }
 .report-row:last-child { border-bottom: none; }
 .report-label { color: var(--parch-500); }
@@ -89,22 +172,26 @@ body { font-family: var(--serif-body); background: var(--ink-900); color: var(--
 .v-green { color: var(--green); } .v-blue { color: var(--blue); } .v-red { color: var(--red); } .v-teal { color: var(--teal); }
 .error-box { margin-top: 10px; padding: 10px 14px; border-radius: 6px; background: var(--red-faint); border: 1px solid rgba(220,80,80,.22); font-family: var(--mono); font-size: .67rem; color: var(--red); word-break: break-all; }
 
+/* ── Estimation de durée ── */
+.timing-estimate { font-size: .68rem; color: var(--parch-600); margin-top: 8px; font-family: var(--serif-display); font-style: italic; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.timing-estimate .t-hl { color: var(--teal); font-style: normal; font-family: var(--mono); font-size: .72rem; }
+.timing-reset { background: none; border: none; color: var(--parch-600); font-size: .6rem; font-family: var(--serif-engraved); letter-spacing: .06em; text-transform: uppercase; cursor: pointer; padding: 0; text-decoration: underline; text-underline-offset: 2px; transition: color .2s; }
+.timing-reset:hover { color: var(--red); }
+
 /* ── Commander section header ── */
 .sec-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
 .sec-title { font-family: var(--serif-engraved); font-size: .65rem; letter-spacing: .13em; text-transform: uppercase; color: var(--parch-500); }
 .sec-count { font-size: .7rem; color: var(--parch-600); background: rgba(255,255,255,.05); border-radius: 3px; padding: 1px 7px; font-variant-numeric: tabular-nums; }
-.btn-xs { font-size: .58rem; padding: 5px 12px; }
-.ml-auto { margin-left: auto; }
 
 /* ── Filter ── */
 .filter-bar { margin-bottom: 12px; }
-.filter-bar input { padding: 7px 12px; border-radius: 5px; border: 1px solid var(--border); background: rgba(0,0,0,.25); color: var(--parch-100); font-family: var(--serif-body); font-size: .82rem; outline: none; width: 240px; transition: border-color .2s; }
+.filter-bar input { padding: 7px 12px; border-radius: 5px; border: 1px solid var(--border); background: rgba(0,0,0,.25); color: var(--parch-100); font-family: var(--serif-body); font-size: .82rem; outline: none; width: 280px; transition: border-color .2s; }
 .filter-bar input:focus { border-color: var(--blue-border); }
 .filter-bar input::placeholder { color: var(--parch-600); }
 
 /* ── Table ── */
 .table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
-table { width: 100%; border-collapse: collapse; font-size: .78rem; min-width: 620px; }
+table { width: 100%; border-collapse: collapse; font-size: .78rem; min-width: 680px; }
 thead { background: rgba(255,255,255,.03); }
 th { padding: 10px 14px; text-align: left; font-family: var(--serif-engraved); font-size: .57rem; letter-spacing: .1em; text-transform: uppercase; color: var(--parch-600); border-bottom: 1px solid var(--border); white-space: nowrap; }
 th.sortable { cursor: pointer; user-select: none; }
@@ -116,6 +203,15 @@ tbody tr:hover td { background: rgba(255,255,255,.02); }
 td.n-name { color: var(--parch-100); font-weight: 500; }
 td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
 
+/* ── Barre de couverture ── */
+.cov-wrap { display: flex; align-items: center; gap: 8px; }
+.cov-bar { flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,.06); overflow: hidden; min-width: 60px; }
+.cov-fill { height: 100%; border-radius: 2px; transition: width .3s; }
+.cov-fill.lvl-high   { background: var(--green); }
+.cov-fill.lvl-mid    { background: var(--amber); }
+.cov-fill.lvl-low    { background: var(--red); }
+.cov-pct { font-size: .68rem; color: var(--parch-600); font-variant-numeric: tabular-nums; min-width: 34px; }
+
 /* ── Color pips ── */
 .ci-pips { display: flex; gap: 4px; align-items: center; }
 .ci-pip { width: 10px; height: 10px; border-radius: 50%; border: 1px solid rgba(255,255,255,.15); flex-shrink: 0; }
@@ -125,8 +221,8 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
 /* ── Badges ── */
 .badge { display: inline-block; font-family: var(--serif-engraved); font-size: .55rem; letter-spacing: .08em; text-transform: uppercase; border-radius: 3px; padding: 2px 8px; white-space: nowrap; }
 .b-never  { color: var(--red);   background: var(--red-faint);   border: 1px solid rgba(220,80,80,.22); }
-.b-stale  { color: var(--amber); background: var(--amber-faint); border: 1px solid rgba(245,158,11,.22); }
-.b-recent { color: var(--green); background: var(--green-faint); border: 1px solid rgba(74,222,128,.22); }
+.b-stale  { color: var(--amber); background: var(--amber-faint); border: 1px solid var(--amber-border); }
+.b-recent { color: var(--green); background: var(--green-faint); border: 1px solid var(--green-border); }
 .empty-msg td { text-align: center; color: var(--parch-600); padding: 28px; font-style: italic; }
 </style>
 </head>
@@ -145,27 +241,103 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
     </div>
   </header>
 
-  <!-- Stats -->
+  <!-- ── Bronze layer — deck_cards ── -->
+  <div class="layer-header">
+    <span class="layer-label">Bronze layer</span>
+    <span class="layer-badge badge-blue">deck_cards</span>
+    <div class="layer-rule"></div>
+  </div>
   <div class="stats-row">
-    <div class="stat-card">
-      <div class="stat-label">Décks en base</div>
+    <div class="stat-card accent-blue">
+      <div class="stat-label">Décks distincts</div>
       <div class="stat-val c-blue loading" id="statDecks">—</div>
+      <div class="stat-sub">deck_ids uniques scrapés</div>
+    </div>
+    <div class="stat-card accent-teal">
+      <div class="stat-label">Commandants uniques</div>
+      <div class="stat-val c-teal loading" id="statUniqueCmd">—</div>
+      <div class="stat-sub">dans deck_cards</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Commandants enregistrés</div>
-      <div class="stat-val c-teal loading" id="statCommanders">—</div>
+      <div class="stat-label">Lignes totales</div>
+      <div class="stat-val loading" id="statRows">—</div>
+      <div class="stat-sub">cartes × décks</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-label">Jamais scrapés</div>
-      <div class="stat-val c-amber loading" id="statPending">—</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Commandants uniques détectés</div>
-      <div class="stat-val loading" id="statUniq">—</div>
+    <div class="stat-card accent-blue" style="border-style:dashed; opacity:.7;">
+      <div class="stat-label">Moyenne cartes / deck</div>
+      <div class="stat-val loading" id="statAvg">—</div>
+      <div class="stat-sub">lignes ÷ décks</div>
     </div>
   </div>
 
-  <!-- Panels -->
+  <!-- ── Bronze layer — commanders ── -->
+  <div class="layer-header" style="margin-top:16px;">
+    <span class="layer-label">Bronze layer</span>
+    <span class="layer-badge badge-blue">commanders</span>
+    <div class="layer-rule"></div>
+  </div>
+  <div class="stats-row">
+    <div class="stat-card accent-teal">
+      <div class="stat-label">Commandants enregistrés</div>
+      <div class="stat-val c-teal loading" id="statCommanders">—</div>
+      <div class="stat-sub">dans la table commanders</div>
+    </div>
+    <div class="stat-card accent-amber">
+      <div class="stat-label">Jamais scrapés</div>
+      <div class="stat-val c-amber loading" id="statPending">—</div>
+      <div class="stat-sub">last_scraped_at IS NULL</div>
+    </div>
+    <div class="stat-card accent-green">
+      <div class="stat-label">Scrapés récemment</div>
+      <div class="stat-val c-green loading" id="statRecent">—</div>
+      <div class="stat-sub">dans les 7 derniers jours</div>
+    </div>
+    <div class="stat-card" style="border-style:dashed; opacity:.7;">
+      <div class="stat-label">Couverture</div>
+      <div class="stat-val loading" id="statCoverage">—</div>
+      <div class="stat-sub">commandants avec ≥ 1 deck en base</div>
+    </div>
+  </div>
+
+  <!-- ── Silver layer — stats ML ── -->
+  <div class="layer-header" style="margin-top:16px;">
+    <span class="layer-label">Silver layer</span>
+    <span class="layer-badge badge-purple">deck_stat_commander</span>
+    <span class="layer-badge badge-purple">deck_stat_global</span>
+    <div class="layer-rule"></div>
+    <span id="statMlLastTrained" style="font-family:var(--serif-display);font-style:italic;font-size:.68rem;color:var(--parch-600);white-space:nowrap;flex-shrink:0;"></span>
+  </div>
+  <div class="stats-row">
+    <div class="stat-card accent-purple">
+      <div class="stat-label">Commandants analysés</div>
+      <div class="stat-val c-purple loading" id="statMlCmd">—</div>
+      <div class="stat-sub">avec statistiques calculées</div>
+    </div>
+    <div class="stat-card accent-purple">
+      <div class="stat-label">Cartes en statistiques</div>
+      <div class="stat-val c-purple loading" id="statMlCards">—</div>
+      <div class="stat-sub">deck_stat_global</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Entrées deck_stat</div>
+      <div class="stat-val loading" id="statMlEntries">—</div>
+      <div class="stat-sub">lignes deck_stat_commander</div>
+    </div>
+    <div class="stat-card" style="border-style:dashed; opacity:.7;">
+      <div class="stat-label">Avg cartes / commandant</div>
+      <div class="stat-val loading" id="statMlAvg">—</div>
+      <div class="stat-sub">entrées ÷ commandants</div>
+    </div>
+  </div>
+
+  <!-- Alerte si commanders vide -->
+  <div class="empty-alert" id="emptyAlert">
+    <strong>Table commanders vide</strong> — Aucun commandant enregistré pour le scraping ciblé.
+    Utilisez <em>Synchroniser depuis décks</em> pour peupler la table depuis deck_cards,
+    ou importez un fichier TOPCOMMANDER.csv via la CLI.
+  </div>
+
+  <!-- ── Panels ── -->
   <div class="panels-row">
 
     <!-- Scrape récents -->
@@ -178,11 +350,25 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
         </div>
         <button class="btn btn-blue" id="recentLaunchBtn">Lancer</button>
       </div>
+      <label class="headless-toggle">
+        <input type="checkbox" id="recentShowBrowser" />
+        <span>Afficher le navigateur</span>
+      </label>
+      <div class="timing-estimate" id="recentEstimate" style="display:none;"></div>
 
       <div class="panel-state" id="recentState" style="display:none;">
         <div id="recentRunning" style="display:none; margin-top:14px;">
-          <div class="running-box"><div class="spinner"></div><span>Scrape en cours…</span></div>
-          <div class="log-line" id="recentLog"></div>
+          <div class="running-box">
+            <div class="spinner"></div>
+            <span id="recentPhase">Initialisation…</span>
+            <button class="btn btn-red btn-xs" id="recentStopBtn" style="margin-left:auto;">Arrêter</button>
+            <span class="run-elapsed" id="recentElapsed">00:00</span>
+          </div>
+          <div class="prog-wrap">
+            <div class="prog-bar"><div class="prog-fill" id="recentProgFill" style="width:0%"></div></div>
+            <span class="prog-label" id="recentProgLabel"></span>
+          </div>
+          <div class="run-log" id="recentLog"></div>
         </div>
         <div id="recentDone" style="display:none; margin-top:14px;">
           <div class="done-badge">Terminé</div>
@@ -195,11 +381,17 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
 
     <!-- Scrape par commandant -->
     <div class="panel">
-      <div class="panel-title">
-        Scraper par commandant
-        <span style="font-family:var(--serif-display);font-style:italic;font-size:.82rem;color:var(--parch-600);letter-spacing:normal;text-transform:none;">— les plus anciens en priorité</span>
-      </div>
+      <div class="panel-title">Scraper par commandant</div>
       <div class="form-row">
+        <div class="field">
+          <label>Sélection</label>
+          <select id="staleMode">
+            <option value="stale">Pas récemment scrapés</option>
+            <option value="min_decks">Moins de decks en base</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row" style="margin-top:10px;">
         <div class="field">
           <label>Nb commandants</label>
           <input type="number" id="staleCount" min="1" max="100" value="1" />
@@ -210,12 +402,30 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
         </div>
         <button class="btn btn-teal" id="staleLaunchBtn">Lancer</button>
       </div>
-      <p class="panel-hint">Cible automatiquement les commandants dont le dernier scrape est le plus ancien (NULL en premier).</p>
+      <label class="headless-toggle">
+        <input type="checkbox" id="staleShowBrowser" />
+        <span>Afficher le navigateur</span>
+      </label>
+      <p class="panel-hint" style="margin-top:10px;" id="staleHint">Cible les commandants dont le dernier scrape est le plus ancien (jamais scrapés en priorité).</p>
+      <div class="timing-estimate" id="staleEstimate" style="display:none;"></div>
 
       <div class="panel-state" id="staleState" style="display:none;">
         <div id="staleRunning" style="display:none; margin-top:14px;">
-          <div class="running-box"><div class="spinner"></div><span>Scrape en cours…</span></div>
-          <div class="log-line" id="staleLog"></div>
+          <div class="running-box">
+            <div class="spinner"></div>
+            <span id="stalePhase">Initialisation…</span>
+            <button class="btn btn-red btn-xs" id="staleStopBtn" style="margin-left:auto;">Arrêter</button>
+            <span class="run-elapsed" id="staleElapsed">00:00</span>
+          </div>
+          <div class="run-commander" id="staleCmdRow">
+            <span class="run-cmd-idx" id="staleCmdIdx">0/0</span>
+            <span class="run-cmd-name" id="staleCmdName">—</span>
+          </div>
+          <div class="prog-wrap">
+            <div class="prog-bar"><div class="prog-fill" id="staleProgFill" style="width:0%"></div></div>
+            <span class="prog-label" id="staleProgLabel"></span>
+          </div>
+          <div class="run-log" id="staleLog"></div>
         </div>
         <div id="staleDone" style="display:none; margin-top:14px;">
           <div class="done-badge">Terminé</div>
@@ -228,11 +438,64 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
 
   </div>
 
+  <!-- ── ML & Stats ── -->
+  <div class="sec-header" style="margin-top:4px; margin-bottom:16px;">
+    <span class="sec-title">Modèles ML</span>
+    <div class="layer-rule"></div>
+    <button class="btn btn-ghost btn-xs" id="fullRefreshBtn">Recalcul complet des stats</button>
+  </div>
+  <div class="panel" style="max-width:640px;">
+    <div class="panel-title">Réentraîner le modèle ML</div>
+    <div class="step-list">
+      <div class="step-list-header">
+        <span class="step-list-label">Étapes</span>
+        <span class="btn-link-sep" style="margin-left:auto;">·</span>
+        <button class="btn-link" id="mlSelectAll" type="button">Tout</button>
+        <span class="btn-link-sep">·</span>
+        <button class="btn-link" id="mlSelectNone" type="button">Aucun</button>
+        <span class="btn-link-sep">·</span>
+      </div>
+      <label class="step-item">
+        <input type="checkbox" id="mlStepStats" checked />
+        <span>Calcul des statistiques <em class="step-hint">(mox_to_stats)</em></span>
+      </label>
+      <label class="step-item">
+        <input type="checkbox" id="mlStepTfidf" checked />
+        <span>Calcul TF-IDF <em class="step-hint">(compute_commander_tfidf)</em></span>
+      </label>
+      <label class="step-item">
+        <input type="checkbox" id="mlStepReload" checked />
+        <span>Rechargement du moteur IA</span>
+      </label>
+    </div>
+    <button class="btn btn-purple" id="mlRetrainBtn">Lancer le réentraînement</button>
+    <div class="panel-state" id="mlState" style="display:none;">
+      <div id="mlRunning" style="display:none; margin-top:14px;">
+        <div class="running-box">
+          <div class="spinner" style="border-top-color:var(--purple)"></div>
+          <span id="mlPhase">Initialisation…</span>
+          <span class="run-elapsed" id="mlElapsed">00:00</span>
+        </div>
+        <div class="prog-wrap">
+          <div class="prog-bar"><div class="prog-fill" id="mlProgFill" style="width:0%;background:var(--purple)"></div></div>
+          <span class="prog-label" id="mlProgLabel"></span>
+        </div>
+        <div class="run-log" id="mlLog"></div>
+      </div>
+      <div id="mlDone" style="display:none; margin-top:14px;">
+        <div class="done-badge">Terminé</div>
+        <div id="mlReport"></div>
+        <div style="margin-top:12px;"><button class="btn btn-ghost btn-xs" id="mlResetBtn">Nouveau réentraînement</button></div>
+      </div>
+      <div id="mlError" style="display:none;" class="error-box"></div>
+    </div>
+  </div>
+
   <!-- Commander list -->
   <div class="sec-header">
     <span class="sec-title">Liste des commandants</span>
     <span class="sec-count" id="cmdCount">—</span>
-    <button class="btn btn-ghost btn-xs ml-auto" id="syncBtn">Synchroniser depuis décks</button>
+    <button class="btn btn-amber btn-xs ml-auto" id="syncBtn">Synchroniser depuis décks</button>
     <button class="btn btn-ghost btn-xs" id="refreshCmdBtn">Rafraîchir</button>
   </div>
 
@@ -244,17 +507,18 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
     <table>
       <thead>
         <tr>
-          <th class="sortable" data-col="rank" style="width:60px;">#</th>
+          <th class="sortable" data-col="rank" style="width:52px;">#</th>
           <th class="sortable" data-col="name">Commandant</th>
-          <th style="width:90px;">CI</th>
-          <th class="sortable n-num" data-col="decks_in_db" style="width:110px;">En base</th>
-          <th class="sortable n-num" data-col="decks_extracted" style="width:100px;">Extraits</th>
-          <th class="sortable" data-col="last_scraped_at" style="width:140px;">Dernier scrape</th>
-          <th style="width:120px;">Statut</th>
+          <th style="width:80px;">CI</th>
+          <th class="sortable n-num" data-col="decks_in_db" style="width:90px;">En base</th>
+          <th class="sortable n-num" data-col="decks_extracted" style="width:90px;">Extraits</th>
+          <th style="width:130px;">Couverture</th>
+          <th class="sortable" data-col="last_scraped_at" style="width:130px;">Dernier scrape</th>
+          <th style="width:110px;">Statut</th>
         </tr>
       </thead>
       <tbody id="cmdTableBody">
-        <tr class="empty-msg"><td colspan="7">Chargement…</td></tr>
+        <tr class="empty-msg"><td colspan="8">Chargement…</td></tr>
       </tbody>
     </table>
   </div>
@@ -284,11 +548,20 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
     user = await getUser();
     if (!user) await new Promise(r => setTimeout(r, 150));
   }
-
   if (!user || user.role !== 'admin') { window.location.href = '/'; return; }
-
   document.getElementById('userInfo').style.display = 'flex';
   document.getElementById('userEmail').textContent = user.email || user.display_name || 'Admin';
+
+  // ── Utilitaires ───────────────────────────────────────────────────────
+  function fmt(n)   { return (n ?? 0).toLocaleString('fr-FR'); }
+  function fmtM(n)  { if (n == null) return '—'; if (n >= 1e6) return (n/1e6).toFixed(1) + ' M'; if (n >= 1e3) return (n/1e3).toFixed(1) + ' k'; return String(n); }
+
+  function setText(id, val, rmLoading) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = val;
+    if (rmLoading) el.classList.remove('loading');
+  }
 
   // ── Stats ─────────────────────────────────────────────────────────────
   async function loadStats() {
@@ -296,20 +569,43 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
       const r = await fetch('/api/admin/stats');
       if (!r.ok) return;
       const d = await r.json();
-      const fmt = n => (n ?? 0).toLocaleString('fr-FR');
-      setText('statDecks',       fmt(d.total_decks),                false, true);
-      setText('statCommanders',  fmt(d.total_commanders),           false, true);
-      setText('statPending',     fmt(d.pending_commanders),         false, true);
-      setText('statUniq',        fmt(d.unique_commanders_in_decks), false, true);
-    } catch {}
-  }
 
-  function setText(id, val, err, rmLoading) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.textContent = val;
-    if (rmLoading) el.classList.remove('loading');
-    if (err) el.style.color = 'var(--red)';
+      // Bronze — deck_cards
+      setText('statDecks',     fmt(d.bronze_decks),             true);
+      setText('statUniqueCmd', fmt(d.bronze_unique_commanders),  true);
+      setText('statRows',      fmtM(d.bronze_rows),             true);
+      const avg = d.bronze_decks ? Math.round(d.bronze_rows / d.bronze_decks) : 0;
+      setText('statAvg', avg ? fmt(avg) : '—', true);
+
+      // Bronze — commanders
+      setText('statCommanders', fmt(d.bronze_commanders),   true);
+      setText('statPending',    fmt(d.pending_commanders),  true);
+      setText('statRecent',     fmt(d.scraped_recent),      true);
+      const cov = d.bronze_commanders
+        ? Math.round(d.commanders_with_decks / d.bronze_commanders * 100)
+        : 0;
+      setText('statCoverage', cov ? cov + ' %' : '—', true);
+
+      // Silver
+      setText('statMlCmd',     fmt(d.ml_commanders),    true);
+      setText('statMlCards',   fmt(d.ml_cards_global),  true);
+      setText('statMlEntries', fmtM(d.ml_stat_entries), true);
+      const mlAvg = d.ml_commanders ? Math.round(d.ml_stat_entries / d.ml_commanders) : 0;
+      setText('statMlAvg', mlAvg ? fmt(mlAvg) : '—', true);
+
+      // Dernier entraînement ML
+      const lastTrained = document.getElementById('statMlLastTrained');
+      if (lastTrained) {
+        lastTrained.textContent = d.ml_last_trained_at
+          ? 'Entraîné le ' + new Date(d.ml_last_trained_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })
+          : '';
+      }
+
+      // Alerte commanders vide
+      document.getElementById('emptyAlert').style.display =
+        d.bronze_commanders === 0 ? 'block' : 'none';
+
+    } catch (e) { console.error('loadStats', e); }
   }
 
   // ── Commander table ───────────────────────────────────────────────────
@@ -318,13 +614,14 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
 
   function relTime(iso) {
     if (!iso) return null;
-    const d = Math.floor((Date.now() - new Date(iso)) / 86400000);
-    const h = Math.floor(((Date.now() - new Date(iso)) % 86400000) / 3600000);
-    const m = Math.floor(((Date.now() - new Date(iso)) % 3600000) / 60000);
-    if (d > 0) return `Il y a ${d}j`;
-    if (h > 0) return `Il y a ${h}h`;
-    if (m > 0) return `Il y a ${m}min`;
-    return "À l'instant";
+    const ms = Date.now() - new Date(iso);
+    const d = Math.floor(ms / 86400000);
+    const h = Math.floor((ms % 86400000) / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    if (d > 0) return `il y a ${d}j`;
+    if (h > 0) return `il y a ${h}h`;
+    if (m > 0) return `il y a ${m}min`;
+    return "à l'instant";
   }
 
   function badge(iso) {
@@ -339,6 +636,16 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
     return '<div class="ci-pips">' +
       [...ci].map(c => `<div class="ci-pip ${CI_CLS[c] || 'pip-C'}" title="${c}"></div>`).join('') +
     '</div>';
+  }
+
+  function coverageBar(inDb, extracted) {
+    if (!extracted) return '<span style="color:var(--parch-600)">—</span>';
+    const pct = Math.min(100, Math.round(inDb / extracted * 100));
+    const cls = pct >= 80 ? 'lvl-high' : pct >= 40 ? 'lvl-mid' : 'lvl-low';
+    return `<div class="cov-wrap">
+      <div class="cov-bar"><div class="cov-fill ${cls}" style="width:${pct}%"></div></div>
+      <span class="cov-pct">${pct} %</span>
+    </div>`;
   }
 
   function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -361,23 +668,24 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
     });
 
     const cnt = data.length;
-    document.getElementById('cmdCount').textContent = `${cnt} commandant${cnt > 1 ? 's' : ''}`;
+    document.getElementById('cmdCount').textContent = `${cnt.toLocaleString('fr-FR')} commandant${cnt > 1 ? 's' : ''}`;
 
     if (!cnt) {
       document.getElementById('cmdTableBody').innerHTML =
-        '<tr class="empty-msg"><td colspan="7">Aucun commandant.</td></tr>';
+        '<tr class="empty-msg"><td colspan="8">Aucun commandant — utilisez "Synchroniser depuis décks".</td></tr>';
       return;
     }
 
-    const fmt = n => n != null ? Number(n).toLocaleString('fr-FR') : '—';
+    const fmtN = n => n != null ? Number(n).toLocaleString('fr-FR') : '—';
     document.getElementById('cmdTableBody').innerHTML = data.map(c => `
       <tr>
-        <td class="n-num">${c.rank ?? '—'}</td>
+        <td class="n-num" style="color:var(--parch-600);">${c.rank ?? '—'}</td>
         <td class="n-name">${esc(c.name)}</td>
         <td>${pips(c.color_identity)}</td>
-        <td class="n-num">${fmt(c.decks_in_db)}</td>
-        <td class="n-num">${fmt(c.decks_extracted)}</td>
-        <td style="color:var(--parch-500);white-space:nowrap;">${relTime(c.last_scraped_at) || '<span style="color:var(--parch-600)">Jamais</span>'}</td>
+        <td class="n-num">${fmtN(c.decks_in_db)}</td>
+        <td class="n-num">${fmtN(c.decks_extracted)}</td>
+        <td>${coverageBar(c.decks_in_db, c.decks_extracted)}</td>
+        <td style="color:var(--parch-500);white-space:nowrap;font-size:.73rem;">${relTime(c.last_scraped_at) || '<span style="color:var(--parch-600)">jamais</span>'}</td>
         <td>${badge(c.last_scraped_at)}</td>
       </tr>
     `).join('');
@@ -385,7 +693,7 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
 
   async function loadCommanders() {
     document.getElementById('cmdTableBody').innerHTML =
-      '<tr class="empty-msg"><td colspan="7">Chargement…</td></tr>';
+      '<tr class="empty-msg"><td colspan="8">Chargement…</td></tr>';
     try {
       const r = await fetch('/api/admin/commanders');
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -393,7 +701,7 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
       renderTable();
     } catch (e) {
       document.getElementById('cmdTableBody').innerHTML =
-        `<tr class="empty-msg"><td colspan="7" style="color:var(--red)">Erreur : ${esc(e.message)}</td></tr>`;
+        `<tr class="empty-msg"><td colspan="8" style="color:var(--red)">Erreur : ${esc(e.message)}</td></tr>`;
     }
   }
 
@@ -423,13 +731,75 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
       const r = await fetch('/api/admin/commanders/sync', { method: 'POST' });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const d = await r.json();
-      btn.textContent = `+${d.added} ajouté${d.added > 1 ? 's' : d.added === 0 ? 's' : ''}`;
+      btn.textContent = `+${d.added.toLocaleString('fr-FR')} ajouté${d.added !== 1 ? 's' : ''}`;
       await Promise.all([loadStats(), loadCommanders()]);
     } catch (e) {
       btn.textContent = 'Erreur';
     }
     setTimeout(() => { btn.disabled = false; btn.textContent = 'Synchroniser depuis décks'; }, 3000);
   });
+
+  // ── Timing / estimation de durée ─────────────────────────────────────
+  let _timing = {};
+
+  function fmtDuration(secs) {
+    if (!secs || secs < 1) return null;
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = Math.round(secs % 60);
+    if (h > 0) return `${h}h ${m > 0 ? m + 'min' : ''}`.trim();
+    if (m > 0) return `${m}min${s > 0 ? ' ' + s + 's' : ''}`;
+    return `${s}s`;
+  }
+
+  function _renderEstimate(elId, secs, resetMode, note) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    const est = fmtDuration(secs);
+    if (!est) { el.style.display = 'none'; return; }
+    el.style.display = 'flex';
+    el.innerHTML =
+      `Durée estimée : <span class="t-hl">~${est}</span>`
+      + (note ? `<span>${note}</span>` : '')
+      + `<button class="timing-reset" data-mode="${resetMode}">Réinitialiser la moyenne</button>`;
+    el.querySelector('.timing-reset').addEventListener('click', () => resetTiming(resetMode));
+  }
+
+  function updateRecentEstimate() {
+    const t = _timing.recent;
+    if (!t?.avg_secs_per_deck) { const el = document.getElementById('recentEstimate'); if (el) el.style.display = 'none'; return; }
+    const limit = parseInt(document.getElementById('recentLimit').value, 10) || 300;
+    _renderEstimate('recentEstimate', limit * t.avg_secs_per_deck, 'recent', '');
+  }
+
+  function updateStaleEstimate() {
+    const t = _timing.stale;
+    if (!t?.avg_secs_per_commander) { const el = document.getElementById('staleEstimate'); if (el) el.style.display = 'none'; return; }
+    const count = parseInt(document.getElementById('staleCount').value, 10) || 1;
+    const note  = t.limit_per_used ? ` · base : ${t.limit_per_used} décks/cmd` : '';
+    _renderEstimate('staleEstimate', count * t.avg_secs_per_commander, 'stale', note);
+  }
+
+  async function loadTiming() {
+    try {
+      const r = await fetch('/api/admin/scrape/timing');
+      if (r.ok) _timing = await r.json();
+    } catch {}
+    updateRecentEstimate();
+    updateStaleEstimate();
+  }
+
+  async function resetTiming(mode) {
+    try {
+      await fetch(`/api/admin/scrape/timing/reset?mode=${mode}`, { method: 'POST' });
+      delete _timing[mode];
+    } catch {}
+    if (mode === 'recent') updateRecentEstimate();
+    else updateStaleEstimate();
+  }
+
+  document.getElementById('recentLimit').addEventListener('input', updateRecentEstimate);
+  document.getElementById('staleCount').addEventListener('input', updateStaleEstimate);
 
   // ── Job polling ───────────────────────────────────────────────────────
   function showPanel(prefix, section) {
@@ -439,30 +809,133 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
     });
     document.getElementById(`${prefix}State`).style.display = 'block';
   }
-
   function resetPanel(prefix, btnId) {
     document.getElementById(`${prefix}State`).style.display = 'none';
     document.getElementById(btnId).disabled = false;
+    // Remet le bouton Arrêter et le badge pour le prochain run
+    const stopBtn = document.getElementById(`${prefix}StopBtn`);
+    if (stopBtn) { stopBtn.style.display = ''; stopBtn.textContent = 'Arrêter'; stopBtn.disabled = false; }
+    const doneBadge = document.querySelector(`#${prefix}Done .done-badge`);
+    if (doneBadge) { doneBadge.textContent = 'Terminé'; doneBadge.className = 'done-badge'; }
+  }
+
+  function _logClass(msg) {
+    if (/✓|enregistrés/.test(msg)) return 'log-ok';
+    if (/ERREUR|échec/i.test(msg))  return 'log-err';
+    if (/^\[(\d+)\/(\d+)\]/.test(msg)) return 'log-cmd';
+    return '';
   }
 
   function pollJob(jobId, prefix, reportFn) {
     showPanel(prefix, 'Running');
-    const logEl = document.getElementById(`${prefix}Log`);
+    const logEl      = document.getElementById(`${prefix}Log`);
+    const progFill   = document.getElementById(`${prefix}ProgFill`);
+    const progLabel  = document.getElementById(`${prefix}ProgLabel`);
+    const phaseEl    = document.getElementById(`${prefix}Phase`);
+    const elapsedEl  = document.getElementById(`${prefix}Elapsed`);
+    const cmdRow     = document.getElementById(`${prefix}CmdRow`);
+    const cmdIdx     = document.getElementById(`${prefix}CmdIdx`);
+    const cmdName    = document.getElementById(`${prefix}CmdName`);
+    const stopBtn    = document.getElementById(`${prefix}StopBtn`);
+
+    // Arme le bouton Arrêter
+    if (stopBtn) {
+      stopBtn.style.display = '';
+      stopBtn.disabled = false;
+      stopBtn.textContent = 'Arrêter';
+      stopBtn.onclick = async () => {
+        stopBtn.disabled = true;
+        stopBtn.textContent = 'Arrêt en cours…';
+        try { await fetch(`/api/admin/scrape/stop/${jobId}`, { method: 'POST' }); } catch {}
+      };
+    }
+
+    let seenLog = 0;
+    const startMs = Date.now();
+
+    const timerIv = setInterval(() => {
+      if (!elapsedEl) return;
+      const s = Math.floor((Date.now() - startMs) / 1000);
+      elapsedEl.textContent =
+        `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+    }, 1000);
 
     const iv = setInterval(async () => {
       try {
         const r = await fetch(`/api/admin/scrape/status/${jobId}`);
         const d = await r.json();
 
-        if (d.log && d.log.length) logEl.textContent = d.log[d.log.length - 1];
+        // Append new log entries incrementalement
+        const logs = d.log || [];
+        for (let i = seenLog; i < logs.length; i++) {
+          const entry = logs[i];
+          const line = document.createElement('div');
+          line.className = 'log-entry ' + _logClass(entry.msg || entry);
+          const ts = entry.ts || '';
+          const msg = entry.msg != null ? entry.msg : String(entry);
+          line.innerHTML = ts ? `<span class="log-ts">${ts}</span>${esc(msg)}` : esc(msg);
+          logEl.appendChild(line);
+        }
+        if (logs.length > seenLog) {
+          seenLog = logs.length;
+          logEl.scrollTop = logEl.scrollHeight;
+        }
 
-        if (d.status === 'done') {
+        // Phase (+ indicateur arrêt demandé)
+        const p = d.progress || {};
+        if (phaseEl) {
+          if (p.stopping) phaseEl.textContent = 'Arrêt en cours…';
+          else if (p.phase) phaseEl.textContent = p.phase;
+        }
+
+        // Commander indicator
+        if (cmdRow) {
+          if (p.commander_total > 0) {
+            cmdRow.style.display = 'flex';
+            if (cmdIdx) cmdIdx.textContent = `${p.commander_idx}/${p.commander_total}`;
+            if (cmdName) cmdName.textContent = p.commander || '—';
+          }
+        }
+
+        // Barre de progression
+        if (progFill) {
+          let pct = 0, label = '';
+          if (p.decks_total > 0) {
+            pct = Math.round(p.decks_done / p.decks_total * 100);
+            label = `${p.decks_done.toLocaleString('fr-FR')} / ${p.decks_total.toLocaleString('fr-FR')} décks`;
+          } else if (p.links_total > 0) {
+            pct = Math.round(p.links_done / p.links_total * 100);
+            label = `${p.links_done.toLocaleString('fr-FR')} / ${p.links_total.toLocaleString('fr-FR')} liens`;
+          } else if (p.commander_total > 0) {
+            pct = Math.round((p.commander_idx - 1) / p.commander_total * 100);
+            label = `Commandant ${p.commander_idx}/${p.commander_total}`;
+          }
+          progFill.style.width = Math.min(100, pct) + '%';
+          if (progLabel) progLabel.textContent = label;
+        }
+
+        if (d.status === 'done' || d.status === 'stopped') {
           clearInterval(iv);
+          clearInterval(timerIv);
+          if (stopBtn) stopBtn.style.display = 'none';
+          if (progFill) progFill.style.width = '100%';
           showPanel(prefix, 'Done');
-          document.getElementById(`${prefix}Report`).innerHTML = reportFn(d.stats);
-          await Promise.all([loadStats(), loadCommanders()]);
+          const doneBadge = document.querySelector(`#${prefix}Done .done-badge`);
+          if (doneBadge) {
+            if (d.status === 'stopped') {
+              doneBadge.textContent = 'Interrompu';
+              doneBadge.className = 'done-badge stopped';
+            } else {
+              doneBadge.textContent = 'Terminé';
+              doneBadge.className = 'done-badge';
+            }
+          }
+          document.getElementById(`${prefix}Report`).innerHTML = reportFn(d.stats || {});
+          await Promise.all([loadStats(), loadCommanders(), loadTiming()]);
         } else if (d.status === 'error') {
           clearInterval(iv);
+          clearInterval(timerIv);
+          if (stopBtn) stopBtn.style.display = 'none';
           showPanel(prefix, 'Error');
           document.getElementById(`${prefix}Error`).textContent = d.error || 'Erreur inconnue';
         }
@@ -473,24 +946,25 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
   // ── Scrape récents ────────────────────────────────────────────────────
   function reportRecent(s) {
     const rows = [
-      ['URLs collectées',   s.seen,       ''],
-      ['Déjà en base',      s.skipped,    ''],
-      ['HTML parsés',       s.fetched,    ''],
-      ['Incomplets',        s.incomplete, 'v-red'],
-      ['Décks créés',       s.created,    'v-green'],
-      ['Décks mis à jour',  s.updated,    'v-blue'],
+      ['URLs collectées',        s.seen,                ''],
+      ['Déjà en base',           s.skipped,             ''],
+      ['HTML parsés',            s.fetched,             ''],
+      ['Incomplets',             s.incomplete,          'v-red'],
+      ['Décks créés',            s.created,             'v-green'],
+      ['Décks mis à jour',       s.updated,             'v-blue'],
+      ['Nettoyage limite 1 000', s.deck_limit_deleted,  s.deck_limit_deleted ? 'v-red' : ''],
     ];
     return rows.map(([l, v, c]) =>
       `<div class="report-row"><span class="report-label">${l}</span><span class="report-val ${c}">${(v??0).toLocaleString('fr-FR')}</span></div>`
     ).join('');
   }
-
   document.getElementById('recentLaunchBtn').addEventListener('click', async () => {
     const limit = parseInt(document.getElementById('recentLimit').value, 10) || 300;
+    const headless = !document.getElementById('recentShowBrowser').checked;
     const btn = document.getElementById('recentLaunchBtn');
     btn.disabled = true;
     try {
-      const r = await fetch(`/api/admin/scrape/recent?limit=${limit}`, { method: 'POST' });
+      const r = await fetch(`/api/admin/scrape/recent?limit=${limit}&headless=${headless}`, { method: 'POST' });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       pollJob((await r.json()).job_id, 'recent', reportRecent);
     } catch (e) {
@@ -505,25 +979,36 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
   // ── Scrape par commandant ─────────────────────────────────────────────
   function reportStale(s) {
     const rows = [
-      ['Commandants traités', s.commanders_processed, 'v-teal'],
-      ['URLs collectées',     s.seen,                 ''],
-      ['HTML parsés',         s.fetched,              ''],
-      ['Incomplets',          s.incomplete,           'v-red'],
-      ['Décks créés',         s.created,              'v-green'],
-      ['Décks mis à jour',    s.updated,              'v-blue'],
+      ['Commandants traités',    s.commanders_processed,  'v-teal'],
+      ['URLs collectées',        s.seen,                  ''],
+      ['HTML parsés',            s.fetched,               ''],
+      ['Incomplets',             s.incomplete,            'v-red'],
+      ['Décks créés',            s.created,               'v-green'],
+      ['Décks mis à jour',       s.updated,               'v-blue'],
+      ['Nettoyage limite 1 000', s.deck_limit_deleted,    s.deck_limit_deleted ? 'v-red' : ''],
     ];
     return rows.map(([l, v, c]) =>
       `<div class="report-row"><span class="report-label">${l}</span><span class="report-val ${c}">${(v??0).toLocaleString('fr-FR')}</span></div>`
     ).join('');
   }
+  const _STALE_HINTS = {
+    stale:     'Cible les commandants dont le dernier scrape est le plus ancien (jamais scrapés en priorité).',
+    min_decks: 'Cible les commandants avec le moins de decks en base (jamais scrapés en priorité absolue, puis tri croissant).',
+  };
+  document.getElementById('staleMode').addEventListener('change', e => {
+    const hint = document.getElementById('staleHint');
+    if (hint) hint.textContent = _STALE_HINTS[e.target.value] || '';
+  });
 
   document.getElementById('staleLaunchBtn').addEventListener('click', async () => {
     const count    = parseInt(document.getElementById('staleCount').value, 10) || 1;
     const limitPer = parseInt(document.getElementById('staleLimitPer').value, 10) || 200;
+    const headless = !document.getElementById('staleShowBrowser').checked;
+    const mode     = document.getElementById('staleMode').value || 'stale';
     const btn = document.getElementById('staleLaunchBtn');
     btn.disabled = true;
     try {
-      const r = await fetch(`/api/admin/scrape/stale?count=${count}&limit_per=${limitPer}`, { method: 'POST' });
+      const r = await fetch(`/api/admin/scrape/stale?count=${count}&limit_per=${limitPer}&headless=${headless}&mode=${mode}`, { method: 'POST' });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       pollJob((await r.json()).job_id, 'stale', reportStale);
     } catch (e) {
@@ -535,9 +1020,73 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
   });
   document.getElementById('staleResetBtn').addEventListener('click', () => resetPanel('stale', 'staleLaunchBtn'));
 
+  // ── Recalcul complet des stats ────────────────────────────────────────
+  document.getElementById('fullRefreshBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('fullRefreshBtn');
+    btn.disabled = true;
+    btn.textContent = 'Calcul en cours…';
+    try {
+      const r = await fetch('/api/admin/stats/refresh', { method: 'POST' });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      await loadStats();
+      btn.textContent = 'Mis à jour !';
+    } catch (e) {
+      btn.textContent = 'Erreur';
+    }
+    setTimeout(() => { btn.disabled = false; btn.textContent = 'Recalcul complet des stats'; }, 3000);
+  });
+
+  // ── ML Réentraînement ─────────────────────────────────────────────────
+  function reportMl(s) {
+    return `<div class="report-row"><span class="report-label">Étapes complétées</span><span class="report-val v-green">${(s?.steps_completed ?? 0)}</span></div>`;
+  }
+  const _mlStepIds = ['mlStepStats', 'mlStepTfidf', 'mlStepReload'];
+  const _mlStepKeys = { mlStepStats: 'stats', mlStepTfidf: 'tfidf', mlStepReload: 'reload' };
+
+  function _mlUpdateBtn() {
+    const anyChecked = _mlStepIds.some(id => document.getElementById(id).checked);
+    document.getElementById('mlRetrainBtn').disabled = !anyChecked;
+  }
+  _mlStepIds.forEach(id => document.getElementById(id).addEventListener('change', _mlUpdateBtn));
+  document.getElementById('mlSelectAll').addEventListener('click', () => {
+    _mlStepIds.forEach(id => { document.getElementById(id).checked = true; });
+    _mlUpdateBtn();
+  });
+  document.getElementById('mlSelectNone').addEventListener('click', () => {
+    _mlStepIds.forEach(id => { document.getElementById(id).checked = false; });
+    _mlUpdateBtn();
+  });
+
+  document.getElementById('mlRetrainBtn').addEventListener('click', async () => {
+    const steps = _mlStepIds
+      .filter(id => document.getElementById(id).checked)
+      .map(id => _mlStepKeys[id]);
+    if (!steps.length) return;
+    const btn = document.getElementById('mlRetrainBtn');
+    btn.disabled = true;
+    try {
+      const r = await fetch('/api/admin/ml/retrain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ steps }),
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      pollJob((await r.json()).job_id, 'ml', reportMl);
+    } catch (e) {
+      btn.disabled = false;
+      document.getElementById('mlState').style.display = 'block';
+      showPanel('ml', 'Error');
+      document.getElementById('mlError').textContent = String(e);
+    }
+  });
+  document.getElementById('mlResetBtn').addEventListener('click', () => {
+    resetPanel('ml', 'mlRetrainBtn');
+    _mlUpdateBtn();
+  });
+
   // ── Init ──────────────────────────────────────────────────────────────
   document.querySelector('th[data-col="last_scraped_at"]').classList.add('sort-active');
-  await Promise.all([loadStats(), loadCommanders()]);
+  await Promise.all([loadStats(), loadCommanders(), loadTiming()]);
 
 })();
 </script>

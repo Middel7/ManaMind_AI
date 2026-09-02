@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>ManaMind — Mon profil</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/app.css">
+<style>
+  .profile-hero { min-height: 220px; }
+  .profile-hero .hero__body {
+    flex-direction: row; align-items: flex-end; gap: var(--sp-5);
+    max-width: none; padding-top: var(--sp-16);
+  }
+  .profile-hero .avatar { border: 2px solid var(--line-strong); box-shadow: var(--shadow-md); }
+
+  .avatar-picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: var(--sp-2); }
+  .avatar-option { border-radius: var(--r-md); overflow: hidden; border: 2px solid transparent; aspect-ratio: 1; }
+  .avatar-option img { width: 100%; height: 100%; object-fit: cover; }
+  .avatar-option[aria-pressed="true"] { border-color: var(--accent); }
+
+  @media (max-width: 860px) {
+    .profile-hero .hero__body { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<div id="page">
+  <section class="hero profile-hero" id="hero">
+    <div class="hero__body">
+      <div class="skeleton" style="width:92px;height:92px;border-radius:999px"></div>
+      <div class="stack-2 grow">
+        <div class="skeleton skeleton--text" style="width:200px;height:28px"></div>
+        <div class="skeleton skeleton--text" style="width:140px"></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="grid-2" style="align-items:start">
+    <div class="stack-6">
+      <div class="panel">
+        <div class="panel__head"><h2 class="h3">Identité</h2></div>
+        <div class="panel__body stack">
+          <div class="field">
+            <label class="label" for="displayName">Pseudo</label>
+            <input class="input" id="displayName" type="text" maxlength="40"
+                   placeholder="Votre pseudo">
+          </div>
+          <div class="field">
+            <label class="label" for="email">Adresse e-mail</label>
+            <input class="input" id="email" type="email" disabled>
+            <p class="xs dim">L'adresse ne peut pas être modifiée depuis cette page.</p>
+          </div>
+          <div class="field">
+            <label class="label" for="favCommander">Commandant favori</label>
+            <div class="autocomplete">
+              <input class="input" id="favCommander" type="text" autocomplete="off"
+                     placeholder="Rechercher une carte…">
+            </div>
+          </div>
+          <div class="cluster" style="justify-content:flex-end">
+            <button class="btn btn--primary" id="saveIdentity">Enregistrer</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel__head">
+          <div class="stack-2">
+            <h2 class="h3">Carte fétiche</h2>
+            <p class="xs dim">Elle sert d'avatar et habille votre accueil.</p>
+          </div>
+        </div>
+        <div class="panel__body stack">
+          <div class="autocomplete">
+            <input class="input" id="avatarSearch" type="text" autocomplete="off"
+                   placeholder="Rechercher une carte…">
+          </div>
+          <p class="label">Ou choisissez parmi vos plus belles cartes</p>
+          <div class="avatar-picker" id="avatarPicker"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stack-6">
+      <div class="panel" id="progressPanel"></div>
+
+      <div class="panel">
+        <div class="panel__head"><h2 class="h3">Ma collection en chiffres</h2></div>
+        <div class="panel__body">
+          <div class="rows" id="statRows"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel__head"><h2 class="h3">Données</h2></div>
+        <div class="panel__body stack">
+          <div class="between">
+            <div>
+              <p class="strong small">Marquer ma collection à jour</p>
+              <p class="xs dim">Remet à zéro le rappel de mise à jour.</p>
+            </div>
+            <button class="btn btn--sm" id="markChecked">Confirmer</button>
+          </div>
+          <hr class="divider">
+          <div class="between">
+            <div>
+              <p class="strong small" style="color:var(--danger)">Vider ma collection</p>
+              <p class="xs dim">Supprime tous les exemplaires. Vos decks sont conservés.</p>
+            </div>
+            <button class="btn btn--sm btn--danger" id="clearCollection">Tout supprimer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/mm.js"></script>
+<script>
+(async () => {
+  const user = await MM.boot({ title: 'Mon profil', nav: 'profile' });
+  if (!user) return;
+
+  let data;
+  try {
+    data = await MM.api.get('/api/profile');
+  } catch (err) {
+    MM.toast.error(err.message);
+    return;
+  }
+
+  const profile = data.profile;
+  const stats = data.stats;
+
+  /* ── Bannière ─────────────────────────────────────────────────────────── */
+
+  function renderHero() {
+    const artId = profile.banner_scryfall_id || profile.avatar_scryfall_id;
+    const initials = (data.user.display_name || data.user.email || '?')
+      .trim().slice(0, 2).toUpperCase();
+
+    MM.el('#hero').innerHTML = `
+      ${artId ? `<div class="hero__art"
+        style="background-image:url('${MM.scryfallArt(artId)}')"></div>` : ''}
+      <div class="hero__body">
+        <span class="avatar avatar--xl">
+          ${profile.avatar_scryfall_id
+            ? `<img src="${MM.scryfallArt(profile.avatar_scryfall_id)}" alt="">`
+            : MM.esc(initials)}
+        </span>
+        <div class="stack-2 grow">
+          <h2 class="h1">${MM.esc(data.user.display_name || 'Sans pseudo')}</h2>
+          <p class="muted small">
+            ${MM.fmt.plural(stats.copies, 'carte')} ·
+            ${MM.fmt.plural(stats.decks, 'deck')} ·
+            ${MM.fmt.eur(stats.value_eur, { compact: true })}
+            ${profile.favorite_commander
+              ? `· joue ${MM.esc(profile.favorite_commander)}` : ''}
+          </p>
+        </div>
+      </div>
+      ${profile.avatar_card_name
+        ? `<span class="hero__credit">${MM.esc(profile.avatar_card_name)}</span>` : ''}`;
+  }
+  renderHero();
+
+  MM.el('#displayName').value = data.user.display_name || '';
+  MM.el('#email').value = data.user.email || '';
+  MM.el('#favCommander').value = profile.favorite_commander || '';
+
+  /* ── Progression ──────────────────────────────────────────────────────── */
+
+  try {
+    const dashboard = await MM.api.get('/api/dashboard');
+    const progress = dashboard.progress;
+    MM.el('#progressPanel').innerHTML = `
+      <div class="panel__head">
+        <div class="stack-2">
+          <h2 class="h3">Votre progression</h2>
+          <p class="xs dim">${progress.done} sur ${progress.total} étapes</p>
+        </div>
+        <span class="badge ${progress.complete ? 'badge--ok' : 'badge--warn'}">
+          ${progress.percent} %</span>
+      </div>
+      <div class="panel__body stack">
+        <div class="progress">
+          <div class="progress__bar" style="width:${progress.percent}%"></div>
+        </div>
+        <div class="steps">
+          ${progress.steps.map((step) => `
+            <div class="step ${step.done ? 'step--done' : ''}">
+              <span class="step__mark">${step.done ? MM.icons.check : ''}</span>
+              <span class="step__text">
+                <span class="step__title">${MM.esc(step.label)}</span>
+                <span class="step__detail">${MM.esc(step.value || step.detail)}</span>
+              </span>
+              ${step.done ? '' : `<a class="btn btn--sm btn--outline"
+                href="${MM.esc(step.href)}">${MM.esc(step.cta)}</a>`}
+            </div>`).join('')}
+        </div>
+      </div>`;
+  } catch { MM.el('#progressPanel').remove(); }
+
+  /* ── Chiffres ─────────────────────────────────────────────────────────── */
+
+  const rows = [
+    ['Exemplaires', MM.fmt.int(stats.copies)],
+    ['Cartes différentes', MM.fmt.int(stats.distinct_cards)],
+    ['Cartes foil', MM.fmt.int(stats.foils)],
+    ['Cartes inutilisées', MM.fmt.int(stats.dormant)],
+    ['Valeur estimée', MM.fmt.eur(stats.value_eur, { compact: true })],
+    ['Decks', MM.fmt.int(stats.decks)],
+    ['Première carte ajoutée', MM.fmt.date(stats.first_add)],
+    ['Dernière modification', MM.fmt.since(stats.last_update) || '—'],
+  ];
+  MM.el('#statRows').innerHTML = rows.map(([label, value]) => `
+    <div class="row" style="padding-left:0;padding-right:0">
+      <span class="grow muted small">${MM.esc(label)}</span>
+      <span class="strong num">${MM.esc(value)}</span>
+    </div>`).join('');
+
+  /* ── Carte fétiche ────────────────────────────────────────────────────── */
+
+  if (stats.top_cards && stats.top_cards.length) {
+    MM.el('#avatarPicker').innerHTML = stats.top_cards
+      .filter((card) => card.scryfall_id)
+      .map((card) => `
+        <button class="avatar-option" data-sid="${MM.esc(card.scryfall_id)}"
+                data-name="${MM.esc(card.card_name)}"
+                aria-pressed="${profile.avatar_scryfall_id === card.scryfall_id}"
+                title="${MM.esc(card.card_name)}">
+          <img src="${MM.scryfallArt(card.scryfall_id)}" alt="${MM.esc(card.card_name)}"
+               loading="lazy">
+        </button>`).join('');
+  } else {
+    MM.el('#avatarPicker').innerHTML =
+      '<p class="xs dim">Importez des cartes pour choisir une illustration.</p>';
+  }
+
+  MM.el('#avatarPicker').addEventListener('click', (event) => {
+    const option = event.target.closest('[data-sid]');
+    if (option) setAvatar(option.dataset.sid, option.dataset.name);
+  });
+
+  MM.autocomplete(MM.el('#avatarSearch'), (card) => {
+    MM.el('#avatarSearch').value = '';
+    setAvatar(card.scryfall_id, card.name);
+  });
+
+  MM.autocomplete(MM.el('#favCommander'), (card) => {
+    MM.el('#favCommander').value = card.name;
+  });
+
+  async function setAvatar(scryfallId, cardName) {
+    try {
+      await MM.api.put('/api/profile', {
+        avatar_scryfall_id: scryfallId,
+        avatar_card_name: cardName,
+        banner_scryfall_id: scryfallId,
+        banner_card_name: cardName,
+      });
+      profile.avatar_scryfall_id = scryfallId;
+      profile.avatar_card_name = cardName;
+      profile.banner_scryfall_id = scryfallId;
+      renderHero();
+      MM.els('.avatar-option').forEach((option) =>
+        option.setAttribute('aria-pressed', String(option.dataset.sid === scryfallId)));
+      const navAvatar = MM.el('#mmAvatar');
+      if (navAvatar) navAvatar.innerHTML = `<img src="${MM.scryfallArt(scryfallId)}" alt="">`;
+      MM.toast.ok('Carte fétiche mise à jour.');
+    } catch (err) { MM.toast.error(err.message); }
+  }
+
+  /* ── Enregistrement ───────────────────────────────────────────────────── */
+
+  MM.el('#saveIdentity').addEventListener('click', async (event) => {
+    event.target.disabled = true;
+    try {
+      await MM.api.put('/api/profile', {
+        display_name: MM.el('#displayName').value.trim(),
+        favorite_commander: MM.el('#favCommander').value.trim() || null,
+      });
+      data.user.display_name = MM.el('#displayName').value.trim();
+      profile.favorite_commander = MM.el('#favCommander').value.trim();
+      sessionStorage.removeItem('_mm_user');
+      renderHero();
+      MM.toast.ok('Profil enregistré.');
+    } catch (err) {
+      MM.toast.error(err.message);
+    } finally {
+      event.target.disabled = false;
+    }
+  });
+
+  MM.el('#markChecked').addEventListener('click', async (event) => {
+    event.target.disabled = true;
+    try {
+      await MM.api.post('/api/profile/collection-checked');
+      MM.toast.ok('Collection marquée à jour.');
+    } catch (err) {
+      MM.toast.error(err.message);
+    } finally {
+      event.target.disabled = false;
+    }
+  });
+
+  MM.el('#clearCollection').addEventListener('click', async () => {
+    const ok = await MM.confirm({
+      title: 'Vider toute la collection ?',
+      text: `Les ${MM.fmt.int(stats.copies)} exemplaires de votre collection seront `
+        + 'définitivement supprimés. Cette action est irréversible.',
+      confirmLabel: 'Tout supprimer', danger: true,
+    });
+    if (!ok) return;
+    try {
+      const result = await MM.api.del('/api/v2/collection');
+      MM.toast.ok(`${MM.fmt.int(result.deleted)} lignes supprimées.`);
+      setTimeout(() => location.reload(), 900);
+    } catch (err) { MM.toast.error(err.message); }
+  });
+})();
+</script>
+</body>
+</html>

@@ -52,44 +52,44 @@ BATCH_SIZE = 500
 # ── Projection par commandant ─────────────────────────────────────────────────
 
 def project_commander(commander: str, session: object) -> dict:
-    """Projette mox_deck_cards + mox_decks → deck_stat_commander pour un commandant.
+    """Projette deck_cards → deck_stat_commander pour un commandant.
 
     Retourne {"decks": int, "cards": int} ou {"decks": 0} si rien en base.
     """
-    # Compter les decks disponibles pour ce commandant
     row = session.execute(
-        text("SELECT COUNT(*) FROM mox_decks WHERE commander = :cmd"),
+        text("SELECT COUNT(DISTINCT deck_id) FROM deck_cards WHERE commander = :cmd"),
         {"cmd": commander},
     ).scalar()
     total_decks = row or 0
 
+    # Purge systématique : les stats de ce commandant sont réécrites ci-dessous,
+    # ou bien il n'a plus de decks / plus de cartes et elles doivent disparaître.
+    session.execute(
+        text("DELETE FROM deck_stat_commander WHERE commander = :cmd"),
+        {"cmd": commander},
+    )
+
     if total_decks == 0:
+        session.commit()
         return {"decks": 0, "cards": 0}
 
-    # Calculer les taux d'inclusion :
-    # pour chaque carte (hors commandant), compter le nb de decks qui la jouent.
+    # Pour chaque carte (hors commandant), compter le nb de decks qui la jouent.
     rows = session.execute(
         text("""
             SELECT
-                dc.card_name,
-                COUNT(DISTINCT dc.deck_id) AS decks_with_card
-            FROM mox_deck_cards dc
-            JOIN mox_decks d ON d.deck_id = dc.deck_id
-            WHERE d.commander = :cmd
-              AND dc.is_commander = 0
-            GROUP BY dc.card_name
+                card_name,
+                COUNT(DISTINCT deck_id) AS decks_with_card
+            FROM deck_cards
+            WHERE commander = :cmd
+              AND is_commander = false
+            GROUP BY card_name
         """),
         {"cmd": commander},
     ).fetchall()
 
     if not rows:
+        session.commit()
         return {"decks": total_decks, "cards": 0}
-
-    # Supprimer les anciennes stats de ce commandant
-    session.execute(
-        text("DELETE FROM deck_stat_commander WHERE commander = :cmd"),
-        {"cmd": commander},
-    )
 
     # Insérer par batch
     stat_rows = [
@@ -193,11 +193,19 @@ def main() -> None:
             commanders = [args.commander]
         else:
             rows = session.execute(
-                text("SELECT DISTINCT commander FROM mox_decks WHERE commander IS NOT NULL ORDER BY commander")
+                text("SELECT DISTINCT commander FROM deck_cards WHERE commander IS NOT NULL ORDER BY commander")
             ).fetchall()
             commanders = [r[0] for r in rows]
 
         log.info("%d commandant(s) à projeter.", len(commanders))
+
+        # Recalcul complet : on repart d'une table vide. Sans ça, un commandant
+        # disparu de deck_cards (decks supprimés, nom normalisé autrement) n'est
+        # plus dans la liste ci-dessus, donc jamais réécrit — ses stats obsolètes
+        # survivraient indéfiniment.
+        session.execute(text("TRUNCATE TABLE deck_stat_commander"))
+        session.commit()
+
         t0 = time.time()
         total_decks = 0
         total_cards = 0

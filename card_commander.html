@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>ManaMind — Commandant pour une carte</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/app.css">
+<style>
+  .search-hero { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: var(--sp-6); align-items: start; }
+  @media (max-width: 720px) { .search-hero { grid-template-columns: 1fr; } }
+
+  .cmd-row {
+    display: flex; align-items: center; gap: var(--sp-4);
+    padding: var(--sp-3) var(--sp-4);
+    border-radius: var(--r-lg);
+    border: 1px solid var(--line);
+    background: var(--bg-raised);
+    transition: border-color var(--dur) var(--ease);
+  }
+  .cmd-row:hover { border-color: var(--line-accent); }
+  .cmd-row__thumb { width: 48px; aspect-ratio: var(--card-ratio); object-fit: cover;
+    border-radius: 4px; background: var(--surface-2); flex-shrink: 0; }
+  .cmd-row__bar { width: 120px; flex-shrink: 0; }
+  @media (max-width: 720px) { .cmd-row__bar { display: none; } }
+</style>
+</head>
+<body>
+
+<div id="page">
+  <div class="stack-2">
+    <h2 class="h2">Dans quel commandant jouer cette carte ?</h2>
+    <p class="muted small">
+      Saisissez une carte : nous cherchons les commandants dont les decks l'incluent
+      le plus souvent.
+    </p>
+  </div>
+
+  <div class="toolbar">
+    <div class="search toolbar__search autocomplete" style="max-width:460px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+           stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+      <input class="input" id="cardInput" type="text" autocomplete="off"
+             placeholder="Nom de la carte…" autofocus>
+    </div>
+    <div class="btn-group" role="group" aria-label="Périmètre">
+      <button class="btn btn--sm" data-mode="mine" aria-pressed="true">Mes commandants</button>
+      <button class="btn btn--sm" data-mode="all" aria-pressed="false">Tous</button>
+    </div>
+    <label class="switch" id="significantWrap" style="display:none">
+      <input type="checkbox" id="significant" checked>
+      <span class="switch__track"></span>
+      <span class="small">Écarter les résultats peu significatifs</span>
+    </label>
+  </div>
+
+  <div id="results">
+    <div class="empty">
+      <span class="empty__mark" id="emptyIcon"></span>
+      <div class="stack-2" style="align-items:center">
+        <p class="empty__title">Choisissez une carte</p>
+        <p class="empty__text">Vous saurez quels commandants en tirent le meilleur parti.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/mm.js"></script>
+<script>
+(async () => {
+  const user = await MM.boot({ title: 'Commandant pour une carte', nav: 'card' });
+  if (!user) return;
+
+  MM.el('#emptyIcon').innerHTML = MM.icons.crown;
+
+  const results = MM.el('#results');
+  const state = { card: null, mode: 'mine', significant: true };
+
+  // Au moins 8 decks : en deçà, un taux de 100 % ne veut rien dire.
+  const MIN_DECKS = 8;
+
+  MM.autocomplete(MM.el('#cardInput'), (card) => {
+    MM.el('#cardInput').value = card.name;
+    state.card = card;
+    load();
+  });
+
+  MM.els('[data-mode]').forEach((button) => {
+    button.addEventListener('click', () => {
+      state.mode = button.dataset.mode;
+      MM.els('[data-mode]').forEach((other) =>
+        other.setAttribute('aria-pressed', String(other === button)));
+      MM.el('#significantWrap').style.display = state.mode === 'all' ? 'inline-flex' : 'none';
+      load();
+    });
+  });
+
+  MM.el('#significant').addEventListener('change', (event) => {
+    state.significant = event.target.checked;
+    load();
+  });
+
+  async function load() {
+    if (!state.card) return;
+    results.innerHTML = `<div class="stack-2">${Array.from({ length: 6 }, () =>
+      '<div class="skeleton" style="height:74px"></div>').join('')}</div>`;
+
+    try {
+      const data = await MM.api.get('/api/commander-suggest' + MM.api.qs({
+        card: state.card.name, top: 10, mode: state.mode,
+      }));
+      render(data.suggestions || []);
+    } catch (err) {
+      results.innerHTML = MM.empty({
+        icon: 'warning', title: 'Recherche impossible', text: err.message });
+    }
+  }
+
+  function render(all) {
+    const filtered = (state.mode === 'all' && state.significant)
+      ? all.filter((entry) => entry.total_decks >= MIN_DECKS)
+      : all;
+    const hidden = all.length - filtered.length;
+
+    if (!filtered.length) {
+      results.innerHTML = MM.empty({
+        icon: 'crown',
+        title: 'Aucun commandant trouvé',
+        text: state.mode === 'mine'
+          ? `Aucun de vos commandants ne joue « ${state.card.name} ». `
+            + 'Essayez avec « Tous » pour élargir la recherche.'
+          : `Aucune donnée exploitable pour « ${state.card.name} ».`,
+      });
+      return;
+    }
+
+    const best = Math.max(...filtered.map((entry) => entry.inclusion_rate)) || 1;
+    const image = MM.img.card(state.card);
+
+    results.innerHTML = `
+      <div class="search-hero">
+        <div class="mtg-card mtg-card--flat">
+          <div class="mtg-card__frame">${MM.img.frame(state.card, { lazy: false })}</div>
+          <div class="mtg-card__foot">
+            <span class="mtg-card__name">${MM.esc(state.card.name)}</span>
+            <span class="mtg-card__meta">
+              ${state.card.owned
+                ? `<span class="badge badge--ok">${state.card.owned} en collection</span>`
+                : '<span class="dim">absente de votre collection</span>'}
+            </span>
+          </div>
+        </div>
+
+        <div class="stack-2">
+          ${hidden ? `<p class="xs dim">${hidden} résultat${hidden > 1 ? 's' : ''}
+            écarté${hidden > 1 ? 's' : ''} faute de decks suffisants
+            (moins de ${MIN_DECKS}).</p>` : ''}
+          ${filtered.map((entry) => `
+            <article class="cmd-row">
+              ${entry.image_url
+                ? `<img class="cmd-row__thumb" src="${MM.esc(entry.image_url)}"
+                     alt="" loading="lazy">`
+                : '<span class="cmd-row__thumb"></span>'}
+              <div class="grow" style="min-width:0">
+                <p class="strong truncate">${MM.esc(entry.commander)}
+                  ${entry.in_my_decks
+                    ? '<span class="badge badge--info">dans vos decks</span>' : ''}</p>
+                <p class="xs dim">${MM.fmt.int(entry.decks_with_card)} decks sur
+                  ${MM.fmt.int(entry.total_decks)} l'incluent</p>
+              </div>
+              <div class="cmd-row__bar">
+                <div class="progress">
+                  <div class="progress__bar"
+                       style="width:${(entry.inclusion_rate / best) * 100}%"></div>
+                </div>
+              </div>
+              <span class="strong num" style="width:64px;text-align:right">
+                ${entry.inclusion_rate.toFixed(1)} %</span>
+            </article>`).join('')}
+        </div>
+      </div>`;
+  }
+
+  // Permet d'arriver depuis un lien : /cartes/commandant?card=Sol+Ring
+  const requested = new URLSearchParams(location.search).get('card');
+  if (requested) {
+    MM.el('#cardInput').value = requested;
+    try {
+      const data = await MM.api.get(
+        `/api/v2/cards/suggest?q=${encodeURIComponent(requested)}&limit=1`);
+      state.card = (data.cards && data.cards[0]) || { name: requested };
+    } catch { state.card = { name: requested }; }
+    load();
+  }
+})();
+</script>
+</body>
+</html>

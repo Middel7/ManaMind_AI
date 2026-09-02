@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>ManaMind — Importer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/app.css">
+<style>
+  .dropzone {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: var(--sp-4);
+    min-height: 260px;
+    padding: var(--sp-10) var(--sp-6);
+    text-align: center;
+    border-radius: var(--r-xl);
+    border: 1.5px dashed var(--line-strong);
+    background: var(--surface);
+    transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+    cursor: pointer;
+  }
+  .dropzone:hover { border-color: var(--line-accent); background: var(--accent-wash); }
+  .dropzone.is-over {
+    border-color: var(--accent);
+    background: var(--accent-wash);
+    box-shadow: var(--shadow-accent);
+  }
+  .dropzone__mark {
+    width: 56px; height: 56px;
+    display: grid; place-items: center;
+    border-radius: var(--r-full);
+    border: 1px solid var(--line);
+    background: var(--bg-raised);
+    color: var(--accent);
+  }
+  .dropzone__mark svg { width: 24px; height: 24px; }
+
+  .formats { display: flex; flex-wrap: wrap; gap: var(--sp-2); justify-content: center; }
+
+  .steps-bar { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
+  .steps-bar__item {
+    display: flex; align-items: center; gap: var(--sp-2);
+    font-size: var(--text-sm); color: var(--text-3);
+  }
+  .steps-bar__item[data-state="current"] { color: var(--accent); font-weight: 600; }
+  .steps-bar__item[data-state="done"] { color: var(--text-2); }
+  .steps-bar__num {
+    width: 22px; height: 22px; display: grid; place-items: center;
+    border-radius: var(--r-full); border: 1px solid currentColor;
+    font-size: var(--text-xs);
+  }
+
+  .entry-table { font-size: var(--text-sm); }
+  .entry-table th {
+    text-align: left; padding: var(--sp-2) var(--sp-3);
+    font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--text-3); font-weight: 600;
+    border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; background: var(--bg-raised);
+  }
+  .entry-table td { padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--line); }
+  .entry-table tr:hover td { background: var(--surface); }
+  .table-scroll { max-height: 460px; overflow-y: auto; }
+</style>
+</head>
+<body>
+
+<div id="page">
+  <div class="steps-bar" id="stepsBar">
+    <span class="steps-bar__item" data-step="1" data-state="current">
+      <span class="steps-bar__num">1</span> Déposer</span>
+    <span class="dim">›</span>
+    <span class="steps-bar__item" data-step="2"><span class="steps-bar__num">2</span> Vérifier</span>
+    <span class="dim">›</span>
+    <span class="steps-bar__item" data-step="3"><span class="steps-bar__num">3</span> Confirmer</span>
+  </div>
+
+  <!-- Étape 1 — dépôt -->
+  <section class="stack-6" id="stepDrop">
+    <div class="dropzone" id="dropzone" role="button" tabindex="0"
+         aria-label="Déposer un fichier de cartes">
+      <span class="dropzone__mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 16V4"/><path d="m7 9 5-5 5 5"/>
+          <path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+      </span>
+      <div class="stack-2" style="align-items:center">
+        <p class="h3">Déposez votre fichier ici</p>
+        <p class="muted small">ou cliquez pour le choisir — 5 Mo maximum</p>
+      </div>
+      <div class="formats">
+        <span class="badge">ManaBox</span>
+        <span class="badge">Delver Lens</span>
+        <span class="badge">Moxfield</span>
+        <span class="badge">Archidekt</span>
+        <span class="badge">MTG Arena</span>
+        <span class="badge">MTGO</span>
+        <span class="badge">Cockatrice</span>
+        <span class="badge">CSV</span>
+      </div>
+      <input type="file" id="fileInput" class="sr-only"
+             accept=".txt,.csv,.tsv,.dek,.cod,.dck,.xml,.json">
+    </div>
+
+    <div class="panel">
+      <div class="panel__head">
+        <h2 class="h3">Ou collez votre liste</h2>
+        <button class="btn btn--primary btn--sm" id="parseText">Analyser le texte</button>
+      </div>
+      <div class="panel__body">
+        <textarea class="textarea" id="pasteArea" spellcheck="false"
+                  placeholder="1 Sol Ring (LTC) 284&#10;1 Arcane Signet (CLB) 305 *F*&#10;4 Lightning Bolt"></textarea>
+        <p class="xs dim" style="margin-top:8px">
+          Le format est détecté automatiquement. L'édition, le numéro et la mention foil
+          sont conservés lorsqu'ils sont présents.
+        </p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel__body cluster">
+        <span class="dim" id="quickIcon"></span>
+        <div class="grow">
+          <p class="strong">Vous préférez saisir vos cartes une par une ?</p>
+          <p class="small muted">L'ajout rapide propose la recherche illustrée et le choix
+            de l'édition.</p>
+        </div>
+        <a class="btn" href="/collection/ajout">Ajout rapide</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Étape 2 — vérification -->
+  <section class="stack-6" id="stepReview" hidden></section>
+</div>
+
+<script src="/static/js/mm.js"></script>
+<script>
+(async () => {
+  const user = await MM.boot({
+    title: 'Importer des cartes', nav: 'import', back: '/collection',
+  });
+  if (!user) return;
+
+  MM.el('#quickIcon').innerHTML = MM.icons.booster;
+
+  const state = { deck: null, detection: null };
+
+  function setStep(current) {
+    MM.els('.steps-bar__item').forEach((item) => {
+      const step = Number(item.dataset.step);
+      item.dataset.state = step < current ? 'done' : (step === current ? 'current' : '');
+    });
+  }
+
+  /* ── Dépôt de fichier ─────────────────────────────────────────────────── */
+
+  const dropzone = MM.el('#dropzone');
+  const fileInput = MM.el('#fileInput');
+
+  dropzone.addEventListener('click', () => fileInput.click());
+  dropzone.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); fileInput.click(); }
+  });
+
+  ['dragenter', 'dragover'].forEach((type) =>
+    dropzone.addEventListener(type, (event) => {
+      event.preventDefault();
+      dropzone.classList.add('is-over');
+    }));
+  ['dragleave', 'drop'].forEach((type) =>
+    dropzone.addEventListener(type, (event) => {
+      event.preventDefault();
+      dropzone.classList.remove('is-over');
+    }));
+
+  dropzone.addEventListener('drop', (event) => {
+    const file = event.dataTransfer.files[0];
+    if (file) uploadFile(file);
+  });
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) uploadFile(fileInput.files[0]);
+  });
+
+  async function uploadFile(file) {
+    const form = new FormData();
+    form.append('file', file);
+    dropzone.innerHTML = `<span class="spinner spinner--lg"></span>
+      <p class="muted">Analyse de ${MM.esc(file.name)}…</p>`;
+    try {
+      const response = await fetch('/api/import/upload', { method: 'POST', body: form });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Import impossible');
+      state.deck = data.deck;
+      state.detection = data.detection;
+      await resolve();
+    } catch (err) {
+      MM.toast.error(err.message);
+      location.reload();
+    }
+  }
+
+  MM.el('#parseText').addEventListener('click', async (event) => {
+    const text = MM.el('#pasteArea').value.trim();
+    if (!text) return MM.toast.error('Collez d’abord une liste de cartes.');
+    event.target.disabled = true;
+    try {
+      const data = await MM.api.post('/api/import/parse', { text });
+      state.deck = data.deck;
+      await resolve();
+    } catch (err) {
+      MM.toast.error(err.message);
+      event.target.disabled = false;
+    }
+  });
+
+  /* ── Étape 2 — résolution et vérification ─────────────────────────────── */
+
+  async function resolve() {
+    setStep(2);
+    MM.el('#stepDrop').hidden = true;
+    const review = MM.el('#stepReview');
+    review.hidden = false;
+    review.innerHTML = `<div class="center" style="padding:60px">
+      <div class="stack-2" style="align-items:center">
+        <span class="spinner spinner--lg"></span>
+        <p class="muted">Identification des cartes…</p>
+      </div></div>`;
+
+    try {
+      const data = await MM.api.post('/api/import/resolve', { deck: state.deck });
+      state.deck = data.deck;
+      renderReview();
+    } catch (err) {
+      review.innerHTML = MM.empty({ icon: 'warning', title: 'Analyse impossible',
+        text: err.message });
+    }
+  }
+
+  const STATUS = {
+    exact_identifier: ['ok', 'Identifiée'],
+    exact_printing: ['ok', 'Édition exacte'],
+    exact_card_unknown_printing: ['info', 'Édition inconnue'],
+    probable_match: ['warn', 'Correspondance probable'],
+    ambiguous: ['warn', 'Ambiguë'],
+    unresolved: ['danger', 'Introuvable'],
+    unsupported_digital_card: ['danger', 'Carte numérique'],
+    ignored_zone: ['info', 'Zone ignorée'],
+    invalid_line: ['danger', 'Ligne invalide'],
+  };
+
+  function renderReview() {
+    const deck = state.deck;
+    const entries = deck.entries || [];
+    const stats = deck.statistics || {};
+    const problems = entries.filter((entry) =>
+      ['unresolved', 'invalid_line', 'unsupported_digital_card'].includes(entry.resolution_status));
+    const copies = entries.reduce((sum, entry) => sum + (entry.quantity || 1), 0);
+    const zones = [...new Set(entries.map((entry) => entry.zone))];
+
+    const sourceLabel = {
+      manabox: 'ManaBox', moxfield: 'Moxfield', archidekt: 'Archidekt',
+      arena: 'MTG Arena', mtgo: 'MTGO', cockatrice: 'Cockatrice', xmage: 'XMage',
+      forge: 'Forge', csv: 'CSV', json: 'JSON', generic_text: 'Texte', url: 'Lien',
+    }[deck.source] || deck.source;
+
+    MM.el('#stepReview').innerHTML = `
+      <div class="stats">
+        <div class="stat">
+          <span class="stat__value">${MM.fmt.int(entries.length)}</span>
+          <span class="stat__label">Lignes lues</span>
+          <span class="stat__note">${MM.fmt.int(copies)} exemplaires</span>
+        </div>
+        <div class="stat">
+          <span class="stat__value">${MM.fmt.int(stats.exact_matches || 0)}</span>
+          <span class="stat__label">Identifiées</span>
+          <span class="stat__note">correspondance certaine</span>
+        </div>
+        <div class="stat">
+          <span class="stat__value">${MM.fmt.int(problems.length)}</span>
+          <span class="stat__label">À vérifier</span>
+          <span class="stat__note">${problems.length
+            ? 'ne seront pas importées' : 'aucun problème'}</span>
+        </div>
+        <div class="stat">
+          <span class="stat__value" style="font-size:var(--text-lg)">${MM.esc(sourceLabel)}</span>
+          <span class="stat__label">Format détecté</span>
+          <span class="stat__note">${MM.esc(deck.deck_name || 'sans titre')}</span>
+        </div>
+      </div>
+
+      ${deck.warnings && deck.warnings.length ? `
+        <div class="panel panel--accent">
+          <div class="panel__body stack-2">
+            ${deck.warnings.slice(0, 5).map((warning) =>
+              `<p class="small">${MM.esc(warning)}</p>`).join('')}
+          </div>
+        </div>` : ''}
+
+      <div class="panel">
+        <div class="panel__head">
+          <h2 class="h3">Où importer ces cartes ?</h2>
+        </div>
+        <div class="panel__body stack">
+          <label class="switch">
+            <input type="checkbox" id="destCollection" checked>
+            <span class="switch__track"></span>
+            <span>
+              <span class="strong">Dans ma collection</span>
+              <span class="dim xs" style="display:block">Les cartes rejoignent votre
+                inventaire, avec leur édition et leur finition.</span>
+            </span>
+          </label>
+          <label class="switch">
+            <input type="checkbox" id="destDeck">
+            <span class="switch__track"></span>
+            <span>
+              <span class="strong">Comme un deck</span>
+              <span class="dim xs" style="display:block">Crée une liste séparée, analysable
+                et comparable à votre collection.</span>
+            </span>
+          </label>
+          <div class="field" id="deckNameField" hidden>
+            <label class="label" for="deckName">Nom du deck</label>
+            <input class="input" id="deckName" type="text"
+                   value="${MM.esc(deck.deck_name || '')}" placeholder="Mon nouveau deck">
+          </div>
+
+          ${zones.length > 1 ? `
+            <div class="stack-2">
+              <span class="label">Zones à importer</span>
+              <div class="chips" id="zoneChips">
+                ${zones.map((zone) => `
+                  <button class="chip" data-zone="${MM.esc(zone)}"
+                    aria-pressed="${zone === 'commander' || zone === 'mainboard'}">
+                    ${MM.esc({ commander: 'Commandant', mainboard: 'Deck principal',
+                      sideboard: 'Réserve', maybeboard: 'Peut-être',
+                      companion: 'Compagnon', token: 'Jetons',
+                      other: 'Autre' }[zone] || zone)}
+                    <span class="chip__count">${entries.filter((e) => e.zone === zone).length}</span>
+                  </button>`).join('')}
+              </div>
+            </div>` : ''}
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel__head">
+          <h2 class="h3">Détail des lignes</h2>
+          <div class="cluster-2">
+            <button class="btn btn--sm" id="filterProblems" aria-pressed="false">
+              Problèmes seulement</button>
+          </div>
+        </div>
+        <div class="panel__body panel__body--flush">
+          <div class="table-scroll">
+            <table class="entry-table">
+              <thead><tr>
+                <th style="width:52px">Qté</th><th>Carte</th>
+                <th style="width:110px">Édition</th>
+                <th style="width:88px">Finition</th>
+                <th style="width:150px">État</th>
+              </tr></thead>
+              <tbody id="entryRows"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="cluster" style="justify-content:flex-end">
+        <button class="btn" id="cancelImport">Recommencer</button>
+        <button class="btn btn--primary btn--lg" id="confirmImport">
+          Importer ${MM.fmt.int(copies - problems.reduce((s, e) => s + (e.quantity || 1), 0))}
+          exemplaires
+        </button>
+      </div>`;
+
+    renderRows(false);
+
+    MM.el('#destDeck').addEventListener('change', (event) => {
+      MM.el('#deckNameField').hidden = !event.target.checked;
+    });
+
+    MM.el('#filterProblems').addEventListener('click', (event) => {
+      const active = event.currentTarget.getAttribute('aria-pressed') === 'true';
+      event.currentTarget.setAttribute('aria-pressed', String(!active));
+      renderRows(!active);
+    });
+
+    const zoneChips = MM.el('#zoneChips');
+    if (zoneChips) {
+      zoneChips.addEventListener('click', (event) => {
+        const chip = event.target.closest('.chip');
+        if (!chip) return;
+        chip.setAttribute('aria-pressed',
+          String(chip.getAttribute('aria-pressed') !== 'true'));
+      });
+    }
+
+    MM.el('#cancelImport').addEventListener('click', () => location.reload());
+    MM.el('#confirmImport').addEventListener('click', confirmImport);
+  }
+
+  function renderRows(problemsOnly) {
+    const entries = (state.deck.entries || []).filter((entry) => !problemsOnly
+      || ['unresolved', 'invalid_line', 'unsupported_digital_card', 'ambiguous']
+        .includes(entry.resolution_status));
+
+    MM.el('#entryRows').innerHTML = entries.slice(0, 600).map((entry) => {
+      const [kind, label] = STATUS[entry.resolution_status] || ['info', entry.resolution_status];
+      return `<tr>
+        <td class="num">${entry.quantity}</td>
+        <td>${MM.esc(entry.canonical_name || entry.raw_name)}
+          ${entry.canonical_name && entry.raw_name
+            && entry.canonical_name !== entry.raw_name
+            ? `<span class="xs dim">← ${MM.esc(entry.raw_name)}</span>` : ''}</td>
+        <td class="dim">${MM.esc(entry.set_code || '—')}
+          ${entry.collector_number ? '<span class="xs">#' + MM.esc(entry.collector_number) + '</span>' : ''}</td>
+        <td class="dim">${MM.esc(MM.fmt.finish(entry.finish) || 'Normale')}</td>
+        <td><span class="badge badge--${kind}">${MM.esc(label)}</span></td>
+      </tr>`;
+    }).join('') || `<tr><td colspan="5" class="dim" style="padding:var(--sp-6);text-align:center">
+      Aucune ligne à afficher.</td></tr>`;
+  }
+
+  /* ── Étape 3 — confirmation ───────────────────────────────────────────── */
+
+  async function confirmImport(event) {
+    const destinations = [];
+    if (MM.el('#destCollection').checked) destinations.push('collection');
+    if (MM.el('#destDeck').checked) destinations.push('deck');
+    if (!destinations.length) {
+      return MM.toast.error('Choisissez au moins une destination.');
+    }
+
+    const zoneChips = MM.els('#zoneChips .chip[aria-pressed="true"]');
+    const zones = zoneChips.length
+      ? zoneChips.map((chip) => chip.dataset.zone)
+      : ['commander', 'mainboard'];
+
+    event.target.disabled = true;
+    event.target.innerHTML = '<span class="spinner"></span> Import en cours…';
+    setStep(3);
+
+    try {
+      const result = await MM.api.post('/api/import/confirm', {
+        deck: state.deck,
+        destinations,
+        zones,
+        deck_name: MM.el('#deckName') ? MM.el('#deckName').value : '',
+      });
+
+      MM.el('#stepReview').innerHTML = `
+        <div class="empty">
+          <span class="empty__mark" style="color:var(--ok);border-color:rgba(107,201,138,.4)">
+            ${MM.icons.check}</span>
+          <div class="stack-2" style="align-items:center">
+            <p class="empty__title">Import terminé</p>
+            <p class="empty__text">
+              ${MM.fmt.int(result.imported)} lignes ajoutées
+              ${result.skipped ? `· ${MM.fmt.int(result.skipped)} ignorées` : ''}
+            </p>
+          </div>
+          ${result.errors && result.errors.length ? `
+            <div class="panel" style="max-width:560px;width:100%">
+              <div class="panel__body stack-2">
+                <p class="label">Lignes non importées</p>
+                ${result.errors.slice(0, 8).map((error) =>
+                  `<p class="xs dim">${MM.esc(error)}</p>`).join('')}
+              </div>
+            </div>` : ''}
+          <div class="cluster">
+            <a class="btn btn--primary" href="/collection">Voir ma collection</a>
+            ${destinations.includes('deck')
+              ? '<a class="btn" href="/decks">Voir mes decks</a>' : ''}
+            <a class="btn btn--ghost" href="/collection/import">Importer un autre fichier</a>
+          </div>
+        </div>`;
+    } catch (err) {
+      MM.toast.error(err.message);
+      event.target.disabled = false;
+      event.target.textContent = 'Réessayer';
+    }
+  }
+})();
+</script>
+</body>
+</html>
