@@ -23,24 +23,28 @@
   }
   .cmd-card:hover { border-color: var(--line-accent); }
 
-  .cmd-card__head { position: relative; min-height: 128px; display: flex; align-items: flex-end; padding: var(--sp-4); }
+  /* L'en-tete se limite a son texte : les 128 px qu'il reservait a l'art de
+     fond profitent desormais a la carte elle-meme, sans grandir la tuile. */
+  .cmd-card__head { position: relative; display: flex; align-items: flex-end; padding: var(--sp-3) var(--sp-4); }
   .cmd-card__art { position: absolute; inset: 0; z-index: -2; background-size: cover; background-position: center 22%; opacity: 0.5; }
   .cmd-card__head::after {
     content: ""; position: absolute; inset: 0; z-index: -1;
     background: linear-gradient(0deg, var(--bg-raised) 8%, rgba(14,14,21,0.35) 100%);
   }
-  .cmd-card__rank {
-    position: absolute; top: var(--sp-3); left: var(--sp-3);
-    width: 26px; height: 26px; display: grid; place-items: center;
-    border-radius: var(--r-full);
-    background: var(--overlay); border: 1px solid var(--line-strong);
-    font-size: var(--text-xs); font-weight: 700;
+  .cmd-card__body { padding: var(--sp-3) var(--sp-4) var(--sp-4);
+                    display: flex; flex-direction: column; gap: var(--sp-3); }
+
+  /* La carte du commandant, seule dans la tuile — deux exemplaires pour un duo.
+     Hauteur commune : sans elle, un duo (deux cartes plus etroites, donc plus
+     courtes) donnerait une tuile plus basse que celle d'un commandant seul. */
+  .cmd-card__split {
+    display: flex; gap: var(--sp-2);
+    align-items: center; justify-content: center;
+    height: 300px;
   }
-  .cmd-card__body { padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3); }
-  /* La carte du commandant, seule dans la tuile — deux exemplaires pour un duo */
-  .cmd-card__split { display: flex; gap: var(--sp-3); justify-content: center; }
   .cmd-card__portrait {
-    width: 100%; max-width: 180px;
+    max-width: 100%; max-height: 100%;
+    width: auto;
     border-radius: 4.7% / 3.5%;
     box-shadow: var(--shadow-card);
   }
@@ -118,7 +122,7 @@
       return;
     }
 
-    results.innerHTML = `<div class="grid-2">${commanders.map((entry, index) => {
+    results.innerHTML = `<div class="grid-2">${commanders.map((entry) => {
       const art = entry.commander_image
         ? entry.commander_image.replace('/normal/', '/art_crop/') : null;
       return `
@@ -126,7 +130,6 @@
           <div class="cmd-card__head">
             ${art ? `<div class="cmd-card__art"
               style="background-image:url('${MM.esc(art)}')"></div>` : ''}
-            <span class="cmd-card__rank">${index + 1}</span>
             <div>
               <p class="h3">${MM.esc(entry.commander)}</p>
               <p class="xs muted">${MM.fmt.int(entry.card_count)} de vos cartes ·
