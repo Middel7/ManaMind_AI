@@ -557,6 +557,7 @@ def api_collection_commanders(
     request: Request,
     top: int = Query(default=10, ge=1, le=50),
     mode: str = Query(default="available"),  # "available" | "all"
+    staple_threshold: float = Query(default=40.0, ge=0.0, le=100.0),
 ) -> Response:
     """
     Retourne les `top` commandants pour lesquels la collection couvre
@@ -592,12 +593,45 @@ def api_collection_commanders(
         for r in collection_rows:
             name_lower = r.name
             if mode == "available":
-                dispo = r.quantity - deck_usage.get(name_lower, 0)
-                if dispo > 0:
-                    coll[name_lower] = dispo
+                # Une carte engagee dans un deck est ecartee entierement, meme
+                # possedee en plusieurs exemplaires : l'ecran promet « les cartes
+                # qui ne sont dans aucun de vos decks », et un deuxieme
+                # exemplaire d'une carte deja jouee ne fonde pas un nouveau deck.
+                if deck_usage.get(name_lower, 0) == 0:
+                    coll[name_lower] = r.quantity
             else:
                 coll[name_lower] = r.quantity
 
+        # Les communes et peu communes des extensions cochees comme ouvertes
+        # comptent comme disponibles : elles sont a portee de main sans avoir
+        # ete saisies une par une. Zero exemplaire connu, donc elles ne
+        # priment jamais sur une carte reellement en collection.
+        from manamind.collection_advisor import load_opened_set_cards
+        for opened_name in load_opened_set_cards(user["id"]).values():
+            key = opened_name.strip().lower()
+            if key not in coll and deck_usage.get(key, 0) == 0:
+                coll[key] = 1
+
+        if not coll:
+            return _json_response({"commanders": []})
+
+        # Terrains de base et cartes trop courantes sont ecartes, comme dans
+        # « Trouver un nouveau commandant » : jouees partout, elles ne
+        # distinguent aucun commandant et gonflaient le score de tous.
+        neutral = {
+            r.name for r in s.execute(text("""
+                SELECT DISTINCT n.name
+                FROM unnest(CAST(:names AS TEXT[])) AS n(name)
+                LEFT JOIN deck_stat_global g
+                       ON LOWER(BTRIM(g.card_name)) = n.name
+                LEFT JOIN scryfall_cards sc
+                       ON sc.normalized_name = mm_normalize_name(n.name)
+                WHERE COALESCE(g.global_frequency, 0) > :threshold
+                   OR sc.type_line ILIKE 'Basic Land%'
+            """), {"names": list(coll.keys()),
+                   "threshold": staple_threshold}).fetchall()
+        }
+        coll = {name: qty for name, qty in coll.items() if name not in neutral}
         if not coll:
             return _json_response({"commanders": []})
 
