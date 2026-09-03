@@ -355,14 +355,18 @@ def api_card_printings(
 def api_sets(
     request: Request,
     search: str = Query(""),
-    limit: int = Query(60, ge=1, le=300),
+    limit: int = Query(60, ge=1, le=1000),
 ) -> Response:
-    """Extensions jouables, les plus recentes d'abord."""
+    """Extensions ouvrables, les plus recentes d'abord.
+
+    Liste noire plutot que blanche : l'ecran de selection doit montrer toutes
+    les extensions, y compris les coffrets et decks preconstruits. Seul ce qui
+    ne s'ouvre pas est ecarte (jetons, promos, memorabilia, minijeux).
+    """
     _user(request)
     params: dict = {"limit": limit}
     where = [
-        "s.set_type IN ('core', 'expansion', 'masters', 'draft_innovation',"
-        " 'commander', 'starter', 'funny', 'alchemy')",
+        "s.set_type NOT IN ('token', 'promo', 'memorabilia', 'minigame')",
         "s.card_count > 0",
         "s.released_at IS NOT NULL",
     ]

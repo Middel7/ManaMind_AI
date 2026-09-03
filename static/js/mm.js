@@ -361,11 +361,14 @@
       ],
     },
     {
-      label: 'Alimenter',
+      label: 'Gérer ma collection',
       items: [
-        { key: 'add', label: 'Ajouter des cartes', href: '/collection/ajout', icon: 'plus' },
-        { key: 'import', label: 'Importer un fichier', href: '/collection/import', icon: 'upload' },
-        { key: 'boosters', label: 'Ouvrir des boosters', href: '/collection/boosters', icon: 'booster' },
+        { key: 'add', label: 'Ajouter des cartes à ma collection',
+          href: '/collection/ajout', icon: 'plus' },
+        { key: 'import', label: 'Importer une liste',
+          href: '/collection/import', icon: 'upload' },
+        { key: 'boosters', label: "Sélectionner les extensions que j'ai ouvertes",
+          href: '/collection/boosters', icon: 'booster' },
       ],
     },
     {

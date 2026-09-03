@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<title>ManaMind — Ouvrir des boosters</title>
+<title>ManaMind — Extensions ouvertes</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
@@ -14,6 +14,7 @@
   .set-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--sp-3); }
 
   .set-card {
+    position: relative;
     display: flex; align-items: center; gap: var(--sp-3);
     padding: var(--sp-3) var(--sp-4);
     border-radius: var(--r-lg);
@@ -30,102 +31,132 @@
     opacity: 0.82;
   }
 
-  .opening-bar {
-    position: sticky; top: calc(var(--topbar-h));
-    z-index: var(--z-sticky);
-    display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap;
-    padding: var(--sp-3) var(--sp-4);
-    margin: 0 calc(-1 * var(--sp-2));
-    border-radius: var(--r-lg);
-    border: 1px solid var(--line);
-    background: color-mix(in srgb, var(--bg-raised) 94%, transparent);
-    backdrop-filter: blur(12px);
-  }
-
-  .pull-card { cursor: pointer; }
-  .pull-card .mtg-card__frame::after {
-    content: "+1";
-    position: absolute; inset: auto 0 0 0;
-    padding: var(--sp-2);
-    text-align: center;
-    font-weight: 600;
-    color: var(--text-inverse);
-    background: linear-gradient(0deg, var(--accent) 40%, transparent);
-    opacity: 0;
-    transition: opacity var(--dur) var(--ease);
-  }
-  .pull-card:hover .mtg-card__frame::after { opacity: 1; }
-
-  .pull-card.is-pulled .mtg-card__frame {
+  /* Extension retenue comme ouverte */
+  .set-card[aria-pressed="true"] {
     border-color: var(--accent);
-    box-shadow: 0 0 0 2px var(--accent-glow), var(--shadow-card);
+    background: color-mix(in srgb, var(--accent) 12%, var(--surface));
   }
-  @keyframes pop { 50% { transform: scale(1.06); } }
-  .pull-card.is-pulled { animation: pop 0.32s var(--ease-out); }
+  .set-card[aria-pressed="true"] .set-card__icon { opacity: 1; }
+  .set-card__check {
+    flex-shrink: 0;
+    width: 20px; height: 20px;
+    display: grid; place-items: center;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    color: var(--text-inverse);
+  }
+  .set-card__check svg { width: 13px; height: 13px; opacity: 0; }
+  .set-card[aria-pressed="true"] .set-card__check {
+    background: var(--accent); border-color: var(--accent);
+  }
+  .set-card[aria-pressed="true"] .set-card__check svg { opacity: 1; }
+  .set-card.is-busy { opacity: 0.55; pointer-events: none; }
 </style>
 </head>
 <body>
 
 <div id="page">
-  <!-- Choix de l'extension -->
-  <section class="stack-6" id="setPicker">
+  <section class="stack-6">
     <div class="stack-2">
-      <h2 class="h2">Quelle extension ouvrez-vous ?</h2>
-      <p class="muted small">Choisissez une extension puis cliquez sur les cartes de votre
-        booster : elles rejoignent votre collection au fur et à mesure.</p>
+      <h2 class="h2">Quelles extensions avez-vous ouvertes ?</h2>
+      <p class="muted small">Cochez les extensions dont vous avez ouvert des boosters. Leurs
+        communes et peu communes seront considérées comme disponibles dans les suggestions
+        de decks, même si vous ne les avez pas saisies une par une dans votre collection.</p>
     </div>
 
-    <div class="search" style="max-width:420px">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
-           stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
-      <input class="input" id="setSearch" type="search" placeholder="Nom ou code d'extension…">
+    <div class="toolbar">
+      <div class="search toolbar__search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+             stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+        <input class="input" id="setSearch" type="search" placeholder="Nom ou code d'extension…">
+      </div>
+      <div class="chips" id="scopeFilter">
+        <button class="chip" data-scope="all" aria-pressed="true">Toutes</button>
+        <button class="chip" data-scope="opened" aria-pressed="false">Cochées</button>
+      </div>
+      <div class="toolbar__spacer"></div>
+      <span class="badge badge--ok" id="openedCount" hidden></span>
     </div>
 
     <div class="set-grid" id="setGrid"></div>
-  </section>
-
-  <!-- Ouverture -->
-  <section class="stack" id="opening" hidden>
-    <div class="opening-bar">
-      <button class="btn btn--ghost btn--sm" id="backToSets">← Changer d'extension</button>
-      <div class="grow">
-        <p class="strong" id="openingTitle"></p>
-        <p class="xs dim" id="openingSub"></p>
-      </div>
-      <div class="chips" id="rarityFilter">
-        <button class="chip" data-rarity="" aria-pressed="true">Toutes</button>
-        <button class="chip" data-rarity="mythic" aria-pressed="false">Mythiques</button>
-        <button class="chip" data-rarity="rare" aria-pressed="false">Rares</button>
-        <button class="chip" data-rarity="uncommon" aria-pressed="false">Peu communes</button>
-        <button class="chip" data-rarity="common" aria-pressed="false">Communes</button>
-      </div>
-      <div class="search" style="width:200px">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
-             stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
-        <input class="input" id="cardSearch" type="search" placeholder="Filtrer…">
-      </div>
-      <span class="badge badge--warn" id="pullCount" hidden>0 ajoutée</span>
-    </div>
-
-    <div class="card-grid card-grid--sm" id="cardGrid"></div>
   </section>
 </div>
 
 <script src="/static/js/mm.js"></script>
 <script>
 (async () => {
+  // Les deux requetes sont independantes : on les lance ensemble.
+  const setsReq = MM.api.get('/api/v2/sets?limit=1000')
+    .then((value) => ({ value }), (error) => ({ error }));
+  const openedReq = MM.api.get('/api/opened-sets')
+    .then((value) => ({ value }), (error) => ({ error }));
+
   const user = await MM.boot({
-    title: 'Ouvrir des boosters', nav: 'boosters', back: '/collection',
+    title: "Sélectionner les extensions que j'ai ouvertes",
+    nav: 'boosters', back: '/collection',
   });
   if (!user) return;
 
-  const state = { sets: [], set: null, cards: [], rarity: '', search: '', pulled: 0 };
+  // La liste complete (~420 extensions) tient en memoire : la recherche filtre
+  // localement plutot que de rappeler l'API a chaque frappe.
+  const state = { sets: [], opened: new Set(), search: '', scope: 'all' };
 
-  /* ── Extensions ───────────────────────────────────────────────────────── */
+  const grid = MM.el('#setGrid');
+  grid.innerHTML = Array.from({ length: 12 }, () =>
+    '<div class="skeleton" style="height:60px"></div>').join('');
 
-  function renderSets(sets) {
-    MM.el('#setGrid').innerHTML = sets.map((set) => `
-      <button class="set-card" data-code="${MM.esc(set.code)}">
+  const setsRes = await setsReq;
+  if (setsRes.error) {
+    grid.innerHTML = MM.empty({
+      icon: 'warning', title: 'Chargement impossible', text: setsRes.error.message });
+    return;
+  }
+  state.sets = setsRes.value.sets || [];
+
+  // Une selection illisible vaut mieux qu'une page en erreur : si la liste des
+  // extensions deja cochees ne revient pas, on affiche la grille vierge.
+  const openedRes = await openedReq;
+  if (!openedRes.error) {
+    // D'anciennes saisies ont laisse en base des codes sans extension
+    // correspondante (KMH, DKT...). Les compter afficherait un total que la
+    // grille est incapable de montrer, et donc de decocher.
+    const known = new Set(state.sets.map((set) => set.code));
+    state.opened = new Set((openedRes.value.sets || []).filter((code) => known.has(code)));
+  }
+
+  const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"'
+    + ' stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L19 7"/></svg>';
+
+  function renderCount() {
+    const badge = MM.el('#openedCount');
+    const n = state.opened.size;
+    badge.hidden = n === 0;
+    badge.textContent = `${MM.fmt.int(n)} extension${n > 1 ? 's' : ''} cochée${n > 1 ? 's' : ''}`;
+  }
+
+  function render() {
+    const term = state.search.toLowerCase();
+    const sets = state.sets.filter((set) =>
+      (state.scope === 'all' || state.opened.has(set.code))
+      && (!term || set.name.toLowerCase().includes(term)
+          || set.code.toLowerCase().includes(term)));
+
+    if (!sets.length) {
+      grid.innerHTML = MM.empty({
+        icon: state.scope === 'opened' ? 'booster' : 'search',
+        title: state.scope === 'opened' && !state.search
+          ? 'Aucune extension cochée'
+          : 'Aucune extension trouvée',
+        text: state.scope === 'opened' && !state.search
+          ? 'Cochez les extensions dont vous avez ouvert des boosters depuis l’onglet « Toutes ».'
+          : `Aucune extension ne correspond à « ${state.search} ».`,
+      });
+      return;
+    }
+
+    grid.innerHTML = sets.map((set) => `
+      <button class="set-card" data-code="${MM.esc(set.code)}"
+              aria-pressed="${state.opened.has(set.code)}">
         ${set.icon
           ? `<img class="set-card__icon" src="${MM.esc(set.icon)}" alt="" loading="lazy">`
           : '<span class="set-card__icon"></span>'}
@@ -134,163 +165,51 @@
           <span class="xs dim">${MM.esc(set.code)} · ${MM.fmt.int(set.card_count)} cartes
             · ${set.released_at ? MM.esc(set.released_at.slice(0, 4)) : ''}</span>
         </span>
+        <span class="set-card__check">${CHECK}</span>
       </button>`).join('');
   }
 
-  async function loadSets(search = '') {
-    MM.el('#setGrid').innerHTML = Array.from({ length: 9 }, () =>
-      '<div class="skeleton" style="height:60px"></div>').join('');
+  async function toggle(node) {
+    const code = node.dataset.code;
+    const wasOpened = state.opened.has(code);
+    const action = wasOpened ? 'remove' : 'add';
+
+    node.classList.add('is-busy');
     try {
-      const data = await MM.api.get(
-        `/api/v2/sets${MM.api.qs({ search, limit: 90 })}`);
-      state.sets = data.sets;
-      renderSets(data.sets);
-    } catch (err) {
-      MM.el('#setGrid').innerHTML = `<p class="muted">${MM.esc(err.message)}</p>`;
-    }
-  }
-
-  MM.el('#setSearch').addEventListener('input',
-    MM.debounce((event) => loadSets(event.target.value.trim()), 280));
-
-  MM.el('#setGrid').addEventListener('click', (event) => {
-    const button = event.target.closest('[data-code]');
-    if (button) openSet(state.sets.find((set) => set.code === button.dataset.code));
-  });
-
-  /* ── Ouverture d'une extension ────────────────────────────────────────── */
-
-  async function openSet(set) {
-    if (!set) return;
-    state.set = set;
-    state.pulled = 0;
-    MM.el('#setPicker').hidden = true;
-    MM.el('#opening').hidden = false;
-    MM.el('#openingTitle').textContent = set.name;
-    MM.el('#openingSub').textContent = `${set.code} · ${set.card_count} cartes`;
-    MM.el('#pullCount').hidden = true;
-    MM.el('#cardGrid').innerHTML = MM.cardSkeletons(18);
-    history.replaceState(null, '', `/collection/boosters?set=${encodeURIComponent(set.code)}`);
-
-    try {
-      const data = await MM.api.get(
-        `/api/v2/sets/${encodeURIComponent(set.code)}/cards?limit=600`);
-      state.cards = data.cards;
-      renderCards();
-    } catch (err) {
-      MM.el('#cardGrid').innerHTML = `<p class="muted">${MM.esc(err.message)}</p>`;
-    }
-  }
-
-  function renderCards() {
-    const term = state.search.toLowerCase();
-    const cards = state.cards.filter((card) =>
-      (!state.rarity || card.rarity === state.rarity)
-      && (!term || card.card_name.toLowerCase().includes(term)));
-
-    if (!cards.length) {
-      MM.el('#cardGrid').innerHTML = MM.empty({
-        icon: 'search', title: 'Aucune carte', text: 'Aucune carte ne correspond à ce filtre.',
-      });
-      return;
-    }
-
-    MM.el('#cardGrid').innerHTML = cards.map((card) => {
-      const index = state.cards.indexOf(card);
-      return `
-        <article class="mtg-card pull-card ${card.owned ? '' : 'mtg-card--muted'}"
-                 data-index="${index}" tabindex="0" role="button"
-                 aria-label="Ajouter ${MM.esc(card.card_name)}">
-          <div class="mtg-card__frame">
-            ${MM.img.frame(card, { size: 'small' })}
-            ${card.owned ? `<span class="mtg-card__qty">${card.owned}</span>` : ''}
-          </div>
-          <div class="mtg-card__foot">
-            <span class="mtg-card__name" title="${MM.esc(card.card_name)}">
-              ${MM.esc(card.card_name)}</span>
-            <span class="mtg-card__meta">
-              <span class="dim">#${MM.esc(card.collector_number || '')}</span>
-              <span class="badge badge--${MM.esc(card.rarity)}"
-                    style="padding:0;border:none;background:none">
-                ${MM.esc(MM.fmt.rarity(card.rarity).slice(0, 1))}</span>
-            </span>
-          </div>
-        </article>`;
-    }).join('');
-  }
-
-  MM.el('#backToSets').addEventListener('click', () => {
-    MM.el('#opening').hidden = true;
-    MM.el('#setPicker').hidden = false;
-    history.replaceState(null, '', '/collection/boosters');
-  });
-
-  MM.el('#rarityFilter').addEventListener('click', (event) => {
-    const chip = event.target.closest('.chip');
-    if (!chip) return;
-    state.rarity = chip.dataset.rarity;
-    MM.els('#rarityFilter .chip').forEach((other) =>
-      other.setAttribute('aria-pressed', String(other === chip)));
-    renderCards();
-  });
-
-  MM.el('#cardSearch').addEventListener('input', MM.debounce((event) => {
-    state.search = event.target.value.trim();
-    renderCards();
-  }, 200));
-
-  /* ── Ajout d'une carte tirée ──────────────────────────────────────────── */
-
-  async function pull(node) {
-    const card = state.cards[Number(node.dataset.index)];
-    if (!card) return;
-    try {
-      await MM.api.post('/api/v2/collection/items', {
-        card_name: card.card_name,
-        quantity: 1,
-        set_code: card.set_code,
-        collector_number: card.collector_number,
-        finish: 'nonfoil',
-      });
-      card.owned = (card.owned || 0) + 1;
-      state.pulled += 1;
-
-      node.classList.remove('mtg-card--muted');
-      node.classList.add('is-pulled');
-      setTimeout(() => node.classList.remove('is-pulled'), 340);
-
-      const badge = MM.el('.mtg-card__qty', node);
-      if (badge) badge.textContent = card.owned;
-      else MM.el('.mtg-card__frame', node).insertAdjacentHTML('beforeend',
-        `<span class="mtg-card__qty">${card.owned}</span>`);
-
-      const counter = MM.el('#pullCount');
-      counter.hidden = false;
-      counter.textContent = `${state.pulled} ajoutée${state.pulled > 1 ? 's' : ''}`;
+      await MM.api.post('/api/opened-sets', { action, set_code: code });
+      if (wasOpened) state.opened.delete(code); else state.opened.add(code);
+      node.setAttribute('aria-pressed', String(!wasOpened));
+      renderCount();
+      // Sous l'onglet « Cochées », la tuile decochee n'a plus sa place.
+      if (state.scope === 'opened' && wasOpened) render();
     } catch (err) {
       MM.toast.error(err.message);
+    } finally {
+      node.classList.remove('is-busy');
     }
   }
 
-  MM.el('#cardGrid').addEventListener('click', (event) => {
-    const node = event.target.closest('.pull-card');
-    if (node) pull(node);
-  });
-  MM.el('#cardGrid').addEventListener('keydown', (event) => {
-    if (event.key !== 'Enter' && event.key !== ' ') return;
-    const node = event.target.closest('.pull-card');
-    if (node) { event.preventDefault(); pull(node); }
+  grid.addEventListener('click', (event) => {
+    const node = event.target.closest('.set-card');
+    if (node) toggle(node);
   });
 
-  /* ── Démarrage ────────────────────────────────────────────────────────── */
+  MM.el('#setSearch').addEventListener('input', MM.debounce((event) => {
+    state.search = event.target.value.trim();
+    render();
+  }, 200));
 
-  await loadSets();
+  MM.el('#scopeFilter').addEventListener('click', (event) => {
+    const chip = event.target.closest('.chip');
+    if (!chip) return;
+    state.scope = chip.dataset.scope;
+    MM.els('#scopeFilter .chip').forEach((other) =>
+      other.setAttribute('aria-pressed', String(other === chip)));
+    render();
+  });
 
-  const requested = new URLSearchParams(location.search).get('set');
-  if (requested) {
-    const found = state.sets.find((set) => set.code === requested.toUpperCase());
-    if (found) openSet(found);
-  }
+  renderCount();
+  render();
 })();
 </script>
 </body>
