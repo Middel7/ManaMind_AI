@@ -152,6 +152,17 @@
                 ? `<span class="badge badge--ok">${state.card.owned} en collection</span>`
                 : '<span class="dim">absente de votre collection</span>'}
             </span>
+            ${state.card.owned ? `
+              <span class="mtg-card__market">
+                <a class="btn btn--sm" target="_blank" rel="noopener"
+                   href="${MM.esc(MM.market.sell(state.card.name))}"
+                   title="Proposer ${MM.esc(state.card.name)} à la vente sur RELIC-TRADE"
+                  >Vendre</a>
+                <a class="btn btn--sm" target="_blank" rel="noopener"
+                   href="${MM.esc(MM.market.buy(state.card.name))}"
+                   title="Voir les offres d'achat de ${MM.esc(state.card.name)} sur Cardmarket"
+                  >Acheter</a>
+              </span>` : ''}
           </div>
         </div>
 
