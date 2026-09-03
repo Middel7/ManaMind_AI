@@ -284,8 +284,7 @@
               : '<span class="row__thumb"></span>'}
             <span class="row__main">
               <span class="row__title truncate">${MM.esc(card.card_name)}</span>
-              <span class="row__sub">${MM.esc(card.set_code || '')}
-                ${card.rarity ? '· ' + MM.esc(MM.fmt.rarity(card.rarity)) : ''}</span>
+              <span class="row__sub">${MM.esc(card.set_code || '')}</span>
             </span>
             <span class="row__aside">
               <span class="small num">${card.unit_price != null
