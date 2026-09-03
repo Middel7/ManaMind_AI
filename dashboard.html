@@ -73,17 +73,26 @@
 <script src="/static/js/mm.js"></script>
 <script>
 (async () => {
+  // Les trois requetes de la page ne dependent pas les unes des autres, mais
+  // s'enchainaient en cascade : MM.boot attend /auth/me, puis /api/dashboard,
+  // puis /api/dashboard/highlights. On les lance ensemble et on n'attend plus
+  // que la plus lente. Le resultat est enveloppe pour qu'un rejet arrivant
+  // avant son await ne remonte pas en unhandledrejection.
+  const dashboardReq = MM.api.get('/api/dashboard')
+    .then((value) => ({ value }), (error) => ({ error }));
+  const highlightsReq = MM.api.get('/api/dashboard/highlights?limit=8')
+    .then((value) => ({ value }), (error) => ({ error }));
+
   const user = await MM.boot({ title: 'Accueil', nav: 'home' });
   if (!user) return;
 
-  let data;
-  try {
-    data = await MM.api.get('/api/dashboard');
-  } catch (err) {
+  const dashboardRes = await dashboardReq;
+  if (dashboardRes.error) {
     MM.el('#hero').innerHTML = `<div class="hero__body">
-      <p class="muted">${MM.esc(err.message)}</p></div>`;
+      <p class="muted">${MM.esc(dashboardRes.error.message)}</p></div>`;
     return;
   }
+  const data = dashboardRes.value;
 
   const { stats, progress, freshness, profile } = data;
   const empty = stats.copies === 0;
@@ -212,7 +221,9 @@
   /* ── Mises en avant ───────────────────────────────────────────────────── */
 
   try {
-    const highlights = await MM.api.get('/api/dashboard/highlights?limit=8');
+    const highlightsRes = await highlightsReq;
+    if (highlightsRes.error) throw highlightsRes.error;
+    const highlights = highlightsRes.value;
 
     if (highlights.dormant.length) {
       MM.el('#dormantSection').hidden = false;
