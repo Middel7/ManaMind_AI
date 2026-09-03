@@ -261,7 +261,25 @@ def health_check() -> JSONResponse:
 
 
 # ── Fichiers statiques ────────────────────────────────────────────────────────
-app.mount("/static",  StaticFiles(directory=str(ROOT / "static")), name="static")
+
+class RevalidatedStaticFiles(StaticFiles):
+    """Statiques revalidées à chaque chargement.
+
+    Sans en-tête de cache explicite, le navigateur applique une heuristique et
+    peut servir un mm.js périmé pendant des heures : une modification du front
+    passe alors inaperçue, avec des erreurs incompréhensibles à la clé (une
+    page à jour appelant un script qui ne l'est pas). « no-cache » n'interdit
+    pas la mise en cache, il impose la revalidation — Starlette répond 304 tant
+    que le fichier n'a pas changé, donc le coût est une requête vide.
+    """
+
+    def file_response(self, *args, **kwargs) -> Response:
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
+app.mount("/static",  RevalidatedStaticFiles(directory=str(ROOT / "static")), name="static")
 app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 app.mount("/outputs", StaticFiles(directory=str(OUTPUTS_DIR)), name="outputs")
 app.mount("/data",    StaticFiles(directory=str(ROOT / "data")), name="data")
