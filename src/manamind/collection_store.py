@@ -471,7 +471,16 @@ def recent_items(user_id: int, limit: int = 12) -> list[dict]:
 
 def dormant_items(user_id: int, limit: int = 24) -> list[dict]:
     """Cartes possedees qu'aucun deck n'utilise, les plus cheres d'abord."""
+    # Les noms utilises en deck sont normalises et dedupliques une seule fois :
+    # en NOT EXISTS correle, la comparaison enveloppait mm_normalize_name() des
+    # deux cotes, ce qui interdisait le hash join et forcait un produit
+    # collection x cartes de decks (~2,7 M comparaisons, 2,3 s).
     query = f"""
+        WITH used AS (
+            SELECT DISTINCT split_part(mm_normalize_name(dc.card_name), ' // ', 1) AS key
+            FROM user_deck_cards dc
+            WHERE dc.user_id = :uid
+        )
         SELECT uc.id, uc.card_name, uc.quantity, uc.finish, uc.language,
                uc.condition, uc.location, uc.note, uc.added_at, uc.updated_at,
                COALESCE(pd.scryfall_id, pf.scryfall_id)        AS scryfall_id,
@@ -490,15 +499,11 @@ def dormant_items(user_id: int, limit: int = 24) -> list[dict]:
                {_UNIT_PRICE_SQL} AS unit_price
         FROM user_collection uc
         {_ENRICH_SQL}
+        LEFT JOIN used ON used.key = split_part(COALESCE(sc.normalized_name,
+                              mm_normalize_name(uc.card_name)), ' // ', 1)
         WHERE uc.user_id = :uid
           AND COALESCE(pd.rarity, pf.rarity) IN ('rare', 'mythic')
-          AND NOT EXISTS (
-              SELECT 1 FROM user_deck_cards dc
-              WHERE dc.user_id = uc.user_id
-                AND split_part(mm_normalize_name(dc.card_name), ' // ', 1)
-                    = split_part(COALESCE(sc.normalized_name,
-                                          mm_normalize_name(uc.card_name)), ' // ', 1)
-          )
+          AND used.key IS NULL
         ORDER BY {_UNIT_PRICE_SQL} DESC NULLS LAST
         LIMIT :limit
     """
