@@ -54,6 +54,9 @@
     display: none;
   }
   @media (hover: none) { .peek { display: none !important; } }
+  /* Badge cliquable : « a acquerir » mene a l'offre Cardmarket de la carte */
+  .badge--link { text-decoration: none; cursor: pointer; }
+  .badge--link:hover { filter: brightness(1.25); }
 </style>
 </head>
 <body>
@@ -255,7 +258,10 @@
               ${card.game_changer
                 ? '<span class="badge badge--warn" title="Carte à fort impact">GC</span>' : ''}
               ${card.owned < card.quantity
-                ? '<span class="badge badge--warn">à acquérir</span>' : ''}
+                ? `<a class="badge badge--warn badge--link" target="_blank" rel="noopener"
+                      href="${MM.esc(MM.market.buy(card.card_name))}"
+                      title="Voir les offres d'achat de ${MM.esc(card.card_name)} sur Cardmarket"
+                     >à acquérir</a>` : ''}
               <span class="xs dim num" style="min-width:52px;text-align:right">
                 ${card.unit_price != null ? MM.fmt.eur(card.unit_price) : '—'}</span>
               <button class="btn btn--ghost btn--icon btn--sm card-line__remove"
