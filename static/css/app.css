@@ -253,17 +253,15 @@ table { border-collapse: collapse; width: 100%; }
   border-bottom: 1px solid var(--line);
 }
 
-.topbar__title {
-  font-family: var(--font-display);
-  font-size: var(--text-xl);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 
 .topbar__actions { margin-left: auto; display: flex; align-items: center; gap: var(--sp-2); }
 
 .topbar__burger { display: none; }
+
+/* Une barre qui ne porte ni retour ni action n'a plus rien a montrer sur grand
+   ecran : la sidebar y dit deja ou l'on se trouve. Elle reste en dessous de
+   860 px, ou son burger est le seul acces au tiroir de navigation. */
+@media (min-width: 861px) { .topbar--bare { display: none; } }
 
 /* ── Barre basse (mobile) ─────────────────────────────────────────────── */
 
@@ -1147,7 +1145,6 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
   }
 
   .topbar__burger { display: inline-flex; }
-  .topbar__title { font-size: var(--text-lg); }
 
   .content { padding: var(--sp-5) var(--sp-4) calc(var(--bottombar-h) + var(--sp-10)); }
 

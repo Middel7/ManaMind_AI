@@ -471,18 +471,22 @@
     const page = el('#page');
     if (!page) throw new Error('MM.boot : #page introuvable');
 
+    // La barre du haut n'affiche plus le titre de l'ecran : il repetait
+    // l'entree de menu active et le titre de la page juste en dessous. Il ne
+    // sert plus qu'a nommer l'onglet du navigateur, si la page ne l'a pas fait.
+    if (title && !document.title) document.title = `ManaMind — ${title}`;
+
     const user = MM.session.cached();
 
     const shell = node(`
       <div class="app">
         <aside class="sidebar" id="mmSidebar"></aside>
         <div class="main">
-          <header class="topbar">
+          <header class="topbar${back || actions ? '' : ' topbar--bare'}">
             <button class="btn btn--ghost btn--icon topbar__burger" id="mmBurger"
                     aria-label="Ouvrir la navigation">${MM.icons.menu}</button>
             ${back ? `<a class="btn btn--ghost btn--icon" href="${esc(back)}"
                          aria-label="Retour">${MM.icons.back}</a>` : ''}
-            <h1 class="topbar__title">${esc(title)}</h1>
             <div class="topbar__actions" id="mmTopActions">${actions}</div>
           </header>
         </div>
@@ -656,8 +660,10 @@
     const { actions = false, muted = false, price = true, qty = true,
             market = false } = options;
     const finish = MM.fmt.finish(item.finish);
+    // La finition et le nombre d'exemplaires descendent sous la carte, avec
+    // l'edition et le prix : poses sur l'illustration, ils masquaient le titre
+    // et l'art de la carte.
     const badges = [];
-    if (finish) badges.push(`<span class="badge badge--foil">${esc(finish)}</span>`);
     if (item.in_decks && item.in_decks.length) {
       badges.push(`<span class="badge badge--info" title="${esc(item.in_decks.join(', '))}">
         ${item.in_decks.length} deck${item.in_decks.length > 1 ? 's' : ''}</span>`);
@@ -669,7 +675,6 @@
         <div class="mtg-card__frame">
           ${MM.img.frame(item)}
           ${badges.length ? `<div class="mtg-card__badges">${badges.join('')}</div>` : ''}
-          ${qty && item.quantity ? `<span class="mtg-card__qty">${item.quantity}</span>` : ''}
           ${actions ? `
             <div class="mtg-card__actions">
               <span class="stepper">
@@ -690,6 +695,9 @@
             ${item.rarity ? `<span class="badge badge--${esc(item.rarity)}"
                                    style="padding:0 4px;border:none;background:none">
                                ${esc(MM.fmt.rarity(item.rarity).slice(0, 1))}</span>` : ''}
+            ${qty && item.quantity > 1 ? `<span title="Exemplaires en collection"
+              >×${item.quantity}</span>` : ''}
+            ${finish ? `<span class="accent">${esc(finish)}</span>` : ''}
             ${price && item.unit_price != null
               ? `<span class="mtg-card__price">${MM.fmt.eur(item.unit_price)}</span>` : ''}
           </span>
