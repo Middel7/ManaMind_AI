@@ -79,7 +79,7 @@
 <script src="/static/js/mm.js"></script>
 <script>
 (async () => {
-  const user = await MM.boot({ title: 'Decks à construire', nav: 'build' });
+  const user = await MM.boot({ title: 'Construire un deck avec mes cartes', nav: 'build' });
   if (!user) return;
 
   const results = MM.el('#results');

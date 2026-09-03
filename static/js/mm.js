@@ -383,7 +383,8 @@
       items: [
         { key: 'add', label: 'Ajouter des cartes à ma collection',
           href: '/collection/ajout', icon: 'plus' },
-        { key: 'import', label: 'Importer une liste',
+        { key: 'import',
+          label: 'Importer une liste de cartes pour ma collection ou une decklist',
           href: '/collection/import', icon: 'upload' },
         { key: 'boosters', label: "Sélectionner les extensions que j'ai ouvertes",
           href: '/collection/boosters', icon: 'booster' },
@@ -392,16 +393,18 @@
     {
       label: 'Analyser',
       items: [
-        { key: 'build', label: 'Decks à construire', href: '/collection/commandants', icon: 'crown' },
+        { key: 'build', label: 'Construire un deck avec mes cartes',
+          href: '/collection/commandants', icon: 'crown' },
         { key: 'improve', label: 'Améliorer mon deck avec les cartes de ma collection',
           href: '/decks/ameliorer', icon: 'sparkle' },
-        { key: 'swap', label: 'Trouver un nouveau commandant pour mon deck',
-          href: '/decks/commandant', icon: 'swap' },
-        { key: 'moves', label: 'Cartes à changer de deck', href: '/decks/deplacements', icon: 'move' },
         { key: 'analyze', label: 'Améliorer mon deck grâce à des analyses IA',
           href: '/decks/analyse', icon: 'chart' },
         { key: 'card', label: 'Trouver un commandant pour une carte',
           href: '/cartes/commandant', icon: 'search' },
+        { key: 'moves', label: 'Cartes à changer de deck',
+          href: '/decks/deplacements', icon: 'move' },
+        { key: 'swap', label: 'Trouver un nouveau commandant pour mon deck',
+          href: '/decks/commandant', icon: 'swap' },
       ],
     },
   ];
