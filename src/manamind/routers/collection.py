@@ -611,9 +611,20 @@ def api_collection_commanders(
                        unnest(CAST(:qtys  AS INTEGER[])) AS qty
             ),
             top100 AS (
+                -- Pre-filtre sur le taux d'inclusion : classer les 3,5 M lignes
+                -- de deck_stat_commander pour n'en garder que 173 k coutait
+                -- 1,3 s. Mesure sur la base : la 100e carte d'un commandant
+                -- n'est jamais sous 6,56 % (1er centile a 18,8 %), donc le
+                -- seuil a 1 % garde une marge de six et ne peut retirer aucune
+                -- carte du classement.
                 SELECT commander, card_name,
-                       ROW_NUMBER() OVER (PARTITION BY commander ORDER BY inclusion_rate DESC) AS rk
+                       -- card_name departage les ex aequo : sans lui, deux
+                       -- executions pouvaient retenir des 100es cartes
+                       -- differentes et donner des totaux qui varient.
+                       ROW_NUMBER() OVER (PARTITION BY commander
+                                          ORDER BY inclusion_rate DESC, card_name) AS rk
                 FROM deck_stat_commander
+                WHERE inclusion_rate >= 1.0
             ),
             top100_filtered AS (
                 SELECT commander, card_name FROM top100 WHERE rk <= 100
@@ -623,12 +634,19 @@ def api_collection_commanders(
                 FROM top100_filtered t
                 JOIN avail a ON a.card_name_lower = LOWER(TRIM(t.card_name))
             ),
+            -- Prix et illustrations restreints aux cartes de la collection :
+            -- agreger la grille Cardmarket et le catalogue Scryfall en entier
+            -- pour n'en garder que quelques milliers de lignes coutait 2,4 s.
             prices AS (
-                SELECT cp.en_name AS card_name,
-                       MIN(pe.low_price) AS low_price
+                -- Un LATERAL par produit a ete essaye pour eviter le parcours
+                -- complet de la grille : le planificateur bascule alors sur un
+                -- plan a plusieurs minutes. Le filtre par sous-requete reste le
+                -- meilleur compromis mesure.
+                SELECT cp.en_name AS card_name, MIN(pe.low_price) AS low_price
                 FROM cardmarket_products cp
                 JOIN cardmarket_price_guide_entries pe ON pe.id_product = cp.id_product
                 WHERE pe.low_price IS NOT NULL AND pe.low_price > 0
+                  AND LOWER(TRIM(cp.en_name)) IN (SELECT card_name_lower FROM avail)
                 GROUP BY cp.en_name
             ),
             card_images AS (
@@ -637,6 +655,7 @@ def api_collection_commanders(
                 FROM scryfall_cards sc
                 JOIN scryfall_card_printings p ON p.card_id = sc.id
                 WHERE p.image_normal IS NOT NULL AND p.lang = 'en'
+                  AND LOWER(TRIM(sc.name)) IN (SELECT card_name_lower FROM avail)
                 GROUP BY LOWER(TRIM(sc.name))
             ),
             scored AS (
@@ -646,19 +665,13 @@ def api_collection_commanders(
                 FROM collection_match cm
                 LEFT JOIN prices pr ON LOWER(TRIM(pr.card_name)) = LOWER(TRIM(cm.card_name))
                 LEFT JOIN card_images ci ON ci.name_lower = LOWER(TRIM(cm.card_name))
-            ),
-            cmd_images AS (
-                SELECT LOWER(TRIM(sc.name)) AS name_lower,
-                       MIN(p.image_normal) AS image_url
-                FROM scryfall_cards sc
-                JOIN scryfall_card_printings p ON p.card_id = sc.id
-                WHERE p.image_normal IS NOT NULL AND p.lang = 'en'
-                GROUP BY LOWER(TRIM(sc.name))
             )
+            -- L'illustration du commandant est resolue par _commander_images :
+            -- le CTE qui s'en chargeait ici rescannait tout Scryfall une
+            -- seconde fois, et laissait les duos « A & B » sans image.
             SELECT s.commander,
                    SUM(s.low_price) AS total_value,
                    COUNT(*) AS card_count,
-                   ci2.image_url AS commander_image,
                    JSON_AGG(
                        JSON_BUILD_OBJECT(
                            'card_name', s.card_name,
@@ -668,8 +681,7 @@ def api_collection_commanders(
                        ) ORDER BY s.low_price DESC
                    ) AS cards
             FROM scored s
-            LEFT JOIN cmd_images ci2 ON ci2.name_lower = LOWER(TRIM(s.commander))
-            GROUP BY s.commander, ci2.image_url
+            GROUP BY s.commander
             ORDER BY total_value DESC
             LIMIT :top
         """), {"names": coll_names, "qtys": coll_qtys, "top": top}).fetchall()
@@ -680,7 +692,7 @@ def api_collection_commanders(
     result = []
     for r in rows:
         cards = r.cards if isinstance(r.cards, list) else _j.loads(r.cards)
-        shots = images.get(r.commander) or ([r.commander_image] if r.commander_image else [])
+        shots = images.get(r.commander) or []
         result.append({
             "commander": r.commander,
             "commander_image": shots[0] if shots else None,
@@ -755,7 +767,7 @@ def api_commander_build(commander: str, request: Request) -> Response:
             SELECT card_name, inclusion_rate
             FROM deck_stat_commander
             WHERE commander = :cmd
-            ORDER BY inclusion_rate DESC
+            ORDER BY inclusion_rate DESC, card_name
             LIMIT 100
         """), {"cmd": commander}).fetchall()
         if not top:
@@ -763,7 +775,7 @@ def api_commander_build(commander: str, request: Request) -> Response:
                 SELECT card_name, inclusion_rate
                 FROM deck_stat_commander
                 WHERE LOWER(TRIM(commander)) = LOWER(TRIM(:cmd))
-                ORDER BY inclusion_rate DESC
+                ORDER BY inclusion_rate DESC, card_name
                 LIMIT 100
             """), {"cmd": commander}).fetchall()
 
