@@ -609,6 +609,20 @@
     return { close };
   };
 
+  /* ══ Liens marchands ═══════════════════════════════════════════════════ */
+
+  MM.market = {
+    /** RELIC-TRADE : proposer la carte a la vente. */
+    sell: (name) =>
+      'https://relictrade.gg/en/recherche?q=' + encodeURIComponent(name || ''),
+
+    /** Cardmarket : offres d'achat. Aucune URL de fiche n'est stockee en base,
+     *  la recherche par nom est donc le seul lien qui ne casse jamais. */
+    buy: (name) =>
+      'https://www.cardmarket.com/fr/Magic/Products/Search?searchString='
+      + encodeURIComponent(name || ''),
+  };
+
   /* ══ Rendu de cartes ═══════════════════════════════════════════════════ */
 
   /**
@@ -617,7 +631,8 @@
    * @param {object} options { actions:boolean, muted:boolean, price:boolean }
    */
   MM.cardTile = function (item, options = {}) {
-    const { actions = false, muted = false, price = true, qty = true } = options;
+    const { actions = false, muted = false, price = true, qty = true,
+            market = false } = options;
     const finish = MM.fmt.finish(item.finish);
     const badges = [];
     if (finish) badges.push(`<span class="badge badge--foil">${esc(finish)}</span>`);
@@ -656,6 +671,17 @@
             ${price && item.unit_price != null
               ? `<span class="mtg-card__price">${MM.fmt.eur(item.unit_price)}</span>` : ''}
           </span>
+          ${market ? `
+            <span class="mtg-card__market">
+              <a class="btn btn--sm" target="_blank" rel="noopener"
+                 href="${esc(MM.market.sell(item.card_name))}"
+                 title="Proposer ${esc(item.card_name || '')} à la vente sur RELIC-TRADE"
+                >Vendre</a>
+              <a class="btn btn--sm" target="_blank" rel="noopener"
+                 href="${esc(MM.market.buy(item.card_name))}"
+                 title="Voir les offres d'achat de ${esc(item.card_name || '')} sur Cardmarket"
+                >Acheter</a>
+            </span>` : ''}
         </div>
       </article>`;
   };
