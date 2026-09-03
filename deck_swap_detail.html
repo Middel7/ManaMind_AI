@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>ManaMind — Commandant alternatif</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/app.css">
+<style>
+  .build-hero { display: flex; gap: var(--sp-6); flex-wrap: wrap; align-items: flex-start; }
+  .build-hero__card { width: 220px; flex-shrink: 0; }
+  .build-hero__card img { width: 100%; border-radius: 4.7% / 3.5%; display: block; }
+  .build-hero__info { flex: 1; min-width: 260px; }
+</style>
+</head>
+<body>
+
+<div id="page">
+  <div id="results"></div>
+</div>
+
+<script src="/static/js/mm.js"></script>
+<script>
+(async () => {
+  const params = new URLSearchParams(location.search);
+  const from = params.get('from') || '';
+  const commander = params.get('commander') || '';
+
+  // Le detail vient de la meme analyse que la liste : on la rejoue pour le
+  // deck de depart et on isole le candidat demande.
+  const dataReq = (from && commander)
+    ? MM.api.get('/api/commander-swap' + MM.api.qs({
+        commander: from, top: 25,
+        sort: params.get('sort') || 'value',
+        max_colors: Number(params.get('max_colors')) || 5,
+      })).then((value) => ({ value }), (error) => ({ error }))
+    : Promise.resolve({ error: new Error('Commandant ou deck de départ manquant.') });
+
+  const user = await MM.boot({
+    title: commander || 'Commandant alternatif',
+    nav: 'swap', back: '/decks/commandant',
+  });
+  if (!user) return;
+
+  const results = MM.el('#results');
+  results.innerHTML = `<div class="center" style="padding:60px">
+    <span class="spinner spinner--lg"></span></div>`;
+
+  const res = await dataReq;
+  if (res.error) {
+    results.innerHTML = MM.empty({
+      icon: 'warning', title: 'Analyse impossible', text: res.error.message,
+      action: { href: '/decks/commandant', label: 'Retour aux propositions' } });
+    return;
+  }
+
+  const cand = (res.value.candidates || [])
+    .find((c) => c.commander === commander);
+  if (!cand) {
+    results.innerHTML = MM.empty({
+      icon: 'swap', title: 'Commandant introuvable',
+      text: `« ${commander} » ne figure plus parmi les propositions pour ce deck.`,
+      action: { href: '/decks/commandant', label: 'Retour aux propositions' } });
+    return;
+  }
+
+  /** Vignette de carte, avec ses liens marchands. */
+  function tile(card, { owned }) {
+    return `
+      <article class="mtg-card">
+        <div class="mtg-card__frame">
+          ${MM.img.frame({ card_name: card.name, image_normal: card.image })}
+        </div>
+        <div class="mtg-card__foot">
+          <span class="mtg-card__name" title="${MM.esc(card.name)}">
+            ${MM.esc(card.name)}</span>
+          <span class="mtg-card__meta">
+            <span class="dim">${(card.inclusion_rate || 0).toFixed(0)} % des decks</span>
+            ${card.price
+              ? `<span class="mtg-card__price">${MM.fmt.eur(card.price)}</span>` : ''}
+          </span>
+          <span class="mtg-card__market">
+            ${owned
+              ? `<a class="btn btn--sm" target="_blank" rel="noopener"
+                    href="${MM.esc(MM.market.sell(card.name))}"
+                    title="Proposer ${MM.esc(card.name)} à la vente sur RELIC-TRADE"
+                   >Vendre</a>`
+              : `<a class="btn btn--sm btn--outline" target="_blank" rel="noopener"
+                    href="${MM.esc(MM.market.buy(card.name))}"
+                    title="Voir les offres d'achat de ${MM.esc(card.name)} sur Cardmarket"
+                   >Acheter</a>`}
+          </span>
+        </div>
+      </article>`;
+  }
+
+  const kept = (cand.cards && cand.cards.kept) || [];
+  const missing = cand.missing_cards || [];
+
+  results.innerHTML = `
+    <section class="stack-6">
+      <div class="build-hero">
+        ${cand.commander_image ? `
+          <div class="build-hero__card">
+            <img src="${MM.esc(cand.commander_image)}"
+                 alt="${MM.esc(cand.commander)}" loading="eager">
+          </div>` : ''}
+        <div class="build-hero__info stack">
+          <div class="stack-2">
+            <h2 class="h2">${MM.esc(cand.commander)}</h2>
+            <p class="muted small">${MM.img.pips(cand.color_identity)}
+              Si vous rebâtissiez « ${MM.esc(from)} » autour de ce commandant, voici ce que
+              votre deck garderait et ce qu'il faudrait acquérir.</p>
+          </div>
+          <div class="stats">
+            <div class="stat">
+              <span class="stat__value">${MM.fmt.int(cand.kept_count)}</span>
+              <span class="stat__label">Cartes conservées</span>
+              <span class="stat__note">${MM.fmt.eur(cand.kept_value)} · ${cand.kept_pct} %
+                de la valeur</span>
+            </div>
+            <div class="stat">
+              <span class="stat__value">${MM.fmt.int(missing.length)}</span>
+              <span class="stat__label">À acquérir</span>
+              <span class="stat__note">${MM.fmt.eur(cand.missing_value)} au total</span>
+            </div>
+          </div>
+          <div class="cluster-2">
+            <a class="btn btn--sm btn--ghost"
+               href="/cartes/commandant?card=${encodeURIComponent(cand.commander)}">
+               Voir dans quels decks ce commandant est joué</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="stack-2">
+        <div class="chips" id="tabs" role="tablist">
+          <button class="chip" data-tab="kept" aria-pressed="true">
+            Cartes conservées <span class="chip__count">${MM.fmt.int(kept.length)}</span></button>
+          <button class="chip" data-tab="missing" aria-pressed="false">
+            À acquérir <span class="chip__count">${MM.fmt.int(missing.length)}</span></button>
+        </div>
+
+        <div id="panel-kept">
+          ${kept.length
+            ? `<div class="card-grid">
+                ${kept.map((card) => tile(card, { owned: true })).join('')}</div>`
+            : '<p class="muted small">Aucune carte de ce deck ne serait conservée.</p>'}
+        </div>
+
+        <div id="panel-missing" hidden>
+          <p class="muted small" style="margin-bottom:var(--sp-3)">Cartes très jouées avec ce
+            commandant qui ne sont pas dans votre deck actuel.</p>
+          ${missing.length
+            ? `<div class="card-grid">
+                ${missing.map((card) => tile(card, { owned: false })).join('')}</div>`
+            : '<p class="muted small">Aucune carte manquante identifiée.</p>'}
+        </div>
+      </div>
+    </section>`;
+
+  MM.el('#tabs').addEventListener('click', (event) => {
+    const chip = event.target.closest('.chip');
+    if (!chip) return;
+    MM.els('#tabs .chip').forEach((other) =>
+      other.setAttribute('aria-pressed', String(other === chip)));
+    MM.el('#panel-kept').hidden = chip.dataset.tab !== 'kept';
+    MM.el('#panel-missing').hidden = chip.dataset.tab !== 'missing';
+  });
+})();
+</script>
+</body>
+</html>

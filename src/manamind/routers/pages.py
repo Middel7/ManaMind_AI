@@ -76,6 +76,11 @@ def page_deck_swap() -> FileResponse:
     return _page("deck_swap.html")
 
 
+@router.get("/decks/commandant/detail")
+def page_deck_swap_detail() -> FileResponse:
+    return _page("deck_swap_detail.html")
+
+
 @router.get("/decks/deplacements")
 def page_deck_moves() -> FileResponse:
     return _page("deck_moves.html")

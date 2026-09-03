@@ -11,44 +11,39 @@
 <link rel="stylesheet" href="/static/css/tokens.css">
 <link rel="stylesheet" href="/static/css/app.css">
 <style>
-  .cand {
-    display: grid; grid-template-columns: 190px minmax(0, 1fr);
+  /* Meme boite que « Decks a construire » : la carte du commandant en entier,
+     un titre, un bouton. */
+  .cmd-card {
+    position: relative;
+    display: flex; flex-direction: column;
     border-radius: var(--r-lg);
     border: 1px solid var(--line);
     background: var(--bg-raised);
     overflow: hidden;
+    isolation: isolate;
     transition: border-color var(--dur) var(--ease);
   }
-  .cand:hover { border-color: var(--line-accent); }
-  @media (max-width: 720px) { .cand { grid-template-columns: 1fr; } }
+  .cmd-card:hover { border-color: var(--line-accent); }
 
-  .cand__art {
-    position: relative;
-    min-height: 190px;
-    background-size: cover; background-position: center 22%;
+  .cmd-card__head { position: relative; display: flex; align-items: flex-end; padding: var(--sp-3) var(--sp-4); }
+  .cmd-card__art { position: absolute; inset: 0; z-index: -2; background-size: cover; background-position: center 22%; opacity: 0.5; }
+  .cmd-card__head::after {
+    content: ""; position: absolute; inset: 0; z-index: -1;
+    background: linear-gradient(0deg, var(--bg-raised) 8%, rgba(14,14,21,0.35) 100%);
   }
-  .cand__art::after {
-    content: ""; position: absolute; inset: 0;
-    background: linear-gradient(90deg, transparent 55%, var(--bg-raised) 100%);
+  .cmd-card__body { padding: var(--sp-3) var(--sp-4) var(--sp-4);
+                    display: flex; flex-direction: column; gap: var(--sp-3); }
+  .cmd-card__split {
+    display: flex; gap: var(--sp-2);
+    align-items: center; justify-content: center;
+    height: 300px;
   }
-  @media (max-width: 720px) {
-    .cand__art { min-height: 130px; }
-    .cand__art::after { background: linear-gradient(0deg, var(--bg-raised) 4%, transparent 70%); }
+  .cmd-card__portrait {
+    max-width: 100%; max-height: 100%;
+    width: auto;
+    border-radius: 4.7% / 3.5%;
+    box-shadow: var(--shadow-card);
   }
-
-  .cand__rank {
-    position: absolute; top: var(--sp-3); left: var(--sp-3); z-index: 1;
-    width: 26px; height: 26px; display: grid; place-items: center;
-    border-radius: var(--r-full);
-    background: var(--overlay); border: 1px solid var(--line-strong);
-    font-size: var(--text-xs); font-weight: 700;
-  }
-  .cand__body { padding: var(--sp-4) var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-3); }
-  .cand__bars { display: flex; flex-direction: column; gap: var(--sp-2); }
-  .cand__bar { display: flex; align-items: center; gap: var(--sp-3); font-size: var(--text-xs); }
-  .cand__bar .progress { flex: 1; }
-  .thumbs { display: flex; gap: 3px; overflow: hidden; }
-  .thumbs img { width: 30px; aspect-ratio: var(--card-ratio); object-fit: cover; border-radius: 3px; flex-shrink: 0; }
 </style>
 </head>
 <body>
@@ -166,119 +161,40 @@
       return;
     }
 
-    const best = Math.max(...candidates.map((c) => c.kept_value || 0)) || 1;
-
-    results.innerHTML = `<div class="stack">${candidates.map((cand, index) => {
+    results.innerHTML = `<div class="grid-2">${candidates.map((cand) => {
       const art = cand.commander_image
         ? cand.commander_image.replace('/normal/', '/art_crop/') : null;
-      const kept = (cand.cards && cand.cards.kept) || [];
       return `
-        <article class="cand">
-          <div class="cand__art" ${art
-            ? `style="background-image:url('${MM.esc(art)}')"` : ''}>
-            <span class="cand__rank">${index + 1}</span>
+        <article class="cmd-card">
+          <div class="cmd-card__head">
+            ${art ? `<div class="cmd-card__art"
+              style="background-image:url('${MM.esc(art)}')"></div>` : ''}
+            <div style="min-width:0">
+              <p class="h3">${MM.esc(cand.commander)}</p>
+              <p class="xs muted">${MM.img.pips(cand.color_identity)}
+                ${MM.fmt.int(cand.kept_count)} cartes gardées ·
+                ${MM.fmt.eur(cand.kept_value, { compact: true })} · ${cand.kept_pct} %</p>
+            </div>
           </div>
-          <div class="cand__body">
-            <div class="between">
-              <div style="min-width:0">
-                <p class="h3 truncate">${MM.esc(cand.commander)}</p>
-                <p class="xs dim">${MM.img.pips(cand.color_identity)}
-                  ${MM.fmt.int(cand.total_decks)} decks référencés</p>
-              </div>
-              <div style="text-align:right">
-                <p class="strong num">${MM.fmt.eur(cand.kept_value)}</p>
-                <p class="xs dim">conservés</p>
-              </div>
+          <div class="cmd-card__body">
+            <div class="cmd-card__split">
+              ${cand.commander_image ? `
+                <img class="cmd-card__portrait" src="${MM.esc(cand.commander_image)}"
+                     alt="${MM.esc(cand.commander)}" loading="lazy">` : ''}
             </div>
-
-            <div class="cand__bars">
-              <div class="cand__bar">
-                <span class="dim" style="width:96px">Valeur gardée</span>
-                <span class="progress">
-                  <span class="progress__bar"
-                        style="width:${Math.round((cand.kept_value / best) * 100)}%"></span>
-                </span>
-                <span class="num" style="width:56px;text-align:right">
-                  ${cand.kept_pct} %</span>
-              </div>
-              <div class="cand__bar">
-                <span class="dim" style="width:96px">Cartes gardées</span>
-                <span class="progress">
-                  <span class="progress__bar" style="width:${
-                    Math.round((cand.kept_count / Math.max(1, data.scored_count)) * 100)}%"></span>
-                </span>
-                <span class="num" style="width:56px;text-align:right">
-                  ${cand.kept_count}</span>
-              </div>
-            </div>
-
-            ${kept.length ? `<div class="thumbs">
-              ${kept.slice(0, 12).filter((c) => c.image).map((c) => `
-                <img src="${MM.esc(c.image)}" alt="${MM.esc(c.name)}"
-                     title="${MM.esc(c.name)} — ${MM.fmt.eur(c.price)}" loading="lazy">`).join('')}
-            </div>` : ''}
-
             <div class="cluster-2">
-              <button class="btn btn--sm" data-detail="${index}">Voir le détail</button>
+              <a class="btn btn--sm" href="/decks/commandant/detail${MM.api.qs({
+                from: state.deck.commander, commander: cand.commander,
+                sort: state.sort, max_colors: state.maxColors })}">Voir le détail</a>
               ${cand.missing_value ? `<span class="badge badge--warn">
                 ${MM.fmt.eur(cand.missing_value)} à acquérir</span>` : ''}
-              ${cand.lost_archetype_count ? `<span class="badge">
-                ${cand.lost_archetype_count} cartes perdues</span>` : ''}
             </div>
           </div>
         </article>`;
     }).join('')}</div>`;
 
-    results.addEventListener('click', (event) => {
-      const button = event.target.closest('[data-detail]');
-      if (button) showDetail(candidates[Number(button.dataset.detail)]);
-    });
   }
 
-  function showDetail(cand) {
-    const kept = (cand.cards && cand.cards.kept) || [];
-    const missing = cand.missing_cards || [];
-
-    const grid = (list, empty) => list.length
-      ? `<div class="card-grid card-grid--sm">${list.map((card) => `
-          <article class="mtg-card mtg-card--flat">
-            <div class="mtg-card__frame">
-              ${MM.img.frame({ card_name: card.name, image_normal: card.image })}
-            </div>
-            <div class="mtg-card__foot">
-              <span class="mtg-card__name">${MM.esc(card.name)}</span>
-              <span class="mtg-card__meta">
-                <span class="dim">${(card.inclusion_rate || 0).toFixed(0)} %</span>
-                <span class="mtg-card__price">${MM.fmt.eur(card.price)}</span>
-              </span>
-            </div>
-          </article>`).join('')}</div>`
-      : `<p class="muted small">${empty}</p>`;
-
-    MM.modal({
-      title: cand.commander,
-      wide: true,
-      body: `
-        <div class="stack-6">
-          <div class="stack">
-            <div class="between">
-              <h3 class="h4">Cartes conservées</h3>
-              <span class="badge badge--ok">${MM.fmt.eur(cand.kept_value)}</span>
-            </div>
-            ${grid(kept, 'Aucune carte conservée.')}
-          </div>
-          <div class="stack">
-            <div class="between">
-              <h3 class="h4">Cartes à acquérir</h3>
-              <span class="badge badge--warn">${MM.fmt.eur(cand.missing_value)}</span>
-            </div>
-            <p class="xs dim">Cartes très jouées avec ce commandant que vous n'avez pas
-              dans ce deck.</p>
-            ${grid(missing, 'Aucune carte manquante identifiée.')}
-          </div>
-        </div>`,
-    });
-  }
 })();
 </script>
 </body>
