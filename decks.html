@@ -140,18 +140,75 @@
             </p>
           </a>
           <div class="deck-tile__actions">
-            <a class="btn btn--sm" href="/decks/ameliorer?deck=${encodeURIComponent(deck.deck_id)}"
-               title="Trouver dans votre collection les cartes qui amélioreraient ce deck">
-               Améliorer</a>
-            <a class="btn btn--sm" href="/decks/alleger?deck=${encodeURIComponent(deck.deck_id)}"
-               title="Repérer les cartes les moins jouées à retirer">Alléger</a>
-            <a class="btn btn--sm" href="/decks/commandant?deck=${encodeURIComponent(deck.deck_id)}"
-               title="Voir quels commandants conserveraient le plus de ces cartes">
-               Commandant</a>
+            ${missing ? `<button class="btn btn--sm" data-fill="${MM.esc(deck.deck_id)}"
+               title="Ajouter à votre collection les ${MM.fmt.int(missing)} cartes de ce deck
+                      que vous ne possédez pas encore">
+               Ajouter les cartes manquantes à ma collection</button>` : ''}
           </div>
         </article>`;
     }).join('')}</div>`;
   }
+
+  // #results survit aux rendus successifs : l'ecoute peut y rester attachee.
+  MM.el('#results').addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-fill]');
+    if (!button) return;
+
+    const deckId = button.dataset.fill;
+    const label = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Analyse…';
+
+    try {
+      // La liste des manquantes est relue au clic plutot que deduite de la
+      // tuile : elle donne les quantites exactes et la valeur a annoncer.
+      const data = await MM.api.get(
+        `/api/v2/decks/${encodeURIComponent(deckId)}/missing?limit=200`);
+      const missing = data.missing || [];
+      if (!missing.length) {
+        MM.toast.ok('Ce deck est déjà complet dans votre collection.');
+        button.remove();
+        return;
+      }
+
+      const copies = missing.reduce((sum, card) => sum + card.quantity, 0);
+      const ok = await MM.confirm({
+        title: 'Ajouter les cartes manquantes ?',
+        text: `${MM.fmt.int(missing.length)} carte${missing.length > 1 ? 's' : ''} `
+          + `(${MM.fmt.int(copies)} exemplaire${copies > 1 ? 's' : ''}) `
+          + `rejoindront votre collection, pour une valeur estimée de `
+          + `${MM.fmt.eur(data.total_eur)}. Les éditions ne sont pas précisées : `
+          + `vous pourrez les corriger carte par carte ensuite.`,
+        confirmLabel: 'Ajouter',
+      });
+      if (!ok) {
+        button.disabled = false;
+        button.textContent = label;
+        return;
+      }
+
+      button.textContent = 'Ajout…';
+      const result = await MM.api.post('/api/v2/collection/items', {
+        entries: missing.map((card) => ({
+          name: card.card_name, quantity: card.quantity,
+        })),
+      });
+      MM.toast.ok(`${MM.fmt.int(result.copies)} exemplaires ajoutés à votre collection.`);
+      if (result.errors && result.errors.length) {
+        MM.toast.error(`${result.errors.length} carte(s) non ajoutée(s) : `
+          + result.errors[0]);
+      }
+
+      // Le taux de possession du deck a change : on relit la liste.
+      const fresh = await MM.api.get('/api/v2/decks');
+      state.decks = fresh.decks;
+      render();
+    } catch (err) {
+      MM.toast.error(err.message);
+      button.disabled = false;
+      button.textContent = label;
+    }
+  });
 
   MM.el('#search').addEventListener('input', MM.debounce((event) => {
     state.search = event.target.value.trim();
