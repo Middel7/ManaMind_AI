@@ -393,49 +393,73 @@
         <span class="muted small">retraits proposés</span></span>
     </div>`);
 
-  const section = (title, list, kind) => `
-    <div class="panel">
-      <div class="panel__head">
-        <h2 class="h3">${MM.esc(title)}</h2>
-        <span class="badge ${kind === 'add' ? 'badge--ok' : 'badge--danger'}">
-          ${list.length}</span>
+  /** Vignette d'une carte proposee, avec le lien marchand qui va avec. */
+  const tile = (row, kind) => {
+    const info = resolved[row.name] || {};
+    return `
+      <article class="mtg-card">
+        <div class="mtg-card__frame">
+          ${MM.img.frame({ card_name: row.name, ...info })}
+          ${info.owned ? `<span class="mtg-card__qty"
+            title="Déjà en collection">${info.owned}</span>` : ''}
+        </div>
+        <div class="mtg-card__foot">
+          <span class="mtg-card__name" title="${MM.esc(row.name)}">
+            ${MM.esc(row.name)}</span>
+          <span class="mtg-card__meta">
+            ${row.frequency
+              ? `<span class="dim" title="Part des decks du commandant">
+                   ${MM.esc(row.frequency)} %</span>`
+              : (row.score ? `<span class="dim"
+                   title="Score de recommandation">${MM.esc(row.score)}</span>` : '')}
+            ${info.unit_price != null
+              ? `<span class="mtg-card__price">${MM.fmt.eur(info.unit_price)}</span>`
+              : ''}
+          </span>
+          <span class="mtg-card__market">
+            ${kind === 'add'
+              ? `<a class="btn btn--sm btn--outline" target="_blank" rel="noopener"
+                    href="${MM.esc(MM.market.buy(row.name))}"
+                    title="Voir les offres d'achat de ${MM.esc(row.name)} sur Cardmarket"
+                   >Acheter</a>`
+              : `<a class="btn btn--sm" target="_blank" rel="noopener"
+                    href="${MM.esc(MM.market.sell(row.name))}"
+                    title="Proposer ${MM.esc(row.name)} à la vente sur RELIC-TRADE"
+                   >Vendre</a>`}
+          </span>
+        </div>
+      </article>`;
+  };
+
+  const grid = (list, kind, empty) => list.length
+    ? `<div class="card-grid">${list.map((row) => tile(row, kind)).join('')}</div>`
+    : `<p class="muted small">${empty}</p>`;
+
+  // Les deux listes deviennent deux onglets plutot que deux panneaux empiles.
+  content.innerHTML = `
+    <div class="stack-2">
+      <div class="chips" id="tabs" role="tablist">
+        <button class="chip" data-tab="add" aria-pressed="true">
+          Cartes à ajouter <span class="chip__count">${additions.length}</span></button>
+        <button class="chip" data-tab="cut" aria-pressed="false">
+          Cartes à retirer <span class="chip__count">${removals.length}</span></button>
       </div>
-      <div class="panel__body">
-        ${list.length ? `<div class="card-grid card-grid--sm">
-          ${list.map((row) => {
-            const info = resolved[row.name] || {};
-            return `
-              <article class="mtg-card mtg-card--flat">
-                <div class="mtg-card__frame">
-                  ${MM.img.frame({ card_name: row.name, ...info })}
-                  ${info.owned ? `<span class="mtg-card__qty"
-                    title="Déjà en collection">${info.owned}</span>` : ''}
-                </div>
-                <div class="mtg-card__foot">
-                  <span class="mtg-card__name" title="${MM.esc(row.name)}">
-                    ${MM.esc(row.name)}</span>
-                  <span class="mtg-card__meta">
-                    ${row.frequency
-                      ? `<span class="dim" title="Part des decks du commandant">
-                           ${MM.esc(row.frequency)} %</span>`
-                      : (row.score ? `<span class="dim"
-                           title="Score de recommandation">${MM.esc(row.score)}</span>` : '')}
-                    ${info.unit_price != null
-                      ? `<span class="mtg-card__price">${MM.fmt.eur(info.unit_price)}</span>`
-                      : ''}
-                  </span>
-                </div>
-              </article>`;
-          }).join('')}
-        </div>` : '<p class="muted small">Aucune proposition dans cette catégorie.</p>'}
+      <div id="panel-add">
+        ${grid(additions, 'add', 'Aucun ajout proposé pour ce deck.')}
+      </div>
+      <div id="panel-cut" hidden>
+        ${grid(removals, 'cut', 'Aucun retrait proposé pour ce deck.')}
       </div>
     </div>`;
 
-  content.innerHTML = `
-    <div class="stack-6">
-      ${section('Cartes à ajouter', additions, 'add')}
-      ${removals.length ? section('Cartes à retirer', removals, 'cut') : ''}
-    </div>`;
+  MM.el('#tabs').addEventListener('click', (event) => {
+    const chip = event.target.closest('.chip');
+    if (!chip) return;
+    MM.els('#tabs .chip').forEach((other) =>
+      other.setAttribute('aria-pressed', String(other === chip)));
+    MM.el('#panel-add').hidden = chip.dataset.tab !== 'add';
+    MM.el('#panel-cut').hidden = chip.dataset.tab !== 'cut';
+  });
 })();
 </script>
 </body>
