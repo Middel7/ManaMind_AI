@@ -573,6 +573,10 @@ table { border-collapse: collapse; width: 100%; }
   gap: var(--sp-3);
 }
 
+/* Sans cela, une tuile au contenu large elargit toute la grille
+   et fait deborder la page horizontalement. */
+.stats > * { min-width: 0; }
+
 .stat {
   padding: var(--sp-4) var(--sp-5);
   border-radius: var(--r-lg);

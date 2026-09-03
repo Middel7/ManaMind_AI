@@ -12,30 +12,35 @@
 <link rel="stylesheet" href="/static/css/app.css">
 <style>
   .hero-dash { min-height: 300px; }
-  .decks-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: var(--sp-3); }
 
-  .deck-card {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    min-height: 116px;
-    padding: var(--sp-4);
-    border-radius: var(--r-lg);
-    border: 1px solid var(--line);
-    overflow: hidden;
-    isolation: isolate;
-    transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease);
+  /* Les quatre chiffres tiennent sur une seule ligne : le bandeau est plus
+     large ici que sur les autres pages, et les écarts sont resserrés. */
+  .hero-dash .hero__body { max-width: 1000px; }
+  .hero-dash .hero__stats { gap: var(--sp-2) var(--sp-4); }
+
+  /* Deux chiffres complémentaires dans une même tuile */
+  .stat__pair { display: flex; align-items: baseline; gap: var(--sp-5); }
+  .stat__pair a { display: flex; align-items: baseline; gap: var(--sp-2); }
+  .stat__pair b {
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
   }
-  .deck-card:hover { border-color: var(--line-accent); transform: translateY(-2px); }
-  .deck-card__art {
-    position: absolute; inset: 0; z-index: -2;
-    background-size: cover; background-position: center 28%;
-    opacity: 0.42;
+  .stat__pair em {
+    font-style: normal;
+    font-size: var(--text-xs);
+    color: var(--text-3);
   }
-  .deck-card::after {
-    content: ""; position: absolute; inset: 0; z-index: -1;
-    background: linear-gradient(0deg, var(--bg-raised) 12%, rgba(14,14,21,0.42) 100%);
+  .stat__pair a:hover b { color: var(--accent-bright); }
+
+  /* Une carte qui dort mène au choix d'un commandant qui la jouerait */
+  #dormantGrid .mtg-card { cursor: pointer; }
+
+  /* Sur petit écran, la tuile à deux chiffres prend toute la largeur :
+     les deux nombres restent ainsi côte à côte sans elargir la grille. */
+  @media (max-width: 860px) {
+    .stat--pair { grid-column: 1 / -1; }
   }
 </style>
 </head>
@@ -73,21 +78,10 @@
     <div class="card-grid" id="dormantGrid"></div>
   </section>
 
-  <section class="section" id="decksSection" hidden>
-    <div class="section-head">
-      <div class="section-head__title">
-        <h2 class="h2">Vos decks</h2>
-        <span class="muted small" id="decksCount"></span>
-      </div>
-      <a class="btn btn--sm" href="/decks">Gérer mes decks</a>
-    </div>
-    <div class="decks-strip" id="decksStrip"></div>
-  </section>
-
   <section class="section" id="recentSection" hidden>
     <div class="section-head">
       <div class="section-head__title">
-        <h2 class="h2">Derniers ajouts</h2>
+        <h2 class="h2">Dernier ajout</h2>
       </div>
       <a class="btn btn--sm" href="/collection?sort=recent">Voir la collection</a>
     </div>
@@ -110,7 +104,7 @@
     return;
   }
 
-  const { stats, progress, freshness, decks, profile } = data;
+  const { stats, progress, freshness, profile } = data;
   const empty = stats.copies === 0;
 
   /* ── Hero ─────────────────────────────────────────────────────────────── */
@@ -140,7 +134,7 @@
       <p class="eyebrow">${MM.esc(greeting)}</p>
       <h2 class="hero__title">${empty
         ? 'Votre collection vous attend'
-        : 'Votre collection, prête à être exploitée'}</h2>
+        : 'Je vous aide au mieux à optimiser et à utiliser en jeu votre collection'}</h2>
       <p class="muted">${empty
         ? "Importez vos cartes une fois, et l'outil vous dira quels decks construire, "
           + 'quelles cartes dorment et lesquelles amélioreraient vos listes.'
@@ -151,9 +145,9 @@
                ${MM.icons.upload} Importer ma collection</a>
              <a class="btn btn--lg" href="/collection/ajout">Ajouter carte par carte</a>`
           : `<a class="btn btn--primary" href="/collection/ajout">
-               ${MM.icons.plus} Ajouter des cartes</a>
-             <a class="btn" href="/collection">Parcourir ma collection</a>
-             <a class="btn btn--ghost" href="/collection/commandants">Que puis-je construire ?</a>`}
+               ${MM.icons.plus} Ajouter des cartes à ma collection</a>
+             <a class="btn" href="/collection/import">
+               ${MM.icons.upload} Ajouter des decks</a>`}
       </div>
       ${heroStats}
     </div>
@@ -235,13 +229,20 @@
       <a class="stat" href="/collection">
         <span class="stat__value">${MM.fmt.int(stats.copies)}</span>
         <span class="stat__label">Exemplaires</span>
-        <span class="stat__note">${MM.fmt.int(stats.distinct_cards)} cartes différentes</span>
       </a>
-      <a class="stat" href="/collection?in_deck=no">
-        <span class="stat__value">${MM.fmt.int(stats.dormant)}</span>
-        <span class="stat__label">Cartes inutilisées</span>
-        <span class="stat__note">dans aucun de vos decks</span>
-      </a>
+      <div class="stat stat--pair">
+        <span class="stat__pair">
+          <a href="/collection?in_deck=yes">
+            <b>${MM.fmt.int(Math.max(0, stats.lines - stats.dormant))}</b>
+            <em>utilisées</em>
+          </a>
+          <a href="/collection?in_deck=no">
+            <b>${MM.fmt.int(stats.dormant)}</b>
+            <em>inutilisées</em>
+          </a>
+        </span>
+        <span class="stat__label">Cartes</span>
+      </div>
       <a class="stat" href="/decks">
         <span class="stat__value">${MM.fmt.int(stats.decks)}</span>
         <span class="stat__label">Decks</span>
@@ -259,34 +260,6 @@
 
   if (empty) return;
 
-  /* ── Decks ────────────────────────────────────────────────────────────── */
-
-  if (decks.length) {
-    MM.el('#decksSection').hidden = false;
-    MM.el('#decksCount').textContent = MM.fmt.plural(stats.decks, 'deck');
-    MM.el('#decksStrip').innerHTML = decks.map((deck) => `
-      <a class="deck-card" href="/decks/${encodeURIComponent(deck.deck_id)}">
-        <div class="deck-card__art" data-commander="${MM.esc(deck.commander || '')}"></div>
-        <p class="strong truncate">${MM.esc(deck.name || deck.commander)}</p>
-        <p class="xs dim truncate">${MM.esc(deck.commander || '')} ·
-          ${MM.fmt.int(deck.card_count)} cartes</p>
-      </a>`).join('');
-
-    // L'illustration du commandant habille chaque vignette de deck
-    MM.els('.deck-card__art').forEach(async (holder) => {
-      const commander = holder.dataset.commander;
-      if (!commander) return;
-      try {
-        const data = await MM.api.get(
-          `/api/v2/cards/suggest?q=${encodeURIComponent(commander.split('//')[0].trim())}&limit=1`);
-        const card = data.cards && data.cards[0];
-        if (card && card.scryfall_id) {
-          holder.style.backgroundImage = `url('${MM.scryfallArt(card.scryfall_id)}')`;
-        }
-      } catch { /* la vignette reste unie */ }
-    });
-  }
-
   /* ── Mises en avant ───────────────────────────────────────────────────── */
 
   try {
@@ -298,6 +271,17 @@
         `${MM.fmt.int(stats.dormant)} au total`;
       MM.el('#dormantGrid').innerHTML =
         highlights.dormant.map((item) => MM.cardTile(item)).join('');
+
+      // Cliquer une carte qui dort cherche un commandant capable de la jouer
+      MM.el('#dormantGrid').addEventListener('click', (event) => {
+        const card = event.target.closest('.mtg-card');
+        if (!card || !card.dataset.name) return;
+        location.href = '/cartes/commandant?card='
+          + encodeURIComponent(card.dataset.name);
+      });
+      MM.els('#dormantGrid .mtg-card').forEach((card) => {
+        card.title = `Trouver un commandant pour ${card.dataset.name}`;
+      });
     }
 
     if (highlights.recent.length) {
