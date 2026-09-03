@@ -65,10 +65,10 @@
     </div>
 
     <select class="select" id="sort" style="width:auto">
+      <option value="value">Valeur décroissante</option>
       <option value="name">Ordre alphabétique</option>
       <option value="recent">Ajout le plus récent</option>
       <option value="oldest">Ajout le plus ancien</option>
-      <option value="value">Valeur décroissante</option>
       <option value="quantity">Quantité</option>
       <option value="rarity">Rareté</option>
       <option value="mana">Coût de mana</option>
@@ -146,7 +146,7 @@
 
   const state = {
     search: params.get('search') || '',
-    sort: params.get('sort') || 'name',
+    sort: params.get('sort') || 'value',
     colors: [], types: [], rarities: [], finishes: [],
     sets: params.get('set') ? [params.get('set')] : [],
     in_deck: params.get('in_deck') || '',
@@ -347,7 +347,7 @@
     const url = new URL(location.href);
     url.search = MM.api.qs({
       search: state.search,
-      sort: state.sort === 'name' ? '' : state.sort,
+      sort: state.sort === 'value' ? '' : state.sort,
       in_deck: state.in_deck,
       set: state.sets[0] || '',
     }).slice(1);
