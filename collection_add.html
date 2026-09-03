@@ -44,7 +44,12 @@
     background: var(--surface);
   }
 
-  .basket { position: sticky; top: calc(var(--topbar-h) + var(--sp-4)); }
+  /* Plus de barre du haut sur grand ecran : le panier se cale en haut du
+     contenu, et ne compense sa hauteur qu'en dessous de 860 px. */
+  .basket { position: sticky; top: var(--sp-4); }
+  @media (max-width: 860px) {
+    .basket { top: calc(var(--topbar-h) + var(--sp-4)); }
+  }
   .basket__list { max-height: 52vh; overflow-y: auto; }
 
   .basket-row {

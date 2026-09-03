@@ -258,10 +258,17 @@ table { border-collapse: collapse; width: 100%; }
 
 .topbar__burger { display: none; }
 
-/* Une barre qui ne porte ni retour ni action n'a plus rien a montrer sur grand
-   ecran : la sidebar y dit deja ou l'on se trouve. Elle reste en dessous de
-   860 px, ou son burger est le seul acces au tiroir de navigation. */
-@media (min-width: 861px) { .topbar--bare { display: none; } }
+/* La barre du haut ne porte plus que le burger : sur grand ecran, ou la sidebar
+   est deployee, elle n'a plus rien a montrer et disparait. Elle ne subsiste en
+   dessous de 860 px que parce que son burger y est le seul acces au tiroir. */
+@media (min-width: 861px) { .topbar { display: none; } }
+
+/* Retour et actions d'ecran, en tete du contenu */
+.page-head {
+  display: flex; align-items: center; gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+}
+.page-head:empty { display: none; }
 
 /* ── Barre basse (mobile) ─────────────────────────────────────────────── */
 

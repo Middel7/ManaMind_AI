@@ -482,12 +482,9 @@
       <div class="app">
         <aside class="sidebar" id="mmSidebar"></aside>
         <div class="main">
-          <header class="topbar${back || actions ? '' : ' topbar--bare'}">
+          <header class="topbar">
             <button class="btn btn--ghost btn--icon topbar__burger" id="mmBurger"
                     aria-label="Ouvrir la navigation">${MM.icons.menu}</button>
-            ${back ? `<a class="btn btn--ghost btn--icon" href="${esc(back)}"
-                         aria-label="Retour">${MM.icons.back}</a>` : ''}
-            <div class="topbar__actions" id="mmTopActions">${actions}</div>
           </header>
         </div>
       </div>
@@ -496,6 +493,18 @@
     document.body.insertBefore(shell, page);
     el('.main', shell).appendChild(page);
     page.classList.add('content');
+
+    // Le retour et les actions d'ecran vivaient dans la barre du haut, ce qui
+    // obligeait a la garder sur les pages qui en ont. Places dans le contenu,
+    // ils permettent a la barre de disparaitre partout sur grand ecran.
+    if (back || actions) {
+      page.insertAdjacentHTML('afterbegin', `
+        <div class="page-head">
+          ${back ? `<a class="btn btn--ghost btn--icon" href="${esc(back)}"
+                       aria-label="Retour">${MM.icons.back}</a>` : ''}
+          <div class="topbar__actions" id="mmTopActions">${actions}</div>
+        </div>`);
+    }
 
     const bottombar = node(`<nav class="bottombar" aria-label="Navigation">${renderTabs(nav)}</nav>`);
     document.body.appendChild(bottombar);
