@@ -71,15 +71,15 @@
               ? `<span class="mtg-card__price">${MM.fmt.eur(card.low_price)}</span>` : ''}
           </span>
           <span class="mtg-card__market">
-            ${owned ? `
-              <a class="btn btn--sm" target="_blank" rel="noopener"
-                 href="${MM.esc(MM.market.sell(card.card_name))}"
-                 title="Proposer ${MM.esc(card.card_name)} à la vente sur RELIC-TRADE"
-                >Vendre</a>` : ''}
-            <a class="btn btn--sm${owned ? '' : ' btn--outline'}" target="_blank" rel="noopener"
-               href="${MM.esc(MM.market.buy(card.card_name))}"
-               title="Voir les offres d'achat de ${MM.esc(card.card_name)} sur Cardmarket"
-              >Acheter</a>
+            ${owned
+              ? `<a class="btn btn--sm" target="_blank" rel="noopener"
+                    href="${MM.esc(MM.market.sell(card.card_name))}"
+                    title="Proposer ${MM.esc(card.card_name)} à la vente sur RELIC-TRADE"
+                   >Vendre</a>`
+              : `<a class="btn btn--sm btn--outline" target="_blank" rel="noopener"
+                    href="${MM.esc(MM.market.buy(card.card_name))}"
+                    title="Voir les offres d'achat de ${MM.esc(card.card_name)} sur Cardmarket"
+                   >Acheter</a>`}
           </span>
         </div>
       </article>`;
@@ -122,25 +122,42 @@
       </div>
 
       <div class="stack-2">
-        <h3 class="h3">Vos cartes pour ce commandant</h3>
-        ${owned.length
-          ? `<div class="card-grid card-grid--sm">
-              ${owned.map((card) => tile(card, { owned: true })).join('')}</div>`
-          : '<p class="muted small">Aucune carte de votre collection ne figure parmi les '
-            + '100 cartes les plus jouées avec ce commandant.</p>'}
-      </div>
+        <div class="chips" id="tabs" role="tablist">
+          <button class="chip" data-tab="owned" aria-pressed="true">
+            Vos cartes <span class="chip__count">${MM.fmt.int(owned.length)}</span></button>
+          <button class="chip" data-tab="missing" aria-pressed="false">
+            À acheter en priorité <span class="chip__count">${MM.fmt.int(missing.length)}</span></button>
+        </div>
 
-      <div class="stack-2">
-        <h3 class="h3">Les ${MM.fmt.int(missing.length)} cartes à acheter en priorité</h3>
-        <p class="muted small">Les plus jouées avec ce commandant qui manquent à votre
-          collection, de la plus fréquente à la moins fréquente.</p>
-        ${missing.length
-          ? `<div class="card-grid card-grid--sm">
-              ${missing.map((card) => tile(card, { owned: false })).join('')}</div>`
-          : '<p class="muted small">Vous possédez déjà toutes les cartes les plus jouées '
-            + 'avec ce commandant.</p>'}
+        <div id="panel-owned">
+          ${owned.length
+            ? `<div class="card-grid">
+                ${owned.map((card) => tile(card, { owned: true })).join('')}</div>`
+            : '<p class="muted small">Aucune carte de votre collection ne figure parmi les '
+              + '100 cartes les plus jouées avec ce commandant.</p>'}
+        </div>
+
+        <div id="panel-missing" hidden>
+          <p class="muted small" style="margin-bottom:var(--sp-3)">Les cartes les plus jouées
+            avec ce commandant qui manquent à votre collection, de la plus fréquente à la
+            moins fréquente.</p>
+          ${missing.length
+            ? `<div class="card-grid">
+                ${missing.map((card) => tile(card, { owned: false })).join('')}</div>`
+            : '<p class="muted small">Vous possédez déjà toutes les cartes les plus jouées '
+              + 'avec ce commandant.</p>'}
+        </div>
       </div>
     </section>`;
+
+  MM.el('#tabs').addEventListener('click', (event) => {
+    const chip = event.target.closest('.chip');
+    if (!chip) return;
+    MM.els('#tabs .chip').forEach((other) =>
+      other.setAttribute('aria-pressed', String(other === chip)));
+    MM.el('#panel-owned').hidden = chip.dataset.tab !== 'owned';
+    MM.el('#panel-missing').hidden = chip.dataset.tab !== 'missing';
+  });
 })();
 </script>
 </body>

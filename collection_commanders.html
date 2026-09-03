@@ -37,13 +37,10 @@
     font-size: var(--text-xs); font-weight: 700;
   }
   .cmd-card__body { padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3); }
-  .cmd-thumbs { display: flex; gap: 4px; overflow: hidden; }
-  .cmd-thumbs img { width: 34px; aspect-ratio: var(--card-ratio); object-fit: cover; border-radius: 3px; flex-shrink: 0; }
-
-  /* La carte du commandant, en entier, aux cotes de ses cartes possedees */
-  .cmd-card__split { display: flex; gap: var(--sp-3); align-items: flex-start; }
+  /* La carte du commandant, seule dans la tuile — deux exemplaires pour un duo */
+  .cmd-card__split { display: flex; gap: var(--sp-3); justify-content: center; }
   .cmd-card__portrait {
-    width: 84px; flex-shrink: 0;
+    width: 100%; max-width: 180px;
     border-radius: 4.7% / 3.5%;
     box-shadow: var(--shadow-card);
   }
@@ -124,7 +121,6 @@
     results.innerHTML = `<div class="grid-2">${commanders.map((entry, index) => {
       const art = entry.commander_image
         ? entry.commander_image.replace('/normal/', '/art_crop/') : null;
-      const cards = entry.cards || [];
       return `
         <article class="cmd-card">
           <div class="cmd-card__head">
@@ -142,12 +138,6 @@
               ${(entry.commander_images || []).map((url) => `
                 <img class="cmd-card__portrait" src="${MM.esc(url)}"
                      alt="${MM.esc(entry.commander)}" loading="lazy">`).join('')}
-              <div class="cmd-thumbs grow">
-                ${cards.slice(0, 8).filter((card) => card.image_url).map((card) => `
-                  <img src="${MM.esc(card.image_url)}" alt="${MM.esc(card.card_name)}"
-                       title="${MM.esc(card.card_name)} — ${MM.fmt.eur(card.low_price)}"
-                       loading="lazy">`).join('')}
-              </div>
             </div>
             <div class="cluster-2">
               <a class="btn btn--sm"
