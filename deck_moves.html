@@ -11,8 +11,15 @@
 <link rel="stylesheet" href="/static/css/tokens.css">
 <link rel="stylesheet" href="/static/css/app.css">
 <style>
-  /* Le trajet d'une carte, lisible sous sa vignette */
+  /* Le trajet d'une carte, lisible sous sa vignette. Les noms de commandants
+     s'ecrivent en entier : tronques, ils devenaient indistinguables entre deux
+     versions d'un meme commandant. */
   .move__flow { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
+  .move__flow > span {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.35;
+  }
   .move__gain {
     position: absolute; top: var(--sp-2); left: var(--sp-2);
     padding: 2px var(--sp-2);
@@ -63,7 +70,7 @@
 
   async function load() {
     const top = MM.el('#topCount').value;
-    results.innerHTML = `<div class="card-grid">${MM.cardSkeletons(12)}</div>`;
+    results.innerHTML = `<div class="card-grid card-grid--lg">${MM.cardSkeletons(12)}</div>`;
 
     try {
       const data = await MM.api.get(`/api/deck-moves?top=${top}`);
@@ -86,13 +93,13 @@
       return;
     }
 
-    results.innerHTML = `<div class="card-grid">${moves.map((move, index) => {
+    results.innerHTML = `<div class="card-grid card-grid--lg">${moves.map((move, index) => {
       const info = resolved[move.card_name] || {};
       return `
         <article class="mtg-card" data-index="${index}">
           <div class="mtg-card__frame">
             ${MM.img.frame({ card_name: move.card_name, ...info })}
-            <span class="move__gain">+${move.gain.toFixed(0)} pts</span>
+            <span class="move__gain">+${move.gain.toFixed(0)} %</span>
           </div>
           <div class="mtg-card__foot">
             <span class="mtg-card__name" title="${MM.esc(move.card_name)}">
@@ -104,11 +111,9 @@
                 ? `<span class="mtg-card__price">${MM.fmt.eur(info.unit_price)}</span>` : ''}
             </span>
             <span class="move__flow">
-              <span class="xs dim truncate" title="${MM.esc(move.from_commander)}">
-                Retirer de ${MM.esc(move.from_commander)}
+              <span class="xs dim">Retirer de ${MM.esc(move.from_commander)}
                 <span class="num">${move.from_rate.toFixed(1)} %</span></span>
-              <span class="xs accent truncate" title="${MM.esc(move.to_commander)}">
-                Ajouter à ${MM.esc(move.to_commander)}
+              <span class="xs accent">Ajouter à ${MM.esc(move.to_commander)}
                 <span class="num">${move.to_rate.toFixed(1)} %</span></span>
             </span>
             <button class="btn btn--sm" data-move="${index}"
