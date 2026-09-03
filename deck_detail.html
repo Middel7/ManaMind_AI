@@ -42,8 +42,12 @@
   }
   .card-line__name { flex: 1; min-width: 0; font-size: var(--text-sm); }
   .card-line--missing .card-line__name { color: var(--accent); }
-  .card-line__remove { opacity: 0; transition: opacity var(--dur-fast) var(--ease); }
+  /* Le retrait etait invisible hors survol : on le montre en permanence,
+     en retrait, et il s'affirme au survol de la ligne. */
+  .card-line__remove { opacity: 0.4; transition: opacity var(--dur-fast) var(--ease); }
   .card-line:hover .card-line__remove { opacity: 1; }
+  .card-line__setcmd { opacity: 0; transition: opacity var(--dur-fast) var(--ease); }
+  .card-line:hover .card-line__setcmd { opacity: 1; }
 
   /* Apercu de la carte au survol, comme sur les sites de decklists */
   .peek {
@@ -54,6 +58,9 @@
     display: none;
   }
   @media (hover: none) { .peek { display: none !important; } }
+  /* La courbe de mana tient dans le bandeau, sous les chiffres du deck */
+  .hero__curve { max-width: 420px; margin: var(--sp-4) 0 var(--sp-2); }
+
   /* Badge cliquable : « a acquerir » mene a l'offre Cardmarket de la carte */
   .badge--link { text-decoration: none; cursor: pointer; }
   .badge--link:hover { filter: brightness(1.25); }
@@ -123,6 +130,7 @@
           <span class="hero__stat"><b>${MM.fmt.eur(deck.value_eur, { compact: true })}</b>
             <span class="muted small">de valeur</span></span>
         </div>
+        <div class="hero__curve">${manaCurve(cards)}</div>
         <div class="hero__actions">
           <a class="btn btn--primary" href="/decks/ameliorer?deck=${encodeURIComponent(deckId)}"
              title="Cartes de votre collection qui amélioreraient ce deck">
@@ -188,47 +196,32 @@
     const missing = cards.filter((card) => card.owned < card.quantity);
 
     MM.el('#content').innerHTML = `
-      <div class="grid-2" style="align-items:start;grid-template-columns:minmax(0,2fr) minmax(280px,1fr)">
-        <div class="stack-6">
-          <div class="panel">
-            <div class="panel__head">
-              <h2 class="h3">Liste du deck</h2>
-              <div class="cluster-2">
-                <button class="btn btn--sm" id="addCard">Ajouter une carte</button>
-                <button class="btn btn--sm btn--ghost" id="exportDeck">Exporter</button>
-              </div>
+      <div class="stack-6">
+        <div class="panel">
+          <div class="panel__head">
+            <h2 class="h3">Liste du deck</h2>
+            <div class="cluster-2">
+              <button class="btn btn--sm" id="addCard">Ajouter une carte</button>
+              ${missing.length ? `<button class="btn btn--sm" id="exportMissing">
+                Exporter les ${MM.fmt.int(missing.length)} cartes à acquérir</button>` : ''}
+              <button class="btn btn--sm btn--ghost" id="exportDeck">Exporter le deck</button>
             </div>
-            <div class="panel__body" id="cardList"></div>
           </div>
+          <div class="panel__body" id="cardList"></div>
         </div>
 
-        <div class="stack-6">
-          <div class="panel">
-            <div class="panel__head"><h2 class="h3">Courbe de mana</h2></div>
-            <div class="panel__body">${manaCurve(cards)}</div>
-          </div>
-
-          <div class="panel">
-            <div class="panel__head">
-              <h2 class="h3">Cartes manquantes</h2>
-              <span class="badge ${missing.length ? 'badge--warn' : 'badge--ok'}">
-                ${missing.length}</span>
+        <div class="panel">
+          <div class="panel__head"><h2 class="h3">Réglages</h2></div>
+          <div class="panel__body stack">
+            <div class="field" style="max-width:420px">
+              <label class="label" for="deckName">Nom du deck</label>
+              <input class="input" id="deckName" type="text"
+                     value="${MM.esc(deck.name)}" maxlength="120">
             </div>
-            <div class="panel__body panel__body--flush" id="missingList"></div>
-          </div>
-
-          <div class="panel">
-            <div class="panel__head"><h2 class="h3">Réglages</h2></div>
-            <div class="panel__body stack">
-              <div class="field">
-                <label class="label" for="deckName">Nom du deck</label>
-                <input class="input" id="deckName" type="text"
-                       value="${MM.esc(deck.name)}" maxlength="120">
-              </div>
+            <div class="cluster-2">
               <button class="btn btn--sm" id="renameDeck">Renommer</button>
               ${deck.url ? `<a class="btn btn--sm btn--ghost" href="${MM.esc(deck.url)}"
                 target="_blank" rel="noopener">Voir la source ${MM.icons.external}</a>` : ''}
-              <hr class="divider">
               <button class="btn btn--sm btn--danger" id="deleteDeck">Supprimer ce deck</button>
             </div>
           </div>
@@ -236,7 +229,6 @@
       </div>`;
 
     renderCards();
-    renderMissing(missing);
     bind();
   }
 
@@ -264,6 +256,12 @@
                      >à acquérir</a>` : ''}
               <span class="xs dim num" style="min-width:52px;text-align:right">
                 ${card.unit_price != null ? MM.fmt.eur(card.unit_price) : '—'}</span>
+              ${/Legendary/i.test(card.type_line || '')
+                && card.card_name.toLowerCase() !== (deck.commander || '').toLowerCase()
+                ? `<button class="btn btn--ghost btn--icon btn--sm card-line__setcmd"
+                           data-setcmd="${MM.esc(card.card_name)}"
+                           title="Définir « ${MM.esc(card.card_name)} » comme commandant de ce deck"
+                           aria-label="Définir comme commandant">${MM.icons.crown}</button>` : ''}
               <button class="btn btn--ghost btn--icon btn--sm card-line__remove"
                       data-remove="${MM.esc(card.card_name)}"
                       aria-label="Retirer ${MM.esc(card.card_name)}">${MM.icons.close}</button>
@@ -272,63 +270,6 @@
     }).join('');
   }
 
-  function renderMissing(missing) {
-    if (!missing.length) {
-      MM.el('#missingList').innerHTML =
-        '<p class="small muted" style="padding:var(--sp-4)">Vous possédez toutes les cartes de ce deck.</p>';
-      return;
-    }
-    const total = missing.reduce((sum, card) =>
-      sum + (card.unit_price || 0) * (card.quantity - card.owned), 0);
-
-    MM.el('#missingList').innerHTML = `
-      <div class="rows">
-        ${missing.slice(0, 30).map((card) => `
-          <div class="row" data-name="${MM.esc(card.card_name)}"
-               data-image="${MM.esc(card.image_normal || '')}">
-            ${card.image_small
-              ? `<img class="row__thumb" src="${MM.esc(card.image_small)}" alt="" loading="lazy">`
-              : '<span class="row__thumb"></span>'}
-            <span class="row__main">
-              <span class="row__title truncate">${MM.esc(card.card_name)}</span>
-              <span class="row__sub">${MM.esc(card.set_code || '')}</span>
-            </span>
-            <span class="row__aside">
-              <span class="small num">${card.unit_price != null
-                ? MM.fmt.eur(card.unit_price) : '—'}</span>
-            </span>
-          </div>`).join('')}
-      </div>
-      <div class="panel__body between" style="border-top:1px solid var(--line)">
-        <span class="muted small">Coût pour compléter</span>
-        <span class="strong num">${MM.fmt.eur(total)}</span>
-      </div>`;
-  }
-
-  /* ── Aperçu au survol ─────────────────────────────────────────────────── */
-
-  const peek = MM.el('#peek');
-  document.addEventListener('mouseover', (event) => {
-    const holder = event.target.closest('[data-image]');
-    if (!holder || !holder.dataset.image) { peek.style.display = 'none'; return; }
-    peek.src = holder.dataset.image;
-    peek.style.display = 'block';
-  });
-  document.addEventListener('mousemove', (event) => {
-    if (peek.style.display !== 'block') return;
-    const x = Math.min(event.clientX + 20, window.innerWidth - 260);
-    const y = Math.min(event.clientY - 60, window.innerHeight - 350);
-    peek.style.left = `${x}px`;
-    peek.style.top = `${Math.max(10, y)}px`;
-  });
-  document.addEventListener('mouseout', (event) => {
-    if (!event.relatedTarget || !event.relatedTarget.closest('[data-image]')) {
-      peek.style.display = 'none';
-    }
-  });
-
-  /* ── Actions ──────────────────────────────────────────────────────────── */
-
   async function reload() {
     const fresh = await MM.api.get(`/api/v2/decks/${encodeURIComponent(deckId)}`);
     cards = fresh.cards;
@@ -336,8 +277,33 @@
     render();
   }
 
+  async function setCommander(name, button) {
+    const ok = await MM.confirm({
+      title: 'Définir comme commandant ?',
+      text: `« ${name} » deviendra le commandant de ${deck.name}`
+        + `${deck.commander && deck.commander !== 'Unknown'
+            ? `, à la place de « ${deck.commander} »` : ''}.`,
+      confirmLabel: 'Définir',
+    });
+    if (!ok) return;
+
+    button.disabled = true;
+    try {
+      await MM.api.post(`/api/v2/decks/${encodeURIComponent(deckId)}/commander`,
+        { card_name: name });
+      MM.toast.ok(`${name} est désormais le commandant de ce deck.`);
+      await reload();
+    } catch (err) {
+      MM.toast.error(err.message);
+      button.disabled = false;
+    }
+  }
+
   function bind() {
     MM.el('#cardList').addEventListener('click', async (event) => {
+      const crown = event.target.closest('[data-setcmd]');
+      if (crown) return setCommander(crown.dataset.setcmd, crown);
+
       const button = event.target.closest('[data-remove]');
       if (!button) return;
       const name = button.dataset.remove;
@@ -404,6 +370,35 @@
         setTimeout(() => { location.href = '/decks'; }, 700);
       } catch (err) { MM.toast.error(err.message); }
     });
+
+    const exportMissing = MM.el('#exportMissing');
+    if (exportMissing) {
+      exportMissing.addEventListener('click', () => {
+        const list = cards.filter((card) => card.owned < card.quantity);
+        // Une ligne « quantite nom » : ce que Cardmarket et les want lists
+        // attendent. La quantite est celle qu'il reste a acheter.
+        const content = list
+          .map((card) => `${card.quantity - card.owned} ${card.card_name}`)
+          .join('\n');
+        const total = list.reduce((sum, card) =>
+          sum + (card.unit_price || 0) * (card.quantity - card.owned), 0);
+        const modal = MM.modal({
+          title: `${list.length} cartes à acquérir · ${MM.fmt.eur(total)}`,
+          body: `<textarea class="textarea" readonly style="min-height:320px"
+                   id="missingArea">${MM.esc(content)}</textarea>`,
+          footer: '<button class="btn btn--primary" data-copy>Copier</button>',
+        });
+        MM.el('[data-copy]', modal.root).addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(content);
+            MM.toast.ok('Liste copiée.');
+          } catch {
+            MM.el('#missingArea', modal.root).select();
+            MM.toast('Sélectionnez puis copiez le texte.');
+          }
+        });
+      });
+    }
 
     MM.el('#exportDeck').addEventListener('click', async () => {
       try {

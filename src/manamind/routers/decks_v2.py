@@ -218,6 +218,72 @@ def api_deck_detail(deck_id: str, request: Request) -> Response:
     })
 
 
+@router.post("/api/v2/decks/{deck_id}/commander")
+async def api_set_commander(deck_id: str, request: Request) -> Response:
+    """Designe une carte du deck comme son commandant.
+
+    Utile quand l'import n'a pas su l'identifier : le deck est alors enregistre
+    sous « Unknown ». Les cartes etant rattachees au deck par le nom de son
+    commandant, les deux tables doivent changer ensemble, d'ou la transaction.
+    """
+    user = _user(request)
+    try:
+        body = await request.json()
+    except Exception:
+        return _json_response({"error": "Corps JSON invalide"}, status_code=400)
+
+    card_name = (body.get("card_name") or "").strip()
+    if not card_name:
+        return _json_response({"error": "Nom de carte manquant"}, status_code=400)
+
+    with SessionLocal() as session:
+        current = session.execute(text("""
+            SELECT commander FROM user_moxfield_decks
+            WHERE user_id = :uid AND deck_id = :did
+        """), {"uid": user["id"], "did": deck_id}).scalar()
+        if current is None:
+            return _json_response({"error": "Deck introuvable"}, status_code=404)
+
+        in_deck = session.execute(text("""
+            SELECT 1 FROM user_deck_cards
+            WHERE user_id = :uid
+              AND mm_normalize_name(commander) = mm_normalize_name(:cmd)
+              AND mm_normalize_name(card_name) = mm_normalize_name(:card)
+        """), {"uid": user["id"], "cmd": current, "card": card_name}).scalar()
+        if not in_deck:
+            return _json_response(
+                {"error": "Cette carte ne fait pas partie du deck"}, status_code=400)
+
+        # Deux decks ne peuvent pas partager un commandant : les cartes sont
+        # uniques par (utilisateur, commandant, carte), les listes fusionneraient.
+        taken = session.execute(text("""
+            SELECT name FROM user_moxfield_decks
+            WHERE user_id = :uid AND deck_id <> :did
+              AND mm_normalize_name(commander) = mm_normalize_name(:cmd)
+        """), {"uid": user["id"], "did": deck_id, "card": card_name,
+               "cmd": card_name}).scalar()
+        if taken:
+            return _json_response(
+                {"error": f"« {taken} » a deja ce commandant. "
+                          "Deux decks ne peuvent pas partager le meme commandant."},
+                status_code=409)
+
+        # Les SELECT ci-dessus ont deja ouvert la transaction : les deux UPDATE
+        # y prennent place et sont valides ensemble par le commit final.
+        session.execute(text("""
+            UPDATE user_deck_cards SET commander = :new
+            WHERE user_id = :uid
+              AND mm_normalize_name(commander) = mm_normalize_name(:old)
+        """), {"uid": user["id"], "old": current, "new": card_name})
+        session.execute(text("""
+            UPDATE user_moxfield_decks SET commander = :new, locally_modified = TRUE
+            WHERE user_id = :uid AND deck_id = :did
+        """), {"uid": user["id"], "did": deck_id, "new": card_name})
+        session.commit()
+
+    return _json_response({"ok": True, "commander": card_name})
+
+
 @router.get("/api/v2/decks/{deck_id}/missing")
 def api_deck_missing(
     deck_id: str,
