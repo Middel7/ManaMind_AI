@@ -39,6 +39,14 @@
   .cmd-card__body { padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3); }
   .cmd-thumbs { display: flex; gap: 4px; overflow: hidden; }
   .cmd-thumbs img { width: 34px; aspect-ratio: var(--card-ratio); object-fit: cover; border-radius: 3px; flex-shrink: 0; }
+
+  /* La carte du commandant, en entier, aux cotes de ses cartes possedees */
+  .cmd-card__split { display: flex; gap: var(--sp-3); align-items: flex-start; }
+  .cmd-card__portrait {
+    width: 84px; flex-shrink: 0;
+    border-radius: 4.7% / 3.5%;
+    box-shadow: var(--shadow-card);
+  }
 </style>
 </head>
 <body>
@@ -130,56 +138,25 @@
             </div>
           </div>
           <div class="cmd-card__body">
-            <div class="cmd-thumbs">
-              ${cards.slice(0, 9).filter((card) => card.image_url).map((card) => `
-                <img src="${MM.esc(card.image_url)}" alt="${MM.esc(card.card_name)}"
-                     title="${MM.esc(card.card_name)} — ${MM.fmt.eur(card.low_price)}"
-                     loading="lazy">`).join('')}
+            <div class="cmd-card__split">
+              ${(entry.commander_images || []).map((url) => `
+                <img class="cmd-card__portrait" src="${MM.esc(url)}"
+                     alt="${MM.esc(entry.commander)}" loading="lazy">`).join('')}
+              <div class="cmd-thumbs grow">
+                ${cards.slice(0, 8).filter((card) => card.image_url).map((card) => `
+                  <img src="${MM.esc(card.image_url)}" alt="${MM.esc(card.card_name)}"
+                       title="${MM.esc(card.card_name)} — ${MM.fmt.eur(card.low_price)}"
+                       loading="lazy">`).join('')}
+              </div>
             </div>
             <div class="cluster-2">
-              <button class="btn btn--sm" data-detail="${index}">Voir les cartes</button>
-              <a class="btn btn--sm btn--ghost"
-                 href="/cartes/commandant?card=${encodeURIComponent(entry.commander)}">
-                 Détails du commandant</a>
+              <a class="btn btn--sm"
+                 href="/collection/commandants/${encodeURIComponent(entry.commander)}">
+                 Voir le détail</a>
             </div>
           </div>
         </article>`;
     }).join('')}</div>`;
-
-    results.addEventListener('click', (event) => {
-      const button = event.target.closest('[data-detail]');
-      if (button) showCards(commanders[Number(button.dataset.detail)]);
-    });
-  }
-
-  function showCards(entry) {
-    const cards = entry.cards || [];
-    MM.modal({
-      title: entry.commander,
-      wide: true,
-      body: `
-        <div class="stack">
-          <div class="cluster">
-            <span class="badge">${MM.fmt.int(entry.card_count)} cartes possédées</span>
-            <span class="badge badge--warn">${MM.fmt.eur(entry.total_value)} de valeur</span>
-          </div>
-          <div class="card-grid card-grid--sm">
-            ${cards.map((card) => `
-              <article class="mtg-card mtg-card--flat">
-                <div class="mtg-card__frame">
-                  ${MM.img.frame({ card_name: card.card_name, image_normal: card.image_url })}
-                  ${card.qty > 1 ? `<span class="mtg-card__qty">${card.qty}</span>` : ''}
-                </div>
-                <div class="mtg-card__foot">
-                  <span class="mtg-card__name">${MM.esc(card.card_name)}</span>
-                  <span class="mtg-card__meta">
-                    <span class="mtg-card__price">${MM.fmt.eur(card.low_price)}</span>
-                  </span>
-                </div>
-              </article>`).join('')}
-          </div>
-        </div>`,
-    });
   }
 
   load();

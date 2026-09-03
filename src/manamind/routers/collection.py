@@ -674,17 +674,157 @@ def api_collection_commanders(
             LIMIT :top
         """), {"names": coll_names, "qtys": coll_qtys, "top": top}).fetchall()
 
+    with SessionLocal() as s:
+        images = _commander_images(s, [r.commander for r in rows])
+
     result = []
     for r in rows:
         cards = r.cards if isinstance(r.cards, list) else _j.loads(r.cards)
+        shots = images.get(r.commander) or ([r.commander_image] if r.commander_image else [])
         result.append({
             "commander": r.commander,
-            "commander_image": r.commander_image,
+            "commander_image": shots[0] if shots else None,
+            "commander_images": shots,
             "total_value": round(float(r.total_value or 0), 2),
             "card_count": r.card_count,
             "cards": cards,
         })
     return _json_response({"commanders": result})
+
+
+def _commander_images(session, names: list[str]) -> dict[str, list[str]]:
+    """Illustrations d'un commandant : une par carte, deux pour un duo.
+
+    Les paires de partenaires sont stockees « A & B » et ne correspondent a
+    aucune carte de ce nom : sans decoupage, la moitie des suggestions
+    s'affichait sans illustration.
+    """
+    from sqlalchemy import text
+
+    parts: dict[str, list[str]] = {n: [p.strip() for p in n.split(" & ") if p.strip()]
+                                   for n in names}
+    wanted = sorted({p for pieces in parts.values() for p in pieces})
+    if not wanted:
+        return {}
+
+    rows = session.execute(text("""
+        SELECT n.name AS asked, img.image_url
+        FROM unnest(CAST(:names AS TEXT[])) AS n(name)
+        LEFT JOIN LATERAL (
+            SELECT MIN(p.image_normal) AS image_url
+            FROM scryfall_cards sc
+            JOIN scryfall_card_printings p ON p.card_id = sc.id
+            WHERE sc.normalized_name = mm_normalize_name(n.name)
+              AND p.image_normal IS NOT NULL AND p.lang = 'en'
+        ) img ON TRUE
+    """), {"names": wanted}).fetchall()
+    found = {r.asked: r.image_url for r in rows if r.image_url}
+
+    return {name: [found[p] for p in pieces if p in found]
+            for name, pieces in parts.items()}
+
+
+@router.get("/api/v2/commander-build/{commander}")
+def api_commander_build(commander: str, request: Request) -> Response:
+    """Detail d'un commandant a construire : cartes possedees et a acheter.
+
+    Les cartes possedees reprennent le calcul de /api/collection-commanders ;
+    les manquantes sont les plus jouees du commandant qui n'y figurent pas,
+    classees par taux d'inclusion — ce sont celles qui completent le deck.
+    """
+    from manamind.auth import get_current_user, COOKIE_NAME
+    user = get_current_user(mm_token=request.cookies.get(COOKIE_NAME))
+    from sqlalchemy import text
+    from manamind.db.engine import SessionLocal
+
+    with SessionLocal() as s:
+        collection = {
+            r.name: int(r.quantity)
+            for r in s.execute(text("""
+                SELECT LOWER(TRIM(card_name)) AS name, SUM(quantity) AS quantity
+                FROM user_collection WHERE user_id = :uid
+                GROUP BY 1
+            """), {"uid": user["id"]}).fetchall()
+        }
+
+        # deck_stat_commander fait 3,5 M lignes : la comparaison doit rester
+        # nue pour que ix_deck_stat_commander_commander serve. Le nom vient de
+        # nos propres donnees, donc l'egalite exacte suffit presque toujours ;
+        # le repli couvre une URL saisie a la main.
+        top = s.execute(text("""
+            SELECT card_name, inclusion_rate
+            FROM deck_stat_commander
+            WHERE commander = :cmd
+            ORDER BY inclusion_rate DESC
+            LIMIT 100
+        """), {"cmd": commander}).fetchall()
+        if not top:
+            top = s.execute(text("""
+                SELECT card_name, inclusion_rate
+                FROM deck_stat_commander
+                WHERE LOWER(TRIM(commander)) = LOWER(TRIM(:cmd))
+                ORDER BY inclusion_rate DESC
+                LIMIT 100
+            """), {"cmd": commander}).fetchall()
+
+        names = [r.card_name for r in top]
+        # Prix et illustration en une passe, sur les 100 noms exacts : les deux
+        # tables sont indexees sur ces colonnes, a condition de ne pas les
+        # envelopper dans une fonction.
+        extra = {}
+        if names:
+            extra = {
+                r.card_name: r for r in s.execute(text("""
+                    SELECT n.card_name,
+                           ROUND(pr.low_price::numeric, 2) AS low_price,
+                           img.image_url
+                    FROM unnest(CAST(:names AS TEXT[])) AS n(card_name)
+                    LEFT JOIN LATERAL (
+                        SELECT MIN(pe.low_price) AS low_price
+                        FROM cardmarket_products cp
+                        JOIN cardmarket_price_guide_entries pe ON pe.id_product = cp.id_product
+                        WHERE cp.en_name = n.card_name
+                          AND pe.low_price IS NOT NULL AND pe.low_price > 0
+                    ) pr ON TRUE
+                    LEFT JOIN LATERAL (
+                        SELECT MIN(p.image_normal) AS image_url
+                        FROM scryfall_cards sc
+                        JOIN scryfall_card_printings p ON p.card_id = sc.id
+                        WHERE sc.normalized_name = mm_normalize_name(n.card_name)
+                          AND p.image_normal IS NOT NULL AND p.lang = 'en'
+                    ) img ON TRUE
+                """), {"names": names}).fetchall()
+            }
+
+        cmd_images = _commander_images(s, [commander]).get(commander, [])
+
+    if not top:
+        return _json_response({"error": "Commandant inconnu"}, status_code=404)
+
+    owned, missing = [], []
+    for r in top:
+        info = extra.get(r.card_name)
+        entry = {
+            "card_name": r.card_name,
+            "inclusion_rate": round(float(r.inclusion_rate or 0), 1),
+            "low_price": float(info.low_price or 0) if info and info.low_price else 0.0,
+            "image_url": info.image_url if info else None,
+        }
+        qty = collection.get((r.card_name or "").strip().lower(), 0)
+        if qty:
+            owned.append({**entry, "qty": qty})
+        else:
+            missing.append(entry)
+
+    return _json_response({
+        "commander": commander,
+        "commander_image": cmd_images[0] if cmd_images else None,
+        "commander_images": cmd_images,
+        "owned": owned,
+        "owned_value": round(sum(c["low_price"] for c in owned), 2),
+        "missing": missing[:20],
+        "missing_value": round(sum(c["low_price"] for c in missing[:20]), 2),
+    })
 
 
 @router.get("/api/collection")

@@ -47,6 +47,11 @@ def page_collection_commanders() -> FileResponse:
     return _page("collection_commanders.html")
 
 
+@router.get("/collection/commandants/{commander}")
+def page_collection_commander_build(commander: str) -> FileResponse:
+    return _page("collection_commander_build.html")
+
+
 # ── Decks ─────────────────────────────────────────────────────────────────────
 # Les routes litterales sont declarees avant /decks/{deck_id}, sinon elles
 # seraient capturees comme des identifiants.
