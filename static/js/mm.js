@@ -701,9 +701,6 @@
           </span>
           <span class="mtg-card__meta">
             ${item.set_code ? `<span>${esc(item.set_code)}</span>` : ''}
-            ${item.rarity ? `<span class="badge badge--${esc(item.rarity)}"
-                                   style="padding:0 4px;border:none;background:none">
-                               ${esc(MM.fmt.rarity(item.rarity).slice(0, 1))}</span>` : ''}
             ${qty && item.quantity > 1 ? `<span title="Exemplaires en collection"
               >×${item.quantity}</span>` : ''}
             ${finish ? `<span class="accent">${esc(finish)}</span>` : ''}
