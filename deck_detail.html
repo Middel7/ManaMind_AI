@@ -94,7 +94,6 @@
   const deck = data.deck;
   let cards = data.cards;
   document.title = `ManaMind — ${deck.name}`;
-  MM.el('.topbar__title').textContent = deck.name;
 
   /* ── Hero ─────────────────────────────────────────────────────────────── */
 
@@ -378,7 +377,6 @@
         await MM.api.post(`/api/deck-rename/${encodeURIComponent(deckId)}`, { name });
         deck.name = name;
         document.title = `ManaMind — ${name}`;
-        MM.el('.topbar__title').textContent = name;
         renderHero();
         MM.toast.ok('Deck renommé.');
       } catch (err) { MM.toast.error(err.message); }
