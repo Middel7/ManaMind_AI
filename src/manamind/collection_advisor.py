@@ -988,10 +988,21 @@ def suggest_from_collection_for_user(user_id: int, top_n: int = 40, commander_fi
             norm = _normalize(card_name)
             deck_usage[norm] = deck_usage.get(norm, 0) + 1
 
-    available: dict[str, int] = {
-        norm: qty for norm, qty in collection.items()
+    # Cartes disponibles : celles de la collection non deja engagees dans un deck...
+    available_collection: dict[str, tuple[int, str]] = {
+        norm: (qty, "collection") for norm, qty in collection.items()
         if qty > deck_usage.get(norm, 0)
     }
+    # ...plus les communes et peu communes des extensions ouvertes, qu'on
+    # considere possedees sans avoir a les saisir une par une. Zero exemplaire
+    # connu : elles ne priment jamais sur une carte reellement en collection.
+    opened_set_cards = load_opened_set_cards(user_id)
+    available_opened: dict[str, tuple[int, str]] = {
+        norm: (0, "opened_sets")
+        for norm in opened_set_cards
+        if norm not in available_collection and deck_usage.get(norm, 0) == 0
+    }
+    available: dict[str, tuple[int, str]] = {**available_opened, **available_collection}
 
     best_per_card: dict[str, dict] = {}
     for deck in decks_cfg:
@@ -1004,7 +1015,7 @@ def suggest_from_collection_for_user(user_id: int, top_n: int = 40, commander_fi
             continue
         this_deck = deck_cards_index.get(cmd_norm, set())
         this_cmd_norms = _cmd_norms(commander)
-        for card_norm, qty in available.items():
+        for card_norm, (qty, card_source) in available.items():
             if card_norm in this_cmd_norms or card_norm in this_deck:
                 continue
             if card_norm not in cmd_cards:
@@ -1021,7 +1032,7 @@ def suggest_from_collection_for_user(user_id: int, top_n: int = 40, commander_fi
                     "total_decks":     data["total_decks"],
                     "copies_owned":    qty,
                     "copies_used":     deck_usage.get(card_norm, 0),
-                    "source":          "collection",
+                    "source":          card_source,
                 }
 
     ranked = sorted(best_per_card.values(), key=lambda r: (-r["inclusion_rate"], r["card_name"]))
@@ -1030,7 +1041,7 @@ def suggest_from_collection_for_user(user_id: int, top_n: int = 40, commander_fi
         "stats": {
             "collection_size":    len(collection),
             "available_cards":    len(available),
-            "opened_sets_cards":  0,
+            "opened_sets_cards":  len(available_opened),
             "commanders_checked": len(decks_cfg),
         },
     }

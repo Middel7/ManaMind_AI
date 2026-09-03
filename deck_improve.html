@@ -115,6 +115,12 @@
           <span class="suggestion__rate">${Math.round(card.inclusion_rate)} %</span>
           ${card.copies_owned > 1
             ? `<span class="mtg-card__qty">${card.copies_owned}</span>` : ''}
+          ${card.source === 'opened_sets' ? `
+            <div class="mtg-card__badges">
+              <span class="badge badge--info"
+                    title="Commune ou peu commune d'une extension que vous avez cochée comme ouverte : elle n'est pas saisie dans votre collection.">
+                extension ouverte</span>
+            </div>` : ''}
         </div>
         <div class="mtg-card__foot">
           <span class="mtg-card__name" title="${MM.esc(card.card_name)}">
