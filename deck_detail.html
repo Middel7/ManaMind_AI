@@ -76,7 +76,7 @@
 (async () => {
   const deckId = decodeURIComponent(location.pathname.split('/').filter(Boolean).pop());
 
-  const user = await MM.boot({ title: 'Deck', nav: 'decks', back: '/decks' });
+  const user = await MM.boot({ title: 'Deck', nav: 'decks' });
   if (!user) return;
 
   let data;
@@ -121,13 +121,15 @@
             <span class="muted small">de valeur</span></span>
         </div>
         <div class="hero__actions">
-          <a class="btn btn--primary" href="/decks/ameliorer?deck=${encodeURIComponent(deckId)}">
+          <a class="btn btn--primary" href="/decks/ameliorer?deck=${encodeURIComponent(deckId)}"
+             title="Cartes de votre collection qui amélioreraient ce deck">
             ${MM.icons.sparkle} Améliorer avec ma collection</a>
-          <a class="btn" href="/decks/alleger?deck=${encodeURIComponent(deckId)}">Alléger</a>
+          <a class="btn" href="/decks/analyse?deck=${encodeURIComponent(deckId)}"
+             title="Analyser le deck : ajouts et retraits suggérés, sans se limiter à
+                    votre collection">
+            ${MM.icons.chart} Améliorer avec l'analyse</a>
           <a class="btn" href="/decks/commandant?deck=${encodeURIComponent(deckId)}">
             Changer de commandant</a>
-          <a class="btn btn--ghost" href="/decks/analyse?deck=${encodeURIComponent(deckId)}">
-            Analyser</a>
         </div>
       </div>`;
   }
