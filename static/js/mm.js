@@ -742,7 +742,14 @@
    * @param {(deck:object)=>void} onChange
    * @returns {Promise<object[]>} les decks charges
    */
-  MM.deckPicker = async function (host, onChange, { label = 'Deck à analyser' } = {}) {
+  /**
+   * Selecteur de deck.
+   * @param {object} options { label, autoSelect } — autoSelect:false laisse le
+   *   champ vide et n'analyse rien tant que l'utilisateur n'a pas choisi. Un
+   *   deck passe dans l'URL reste honore dans les deux cas.
+   */
+  MM.deckPicker = async function (host, onChange,
+                                  { label = 'Deck à analyser', autoSelect = true } = {}) {
     host.innerHTML = '<div class="skeleton skeleton--text" style="width:260px;height:38px"></div>';
     let decks = [];
     try {
@@ -764,12 +771,14 @@
     }
 
     const requested = new URLSearchParams(location.search).get('deck');
-    const current = decks.find((deck) => deck.deck_id === requested) || decks[0];
+    const current = decks.find((deck) => deck.deck_id === requested)
+      || (autoSelect ? decks[0] : null);
 
     host.innerHTML = `
       <div class="field" style="max-width:420px">
         <label class="label" for="mmDeckPick">${esc(label)}</label>
         <select class="select" id="mmDeckPick">
+          ${current ? '' : '<option value="" selected>Choisissez un deck…</option>'}
           ${decks.map((deck) => `
             <option value="${esc(deck.deck_id)}" ${deck === current ? 'selected' : ''}>
               ${esc(deck.name)}
@@ -779,13 +788,14 @@
 
     el('#mmDeckPick', host).addEventListener('change', (event) => {
       const deck = decks.find((entry) => entry.deck_id === event.target.value);
+      if (!deck) return;
       const url = new URL(location.href);
       url.searchParams.set('deck', deck.deck_id);
       history.replaceState(null, '', url);
       onChange(deck);
     });
 
-    onChange(current);
+    if (current) onChange(current);
     return decks;
   };
 

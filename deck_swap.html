@@ -93,10 +93,19 @@
   const results = MM.el('#results');
   const state = { deck: null, sort: 'value', maxColors: 5, data: null };
 
+  // Rien n'est analyse tant qu'un deck n'a pas ete choisi : l'analyse est
+  // couteuse et n'a aucun sens sur un deck pris au hasard.
+  results.innerHTML = MM.empty({
+    icon: 'swap',
+    title: 'Choisissez un deck',
+    text: 'Sélectionnez le deck dont vous voulez changer le commandant : nous chercherons '
+      + 'ceux qui conserveraient le plus de valeur parmi ses cartes.',
+  });
+
   await MM.deckPicker(MM.el('#deckPicker'), (deck) => {
     state.deck = deck;
     load();
-  }, { label: 'Deck de départ' });
+  }, { label: 'Deck de départ', autoSelect: false });
 
   MM.el('#sortMode').addEventListener('change', (event) => {
     state.sort = event.target.value; load();
