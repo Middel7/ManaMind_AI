@@ -86,7 +86,8 @@
 <script src="/static/js/mm.js"></script>
 <script>
 (async () => {
-  const user = await MM.boot({ title: 'Changer de commandant', nav: 'swap' });
+  const user = await MM.boot({
+    title: 'Trouver un nouveau commandant pour mon deck', nav: 'swap' });
   if (!user) return;
 
   const results = MM.el('#results');
