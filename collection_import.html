@@ -41,6 +41,33 @@
 
   .formats { display: flex; flex-wrap: wrap; gap: var(--sp-2); justify-content: center; }
 
+  .dest-choice { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+                 gap: var(--sp-3); }
+  .dest-card {
+    display: flex; align-items: flex-start; gap: var(--sp-3);
+    padding: var(--sp-4);
+    border-radius: var(--r-lg);
+    border: 1px solid var(--line);
+    background: var(--surface);
+    text-align: left;
+    transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+  }
+  .dest-card:hover { border-color: var(--line-accent); background: var(--surface-2); }
+  .dest-card[aria-pressed="true"] {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  }
+  .dest-card__mark {
+    flex-shrink: 0;
+    width: 34px; height: 34px;
+    display: grid; place-items: center;
+    border-radius: var(--r-full);
+    border: 1px solid var(--line);
+    color: var(--text-2);
+  }
+  .dest-card__mark svg { width: 17px; height: 17px; }
+  .dest-card[aria-pressed="true"] .dest-card__mark { border-color: var(--accent); color: var(--accent); }
+
   .steps-bar { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
   .steps-bar__item {
     display: flex; align-items: center; gap: var(--sp-2);
@@ -81,6 +108,28 @@
 
   <!-- Étape 1 — dépôt -->
   <section class="stack-6" id="stepDrop">
+    <div class="stack-2">
+      <h2 class="h3">Que contient votre liste ?</h2>
+      <div class="dest-choice" id="destChoice">
+        <button class="dest-card" data-dest="collection" aria-pressed="true">
+          <span class="dest-card__mark" data-icon="collection"></span>
+          <span class="grow" style="min-width:0">
+            <span class="strong" style="display:block">Des cartes à ajouter à ma collection</span>
+            <span class="dim xs">Elles rejoignent votre inventaire, avec leur édition et
+              leur finition.</span>
+          </span>
+        </button>
+        <button class="dest-card" data-dest="deck" aria-pressed="false">
+          <span class="dest-card__mark" data-icon="decks"></span>
+          <span class="grow" style="min-width:0">
+            <span class="strong" style="display:block">Un deck</span>
+            <span class="dim xs">Crée une liste séparée, analysable et comparable à votre
+              collection.</span>
+          </span>
+        </button>
+      </div>
+    </div>
+
     <div class="dropzone" id="dropzone" role="button" tabindex="0"
          aria-label="Déposer un fichier de cartes">
       <span class="dropzone__mark">
@@ -121,18 +170,6 @@
         </p>
       </div>
     </div>
-
-    <div class="panel">
-      <div class="panel__body cluster">
-        <span class="dim" id="quickIcon"></span>
-        <div class="grow">
-          <p class="strong">Vous préférez saisir vos cartes une par une ?</p>
-          <p class="small muted">L'ajout rapide propose la recherche illustrée et le choix
-            de l'édition.</p>
-        </div>
-        <a class="btn" href="/collection/ajout">Ajout rapide</a>
-      </div>
-    </div>
   </section>
 
   <!-- Étape 2 — vérification -->
@@ -147,9 +184,32 @@
   });
   if (!user) return;
 
-  MM.el('#quickIcon').innerHTML = MM.icons.booster;
+  // Destination choisie des l'etape 1 : elle conditionne l'etape 2, qui se
+  // contente ensuite de la rappeler et d'en decliner les reglages.
+  const DEST = {
+    collection: {
+      label: 'Des cartes à ajouter à ma collection',
+      note: 'Elles rejoignent votre inventaire, avec leur édition et leur finition.',
+    },
+    deck: {
+      label: 'Un deck',
+      note: 'Crée une liste séparée, analysable et comparable à votre collection.',
+    },
+  };
 
-  const state = { deck: null, detection: null };
+  const state = { deck: null, detection: null, destination: 'collection' };
+
+  MM.els('#destChoice .dest-card__mark').forEach((mark) => {
+    mark.innerHTML = MM.icons[mark.dataset.icon] || '';
+  });
+
+  MM.el('#destChoice').addEventListener('click', (event) => {
+    const card = event.target.closest('.dest-card');
+    if (!card) return;
+    state.destination = card.dataset.dest;
+    MM.els('#destChoice .dest-card').forEach((other) =>
+      other.setAttribute('aria-pressed', String(other === card)));
+  });
 
   function setStep(current) {
     MM.els('.steps-bar__item').forEach((item) => {
@@ -304,32 +364,33 @@
 
       <div class="panel">
         <div class="panel__head">
-          <h2 class="h3">Où importer ces cartes ?</h2>
+          <h2 class="h3">Destination</h2>
+          <button class="btn btn--sm" id="switchDest"
+                  title="Traiter cette liste comme ${MM.esc(
+                    state.destination === 'deck' ? DEST.collection.label : DEST.deck.label)}">
+            Changer</button>
         </div>
         <div class="panel__body stack">
-          <label class="switch">
-            <input type="checkbox" id="destCollection" checked>
-            <span class="switch__track"></span>
-            <span>
-              <span class="strong">Dans ma collection</span>
-              <span class="dim xs" style="display:block">Les cartes rejoignent votre
-                inventaire, avec leur édition et leur finition.</span>
-            </span>
-          </label>
-          <label class="switch">
-            <input type="checkbox" id="destDeck">
-            <span class="switch__track"></span>
-            <span>
-              <span class="strong">Comme un deck</span>
-              <span class="dim xs" style="display:block">Crée une liste séparée, analysable
-                et comparable à votre collection.</span>
-            </span>
-          </label>
-          <div class="field" id="deckNameField" hidden>
-            <label class="label" for="deckName">Nom du deck</label>
-            <input class="input" id="deckName" type="text"
-                   value="${MM.esc(deck.deck_name || '')}" placeholder="Mon nouveau deck">
+          <div>
+            <span class="strong">${MM.esc(DEST[state.destination].label)}</span>
+            <span class="dim xs" style="display:block">${MM.esc(DEST[state.destination].note)}</span>
           </div>
+
+          ${state.destination === 'deck' ? `
+            <div class="field">
+              <label class="label" for="deckName">Nom du deck</label>
+              <input class="input" id="deckName" type="text"
+                     value="${MM.esc(deck.deck_name || '')}" placeholder="Mon nouveau deck">
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="alsoCollection">
+              <span class="switch__track"></span>
+              <span>
+                <span class="strong">Ajouter aussi ces cartes à ma collection</span>
+                <span class="dim xs" style="display:block">À cocher si vous possédez
+                  physiquement les cartes de ce deck.</span>
+              </span>
+            </label>` : ''}
 
           ${zones.length > 1 ? `
             <div class="stack-2">
@@ -382,8 +443,9 @@
 
     renderRows(false);
 
-    MM.el('#destDeck').addEventListener('change', (event) => {
-      MM.el('#deckNameField').hidden = !event.target.checked;
+    MM.el('#switchDest').addEventListener('click', () => {
+      state.destination = state.destination === 'deck' ? 'collection' : 'deck';
+      renderReview();
     });
 
     MM.el('#filterProblems').addEventListener('click', (event) => {
@@ -431,11 +493,10 @@
   /* ── Étape 3 — confirmation ───────────────────────────────────────────── */
 
   async function confirmImport(event) {
-    const destinations = [];
-    if (MM.el('#destCollection').checked) destinations.push('collection');
-    if (MM.el('#destDeck').checked) destinations.push('deck');
-    if (!destinations.length) {
-      return MM.toast.error('Choisissez au moins une destination.');
+    const destinations = [state.destination];
+    // Un deck que l'on possede physiquement alimente aussi la collection.
+    if (state.destination === 'deck' && MM.el('#alsoCollection').checked) {
+      destinations.push('collection');
     }
 
     const zoneChips = MM.els('#zoneChips .chip[aria-pressed="true"]');
