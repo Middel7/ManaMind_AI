@@ -57,6 +57,18 @@ _PRICE_SQL = """
 """
 
 
+# Noms possedes, normalises et agreges une seule fois. Correlee carte par carte,
+# la meme condition relancait un parcours complet de user_collection pour chaque
+# ligne de deck (~2 s sur 20 decks) : le CTE la ramene a un unique parcours.
+_OWNED_SQL = """
+    SELECT split_part(mm_normalize_name(uc.card_name), ' // ', 1) AS key,
+           SUM(uc.quantity) AS qty
+    FROM user_collection uc
+    WHERE uc.user_id = :uid
+    GROUP BY 1
+"""
+
+
 def _user(request: Request) -> dict:
     return get_current_user(mm_token=request.cookies.get(COOKIE_NAME))
 
@@ -68,6 +80,19 @@ def api_decks(request: Request) -> Response:
 
     with SessionLocal() as session:
         rows = session.execute(text(f"""
+            WITH owned_idx AS ({_OWNED_SQL}),
+            -- Un seul parcours de user_deck_cards, groupe par commandant :
+            -- le LATERAL correle en refaisait un par deck.
+            agg AS (
+                SELECT mm_normalize_name(dc.commander) AS commander_key,
+                       SUM(dc.quantity) AS cards,
+                       SUM(dc.quantity) FILTER (WHERE o.key IS NOT NULL) AS owned
+                FROM user_deck_cards dc
+                LEFT JOIN owned_idx o
+                  ON o.key = split_part(mm_normalize_name(dc.card_name), ' // ', 1)
+                WHERE dc.user_id = :uid
+                GROUP BY 1
+            )
             SELECT d.deck_id, d.name, d.commander, d.moxfield_url,
                    COALESCE(d.fetched_at, d.created_at) AS updated_at,
                    d.locally_modified,
@@ -75,20 +100,7 @@ def api_decks(request: Request) -> Response:
                    COALESCE(agg.owned, 0)  AS owned_count,
                    art.scryfall_id, art.image_small, art.image_normal
             FROM user_moxfield_decks d
-            LEFT JOIN LATERAL (
-                SELECT SUM(dc.quantity) AS cards,
-                       SUM(dc.quantity) FILTER (
-                           WHERE EXISTS (
-                               SELECT 1 FROM user_collection uc
-                               WHERE uc.user_id = d.user_id
-                                 AND split_part(mm_normalize_name(uc.card_name), ' // ', 1)
-                    = split_part(mm_normalize_name(dc.card_name), ' // ', 1)
-                           )
-                       ) AS owned
-                FROM user_deck_cards dc
-                WHERE dc.user_id = d.user_id
-                  AND mm_normalize_name(dc.commander) = mm_normalize_name(d.commander)
-            ) agg ON TRUE
+            LEFT JOIN agg ON agg.commander_key = mm_normalize_name(d.commander)
             {_ART_SQL.format(name_expr="split_part(d.commander, '//', 1)")}
             WHERE d.user_id = :uid
             ORDER BY COALESCE(d.fetched_at, d.created_at) DESC NULLS LAST
@@ -132,6 +144,7 @@ def api_deck_detail(deck_id: str, request: Request) -> Response:
             return _json_response({"error": "Deck introuvable"}, status_code=404)
 
         rows = session.execute(text(f"""
+            WITH owned_idx AS ({_OWNED_SQL})
             SELECT dc.card_name, dc.quantity,
                    sc.type_line, sc.mana_cost, sc.mana_value,
                    sc.color_identity, sc.oracle_text,
@@ -151,13 +164,8 @@ def api_deck_detail(deck_id: str, request: Request) -> Response:
             ) sc ON TRUE
             {_ART_SQL.format(name_expr="dc.card_name")}
             {_PRICE_SQL.format(name_expr="dc.card_name")}
-            LEFT JOIN LATERAL (
-                SELECT SUM(uc.quantity) AS qty
-                FROM user_collection uc
-                WHERE uc.user_id = :uid
-                  AND split_part(mm_normalize_name(uc.card_name), ' // ', 1)
-                    = split_part(mm_normalize_name(dc.card_name), ' // ', 1)
-            ) owned ON TRUE
+            LEFT JOIN owned_idx owned
+              ON owned.key = split_part(mm_normalize_name(dc.card_name), ' // ', 1)
             WHERE dc.user_id = :uid
               AND mm_normalize_name(dc.commander) = mm_normalize_name(:commander)
             ORDER BY dc.card_name
