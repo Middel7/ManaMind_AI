@@ -771,8 +771,16 @@ def _commander_images(session, names: list[str]) -> dict[str, list[str]]:
 
 
 @router.get("/api/v2/commander-build/{commander}")
-def api_commander_build(commander: str, request: Request) -> Response:
+def api_commander_build(
+    commander: str,
+    request: Request,
+    staple_threshold: float = Query(default=40.0, ge=0.0, le=100.0),
+) -> Response:
     """Detail d'un commandant a construire : cartes possedees et a acheter.
+
+    Ecarte les memes cartes que la liste dont cette page est le detail :
+    terrains de base et cartes jouees dans plus de staple_threshold % des
+    decks, qui ne distinguent aucun commandant.
 
     Les cartes possedees reprennent le calcul de /api/collection-commanders ;
     les manquantes sont les plus jouees du commandant qui n'y figurent pas,
@@ -798,20 +806,40 @@ def api_commander_build(commander: str, request: Request) -> Response:
         # nos propres donnees, donc l'egalite exacte suffit presque toujours ;
         # le repli couvre une URL saisie a la main.
         top = s.execute(text("""
-            SELECT card_name, inclusion_rate
-            FROM deck_stat_commander
-            WHERE commander = :cmd
-            ORDER BY inclusion_rate DESC, card_name
+            SELECT dsc.card_name, dsc.inclusion_rate
+            FROM deck_stat_commander dsc
+            WHERE dsc.commander = :cmd
+              AND COALESCE((
+                    SELECT g.global_frequency FROM deck_stat_global g
+                    WHERE LOWER(BTRIM(g.card_name)) = LOWER(BTRIM(dsc.card_name))
+                    LIMIT 1
+                  ), 0) <= :threshold
+              AND NOT EXISTS (
+                    SELECT 1 FROM scryfall_cards sc
+                    WHERE sc.normalized_name = mm_normalize_name(dsc.card_name)
+                      AND sc.type_line ILIKE 'Basic Land%'
+                  )
+            ORDER BY dsc.inclusion_rate DESC, dsc.card_name
             LIMIT 100
-        """), {"cmd": commander}).fetchall()
+        """), {"cmd": commander, "threshold": staple_threshold}).fetchall()
         if not top:
             top = s.execute(text("""
-                SELECT card_name, inclusion_rate
-                FROM deck_stat_commander
-                WHERE LOWER(TRIM(commander)) = LOWER(TRIM(:cmd))
-                ORDER BY inclusion_rate DESC, card_name
+                SELECT dsc.card_name, dsc.inclusion_rate
+                FROM deck_stat_commander dsc
+                WHERE LOWER(TRIM(dsc.commander)) = LOWER(TRIM(:cmd))
+              AND COALESCE((
+                    SELECT g.global_frequency FROM deck_stat_global g
+                    WHERE LOWER(BTRIM(g.card_name)) = LOWER(BTRIM(dsc.card_name))
+                    LIMIT 1
+                  ), 0) <= :threshold
+              AND NOT EXISTS (
+                    SELECT 1 FROM scryfall_cards sc
+                    WHERE sc.normalized_name = mm_normalize_name(dsc.card_name)
+                      AND sc.type_line ILIKE 'Basic Land%'
+                  )
+                ORDER BY dsc.inclusion_rate DESC, dsc.card_name
                 LIMIT 100
-            """), {"cmd": commander}).fetchall()
+            """), {"cmd": commander, "threshold": staple_threshold}).fetchall()
 
         names = [r.card_name for r in top]
         # Prix et illustration en une passe, sur les 100 noms exacts : les deux
