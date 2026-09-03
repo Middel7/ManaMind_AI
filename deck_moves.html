@@ -4,48 +4,30 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<title>ManaMind — Cartes mal placées</title>
+<title>ManaMind — Cartes à changer de deck</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/css/tokens.css">
 <link rel="stylesheet" href="/static/css/app.css">
 <style>
-  .move {
-    display: grid;
-    grid-template-columns: 64px minmax(0, 1fr) auto;
-    gap: var(--sp-4);
-    align-items: center;
-    padding: var(--sp-3) var(--sp-4);
-    border-radius: var(--r-lg);
-    border: 1px solid var(--line);
-    background: var(--bg-raised);
-    transition: border-color var(--dur) var(--ease);
-  }
-  .move:hover { border-color: var(--line-accent); }
-  .move__thumb { width: 64px; aspect-ratio: var(--card-ratio); object-fit: cover;
-    border-radius: 4px; background: var(--surface-2); }
-
-  .move__flow { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
-  .move__side { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-  .move__arrow { color: var(--accent); flex-shrink: 0; }
+  /* Le trajet d'une carte, lisible sous sa vignette */
+  .move__flow { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
   .move__gain {
-    text-align: right; flex-shrink: 0;
-    font-variant-numeric: tabular-nums;
+    position: absolute; top: var(--sp-2); left: var(--sp-2);
+    padding: 2px var(--sp-2);
+    border-radius: var(--r-full);
+    background: var(--accent); color: var(--text-inverse);
+    font-size: var(--text-xs); font-weight: 700;
   }
-
-  @media (max-width: 720px) {
-    .move { grid-template-columns: 48px minmax(0, 1fr); }
-    .move__thumb { width: 48px; }
-    .move__gain { grid-column: 1 / -1; text-align: left; }
-  }
+  .move--done { opacity: 0.45; }
 </style>
 </head>
 <body>
 
 <div id="page">
   <div class="stack-2">
-    <h2 class="h2">Cartes mal placées</h2>
+    <h2 class="h2">Cartes à changer de deck</h2>
     <p class="muted small">
       Ces cartes sont dans un de vos decks alors qu'elles seraient statistiquement
       bien plus à leur place dans un autre. Comparaison fondée sur les taux
@@ -64,14 +46,13 @@
     </div>
   </div>
 
-  <div id="summary"></div>
   <div id="results"></div>
 </div>
 
 <script src="/static/js/mm.js"></script>
 <script>
 (async () => {
-  const user = await MM.boot({ title: 'Cartes mal placées', nav: 'moves' });
+  const user = await MM.boot({ title: 'Cartes à changer de deck', nav: 'moves' });
   if (!user) return;
 
   const results = MM.el('#results');
@@ -82,38 +63,20 @@
 
   async function load() {
     const top = MM.el('#topCount').value;
-    results.innerHTML = `<div class="stack">${Array.from({ length: 8 }, () =>
-      '<div class="skeleton" style="height:92px"></div>').join('')}</div>`;
+    results.innerHTML = `<div class="card-grid">${MM.cardSkeletons(12)}</div>`;
 
     try {
       const data = await MM.api.get(`/api/deck-moves?top=${top}`);
       moves = data.results || [];
       resolved = await MM.resolveCards(moves.map((move) => move.card_name));
-      render(data);
+      render();
     } catch (err) {
       results.innerHTML = MM.empty({
         icon: 'warning', title: 'Analyse impossible', text: err.message });
     }
   }
 
-  function render(data) {
-    const stats = data.stats || {};
-    MM.el('#summary').innerHTML = `
-      <div class="stats">
-        <div class="stat">
-          <span class="stat__value">${MM.fmt.int(moves.length)}</span>
-          <span class="stat__label">Déplacements suggérés</span>
-        </div>
-        <div class="stat">
-          <span class="stat__value">${MM.fmt.int(stats.decks_analyzed || 0)}</span>
-          <span class="stat__label">Decks analysés</span>
-        </div>
-        <div class="stat">
-          <span class="stat__value">${MM.fmt.int(stats.cards_scanned || 0)}</span>
-          <span class="stat__label">Cartes examinées</span>
-        </div>
-      </div>`;
-
+  function render() {
     if (!moves.length) {
       results.innerHTML = MM.empty({
         icon: 'check',
@@ -123,36 +86,31 @@
       return;
     }
 
-    results.innerHTML = `<div class="stack-2">${moves.map((move, index) => {
+    results.innerHTML = `<div class="card-grid">${moves.map((move, index) => {
       const info = resolved[move.card_name] || {};
       return `
-        <article class="move" data-index="${index}">
-          ${info.image_small
-            ? `<img class="move__thumb" src="${MM.esc(info.image_small)}"
-                 alt="${MM.esc(move.card_name)}" loading="lazy">`
-            : '<span class="move__thumb"></span>'}
-          <div style="min-width:0">
-            <p class="strong truncate">${MM.esc(move.card_name)}
-              ${info.unit_price != null
-                ? `<span class="xs dim num">· ${MM.fmt.eur(info.unit_price)}</span>` : ''}</p>
-            <div class="move__flow">
-              <span class="move__side">
-                <span class="xs dim">Actuellement dans</span>
-                <span class="small truncate">${MM.esc(move.from_commander)}
-                  <span class="dim num">${move.from_rate.toFixed(1)} %</span></span>
-              </span>
-              <span class="move__arrow">→</span>
-              <span class="move__side">
-                <span class="xs dim">Serait mieux dans</span>
-                <span class="small truncate accent">${MM.esc(move.to_commander)}
-                  <span class="num">${move.to_rate.toFixed(1)} %</span></span>
-              </span>
-            </div>
+        <article class="mtg-card" data-index="${index}">
+          <div class="mtg-card__frame">
+            ${MM.img.frame({ card_name: move.card_name, ...info })}
+            <span class="move__gain">+${move.gain.toFixed(0)} pts</span>
           </div>
-          <div class="move__gain">
-            <p class="h3 accent">+${move.gain.toFixed(0)} pts</p>
-            <p class="xs dim">${MM.fmt.int(move.decks_with_card)} /
-              ${MM.fmt.int(move.total_decks)} decks</p>
+          <div class="mtg-card__foot">
+            <span class="mtg-card__name" title="${MM.esc(move.card_name)}">
+              ${MM.esc(move.card_name)}</span>
+            <span class="mtg-card__meta">
+              <span class="dim">${MM.fmt.int(move.decks_with_card)} /
+                ${MM.fmt.int(move.total_decks)} decks</span>
+              ${info.unit_price != null
+                ? `<span class="mtg-card__price">${MM.fmt.eur(info.unit_price)}</span>` : ''}
+            </span>
+            <span class="move__flow">
+              <span class="xs dim truncate" title="${MM.esc(move.from_commander)}">
+                Retirer de ${MM.esc(move.from_commander)}
+                <span class="num">${move.from_rate.toFixed(1)} %</span></span>
+              <span class="xs accent truncate" title="${MM.esc(move.to_commander)}">
+                Ajouter à ${MM.esc(move.to_commander)}
+                <span class="num">${move.to_rate.toFixed(1)} %</span></span>
+            </span>
             <button class="btn btn--sm" data-move="${index}"
                     style="margin-top:6px">Déplacer</button>
           </div>
@@ -182,7 +140,7 @@
       await MM.api.post('/api/deck-card/add', {
         commander: move.to_commander, card_name: move.card_name,
       });
-      button.closest('.move').style.opacity = '0.45';
+      button.closest('.mtg-card').classList.add('move--done');
       button.textContent = 'Déplacée ✓';
       MM.toast.ok(`${move.card_name} déplacée vers ${move.to_commander}.`);
     } catch (err) {

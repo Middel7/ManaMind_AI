@@ -396,7 +396,7 @@
         { key: 'improve', label: 'Améliorer un deck', href: '/decks/ameliorer', icon: 'sparkle' },
         { key: 'swap', label: 'Trouver un nouveau commandant pour mon deck',
           href: '/decks/commandant', icon: 'swap' },
-        { key: 'moves', label: 'Cartes mal placées', href: '/decks/deplacements', icon: 'move' },
+        { key: 'moves', label: 'Cartes à changer de deck', href: '/decks/deplacements', icon: 'move' },
         { key: 'analyze', label: 'Analyser un deck', href: '/decks/analyse', icon: 'chart' },
         { key: 'card', label: 'Commandant pour une carte', href: '/cartes/commandant', icon: 'search' },
       ],
