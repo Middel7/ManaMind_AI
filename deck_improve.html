@@ -22,6 +22,11 @@
   }
   .suggestion.is-added .mtg-card__frame { border-color: var(--ok); opacity: 0.6; }
 </style>
+<style>
+  /* Encart compact, aligne sur le selecteur de deck plutot qu'en grille */
+  .stat--inline { padding: var(--sp-2) var(--sp-4); white-space: nowrap; }
+  .stat--inline .stat__value { font-size: var(--text-xl); }
+</style>
 </head>
 <body>
 
@@ -36,6 +41,7 @@
 
   <div class="toolbar">
     <div id="deckPicker" class="grow"></div>
+    <div id="avgRate"></div>
   </div>
 
   <div id="results"></div>
@@ -66,14 +72,15 @@
         + MM.api.qs({ top: 60, commander: currentDeck.commander }));
       suggestions = data.results || [];
       resolved = await MM.resolveCards(suggestions.map((card) => card.card_name));
-      render(data);
+      render();
     } catch (err) {
       results.innerHTML = MM.empty({
         icon: 'warning', title: 'Analyse impossible', text: err.message });
     }
   }
 
-  function render(data) {
+  function render() {
+    MM.el('#avgRate').innerHTML = '';
     if (!suggestions.length) {
       results.innerHTML = MM.empty({
         icon: 'sparkle',
@@ -85,27 +92,18 @@
       return;
     }
 
-    const stats = data.stats || {};
     results.innerHTML = `
-      <div class="stats" style="margin-bottom:var(--sp-6)">
-        <div class="stat">
-          <span class="stat__value">${MM.fmt.int(suggestions.length)}</span>
-          <span class="stat__label">Cartes proposées</span>
-          <span class="stat__note">issues de votre collection</span>
-        </div>
-        <div class="stat">
-          <span class="stat__value">${MM.fmt.int(stats.available_cards || 0)}</span>
-          <span class="stat__label">Cartes disponibles</span>
-          <span class="stat__note">non utilisées dans vos decks</span>
-        </div>
-        <div class="stat">
-          <span class="stat__value">${Math.round(suggestions[0].inclusion_rate)} %</span>
-          <span class="stat__label">Meilleur taux</span>
-          <span class="stat__note">${MM.esc(suggestions[0].card_name)}</span>
-        </div>
-      </div>
-
       <div class="card-grid" id="grid"></div>`;
+
+    // Les suggestions arrivent triees par taux decroissant : les vingt
+    // premieres sont donc les plus pertinentes du lot.
+    const head = suggestions.slice(0, 20);
+    const avg = head.reduce((sum, card) => sum + card.inclusion_rate, 0) / head.length;
+    MM.el('#avgRate').innerHTML = `
+      <div class="stat stat--inline">
+        <span class="stat__value">${Math.round(avg)} %</span>
+        <span class="stat__label">Taux moyen des ${head.length} premières</span>
+      </div>`;
 
     MM.el('#grid').innerHTML = suggestions.map((card, index) => `
       <article class="mtg-card suggestion" data-index="${index}"
