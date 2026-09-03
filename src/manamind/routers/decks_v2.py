@@ -81,7 +81,8 @@ def api_decks(request: Request) -> Response:
                            WHERE EXISTS (
                                SELECT 1 FROM user_collection uc
                                WHERE uc.user_id = d.user_id
-                                 AND mm_normalize_name(uc.card_name) = mm_normalize_name(dc.card_name)
+                                 AND split_part(mm_normalize_name(uc.card_name), ' // ', 1)
+                    = split_part(mm_normalize_name(dc.card_name), ' // ', 1)
                            )
                        ) AS owned
                 FROM user_deck_cards dc
@@ -154,7 +155,8 @@ def api_deck_detail(deck_id: str, request: Request) -> Response:
                 SELECT SUM(uc.quantity) AS qty
                 FROM user_collection uc
                 WHERE uc.user_id = :uid
-                  AND mm_normalize_name(uc.card_name) = mm_normalize_name(dc.card_name)
+                  AND split_part(mm_normalize_name(uc.card_name), ' // ', 1)
+                    = split_part(mm_normalize_name(dc.card_name), ' // ', 1)
             ) owned ON TRUE
             WHERE dc.user_id = :uid
               AND mm_normalize_name(dc.commander) = mm_normalize_name(:commander)
@@ -237,7 +239,8 @@ def api_deck_missing(
               AND NOT EXISTS (
                   SELECT 1 FROM user_collection uc
                   WHERE uc.user_id = :uid
-                    AND mm_normalize_name(uc.card_name) = mm_normalize_name(dc.card_name)
+                    AND split_part(mm_normalize_name(uc.card_name), ' // ', 1)
+                    = split_part(mm_normalize_name(dc.card_name), ' // ', 1)
               )
             ORDER BY price.unit_price DESC NULLS LAST
             LIMIT :limit

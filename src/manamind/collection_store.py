@@ -97,6 +97,17 @@ def _norm(value: str | None) -> str:
     return (value or "").strip().lower()
 
 
+def _key(value: str | None) -> str:
+    """Cle de rapprochement d'un nom de carte : face avant, sans diacritiques.
+
+    Les decklists ne citent que la face avant des cartes recto-verso, alors que
+    scryfall_cards porte le nom complet : sans cela, une carte presente dans un
+    deck apparaitrait comme inutilisee.
+    """
+    from mtgdb.db.models.card import normalize_card_name
+    return normalize_card_name(value or "").split(" // ")[0].strip()
+
+
 def _iso(value: Any) -> str | None:
     return value.isoformat() if isinstance(value, datetime) else None
 
@@ -156,7 +167,7 @@ def _deck_usage(session: Any, user_id: int) -> dict[str, list[str]]:
     usage: dict[str, list[str]] = {}
     for row in rows:
         if row.card_name and row.commander:
-            usage.setdefault(_norm(row.card_name), []).append(row.commander)
+            usage.setdefault(_key(row.card_name), []).append(row.commander)
     return usage
 
 
@@ -203,6 +214,17 @@ def list_items(
             clauses.append("(sc.color_identity IS NULL OR cardinality(sc.color_identity) = 0)")
         if clauses:
             where.append("(" + " OR ".join(clauses) + ")")
+    if in_deck in ("yes", "no"):
+        clause = """
+            EXISTS (
+                SELECT 1 FROM user_deck_cards dc
+                WHERE dc.user_id = uc.user_id
+                  AND split_part(mm_normalize_name(dc.card_name), ' // ', 1)
+                      = split_part(COALESCE(sc.normalized_name,
+                                            mm_normalize_name(uc.card_name)), ' // ', 1)
+            )
+        """
+        where.append(clause if in_deck == "yes" else f"NOT {clause}")
     if types:
         type_clauses = []
         for idx, type_name in enumerate(types):
@@ -252,14 +274,8 @@ def list_items(
     items = []
     for row in rows:
         item = _row_to_item(row)
-        item["in_decks"] = usage.get(_norm(row.card_name), [])
+        item["in_decks"] = usage.get(_key(row.card_name), [])
         items.append(item)
-
-    # Le filtre "en deck" s'applique apres coup : il depend des decks, pas de la carte
-    if in_deck == "yes":
-        items = [i for i in items if i["in_decks"]]
-    elif in_deck == "no":
-        items = [i for i in items if not i["in_decks"]]
 
     return {"items": items, "total": total, "limit": params["limit"], "offset": params["offset"]}
 
@@ -401,8 +417,9 @@ def _compute_stats(user_id: int) -> dict:
               AND NOT EXISTS (
                   SELECT 1 FROM user_deck_cards dc
                   WHERE dc.user_id = uc.user_id
-                    AND mm_normalize_name(dc.card_name)
-                        = COALESCE(sc.normalized_name, mm_normalize_name(uc.card_name))
+                    AND split_part(mm_normalize_name(dc.card_name), ' // ', 1)
+                        = split_part(COALESCE(sc.normalized_name,
+                                              mm_normalize_name(uc.card_name)), ' // ', 1)
               )
         """), {"uid": user_id}).scalar()
 
@@ -478,7 +495,9 @@ def dormant_items(user_id: int, limit: int = 24) -> list[dict]:
           AND NOT EXISTS (
               SELECT 1 FROM user_deck_cards dc
               WHERE dc.user_id = uc.user_id
-                AND mm_normalize_name(dc.card_name) = mm_normalize_name(uc.card_name)
+                AND split_part(mm_normalize_name(dc.card_name), ' // ', 1)
+                    = split_part(COALESCE(sc.normalized_name,
+                                          mm_normalize_name(uc.card_name)), ' // ', 1)
           )
         ORDER BY {_UNIT_PRICE_SQL} DESC NULLS LAST
         LIMIT :limit
