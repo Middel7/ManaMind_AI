@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<title>ManaMind — Analyser un deck</title>
+<title>ManaMind — Améliorer mon deck</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
@@ -36,7 +36,7 @@
 
 <div id="page">
   <div class="stack-2">
-    <h2 class="h2">Analyser un deck</h2>
+    <h2 class="h2">Améliorer mon deck grâce à des analyses IA</h2>
     <p class="muted small">
       Obtenez des suggestions d'ajouts et de retraits pour l'un de vos decks.
     </p>
@@ -50,7 +50,8 @@
     <button class="mode" data-analysis="popular">
       <span class="mode__mark" data-icon="chart"></span>
       <span>
-        <span class="h3" style="display:block">Analyse par popularité</span>
+        <span class="h3" style="display:block">Amélioration utilisant la popularité
+          des cartes</span>
         <span class="small muted">Compare votre liste à ce que jouent réellement les
           autres decks du même commandant. Rapide et lisible.</span>
       </span>
@@ -60,7 +61,8 @@
     <button class="mode" data-analysis="ia">
       <span class="mode__mark" data-icon="sparkle"></span>
       <span>
-        <span class="h3" style="display:block">Analyse par intelligence artificielle</span>
+        <span class="h3" style="display:block">Amélioration grâce à l'intelligence
+          artificielle</span>
         <span class="small muted">Étudie la cohérence du deck, sa courbe, ses familles
           de cartes, et propose des remplacements argumentés.</span>
       </span>
@@ -75,7 +77,7 @@
 <script src="/static/js/mm.js"></script>
 <script>
 (async () => {
-  const user = await MM.boot({ title: 'Analyser un deck', nav: 'analyze' });
+  const user = await MM.boot({ title: 'Améliorer mon deck grâce à des analyses IA', nav: 'analyze' });
   if (!user) return;
 
   MM.els('[data-icon]').forEach((holder) => {

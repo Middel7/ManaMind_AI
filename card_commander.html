@@ -72,7 +72,7 @@
 <script src="/static/js/mm.js"></script>
 <script>
 (async () => {
-  const user = await MM.boot({ title: 'Commandant pour une carte', nav: 'card' });
+  const user = await MM.boot({ title: 'Trouver un commandant pour une carte', nav: 'card' });
   if (!user) return;
 
   MM.el('#emptyIcon').innerHTML = MM.icons.crown;

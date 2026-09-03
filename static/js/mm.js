@@ -393,12 +393,15 @@
       label: 'Analyser',
       items: [
         { key: 'build', label: 'Decks à construire', href: '/collection/commandants', icon: 'crown' },
-        { key: 'improve', label: 'Améliorer un deck', href: '/decks/ameliorer', icon: 'sparkle' },
+        { key: 'improve', label: 'Améliorer mon deck avec les cartes de ma collection',
+          href: '/decks/ameliorer', icon: 'sparkle' },
         { key: 'swap', label: 'Trouver un nouveau commandant pour mon deck',
           href: '/decks/commandant', icon: 'swap' },
         { key: 'moves', label: 'Cartes à changer de deck', href: '/decks/deplacements', icon: 'move' },
-        { key: 'analyze', label: 'Analyser un deck', href: '/decks/analyse', icon: 'chart' },
-        { key: 'card', label: 'Commandant pour une carte', href: '/cartes/commandant', icon: 'search' },
+        { key: 'analyze', label: 'Améliorer mon deck grâce à des analyses IA',
+          href: '/decks/analyse', icon: 'chart' },
+        { key: 'card', label: 'Trouver un commandant pour une carte',
+          href: '/cartes/commandant', icon: 'search' },
       ],
     },
   ];
