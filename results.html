@@ -64,6 +64,34 @@
   .curve__fill { width: 100%; background: linear-gradient(180deg, var(--accent), var(--accent-deep));
     border-radius: 3px 3px 0 0; min-height: 2px; }
   .curve__label { font-size: 10px; color: var(--text-3); }
+  /* Courbe de mana et repartition des couleurs, dans le bandeau */
+  .curve { display: flex; align-items: flex-end; gap: 4px; height: 56px; max-width: 340px; }
+  .curve__bar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .curve__fill {
+    width: 100%;
+    background: linear-gradient(180deg, var(--accent), var(--accent-deep));
+    border-radius: 3px 3px 0 0;
+    min-height: 2px;
+  }
+  .curve__label { font-size: 10px; color: var(--text-3); }
+
+  .mana-split { display: flex; gap: var(--sp-4); flex-wrap: wrap; align-items: center; }
+  .mana-count { display: inline-flex; align-items: center; gap: 5px; font-size: var(--text-sm); }
+  .mana-count .pip { width: 13px; height: 13px; }
+  .mana-row { display: flex; gap: var(--sp-3); flex-wrap: wrap; align-items: center; }
+  .mana-row__label {
+    font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--text-3); min-width: 96px;
+  }
+
+  /* Actions rangees a droite : le contenu du bandeau remonte d'autant */
+  .hero__split { display: flex; gap: var(--sp-6); align-items: flex-start; }
+  .hero__split > .grow { min-width: 0; }
+  .hero__split .hero__actions { flex-direction: column; align-items: stretch; flex-shrink: 0; }
+  @media (max-width: 860px) {
+    .hero__split { flex-direction: column; }
+    .hero__split .hero__actions { flex-direction: row; flex-wrap: wrap; }
+  }
 </style>
 </head>
 <body>
@@ -99,17 +127,110 @@
     MM.el('#hero').innerHTML = `
       ${art ? `<div class="hero__art" style="background-image:url('${MM.esc(art)}')"></div>` : ''}
       <div class="hero__body">
-        <p class="eyebrow">${MM.esc(deckInfo.commander || 'Analyse')}</p>
-        <h2 class="hero__title">${MM.esc(deckInfo.name || "Résultats d’analyse")}</h2>
-        <p class="muted">${MM.esc(subtitle)}</p>
-        ${stats || ''}
-        <div class="hero__actions">
-          ${deckInfo.deck_id
-            ? `<a class="btn" href="/decks/${encodeURIComponent(deckInfo.deck_id)}">
-                 Ouvrir le deck</a>` : ''}
-          <a class="btn btn--ghost" href="/decks/analyse">Nouvelle analyse</a>
+        <div class="hero__split">
+          <div class="grow">
+            <p class="eyebrow">${MM.esc(deckInfo.commander || 'Analyse')}</p>
+            <h2 class="hero__title">${MM.esc(deckInfo.name || "Résultats d’analyse")}</h2>
+            <p class="muted">${MM.esc(subtitle)}</p>
+            ${stats || ''}
+            <div id="manaBlock" class="stack-2" style="margin-top:var(--sp-4)"></div>
+          </div>
+          <div class="hero__actions">
+            ${deckInfo.deck_id
+              ? `<a class="btn" href="/decks/${encodeURIComponent(deckInfo.deck_id)}">
+                   Ouvrir le deck</a>` : ''}
+            <a class="btn btn--ghost" href="/decks/analyse">Nouvelle analyse</a>
+          </div>
         </div>
       </div>`;
+
+    renderMana();
+  }
+
+  /* ── Mana du deck : courbe, besoins en symboles, sources ───────────────── */
+
+  const COLORS = ['W', 'U', 'B', 'R', 'G'];
+  let deckCards = null;
+
+  /** Repartition des symboles colores exiges par les couts. Un symbole hybride
+   *  compte pour chacune de ses couleurs, faute de savoir laquelle sera payee. */
+  function manaSymbols(list) {
+    const counts = { W: 0, U: 0, B: 0, R: 0, G: 0 };
+    list.forEach((card) => {
+      const matches = (card.mana_cost || '').match(/\{[^}]+\}/g) || [];
+      matches.forEach((symbol) => {
+        COLORS.forEach((color) => {
+          if (symbol.includes(color)) counts[color] += card.quantity;
+        });
+      });
+    });
+    return counts;
+  }
+
+  /** Sources de mana : tout ce dont le texte ajoute du mana d'une couleur. */
+  function manaSources(list) {
+    const counts = { W: 0, U: 0, B: 0, R: 0, G: 0, any: 0 };
+    list.forEach((card) => {
+      const text = card.oracle_text || '';
+      const found = new Set();
+      // « Add » jusqu'a la fin de la phrase : evite de compter un symbole
+      // mentionne ailleurs dans le texte de la carte.
+      (text.match(/[Aa]dd[^.]*/g) || []).forEach((segment) => {
+        if (/any color/i.test(segment)) found.add('any');
+        COLORS.forEach((color) => {
+          if (segment.includes(`{${color}}`)) found.add(color);
+        });
+      });
+      found.forEach((key) => { counts[key] += card.quantity; });
+    });
+    return counts;
+  }
+
+  function manaCurve(list) {
+    const buckets = [0, 0, 0, 0, 0, 0, 0, 0];
+    list.forEach((card) => {
+      if (/Land/i.test(card.type_line || '')) return;
+      buckets[Math.min(7, Math.floor(card.mana_value ?? 0))] += card.quantity;
+    });
+    const max = Math.max(...buckets, 1);
+    return `<div class="curve">${buckets.map((count, index) => `
+      <span class="curve__bar" title="${count} carte${count > 1 ? 's' : ''} à ${index}${index === 7 ? '+' : ''}">
+        <span class="curve__fill" style="height:${(count / max) * 40}px"></span>
+        <span class="curve__label">${index === 7 ? '7+' : index}</span>
+      </span>`).join('')}</div>`;
+  }
+
+  function countRow(label, counts, extra) {
+    const shown = COLORS.filter((color) => counts[color] > 0);
+    if (!shown.length && !extra) return '';
+    return `
+      <div class="mana-row">
+        <span class="mana-row__label">${MM.esc(label)}</span>
+        ${shown.map((color) => `
+          <span class="mana-count" title="${counts[color]} ${MM.esc(label.toLowerCase())} ${color}">
+            <span class="pip pip--${color}"></span>${MM.fmt.int(counts[color])}</span>`).join('')}
+        ${extra || ''}
+      </div>`;
+  }
+
+  function renderMana() {
+    const host = MM.el('#manaBlock');
+    if (!host || !deckCards) return;
+    const sources = manaSources(deckCards);
+    host.innerHTML = `
+      ${manaCurve(deckCards)}
+      ${countRow('Symboles exigés', manaSymbols(deckCards))}
+      ${countRow('Sources', sources, sources.any
+        ? `<span class="xs dim">+ ${MM.fmt.int(sources.any)} de n’importe quelle couleur</span>`
+        : '')}`;
+  }
+
+  if (deckInfo.deck_id) {
+    // Les resultats d'analyse ne portent pas la liste du deck : on la relit
+    // pour en tirer la courbe et la repartition, sans bloquer l'affichage.
+    MM.api.get(`/api/v2/decks/${encodeURIComponent(deckInfo.deck_id)}`)
+      .then((data) => { deckCards = data.cards || []; renderMana(); })
+      .catch(() => {});
   }
 
   function fail(message) {
