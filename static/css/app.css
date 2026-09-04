@@ -764,8 +764,10 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
 }
 
 .mtg-card__qty {
+  /* Sous le coin superieur droit : c'est la que la carte imprime son cout de
+     mana, que la pastille masquait entierement. */
   position: absolute;
-  top: 6px; right: 6px;
+  top: 15%; right: 6px;
   min-width: 22px; height: 22px;
   padding: 0 6px;
   display: grid; place-items: center;
