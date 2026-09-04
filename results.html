@@ -72,7 +72,7 @@
   }
 
   /* Courbe de mana et repartition des couleurs, dans le bandeau */
-  .curve { display: flex; align-items: flex-end; gap: 4px; height: 56px; max-width: 340px; }
+  .curve { display: flex; align-items: flex-end; gap: 3px; height: 44px; width: 200px; }
   .curve__bar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
   .curve__fill {
     width: 100%;
@@ -89,10 +89,14 @@
   .mana-split { display: flex; gap: var(--sp-4); flex-wrap: wrap; align-items: center; }
   .mana-count { display: inline-flex; align-items: center; gap: 5px; font-size: var(--text-sm); }
   .mana-count .pip { width: 13px; height: 13px; }
-  .mana-row { display: flex; gap: var(--sp-3); flex-wrap: wrap; align-items: center; }
+  /* Courbe a gauche, symboles et sources a droite : empilees, elles
+     ajoutaient une centaine de pixels au bandeau pour rien. */
+  #manaBlock { display: flex; gap: var(--sp-5); align-items: center; flex-wrap: wrap; }
+  .mana-rows { display: flex; flex-direction: column; gap: 2px; }
+  .mana-row { display: flex; gap: var(--sp-2); flex-wrap: wrap; align-items: center; }
   .mana-row__label {
-    font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.08em;
-    color: var(--text-3); min-width: 96px;
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text-3); min-width: 74px;
   }
 
 </style>
@@ -144,7 +148,7 @@
                      Ouvrir le deck</a>` : ''}
               <a class="btn btn--ghost" href="/decks/analyse">Nouvelle analyse</a>
             </div>
-            <div id="manaBlock" class="stack-2"></div>
+            <div id="manaBlock"></div>
           </div>
         </div>
       </div>`;
@@ -230,10 +234,12 @@
     const sources = manaSources(deckCards);
     host.innerHTML = `
       ${manaCurve(deckCards)}
-      ${countRow('Symboles exigés', manaSymbols(deckCards))}
-      ${countRow('Sources', sources, sources.any
-        ? `<span class="xs dim">+ ${MM.fmt.int(sources.any)} de n’importe quelle couleur</span>`
-        : '')}`;
+      <div class="mana-rows">
+        ${countRow('Symboles', manaSymbols(deckCards))}
+        ${countRow('Sources', sources, sources.any
+          ? `<span class="xs dim">+ ${MM.fmt.int(sources.any)} toutes couleurs</span>`
+          : '')}
+      </div>`;
   }
 
   if (deckInfo.deck_id) {
