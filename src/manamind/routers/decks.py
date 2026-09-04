@@ -177,7 +177,8 @@ async def api_deck_card_remove(request: Request) -> JSONResponse:
         return _json_response({"error": "Paramètres manquants"}, status_code=400)
     try:
         from manamind.user_decks import remove_card_from_deck_db
-        found = remove_card_from_deck_db(user["id"], commander, card, deck_id)
+        found = remove_card_from_deck_db(user["id"], commander, card, deck_id,
+                                         all_copies=bool(body.get("all")))
         if not found:
             return _json_response({"ok": False, "error": f"« {card} » n'est pas dans le deck de {commander}"}, status_code=404)
         return _json_response({"ok": True})

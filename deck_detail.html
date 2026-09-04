@@ -36,10 +36,26 @@
     transition: background var(--dur-fast) var(--ease);
   }
   .card-line:hover { background: var(--surface); }
+  /* La quantite s'ajuste sur place — un deck compte plusieurs terrains de
+     base. Les boutons ne paraissent qu'au survol : permanents, ils
+     alourdiraient une liste de cent lignes. */
   .card-line__qty {
-    min-width: 22px; text-align: right;
+    display: inline-flex; align-items: center; gap: 2px;
+    min-width: 56px; justify-content: flex-end;
+  }
+  .card-line__qty output {
+    min-width: 18px; text-align: right;
     font-variant-numeric: tabular-nums; color: var(--text-3); font-size: var(--text-sm);
   }
+  .card-line__qty button {
+    width: 18px; height: 18px; display: grid; place-items: center;
+    border-radius: var(--r-sm); border: 1px solid var(--line-strong);
+    color: var(--text-2); font-size: 12px; line-height: 1;
+    opacity: 0; transition: opacity var(--dur-fast) var(--ease);
+  }
+  .card-line:hover .card-line__qty button,
+  .card-line__qty button:focus-visible { opacity: 1; }
+  .card-line__qty button:hover { background: var(--surface-2); color: var(--text); }
   .card-line__name { flex: 0 1 auto; min-width: 0; font-size: var(--text-sm); }
   .card-line--missing .card-line__name { color: var(--accent); }
   /* Le retrait etait invisible hors survol : on le montre en permanence,
@@ -254,7 +270,13 @@
             <div class="card-line ${card.owned < card.quantity ? 'card-line--missing' : ''}"
                  data-name="${MM.esc(card.card_name)}"
                  data-image="${MM.esc(card.image_normal || '')}">
-              <span class="card-line__qty">${card.quantity}</span>
+              <span class="card-line__qty">
+                <button data-qty="dec" data-name="${MM.esc(card.card_name)}"
+                        aria-label="Retirer un exemplaire de ${MM.esc(card.card_name)}">−</button>
+                <output>${card.quantity}</output>
+                <button data-qty="inc" data-name="${MM.esc(card.card_name)}"
+                        aria-label="Ajouter un exemplaire de ${MM.esc(card.card_name)}">+</button>
+              </span>
               <span class="card-line__name truncate">${MM.esc(card.card_name)}</span>
               ${/Legendary/i.test(card.type_line || '')
                 && card.card_name.toLowerCase() !== (deck.commander || '').toLowerCase()
@@ -279,6 +301,26 @@
             </div>`).join('')}
         </div>`;
     }).join('');
+  }
+
+  /** Ajuste d'un exemplaire la carte dans le deck, sans toucher a la
+   *  collection. Le compte est repris sur place : le rendu recalcule alors la
+   *  courbe, la valeur et les manquantes. */
+  async function changeQuantity(name, delta, button) {
+    button.disabled = true;
+    try {
+      await MM.api.post(delta > 0 ? '/api/deck-card/add' : '/api/deck-card/remove',
+        { deck_id: deckId, commander: deck.commander, card_name: name });
+      const card = cards.find((item) => item.card_name === name);
+      if (card) {
+        card.quantity += delta;
+        if (card.quantity <= 0) cards = cards.filter((item) => item !== card);
+      }
+      render();
+    } catch (err) {
+      MM.toast.error(err.message);
+      button.disabled = false;
+    }
   }
 
   async function reload() {
@@ -315,18 +357,24 @@
       const crown = event.target.closest('[data-setcmd]');
       if (crown) return setCommander(crown.dataset.setcmd, crown);
 
+      const step = event.target.closest('[data-qty]');
+      if (step) return changeQuantity(step.dataset.name, step.dataset.qty === 'inc' ? 1 : -1, step);
+
       const button = event.target.closest('[data-remove]');
       if (!button) return;
       const name = button.dataset.remove;
+      const line = cards.find((card) => card.card_name === name);
+      const copies = line ? line.quantity : 1;
       const ok = await MM.confirm({
         title: 'Retirer cette carte ?',
-        text: `« ${name} » sera retirée de ${deck.name}. Votre collection n'est pas modifiée.`,
+        text: `${copies > 1 ? `Les ${copies} exemplaires de « ${name} » seront retirés` : `« ${name} » sera retirée`}`
+          + ` de ${deck.name}. Votre collection n'est pas modifiée.`,
         confirmLabel: 'Retirer', danger: true,
       });
       if (!ok) return;
       try {
         await MM.api.post('/api/deck-card/remove',
-          { deck_id: deckId, commander: deck.commander, card_name: name });
+          { deck_id: deckId, commander: deck.commander, card_name: name, all: true });
         MM.toast('Carte retirée du deck.');
         await reload();
       } catch (err) { MM.toast.error(err.message); }

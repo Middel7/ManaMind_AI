@@ -188,8 +188,13 @@ def add_card_to_deck_db(user_id: int, commander: str, card_name: str,
 
 
 def remove_card_from_deck_db(user_id: int, commander: str, card_name: str,
-                             deck_id: str | None = None) -> bool:
-    """Retire un exemplaire, puis la ligne si elle tombe a zero."""
+                             deck_id: str | None = None,
+                             all_copies: bool = False) -> bool:
+    """Retire un exemplaire — ou la carte entiere si all_copies.
+
+    Les terrains de base vont par dizaines : sans all_copies, vider une ligne
+    demanderait autant d'appels que d'exemplaires.
+    """
     target = resolve_deck(user_id, deck_id, commander)
     if target is None:
         return False
@@ -202,7 +207,7 @@ def remove_card_from_deck_db(user_id: int, commander: str, card_name: str,
         """), {"uid": user_id, "did": did, "name": card_name}).scalar()
         if qty is None:
             return False
-        if qty <= 1:
+        if all_copies or qty <= 1:
             sess.execute(text("""
                 DELETE FROM user_deck_cards
                 WHERE user_id = :uid AND deck_id = :did

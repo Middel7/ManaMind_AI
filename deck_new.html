@@ -28,6 +28,21 @@
   }
   .deck-line:hover { background: var(--surface); }
   .deck-line__name { flex: 1; min-width: 0; font-size: var(--text-sm); }
+  /* Quantite reglable : plusieurs exemplaires d'un meme terrain de base. */
+  .deck-line__qty { display: inline-flex; align-items: center; gap: 2px; }
+  .deck-line__qty output {
+    min-width: 16px; text-align: right;
+    font-variant-numeric: tabular-nums; color: var(--text-3); font-size: var(--text-sm);
+  }
+  .deck-line__qty button {
+    width: 18px; height: 18px; display: grid; place-items: center;
+    border-radius: var(--r-sm); border: 1px solid var(--line-strong);
+    color: var(--text-2); font-size: 12px; line-height: 1;
+    opacity: 0; transition: opacity var(--dur-fast) var(--ease);
+  }
+  .deck-line:hover .deck-line__qty button,
+  .deck-line__qty button:focus-visible { opacity: 1; }
+  .deck-line__qty button:hover { background: var(--surface-2); color: var(--text); }
   .deck-line__drop { opacity: 0.4; }
   .deck-line:hover .deck-line__drop { opacity: 1; }
 
@@ -241,10 +256,17 @@
 
   /** Ce que les règles interdisent : hors identité de couleur, ou déjà là.
    *  Retourne la raison, ou null si la carte peut entrer. */
+  /** Cartes qu'un deck peut compter en plusieurs exemplaires. */
+  function unlimited(card) {
+    const lower = (card.card_name || card.name || '').trim().toLowerCase();
+    return BASIC_LANDS.has(lower)
+      || /any number of cards named/i.test(card.oracle_text || '');
+  }
+
   function illegalReason(card) {
     const name = (card.card_name || card.name || '').trim();
     const lower = name.toLowerCase();
-    if (state.cards.some((c) => c.card_name.toLowerCase() === lower)) {
+    if (state.cards.some((c) => c.card_name.toLowerCase() === lower) && !unlimited(card)) {
       return 'déjà dans le deck';
     }
     if (BASIC_LANDS.has(lower)) return null;   // seuls terrains sans limite
@@ -398,6 +420,13 @@
       .sort((a, b) => a.card_name.localeCompare(b.card_name, 'fr'));
     host.innerHTML = sorted.map((card) => `
       <div class="deck-line">
+        <span class="deck-line__qty">
+          <button data-dq="dec" data-name="${MM.esc(card.card_name)}"
+                  aria-label="Retirer un exemplaire de ${MM.esc(card.card_name)}">−</button>
+          <output>${card.quantity || 1}</output>
+          <button data-dq="inc" data-name="${MM.esc(card.card_name)}"
+                  aria-label="Ajouter un exemplaire de ${MM.esc(card.card_name)}">+</button>
+        </span>
         <span class="deck-line__name truncate" title="${MM.esc(card.card_name)}">
           ${MM.esc(card.card_name)}</span>
         <button class="btn btn--ghost btn--icon btn--sm deck-line__drop"
@@ -442,14 +471,30 @@
     }
   }
 
-  async function dropCard(name) {
+  async function dropCard(name, all = false) {
     try {
-      await MM.api.post('/api/deck-card/remove',
-        { deck_id: state.deck.deck_id, commander: state.deck.commander, card_name: name });
+      await MM.api.post('/api/deck-card/remove', {
+        deck_id: state.deck.deck_id, commander: state.deck.commander,
+        card_name: name, all,
+      });
       await loadCards();
       MM.toast(`${name} retirée.`);
       render();
     } catch (err) { MM.toast.error(err.message); }
+  }
+
+  /** Ajoute ou retire un exemplaire d'une carte deja dans le deck. */
+  async function changeQuantity(name, delta, button) {
+    button.disabled = true;
+    try {
+      await MM.api.post(delta > 0 ? '/api/deck-card/add' : '/api/deck-card/remove',
+        { deck_id: state.deck.deck_id, commander: state.deck.commander, card_name: name });
+      await loadCards();
+      render();
+    } catch (err) {
+      MM.toast.error(err.message);
+      button.disabled = false;
+    }
   }
 
   let bound = false;
@@ -460,7 +505,10 @@
 
     MM.el('#build').addEventListener('click', (event) => {
       const drop = event.target.closest('[data-drop]');
-      if (drop) return dropCard(drop.dataset.drop);
+      if (drop) return dropCard(drop.dataset.drop, true);
+
+      const step = event.target.closest('[data-dq]');
+      if (step) return changeQuantity(step.dataset.name, step.dataset.dq === 'inc' ? 1 : -1, step);
 
       // Le compteur de collection vit dans la vignette, qui ajoute au deck :
       // sans cette sortie, un clic ferait les deux.
