@@ -18,7 +18,10 @@
   .cmd-bar__art { width: 76px; border-radius: 4.7% / 3.5%; box-shadow: var(--shadow-card); }
 
   /* Liste du deck en cours, a droite */
-  .deck-side { position: sticky; top: var(--sp-4); }
+  .deck-side {
+    position: sticky; top: var(--sp-4);
+    display: flex; flex-direction: column; gap: var(--sp-4);
+  }
   .deck-line {
     display: flex; align-items: center; gap: var(--sp-2);
     padding: 3px var(--sp-2); border-radius: var(--r-sm);
@@ -319,29 +322,33 @@
 
       <div class="grid-2" style="align-items:start;grid-template-columns:minmax(0,2fr) minmax(260px,1fr)">
         <div class="stack-6">
+          <div class="stack-2" id="searchBlock" hidden>
+            <h3 class="h3">Résultats de la recherche</h3>
+            <div id="searchResults"></div>
+          </div>
+
           <div class="stack-2">
             <h3 class="h3">Suggéré par la popularité, dans votre collection</h3>
             <p class="muted small">Les cartes que vous possédez et que jouent le plus les
               autres decks de ${MM.esc(deck.commander)}.</p>
             <div id="suggested"></div>
           </div>
-
-          <div class="stack-2">
-            <h3 class="h3">Ajouter une autre carte</h3>
-            <div class="field" style="max-width:520px">
-              <input class="input" id="cardSearch" type="text" autocomplete="off"
-                     placeholder="Tapez un nom puis appuyez sur Entrée">
-            </div>
-            <div id="searchResults"></div>
-          </div>
         </div>
 
-        <div class="panel deck-side">
-          <div class="panel__head">
-            <h3 class="h3">Liste du deck</h3>
-            <span class="badge">${MM.fmt.int(count)}</span>
+        <div class="deck-side">
+          <div class="field">
+            <label class="label" for="cardSearch">Ajouter une autre carte</label>
+            <input class="input" id="cardSearch" type="text" autocomplete="off"
+                   placeholder="Tapez un nom puis appuyez sur Entrée">
           </div>
-          <div class="panel__body" id="deckList"></div>
+
+          <div class="panel">
+            <div class="panel__head">
+              <h3 class="h3">Liste du deck</h3>
+              <span class="badge">${MM.fmt.int(count)}</span>
+            </div>
+            <div class="panel__body" id="deckList"></div>
+          </div>
         </div>
       </div>`;
 
@@ -374,6 +381,8 @@
   function renderSearch() {
     const host = MM.el('#searchResults');
     if (!host) return;
+    const block = MM.el('#searchBlock');
+    if (block) block.hidden = !state.search.length;
     host.innerHTML = state.search.length
       ? `<div class="card-grid">${state.search.map((c, i) => cardTile(c, i, 'sea')).join('')}</div>`
       : '';
@@ -472,6 +481,7 @@
       event.preventDefault();
       const term = search.value.trim();
       if (term.length < 2) return;
+      MM.el('#searchBlock').hidden = false;
       MM.el('#searchResults').innerHTML =
         `<div class="card-grid">${MM.cardSkeletons(6)}</div>`;
       try {
