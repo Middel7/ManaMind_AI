@@ -73,7 +73,15 @@ def save_deck_for_user(user_id: int, deck_id: str, url: str, commander: str, nam
 
 
 def remove_deck_for_user(user_id: int, deck_id: str) -> bool:
+    """Supprime un deck et les cartes qui lui appartenaient.
+
+    Les laisser derriere faussait tout ce qui compte par commandant :
+    l'analyse, l'export, et le nombre d'exemplaires encore libres.
+    """
     with SessionLocal() as sess:
+        sess.execute(text("""
+            DELETE FROM user_deck_cards WHERE user_id = :uid AND deck_id = :did
+        """), {"uid": user_id, "did": deck_id})
         result = sess.execute(text("""
             DELETE FROM user_moxfield_decks WHERE user_id = :uid AND deck_id = :did
         """), {"uid": user_id, "did": deck_id})
@@ -103,11 +111,22 @@ def mark_synced_for_user(user_id: int, deck_id: str) -> bool:
 # ── Cartes des decks (remplace data/My decks/*.txt) ──────────────────────────
 
 def get_deck_cards(user_id: int, commander: str) -> list[tuple[str, int]]:
-    """Retourne [(card_name, qty), ...] pour ce commandant et cet utilisateur."""
+    """Retourne [(card_name, qty), ...] pour ce commandant et cet utilisateur.
+
+    Seules comptent les cartes d'un deck qui existe encore : celles restees
+    d'un deck supprime portent toujours son commandant, et se glissaient dans
+    les analyses comme dans le compte des exemplaires engages.
+    """
     with SessionLocal() as sess:
         rows = sess.execute(text("""
-            SELECT card_name, quantity FROM user_deck_cards
-            WHERE user_id = :uid AND LOWER(TRIM(commander)) = LOWER(TRIM(:cmd))
+            SELECT dc.card_name, dc.quantity
+            FROM user_deck_cards dc
+            WHERE dc.user_id = :uid
+              AND LOWER(TRIM(dc.commander)) = LOWER(TRIM(:cmd))
+              AND EXISTS (
+                SELECT 1 FROM user_moxfield_decks d
+                WHERE d.user_id = dc.user_id AND d.deck_id = dc.deck_id
+              )
         """), {"uid": user_id, "cmd": commander}).fetchall()
     return [(r.card_name, r.quantity) for r in rows]
 
@@ -222,11 +241,20 @@ def remove_card_from_deck_db(user_id: int, commander: str, card_name: str,
         sess.commit()
     return True
 
-def get_deck_txt_content(user_id: int, commander: str) -> Optional[str]:
+def get_deck_txt_content(user_id: int, commander: str,
+                         deck_id: str | None = None) -> Optional[str]:
     """Retourne le contenu texte de la decklist (format Moxfield/EDHREC).
+
     Le commandant est placé dans une section séparée par une ligne vide
-    pour que recommandation_populaire.py puisse l'identifier."""
-    cards = get_deck_cards(user_id, commander)
+    pour que recommandation_populaire.py puisse l'identifier.
+
+    Le deck_id prime quand il est connu : rassembler les cartes par nom de
+    commandant melait les decks qui le partagent, et ramassait au passage
+    celles restees d'un deck supprime — l'analyse proposait alors de retirer
+    des cartes absentes de la liste.
+    """
+    cards = (get_deck_cards_by_id(user_id, deck_id) if deck_id
+             else get_deck_cards(user_id, commander))
     if not cards:
         return None
     # Exclure le(s) commandant(s) du corps du deck

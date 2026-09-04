@@ -143,7 +143,7 @@ def api_deck_txt(deck_id: str, request: Request) -> JSONResponse:
     entry = next((d for d in decks if d["deck_id"] == deck_id), None)
     if not entry:
         return _json_response({"error": "Deck introuvable"}, status_code=404)
-    content = get_deck_txt_content(user["id"], entry["commander"])
+    content = get_deck_txt_content(user["id"], entry["commander"], deck_id)
     return _json_response({"ok": True, "content": content or "", "commander": entry["commander"]})
 
 
