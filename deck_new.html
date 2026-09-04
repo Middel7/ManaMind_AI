@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>ManaMind — Créer un deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/app.css">
+<style>
+  #build .card-grid { --card-min: 168px; }
+
+  /* Bandeau du commandant retenu, une fois le deck cree */
+  .cmd-bar { display: flex; gap: var(--sp-4); align-items: center; flex-wrap: wrap; }
+  .cmd-bar__art { width: 76px; border-radius: 4.7% / 3.5%; box-shadow: var(--shadow-card); }
+
+  /* Liste du deck en cours, a droite */
+  .deck-side { position: sticky; top: var(--sp-4); }
+  .deck-line {
+    display: flex; align-items: center; gap: var(--sp-2);
+    padding: 3px var(--sp-2); border-radius: var(--r-sm);
+  }
+  .deck-line:hover { background: var(--surface); }
+  .deck-line__name { flex: 1; min-width: 0; font-size: var(--text-sm); }
+  .deck-line__drop { opacity: 0.4; }
+  .deck-line:hover .deck-line__drop { opacity: 1; }
+
+  /* Carte que les regles interdisent : grisee, non cliquable */
+  .card-illegal { opacity: 0.45; }
+  .card-illegal .mtg-card__frame { filter: grayscale(0.7); }
+  .illegal-why {
+    display: block; font-size: var(--text-xs); color: var(--warn);
+    margin-top: 2px;
+  }
+</style>
+</head>
+<body>
+
+<div id="page">
+  <div class="stack-2">
+    <h2 class="h2">Créer un deck</h2>
+    <p class="muted small">Choisissez d’abord un commandant : il fixe l’identité de couleur
+      du deck. Vous ajoutez ensuite les cartes une par une, à partir de vos suggestions ou
+      par leur nom.</p>
+  </div>
+
+  <div id="step-commander" class="stack-6" style="margin-top:var(--sp-6)">
+    <div class="field" style="max-width:520px">
+      <label class="label" for="cmdInput">Commandant</label>
+      <input class="input" id="cmdInput" type="text" autocomplete="off"
+             placeholder="Tapez un nom puis appuyez sur Entrée">
+    </div>
+    <div id="cmdResults"></div>
+  </div>
+
+  <div id="build" hidden style="margin-top:var(--sp-4)"></div>
+</div>
+
+<script src="/static/js/mm.js"></script>
+<script>
+(async () => {
+  const user = await MM.boot({ title: 'Créer un deck', nav: 'decks' });
+  if (!user) return;
+
+  const state = {
+    deck: null,          // { deck_id, commander, name, color_identity }
+    cards: [],           // cartes du deck : { card_name, quantity }
+    suggestions: [],
+    search: [],
+  };
+
+  const BASIC_LANDS = new Set([
+    'plains', 'island', 'swamp', 'mountain', 'forest', 'wastes',
+    'snow-covered plains', 'snow-covered island', 'snow-covered swamp',
+    'snow-covered mountain', 'snow-covered forest',
+  ]);
+
+  /* ── Étape 1 : le commandant ──────────────────────────────────────────── */
+
+  const cmdInput = MM.el('#cmdInput');
+  const cmdResults = MM.el('#cmdResults');
+  cmdInput.focus();
+
+  async function searchCommander() {
+    const term = cmdInput.value.trim();
+    if (term.length < 2) {
+      cmdResults.innerHTML = '<p class="muted small">Saisissez au moins deux caractères.</p>';
+      return;
+    }
+    cmdResults.innerHTML = `<div class="card-grid">${MM.cardSkeletons(6)}</div>`;
+    try {
+      const data = await MM.api.get(
+        `/api/v2/cards/suggest?q=${encodeURIComponent(term)}&limit=20`);
+      const cards = data.cards || [];
+      if (!cards.length) {
+        cmdResults.innerHTML = MM.empty({
+          icon: 'search', title: 'Aucune carte trouvée',
+          text: `Rien ne correspond à « ${term} ».` });
+        return;
+      }
+      cmdResults.innerHTML = `<div class="card-grid">${cards.map((card, index) => `
+        <article class="mtg-card" data-cmd="${index}" tabindex="0" role="button"
+                 style="cursor:pointer"
+                 aria-label="Créer un deck avec ${MM.esc(card.name)}">
+          <div class="mtg-card__frame">${MM.img.frame(card)}</div>
+          <div class="mtg-card__foot">
+            <span class="mtg-card__name" title="${MM.esc(card.name)}">
+              ${MM.esc(card.name)}</span>
+            <span class="mtg-card__meta">
+              ${MM.img.pips(card.color_identity)}
+              ${card.set_code ? `<span>${MM.esc(card.set_code)}</span>` : ''}
+            </span>
+          </div>
+        </article>`).join('')}</div>`;
+
+      cmdResults.onclick = (event) => {
+        const node = event.target.closest('[data-cmd]');
+        if (node) createDeck(cards[Number(node.dataset.cmd)], node);
+      };
+    } catch (err) {
+      cmdResults.innerHTML = MM.empty({
+        icon: 'warning', title: 'Recherche impossible', text: err.message });
+    }
+  }
+
+  cmdInput.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    searchCommander();
+  });
+
+  async function createDeck(card, node) {
+    node.style.opacity = '0.5';
+    try {
+      const deck = await MM.api.post('/api/v2/decks', {
+        commander: card.name,
+        name: card.name,
+      });
+      state.deck = { ...deck, image: card.image_normal || card.image_small };
+      MM.el('#step-commander').hidden = true;
+      MM.el('#build').hidden = false;
+      MM.toast.ok(`Deck « ${deck.name} » créé.`);
+      await Promise.all([loadCards(), loadSuggestions()]);
+      render();
+    } catch (err) {
+      MM.toast.error(err.message);
+      node.style.opacity = '';
+    }
+  }
+
+  /* ── Étape 2 : composer le deck ───────────────────────────────────────── */
+
+  async function loadCards() {
+    const data = await MM.api.get(`/api/v2/decks/${encodeURIComponent(state.deck.deck_id)}`);
+    state.cards = data.cards || [];
+  }
+
+  async function loadSuggestions() {
+    try {
+      const data = await MM.api.get('/api/collection-suggest' + MM.api.qs({
+        top: 30, commander: state.deck.commander,
+      }));
+      state.suggestions = data.results || [];
+    } catch { state.suggestions = []; }
+  }
+
+  /** Ce que les règles interdisent : hors identité de couleur, ou déjà là.
+   *  Retourne la raison, ou null si la carte peut entrer. */
+  function illegalReason(card) {
+    const name = (card.card_name || card.name || '').trim();
+    const lower = name.toLowerCase();
+    if (state.cards.some((c) => c.card_name.toLowerCase() === lower)) {
+      return 'déjà dans le deck';
+    }
+    if (BASIC_LANDS.has(lower)) return null;   // seuls terrains sans limite
+    const identity = state.deck.color_identity || [];
+    const colors = card.color_identity || [];
+    const hors = colors.filter((c) => !identity.includes(c));
+    if (hors.length) return `hors identité (${hors.join('')})`;
+    return null;
+  }
+
+  function cardTile(card, index, kind) {
+    const name = card.card_name || card.name;
+    const why = illegalReason(card);
+    const price = card.unit_price ?? card.low_price;
+    return `
+      <article class="mtg-card ${why ? 'card-illegal' : ''}"
+               ${why ? '' : `data-add="${kind}:${index}" tabindex="0" role="button"
+               style="cursor:pointer" aria-label="Ajouter ${MM.esc(name)} au deck"`}>
+        <div class="mtg-card__frame">
+          ${MM.img.frame({ card_name: name, ...card })}
+        </div>
+        <div class="mtg-card__foot">
+          <span class="mtg-card__name" title="${MM.esc(name)}">${MM.esc(name)}</span>
+          <span class="mtg-card__meta">
+            ${card.inclusion_rate != null
+              ? `<span class="dim">${Math.round(card.inclusion_rate)} % des decks</span>` : ''}
+            ${card.copies_owned ? `<span class="dim">${card.copies_owned} en collection</span>` : ''}
+            ${price != null ? `<span class="mtg-card__price">${MM.fmt.eur(price)}</span>` : ''}
+          </span>
+          ${why ? `<span class="illegal-why">${MM.esc(why)}</span>` : ''}
+        </div>
+      </article>`;
+  }
+
+  function render() {
+    const deck = state.deck;
+    const count = state.cards.reduce((sum, c) => sum + (c.quantity || 1), 0);
+
+    MM.el('#build').innerHTML = `
+      <div class="panel" style="margin-bottom:var(--sp-4)">
+        <div class="panel__body cmd-bar">
+          ${deck.image ? `<img class="cmd-bar__art" src="${MM.esc(deck.image)}" alt="">` : ''}
+          <div class="grow" style="min-width:0">
+            <p class="h3">${MM.esc(deck.name)}</p>
+            <p class="xs dim">${MM.img.pips(deck.color_identity)}
+              Commandant : ${MM.esc(deck.commander)}</p>
+          </div>
+          <div class="stat" style="padding:var(--sp-2) var(--sp-4)">
+            <span class="stat__value">${MM.fmt.int(count + 1)}</span>
+            <span class="stat__label">cartes avec le commandant</span>
+          </div>
+          <a class="btn btn--primary" href="/decks/${encodeURIComponent(deck.deck_id)}">
+            Ouvrir la fiche du deck</a>
+        </div>
+      </div>
+
+      <div class="grid-2" style="align-items:start;grid-template-columns:minmax(0,2fr) minmax(260px,1fr)">
+        <div class="stack-6">
+          <div class="stack-2">
+            <h3 class="h3">Suggéré par la popularité, dans votre collection</h3>
+            <p class="muted small">Les cartes que vous possédez et que jouent le plus les
+              autres decks de ${MM.esc(deck.commander)}.</p>
+            <div id="suggested"></div>
+          </div>
+
+          <div class="stack-2">
+            <h3 class="h3">Ajouter une autre carte</h3>
+            <div class="field" style="max-width:520px">
+              <input class="input" id="cardSearch" type="text" autocomplete="off"
+                     placeholder="Tapez un nom puis appuyez sur Entrée">
+            </div>
+            <div id="searchResults"></div>
+          </div>
+        </div>
+
+        <div class="panel deck-side">
+          <div class="panel__head">
+            <h3 class="h3">Liste du deck</h3>
+            <span class="badge">${MM.fmt.int(count)}</span>
+          </div>
+          <div class="panel__body" id="deckList"></div>
+        </div>
+      </div>`;
+
+    renderSuggested();
+    renderSearch();
+    renderDeck();
+    bind();
+  }
+
+  function renderSuggested() {
+    const host = MM.el('#suggested');
+    const list = state.suggestions;
+    host.innerHTML = list.length
+      ? `<div class="card-grid">${list.map((c, i) => cardTile(c, i, 'sug')).join('')}</div>`
+      : `<p class="muted small">Aucune carte de votre collection ne ressort pour ce
+         commandant. Utilisez la recherche ci-dessous.</p>`;
+  }
+
+  function renderSearch() {
+    const host = MM.el('#searchResults');
+    if (!host) return;
+    host.innerHTML = state.search.length
+      ? `<div class="card-grid">${state.search.map((c, i) => cardTile(c, i, 'sea')).join('')}</div>`
+      : '';
+  }
+
+  function renderDeck() {
+    const host = MM.el('#deckList');
+    if (!state.cards.length) {
+      host.innerHTML = '<p class="muted small">Aucune carte pour le moment.</p>';
+      return;
+    }
+    const sorted = state.cards.slice()
+      .sort((a, b) => a.card_name.localeCompare(b.card_name, 'fr'));
+    host.innerHTML = sorted.map((card) => `
+      <div class="deck-line">
+        <span class="deck-line__name truncate" title="${MM.esc(card.card_name)}">
+          ${MM.esc(card.card_name)}</span>
+        <button class="btn btn--ghost btn--icon btn--sm deck-line__drop"
+                data-drop="${MM.esc(card.card_name)}"
+                aria-label="Retirer ${MM.esc(card.card_name)}">${MM.icons.close}</button>
+      </div>`).join('');
+  }
+
+  async function addCard(card) {
+    const name = card.card_name || card.name;
+    const why = illegalReason(card);
+    if (why) return MM.toast.error(`${name} : ${why}.`);
+    try {
+      await MM.api.post('/api/deck-card/add',
+        { commander: state.deck.commander, card_name: name });
+      await loadCards();
+      MM.toast.ok(`${name} ajoutée.`);
+      render();
+    } catch (err) { MM.toast.error(err.message); }
+  }
+
+  async function dropCard(name) {
+    try {
+      await MM.api.post('/api/deck-card/remove',
+        { commander: state.deck.commander, card_name: name });
+      await loadCards();
+      MM.toast(`${name} retirée.`);
+      render();
+    } catch (err) { MM.toast.error(err.message); }
+  }
+
+  function bind() {
+    MM.el('#build').addEventListener('click', (event) => {
+      const drop = event.target.closest('[data-drop]');
+      if (drop) return dropCard(drop.dataset.drop);
+
+      const add = event.target.closest('[data-add]');
+      if (!add) return;
+      const [kind, index] = add.dataset.add.split(':');
+      addCard((kind === 'sug' ? state.suggestions : state.search)[Number(index)]);
+    });
+
+    const search = MM.el('#cardSearch');
+    if (!search) return;
+    search.addEventListener('keydown', async (event) => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      const term = search.value.trim();
+      if (term.length < 2) return;
+      MM.el('#searchResults').innerHTML =
+        `<div class="card-grid">${MM.cardSkeletons(6)}</div>`;
+      try {
+        const data = await MM.api.get(
+          `/api/v2/cards/suggest?q=${encodeURIComponent(term)}&limit=20`);
+        state.search = data.cards || [];
+        renderSearch();
+      } catch (err) {
+        MM.el('#searchResults').innerHTML = MM.empty({
+          icon: 'warning', title: 'Recherche impossible', text: err.message });
+      }
+    });
+  }
+})();
+</script>
+</body>
+</html>

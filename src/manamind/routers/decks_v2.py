@@ -7,6 +7,8 @@ n'ont ainsi pas a interroger l'API carte par carte.
 
 from __future__ import annotations
 
+import uuid
+
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import Response
 from sqlalchemy import text
@@ -117,6 +119,60 @@ def api_decks(request: Request) -> Response:
             "image_normal": row.image_normal,
         })
     return _json_response({"decks": decks})
+
+
+@router.post("/api/v2/decks")
+async def api_create_deck(request: Request) -> Response:
+    """Cree un deck vide autour d'un commandant.
+
+    Les cartes etant rattachees au deck par le nom de son commandant, deux
+    decks ne peuvent pas partager le meme : leurs listes se confondraient.
+    """
+    user = _user(request)
+    try:
+        body = await request.json()
+    except Exception:
+        return _json_response({"error": "Corps JSON invalide"}, status_code=400)
+
+    commander = (body.get("commander") or "").strip()
+    name = (body.get("name") or "").strip() or commander
+    if not commander:
+        return _json_response({"error": "Commandant manquant"}, status_code=400)
+
+    with SessionLocal() as session:
+        taken = session.execute(text("""
+            SELECT name FROM user_moxfield_decks
+            WHERE user_id = :uid
+              AND mm_normalize_name(commander) = mm_normalize_name(:cmd)
+        """), {"uid": user["id"], "cmd": commander}).scalar()
+        if taken:
+            return _json_response(
+                {"error": f"« {taken} » a deja ce commandant. "
+                          "Deux decks ne peuvent pas partager le meme commandant."},
+                status_code=409)
+
+        # L'identite de couleur du commandant borne ce que le deck peut jouer.
+        identity = session.execute(text("""
+            SELECT color_identity FROM scryfall_cards
+            WHERE normalized_name = mm_normalize_name(:cmd)
+            ORDER BY id
+            LIMIT 1
+        """), {"cmd": commander}).scalar()
+
+        deck_id = f"new-{uuid.uuid4().hex[:12]}"
+        session.execute(text("""
+            INSERT INTO user_moxfield_decks
+                   (user_id, deck_id, moxfield_url, commander, name, locally_modified)
+            VALUES (:uid, :did, '', :cmd, :name, TRUE)
+        """), {"uid": user["id"], "did": deck_id, "cmd": commander, "name": name})
+        session.commit()
+
+    return _json_response({
+        "deck_id": deck_id,
+        "commander": commander,
+        "name": name,
+        "color_identity": list(identity or []),
+    })
 
 
 @router.get("/api/v2/decks/{deck_id}")

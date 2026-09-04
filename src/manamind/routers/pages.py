@@ -61,6 +61,11 @@ def page_decks() -> FileResponse:
     return _page("decks.html")
 
 
+@router.get("/decks/nouveau")
+def page_deck_new() -> FileResponse:
+    return _page("deck_new.html")
+
+
 @router.get("/decks/ameliorer")
 def page_deck_improve() -> FileResponse:
     return _page("deck_improve.html")
