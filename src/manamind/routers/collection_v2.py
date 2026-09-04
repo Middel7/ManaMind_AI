@@ -138,6 +138,11 @@ def api_card_suggest(
 
     /api/cards/autocomplete ne renvoie que des noms ; l'ajout rapide a besoin
     de la vignette pour que l'utilisateur reconnaisse la carte d'un coup d'oeil.
+
+    La recherche accepte le nom dans n'importe quelle langue imprimee : les
+    408 000 noms traduits de scryfall_card_printings sont interroges par leur
+    index, en plus du nom anglais. La carte reste identifiee par son nom
+    anglais ; le nom trouve est renvoye a part.
     """
     user = _user(request)
     term = q.strip()
@@ -146,12 +151,33 @@ def api_card_suggest(
 
     with SessionLocal() as session:
         rows = session.execute(text("""
+            -- Les deux branches passent par un index. ILIKE, et non
+            -- LOWER(...) LIKE : la base est en collation French_France.1252,
+            -- ou un btree ne sert pas pour LIKE — c'est l'index trigram de
+            -- printed_name qui repond, et il exige ILIKE (216 ms -> 30 ms).
+            WITH matched AS (
+                SELECT id FROM scryfall_cards WHERE name ILIKE :prefix
+                UNION
+                SELECT DISTINCT card_id FROM scryfall_card_printings
+                WHERE printed_name ILIKE :prefix
+                  AND card_id IS NOT NULL
+            )
             SELECT c.id, c.name, c.type_line, c.mana_cost, c.mana_value,
-                   c.color_identity, c.edhrec_rank,
+                   c.color_identity, c.edhrec_rank, tr.printed_name,
                    p.scryfall_id, p.set_code, p.collector_number, p.rarity,
                    p.image_small, p.image_normal,
                    COALESCE(owned.qty, 0) AS owned
             FROM scryfall_cards c
+            JOIN matched m ON m.id = c.id
+            -- Nom traduit ayant conduit au resultat, pour le montrer a l'ecran
+            LEFT JOIN LATERAL (
+                SELECT pr3.printed_name
+                FROM scryfall_card_printings pr3
+                WHERE pr3.card_id = c.id
+                  AND pr3.printed_name ILIKE :prefix
+                ORDER BY pr3.printed_name
+                LIMIT 1
+            ) tr ON TRUE
             JOIN LATERAL (
                 SELECT pr.scryfall_id, pr.set_code, pr.collector_number,
                        pr.rarity, pr.image_small, pr.image_normal
@@ -172,9 +198,9 @@ def api_card_suggest(
                 WHERE uc.user_id = :uid
                   AND mm_normalize_name(uc.card_name) = c.normalized_name
             ) owned ON TRUE
-            WHERE c.name ILIKE :prefix
-              AND c.type_line NOT ILIKE '%Token%'
+            WHERE c.type_line NOT ILIKE '%Token%'
             ORDER BY (c.name ILIKE :exact) DESC,
+                     (LOWER(tr.printed_name) = LOWER(:exact)) DESC,
                      c.edhrec_rank ASC NULLS LAST,
                      c.name
             LIMIT :limit
@@ -187,6 +213,7 @@ def api_card_suggest(
         {
             "name": r.name,
             "card_name": r.name,
+            "printed_name": r.printed_name,
             "scryfall_id": r.scryfall_id,
             "set_code": (r.set_code or "").upper(),
             "collector_number": r.collector_number,

@@ -379,6 +379,9 @@
               <div class="mtg-card__foot">
                 <span class="mtg-card__name" title="${MM.esc(card.name)}">
                   ${MM.esc(card.name)}</span>
+                ${card.printed_name && card.printed_name !== card.name
+                  ? `<span class="xs dim truncate" title="Nom trouvé : ${MM.esc(card.printed_name)}"
+                      >${MM.esc(card.printed_name)}</span>` : ''}
                 <span class="mtg-card__meta">
                   ${card.set_code ? `<span>${MM.esc(card.set_code)}</span>` : ''}
                   ${card.unit_price != null
