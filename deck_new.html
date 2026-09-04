@@ -28,6 +28,26 @@
   .deck-line__drop { opacity: 0.4; }
   .deck-line:hover .deck-line__drop { opacity: 1; }
 
+  /* Courbe et repartition du mana, dans le bandeau du deck */
+  .curve { display: flex; align-items: flex-end; gap: 3px; height: 46px; width: 168px; }
+  .curve__bar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .curve__fill {
+    width: 100%;
+    background: linear-gradient(180deg, var(--accent), var(--accent-deep));
+    border-radius: 3px 3px 0 0;
+    min-height: 2px;
+  }
+  .curve__label { font-size: 10px; color: var(--text-3); }
+  #manaBlock { display: flex; gap: var(--sp-4); align-items: center; flex-wrap: wrap; }
+  .mana-rows { display: flex; flex-direction: column; gap: 2px; }
+  .mana-row { display: flex; gap: var(--sp-2); flex-wrap: wrap; align-items: center; }
+  .mana-row__label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text-3); min-width: 66px;
+  }
+  .mana-count { display: inline-flex; align-items: center; gap: 4px; font-size: var(--text-sm); }
+  .mana-count .pip { width: 12px; height: 12px; }
+
   /* Carte que les regles interdisent : grisee, non cliquable */
   .card-illegal { opacity: 0.45; }
   .card-illegal .mtg-card__frame { filter: grayscale(0.7); }
@@ -40,7 +60,7 @@
 <body>
 
 <div id="page">
-  <div class="stack-2">
+  <div class="stack-2" id="intro">
     <h2 class="h2">Créer un deck</h2>
     <p class="muted small">Choisissez d’abord un commandant : il fixe l’identité de couleur
       du deck. Vous ajoutez ensuite les cartes une par une, à partir de vos suggestions ou
@@ -67,6 +87,7 @@
 
   const state = {
     deck: null,          // { deck_id, commander, name, color_identity }
+    commanderCard: null, // la carte du commandant, pour le calcul de mana
     cards: [],           // cartes du deck : { card_name, quantity }
     suggestions: [],
     search: [],
@@ -140,6 +161,13 @@
         name: card.name,
       });
       state.deck = { ...deck, image: card.image_normal || card.image_small };
+      state.commanderCard = {
+        card_name: card.name, quantity: 1,
+        mana_cost: card.mana_cost, mana_value: card.mana_value,
+        type_line: card.type_line, oracle_text: card.oracle_text,
+      };
+      // L'entete a fait son office : le bandeau du deck le remplace.
+      MM.el('#intro').hidden = true;
       MM.el('#step-commander').hidden = true;
       MM.el('#build').hidden = false;
       MM.toast.ok(`Deck « ${deck.name} » créé.`);
@@ -163,7 +191,11 @@
       const data = await MM.api.get('/api/collection-suggest' + MM.api.qs({
         top: 30, commander: state.deck.commander,
       }));
-      state.suggestions = data.results || [];
+      const results = data.results || [];
+      // Les suggestions ne portent que des noms : sans cette resolution, les
+      // vignettes restaient vides.
+      const resolved = await MM.resolveCards(results.map((c) => c.card_name));
+      state.suggestions = results.map((c) => ({ ...(resolved[c.card_name] || {}), ...c }));
     } catch { state.suggestions = []; }
   }
 
@@ -224,6 +256,7 @@
             <span class="stat__value">${MM.fmt.int(count + 1)}</span>
             <span class="stat__label">cartes avec le commandant</span>
           </div>
+          <div id="manaBlock"></div>
           <a class="btn btn--primary" href="/decks/${encodeURIComponent(deck.deck_id)}">
             Ouvrir la fiche du deck</a>
         </div>
@@ -260,7 +293,17 @@
     renderSuggested();
     renderSearch();
     renderDeck();
+    renderMana();
     bind();
+  }
+
+  /** Courbe et repartition du mana, calculees sur les cartes du deck plus son
+   *  commandant : c'est lui qui fixe l'identite de couleur. */
+  function renderMana() {
+    const host = MM.el('#manaBlock');
+    if (!host) return;
+    const list = state.cards.concat(state.commanderCard ? [state.commanderCard] : []);
+    host.innerHTML = list.length ? MM.mana.block(list, 34) : '';
   }
 
   function renderSuggested() {

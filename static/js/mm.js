@@ -781,6 +781,92 @@
    * @param {string[]} names
    * @returns {Promise<Object<string, object>>} indexe par le nom demande
    */
+  /* ══ Mana d'un deck ════════════════════════════════════════════════════ */
+
+  MM.mana = {
+    COLORS: ['W', 'U', 'B', 'R', 'G'],
+
+    /** Symboles colores exiges par les couts. Un symbole hybride compte pour
+     *  chacune de ses couleurs, faute de savoir laquelle sera payee. */
+    symbols(list) {
+      const counts = { W: 0, U: 0, B: 0, R: 0, G: 0 };
+      list.forEach((card) => {
+        const matches = (card.mana_cost || '').match(/\{[^}]+\}/g) || [];
+        matches.forEach((symbol) => {
+          MM.mana.COLORS.forEach((color) => {
+            if (symbol.includes(color)) counts[color] += card.quantity || 1;
+          });
+        });
+      });
+      return counts;
+    },
+
+    /** Sources de mana : toute carte dont le texte ajoute du mana d'une
+     *  couleur — terrains comme artefacts. « any » compte a part. */
+    sources(list) {
+      const counts = { W: 0, U: 0, B: 0, R: 0, G: 0, any: 0 };
+      list.forEach((card) => {
+        const found = new Set();
+        // « Add » jusqu'a la fin de la phrase : evite de compter un symbole
+        // mentionne ailleurs dans le texte de la carte.
+        ((card.oracle_text || '').match(/[Aa]dd[^.]*/g) || []).forEach((segment) => {
+          if (/any color/i.test(segment)) found.add('any');
+          MM.mana.COLORS.forEach((color) => {
+            if (segment.includes(`{${color}}`)) found.add(color);
+          });
+        });
+        found.forEach((key) => { counts[key] += card.quantity || 1; });
+      });
+      return counts;
+    },
+
+    /** Courbe de mana, terrains exclus. */
+    curve(list, height = 40) {
+      const buckets = [0, 0, 0, 0, 0, 0, 0, 0];
+      list.forEach((card) => {
+        if (/Land/i.test(card.type_line || '')) return;
+        buckets[Math.min(7, Math.floor(card.mana_value ?? 0))] += card.quantity || 1;
+      });
+      const max = Math.max(...buckets, 1);
+      return `<div class="curve">${buckets.map((count, index) => `
+        <span class="curve__bar" title="${count} carte${count > 1 ? 's' : ''} à ${index}${index === 7 ? '+' : ''}">
+          <span class="curve__fill" style="height:${(count / max) * height}px"></span>
+          <span class="curve__label">${index === 7 ? '7+' : index}</span>
+        </span>`).join('')}</div>`;
+    },
+
+    /** Une ligne de comptes colores, avec la part de chacun. */
+    row(label, counts, extra) {
+      const shown = MM.mana.COLORS.filter((color) => counts[color] > 0);
+      if (!shown.length && !extra) return '';
+      // Les sources « de n'importe quelle couleur » restent hors du calcul :
+      // elles alimentent toutes les couleurs et fausseraient la repartition.
+      const total = shown.reduce((sum, color) => sum + counts[color], 0);
+      return `
+        <div class="mana-row">
+          <span class="mana-row__label">${esc(label)}</span>
+          ${shown.map((color) => `
+            <span class="mana-count"
+                  title="${counts[color]} sur ${total} — ${esc(label.toLowerCase())} ${color}">
+              <span class="pip pip--${color}"></span>${counts[color]}
+              <span class="dim">${Math.round((counts[color] / total) * 100)} %</span></span>`).join('')}
+          ${extra || ''}
+        </div>`;
+    },
+
+    /** Bloc complet : courbe, symboles exiges, sources. */
+    block(list, height = 40) {
+      const src = MM.mana.sources(list);
+      return `
+        ${MM.mana.curve(list, height)}
+        <div class="mana-rows">
+          ${MM.mana.row('Symboles', MM.mana.symbols(list))}
+          ${MM.mana.row('Sources', src, src.any
+            ? `<span class="xs dim">+ ${src.any} toutes couleurs</span>` : '')}
+        </div>`;
+    },
+  };
+
   MM.resolveCards = async function (names) {
     const unique = [...new Set(names.filter(Boolean))];
     if (!unique.length) return {};

@@ -271,7 +271,7 @@ async def api_cards_resolve(request: Request) -> Response:
                    COALESCE(c.game_changer, false) AS game_changer,
                    art.scryfall_id, art.image_small, art.image_normal,
                    art.rarity, art.set_code,
-                   price.low_price,
+                   price.low_price AS unit_price,
                    COALESCE(owned.qty, 0) AS owned
             FROM unnest(CAST(:names AS text[])) AS n(raw)
             LEFT JOIN LATERAL (
