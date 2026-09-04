@@ -237,6 +237,83 @@
     if (button) addToCollection(button);
   });
 
+  /** Ecran d'accueil : les cartes rares et mythiques qu'aucun deck n'utilise,
+   *  les plus cheres d'abord. Un clic lance la recherche de commandant pour
+   *  cette carte — c'est le point de depart naturel de cet ecran. */
+  async function showDormant() {
+    results.innerHTML = `<div class="stack-2">
+      <h3 class="h3">Vos cartes qui dorment</h3>
+      <div class="card-grid">${MM.cardSkeletons(8)}</div></div>`;
+    try {
+      const data = await MM.api.get('/api/v2/collection/dormant?limit=60');
+      const items = data.items || [];
+      if (!items.length) {
+        results.innerHTML = MM.empty({
+          icon: 'search', title: 'Cherchez une carte',
+          text: 'Saisissez le nom d’une carte pour voir dans quels commandants elle est '
+            + 'le plus jouée.' });
+        return;
+      }
+      results.innerHTML = `
+        <div class="stack-2">
+          <div class="between">
+            <h3 class="h3">Vos cartes qui dorment</h3>
+            <span class="badge">${MM.fmt.int(items.length)}</span>
+          </div>
+          <p class="muted small">Rares et mythiques qu’aucun de vos decks n’utilise, de la
+            plus chère à la moins chère. Cliquez sur l’une d’elles pour lui chercher un
+            commandant, ou saisissez un autre nom ci-dessus.</p>
+          <div class="card-grid">
+            ${items.map((item, index) => `
+              <article class="mtg-card" data-dormant="${index}" tabindex="0" role="button"
+                       aria-label="Chercher un commandant pour ${MM.esc(item.card_name)}">
+                <div class="mtg-card__frame">
+                  ${MM.img.frame(item)}
+                  ${item.quantity > 1
+                    ? `<span class="mtg-card__qty">${item.quantity}</span>` : ''}
+                </div>
+                <div class="mtg-card__foot">
+                  <span class="mtg-card__name" title="${MM.esc(item.card_name)}">
+                    ${MM.esc(item.card_name)}</span>
+                  <span class="mtg-card__meta">
+                    ${item.set_code ? `<span>${MM.esc(item.set_code)}</span>` : ''}
+                    ${item.unit_price != null
+                      ? `<span class="mtg-card__price">${MM.fmt.eur(item.unit_price)}</span>`
+                      : ''}
+                  </span>
+                </div>
+              </article>`).join('')}
+          </div>
+        </div>`;
+
+      const pick = (node) => {
+        const item = items[Number(node.dataset.dormant)];
+        MM.el('#cardInput').value = item.card_name;
+        state.card = {
+          name: item.card_name,
+          set_code: item.set_code,
+          collector_number: item.collector_number,
+          image_normal: item.image_normal,
+          image_small: item.image_small,
+          owned: item.quantity,
+        };
+        load();
+      };
+      results.onclick = (event) => {
+        const node = event.target.closest('[data-dormant]');
+        if (node) pick(node);
+      };
+      results.onkeydown = (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        const node = event.target.closest('[data-dormant]');
+        if (node) { event.preventDefault(); pick(node); }
+      };
+    } catch (err) {
+      results.innerHTML = MM.empty({
+        icon: 'warning', title: 'Chargement impossible', text: err.message });
+    }
+  }
+
   // Permet d'arriver depuis un lien : /cartes/commandant?card=Sol+Ring
   const requested = new URLSearchParams(location.search).get('card');
   if (requested) {
@@ -247,6 +324,8 @@
       state.card = (data.cards && data.cards[0]) || { name: requested };
     } catch { state.card = { name: requested }; }
     load();
+  } else {
+    showDormant();
   }
 })();
 </script>
