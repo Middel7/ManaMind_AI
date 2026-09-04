@@ -65,6 +65,13 @@
 
   async function load() {
     if (!currentDeck) return;
+
+    if (MM.commanderMissing(currentDeck)) {
+      MM.el('#avgRate').innerHTML = '';
+      results.innerHTML = MM.commanderPrompt(currentDeck);
+      return;
+    }
+
     results.innerHTML = `<div class="card-grid">${MM.cardSkeletons(12)}</div>`;
 
     try {

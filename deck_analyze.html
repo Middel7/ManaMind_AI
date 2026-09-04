@@ -46,6 +46,8 @@
     <div id="deckPicker" class="grow"></div>
   </div>
 
+  <div id="noCommander" hidden></div>
+
   <div class="modes" id="modes">
     <button class="mode" data-analysis="popular">
       <span class="mode__mark" data-icon="chart"></span>
@@ -85,7 +87,19 @@
   });
 
   let currentDeck = null;
-  await MM.deckPicker(MM.el('#deckPicker'), (deck) => { currentDeck = deck; });
+  await MM.deckPicker(MM.el('#deckPicker'), (deck) => {
+    currentDeck = deck;
+    // Sans commandant, les deux analyses n'ont aucun point de comparaison :
+    // on renvoie l'utilisateur la ou il peut en designer un.
+    const choices = MM.el('#modes');
+    const prompt = MM.el('#noCommander');
+    const missing = MM.commanderMissing(deck);
+    if (choices) choices.hidden = missing;
+    if (prompt) {
+      prompt.hidden = !missing;
+      prompt.innerHTML = missing ? MM.commanderPrompt(deck) : '';
+    }
+  });
 
   /* ── Disponibilité du moteur ──────────────────────────────────────────── */
 

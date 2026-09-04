@@ -826,6 +826,29 @@
     return decks;
   };
 
+  /**
+   * Un deck dont l'import n'a pas identifie le commandant est enregistre sous
+   * « Unknown ». Les analyses partent toutes du commandant : sans lui, elles
+   * ne renvoient rien d'exploitable.
+   */
+  MM.commanderMissing = function (deck) {
+    const name = ((deck && deck.commander) || '').trim().toLowerCase();
+    return !name || name === 'unknown';
+  };
+
+  /** Invite a designer un commandant, sur la fiche du deck concerne. */
+  MM.commanderPrompt = function (deck) {
+    return MM.empty({
+      icon: 'crown',
+      title: 'Ce deck n’a pas de commandant',
+      text: `L'import n'a pas su identifier le commandant de « ${esc(deck.name)} ». `
+        + 'Désignez-le depuis la fiche du deck : la couronne, à côté du nom de chaque '
+        + 'carte légendaire, en fait le commandant.',
+      action: { href: `/decks/${encodeURIComponent(deck.deck_id)}`,
+                label: 'Ouvrir la fiche du deck' },
+    });
+  };
+
   MM.empty = function ({ icon = 'box', title, text, action }) {
     return `
       <div class="empty">
