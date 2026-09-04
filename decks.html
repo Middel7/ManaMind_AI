@@ -59,7 +59,7 @@
       <option value="size">Nombre de cartes</option>
     </select>
     <div class="toolbar__spacer"></div>
-    <a class="btn btn--primary" href="/collection/import">Importer un deck</a>
+    <a class="btn btn--primary" href="/collection/import?type=deck">Importer un deck</a>
   </div>
 
   <div id="results">
@@ -107,7 +107,7 @@
         title: 'Aucun deck pour le moment',
         text: "Importez une decklist pour croiser vos decks avec votre collection : "
           + "cartes manquantes, cartes dormantes, améliorations possibles.",
-        action: { href: '/collection/import', label: 'Importer un deck' },
+        action: { href: '/collection/import?type=deck', label: 'Importer un deck' },
       });
       return;
     }

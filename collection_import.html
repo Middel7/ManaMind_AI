@@ -197,7 +197,17 @@
     },
   };
 
-  const state = { deck: null, detection: null, destination: 'collection' };
+  // Le lien d'ou l'on vient dit ce qu'on veut importer : « Importer un deck »
+  // arrive avec ?type=deck et evite d'avoir a recliquer sur le meme choix.
+  const wanted = new URLSearchParams(location.search).get('type');
+  const state = {
+    deck: null, detection: null,
+    destination: wanted === 'deck' ? 'deck' : 'collection',
+  };
+
+  MM.els('#destChoice .dest-card').forEach((card) => {
+    card.setAttribute('aria-pressed', String(card.dataset.dest === state.destination));
+  });
 
   MM.els('#destChoice .dest-card__mark').forEach((mark) => {
     mark.innerHTML = MM.icons[mark.dataset.icon] || '';
