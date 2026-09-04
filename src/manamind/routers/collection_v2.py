@@ -250,6 +250,55 @@ def api_card_suggest(
     ]})
 
 
+@router.post("/api/v2/collection/adjust")
+async def api_adjust(request: Request) -> Response:
+    """Ajoute ou retire un exemplaire, en designant la carte par son nom.
+
+    Les ecrans d'analyse ne connaissent que des noms : sans cette route, ils
+    devraient d'abord retrouver l'identifiant de la ligne de collection.
+    """
+    user = _user(request)
+    try:
+        body = await request.json()
+    except Exception:
+        return _json_response({"error": "Corps JSON invalide"}, status_code=400)
+
+    name = (body.get("card_name") or "").strip()
+    delta = int(body.get("delta") or 0)
+    if not name or delta == 0:
+        return _json_response({"error": "card_name et delta sont requis"}, status_code=400)
+
+    with SessionLocal() as session:
+        rows = session.execute(text("""
+            SELECT id, quantity FROM user_collection
+            WHERE user_id = :uid AND mm_normalize_name(card_name) = mm_normalize_name(:n)
+            ORDER BY quantity DESC, id
+        """), {"uid": user["id"], "n": name}).fetchall()
+
+        if not rows:
+            if delta < 0:
+                return _json_response({"error": "Carte absente de la collection"},
+                                      status_code=404)
+            store.add_item(user["id"], name, quantity=delta)
+            total = delta
+        else:
+            # Une carte peut occuper plusieurs lignes (editions, finitions) :
+            # on ajuste celle qui en a le plus, pour ne pas eparpiller.
+            first = rows[0]
+            new_qty = first.quantity + delta
+            if new_qty <= 0:
+                session.execute(text("DELETE FROM user_collection WHERE id = :i"),
+                                {"i": first.id})
+            else:
+                session.execute(text(
+                    "UPDATE user_collection SET quantity = :q, updated_at = now() "
+                    "WHERE id = :i"), {"q": new_qty, "i": first.id})
+            session.commit()
+            total = sum(r.quantity for r in rows[1:]) + max(0, new_qty)
+
+    return _json_response({"ok": True, "card_name": name, "quantity": total})
+
+
 @router.post("/api/v2/cards/resolve")
 async def api_cards_resolve(request: Request) -> Response:
     """Resout un lot de noms en illustration, rarete et prix, en une requete.

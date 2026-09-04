@@ -231,10 +231,22 @@
           <span class="mtg-card__meta">
             ${card.inclusion_rate != null
               ? `<span class="dim">${Math.round(card.inclusion_rate)} % des decks</span>` : ''}
-            ${card.copies_owned ? `<span class="dim">${card.copies_owned} en collection</span>` : ''}
+            ${card.copies_owned ? `<span class="dim">${card.copies_owned} en collection</span>
+                 <span class="accent">${Math.max(0, card.copies_owned - (card.copies_used || 0))} libre${
+                   Math.max(0, card.copies_owned - (card.copies_used || 0)) > 1 ? 's' : ''}</span>` : ''}
             ${price != null ? `<span class="mtg-card__price">${MM.fmt.eur(price)}</span>` : ''}
           </span>
           ${why ? `<span class="illegal-why">${MM.esc(why)}</span>` : ''}
+          <span class="mtg-card__ops" data-stop>
+            <span class="stepper">
+              <button data-coll="dec" data-card="${MM.esc(name)}"
+                      aria-label="Retirer un exemplaire de ma collection">−</button>
+              <span class="stepper__value">${card.copies_owned ?? card.owned ?? 0}</span>
+              <button data-coll="inc" data-card="${MM.esc(name)}"
+                      aria-label="Ajouter un exemplaire a ma collection">+</button>
+            </span>
+            <span class="xs dim">en collection</span>
+          </span>
         </div>
       </article>`;
   }
@@ -354,6 +366,29 @@
     } catch (err) { MM.toast.error(err.message); }
   }
 
+  /** Ajuste la quantite en collection, sans toucher au deck. */
+  async function adjustCollection(button) {
+    const name = button.dataset.card;
+    const delta = button.dataset.coll === 'inc' ? 1 : -1;
+    const value = button.parentElement.querySelector('.stepper__value');
+    button.disabled = true;
+    try {
+      const res = await MM.api.post('/api/v2/collection/adjust',
+        { card_name: name, delta });
+      value.textContent = res.quantity;
+      // Les suggestions gardent le compte a jour pour les rendus suivants.
+      const found = state.suggestions.find((c) => (c.card_name || c.name) === name);
+      if (found) found.copies_owned = res.quantity;
+      MM.toast.ok(delta > 0
+        ? `${name} ajoutée à votre collection.`
+        : `${name} retirée de votre collection.`);
+    } catch (err) {
+      MM.toast.error(err.message);
+    } finally {
+      button.disabled = false;
+    }
+  }
+
   async function dropCard(name) {
     try {
       await MM.api.post('/api/deck-card/remove',
@@ -368,6 +403,11 @@
     MM.el('#build').addEventListener('click', (event) => {
       const drop = event.target.closest('[data-drop]');
       if (drop) return dropCard(drop.dataset.drop);
+
+      // Le compteur de collection vit dans la vignette, qui ajoute au deck :
+      // sans cette sortie, un clic ferait les deux.
+      const coll = event.target.closest('[data-coll]');
+      if (coll) return adjustCollection(coll);
 
       const add = event.target.closest('[data-add]');
       if (!add) return;
