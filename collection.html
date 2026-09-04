@@ -55,6 +55,19 @@
   /* En vue liste, les liens marchands se rangent a droite de la ligne */
   .list-view .mtg-card__market { margin-top: 0; flex-shrink: 0; }
   .list-view .mtg-card__market .btn { flex: none; }
+  /* Carte absente de la collection : grisee, avec une etiquette explicite */
+  .card-absent__flag {
+    position: absolute; top: 6px; left: 6px;
+    padding: 2px 7px;
+    border-radius: var(--r-sm);
+    background: var(--overlay);
+    border: 1px solid var(--line-strong);
+    color: var(--text-2);
+    font-size: var(--text-xs); font-weight: 600;
+    backdrop-filter: blur(4px);
+  }
+  .card-absent { border: 1px dashed var(--line-strong); border-radius: var(--r-lg);
+                 padding: var(--sp-2); }
 </style>
 </head>
 <body>
@@ -134,6 +147,7 @@
 
   <div id="results">
     <div class="card-grid" id="grid"></div>
+  <div id="catalog"></div>
   </div>
 
   <div class="sentinel" id="sentinel"></div>
@@ -265,6 +279,81 @@
     event.currentTarget.setAttribute('aria-expanded', String(!panel.hidden));
   });
 
+  /* ── Cartes hors collection ───────────────────────────────────────────── */
+
+  /** Une recherche ne doit pas s'arreter a ce que l'on possede : les cartes du
+   *  catalogue qui correspondent sont proposees en dessous, prêtes a rejoindre
+   *  la collection. */
+  async function renderCatalog() {
+    const host = MM.el('#catalog');
+    if (!host) return;
+    const term = state.search;
+    if (term.length < 2) { host.innerHTML = ''; return; }
+
+    try {
+      const data = await MM.api.get(
+        `/api/v2/cards/suggest?q=${encodeURIComponent(term)}&limit=20`);
+      // Celles que l'on possede deja figurent au-dessus, dans la collection.
+      const cards = (data.cards || []).filter((card) => !card.owned);
+      if (!cards.length) { host.innerHTML = ''; return; }
+
+      host.innerHTML = `
+        <div class="stack-2" style="margin-top:var(--sp-8)">
+          <div class="between">
+            <h3 class="h3">Pas encore dans votre collection</h3>
+            <span class="badge">${MM.fmt.int(cards.length)}</span>
+          </div>
+          <p class="muted small">Ces cartes correspondent à « ${MM.esc(term)} ».
+            Ajoutez-les d’un clic.</p>
+          <div class="card-grid">
+            ${cards.map((card, index) => `
+              <article class="mtg-card mtg-card--muted card-absent" data-catalog="${index}">
+                <div class="mtg-card__frame">
+                  ${MM.img.frame(card)}
+                  <span class="card-absent__flag">Pas en collection</span>
+                </div>
+                <div class="mtg-card__foot">
+                  <span class="mtg-card__name" title="${MM.esc(card.name)}">
+                    ${MM.esc(card.name)}</span>
+                  ${card.printed_name && card.printed_name !== card.name
+                    ? `<span class="xs dim truncate">${MM.esc(card.printed_name)}</span>` : ''}
+                  <span class="mtg-card__meta">
+                    ${card.set_code ? `<span>${MM.esc(card.set_code)}</span>` : ''}
+                    ${card.unit_price != null
+                      ? `<span class="mtg-card__price">${MM.fmt.eur(card.unit_price)}</span>` : ''}
+                  </span>
+                  <button class="btn btn--sm" data-add="${index}"
+                          style="margin-top:6px">Ajouter à ma collection</button>
+                </div>
+              </article>`).join('')}
+          </div>
+        </div>`;
+
+      host.onclick = async (event) => {
+        const button = event.target.closest('[data-add]');
+        if (!button) return;
+        const card = cards[Number(button.dataset.add)];
+        button.disabled = true;
+        button.textContent = 'Ajout…';
+        try {
+          await MM.api.post('/api/v2/collection/items', {
+            card_name: card.name,
+            quantity: 1,
+            set_code: card.set_code,
+            collector_number: card.collector_number,
+          });
+          MM.toast.ok(`${card.name} ajoutée à votre collection.`);
+          button.textContent = 'Ajoutée ✓';
+          load(true);
+        } catch (err) {
+          MM.toast.error(err.message);
+          button.disabled = false;
+          button.textContent = 'Ajouter à ma collection';
+        }
+      };
+    } catch { host.innerHTML = ''; }
+  }
+
   MM.el('#search').addEventListener('input', MM.debounce((event) => {
     state.search = event.target.value.trim();
     reload();
@@ -337,6 +426,7 @@
       state.offset += data.items.length;
       if (data.items.length < PAGE_SIZE) state.done = true;
       updateSummary();
+      if (reset) renderCatalog();
     } catch (err) {
       MM.toast.error(err.message);
       state.done = true;
