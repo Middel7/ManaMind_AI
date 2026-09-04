@@ -284,6 +284,72 @@ async def api_set_commander(deck_id: str, request: Request) -> Response:
     return _json_response({"ok": True, "commander": card_name})
 
 
+@router.get("/api/v2/hidden-moves")
+def api_hidden_moves(request: Request) -> Response:
+    """Deplacements que l'utilisateur a ecartes, les plus recents d'abord."""
+    user = _user(request)
+    with SessionLocal() as session:
+        rows = session.execute(text("""
+            SELECT id, card_name, from_commander, to_commander, hidden_at
+            FROM user_hidden_moves
+            WHERE user_id = :uid
+            ORDER BY hidden_at DESC, id DESC
+        """), {"uid": user["id"]}).fetchall()
+
+    return _json_response({"moves": [
+        {
+            "id": r.id,
+            "card_name": r.card_name,
+            "from_commander": r.from_commander,
+            "to_commander": r.to_commander,
+            "hidden_at": r.hidden_at.isoformat() if r.hidden_at else None,
+        }
+        for r in rows
+    ]})
+
+
+@router.post("/api/v2/hidden-moves")
+async def api_hide_move(request: Request) -> Response:
+    """Ecarte un deplacement : il ne sera plus propose."""
+    user = _user(request)
+    try:
+        body = await request.json()
+    except Exception:
+        return _json_response({"error": "Corps JSON invalide"}, status_code=400)
+
+    card = (body.get("card_name") or "").strip()
+    origin = (body.get("from_commander") or "").strip()
+    target = (body.get("to_commander") or "").strip()
+    if not (card and origin and target):
+        return _json_response(
+            {"error": "card_name, from_commander et to_commander sont requis"},
+            status_code=400)
+
+    with SessionLocal() as session:
+        session.execute(text("""
+            INSERT INTO user_hidden_moves (user_id, card_name, from_commander, to_commander)
+            VALUES (:uid, :card, :origin, :target)
+            ON CONFLICT (user_id, card_name, from_commander, to_commander) DO NOTHING
+        """), {"uid": user["id"], "card": card, "origin": origin, "target": target})
+        session.commit()
+
+    return _json_response({"ok": True})
+
+
+@router.delete("/api/v2/hidden-moves/{move_id}")
+def api_restore_move(move_id: int, request: Request) -> Response:
+    """Remet un deplacement dans les suggestions."""
+    user = _user(request)
+    with SessionLocal() as session:
+        result = session.execute(text("""
+            DELETE FROM user_hidden_moves WHERE id = :mid AND user_id = :uid
+        """), {"mid": move_id, "uid": user["id"]})
+        session.commit()
+    if not result.rowcount:
+        return _json_response({"error": "Suggestion introuvable"}, status_code=404)
+    return _json_response({"ok": True})
+
+
 @router.get("/api/v2/decks/{deck_id}/missing")
 def api_deck_missing(
     deck_id: str,

@@ -1047,6 +1047,22 @@ def suggest_from_collection_for_user(user_id: int, top_n: int = 40, commander_fi
     }
 
 
+def load_hidden_moves(user_id: int) -> set[tuple[str, str, str]]:
+    """Deplacements que l'utilisateur a refuses, normalises pour comparaison."""
+    from sqlalchemy import text as _t
+    from manamind.db.engine import SessionLocal as _SL
+    try:
+        with _SL() as sess:
+            rows = sess.execute(_t("""
+                SELECT card_name, from_commander, to_commander
+                FROM user_hidden_moves WHERE user_id = :uid
+            """), {"uid": user_id}).fetchall()
+    except Exception:
+        return set()
+    return {(_normalize(r.card_name), _normalize(r.from_commander),
+             _normalize(r.to_commander)) for r in rows}
+
+
 def suggest_moves_for_user(user_id: int, top_n: int = 30) -> dict:
     """Variante multi-user de suggest_moves."""
     from manamind.user_decks import load_config_for_user, get_deck_cards
@@ -1133,7 +1149,18 @@ def suggest_moves_for_user(user_id: int, top_n: int = 30) -> dict:
                     "total_decks":     best_other_data["total_decks"],
                 }
 
-    ranked = sorted(best_move.values(), key=lambda r: (-r["gain"], r["card_name"]))
+    # Suggestions deja refusees : elles ne reviennent pas. Le trio carte /
+    # origine / destination identifie le deplacement, la meme carte pouvant
+    # valoir un deplacement ailleurs.
+    hidden = load_hidden_moves(user_id)
+    kept = [
+        move for move in best_move.values()
+        if (_normalize(move["card_name"]),
+            _normalize(move["from_commander"]),
+            _normalize(move["to_commander"])) not in hidden
+    ]
+
+    ranked = sorted(kept, key=lambda r: (-r["gain"], r["card_name"]))
     return {
         "results": [{"rank": i + 1, **r} for i, r in enumerate(ranked[:top_n])],
         "missing_data": [],

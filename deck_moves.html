@@ -43,7 +43,12 @@
   </div>
 
   <div class="toolbar">
-    <div class="field" style="width:auto">
+    <div class="chips" id="views" role="tablist">
+      <button class="chip" data-view="open" aria-pressed="true">Propositions</button>
+      <button class="chip" data-view="hidden" aria-pressed="false">
+        Écartées <span class="chip__count" id="hiddenCount">0</span></button>
+    </div>
+    <div class="field" style="width:auto" id="topField">
       <label class="label" for="topCount">Nombre de propositions</label>
       <select class="select" id="topCount">
         <option value="30">30</option>
@@ -116,14 +121,91 @@
               <span class="xs accent">Ajouter à ${MM.esc(move.to_commander)}
                 <span class="num">${move.to_rate.toFixed(1)} %</span></span>
             </span>
-            <button class="btn btn--sm" data-move="${index}"
-                    style="margin-top:6px">Déplacer</button>
+            <span class="cluster-2" style="margin-top:6px">
+              <button class="btn btn--sm grow" data-move="${index}">Déplacer</button>
+              <button class="btn btn--sm btn--ghost" data-hide="${index}"
+                      title="Ne plus proposer ce déplacement">Écarter</button>
+            </span>
           </div>
         </article>`;
     }).join('')}</div>`;
   }
 
+  /* ── Propositions ecartees ────────────────────────────────────────────── */
+
+  let hidden = [];
+
+  async function loadHidden() {
+    try {
+      hidden = (await MM.api.get('/api/v2/hidden-moves')).moves || [];
+    } catch { hidden = []; }
+    MM.el('#hiddenCount').textContent = hidden.length;
+  }
+
+  function renderHidden() {
+    if (!hidden.length) {
+      results.innerHTML = MM.empty({
+        icon: 'check', title: 'Aucune proposition écartée',
+        text: 'Les déplacements que vous écartez apparaîtront ici, et pourront être remis '
+          + 'dans les propositions.' });
+      return;
+    }
+    results.innerHTML = `<div class="rows">${hidden.map((move) => `
+      <div class="row">
+        <span class="row__main">
+          <span class="row__title truncate">${MM.esc(move.card_name)}</span>
+          <span class="row__sub">${MM.esc(move.from_commander)}
+            → ${MM.esc(move.to_commander)}</span>
+        </span>
+        <span class="row__aside">
+          <button class="btn btn--sm" data-restore="${move.id}">Remettre</button>
+        </span>
+      </div>`).join('')}</div>`;
+  }
+
+  function showView(view) {
+    MM.el('#topField').hidden = view !== 'open';
+    if (view === 'hidden') renderHidden(); else load();
+  }
+
+  MM.el('#views').addEventListener('click', (event) => {
+    const chip = event.target.closest('.chip');
+    if (!chip) return;
+    MM.els('#views .chip').forEach((other) =>
+      other.setAttribute('aria-pressed', String(other === chip)));
+    showView(chip.dataset.view);
+  });
+
   results.addEventListener('click', async (event) => {
+    const restore = event.target.closest('[data-restore]');
+    if (restore) {
+      restore.disabled = true;
+      try {
+        await MM.api.del(`/api/v2/hidden-moves/${restore.dataset.restore}`);
+        MM.toast.ok('Proposition remise dans la liste.');
+        await loadHidden();
+        renderHidden();
+      } catch (err) { MM.toast.error(err.message); restore.disabled = false; }
+      return;
+    }
+
+    const skip = event.target.closest('[data-hide]');
+    if (skip) {
+      const move = moves[Number(skip.dataset.hide)];
+      skip.disabled = true;
+      try {
+        await MM.api.post('/api/v2/hidden-moves', {
+          card_name: move.card_name,
+          from_commander: move.from_commander,
+          to_commander: move.to_commander,
+        });
+        skip.closest('.mtg-card').remove();
+        MM.toast.ok(`${move.card_name} ne sera plus proposée pour ce déplacement.`);
+        await loadHidden();
+      } catch (err) { MM.toast.error(err.message); skip.disabled = false; }
+      return;
+    }
+
     const button = event.target.closest('[data-move]');
     if (!button) return;
     const move = moves[Number(button.dataset.move)];
@@ -155,6 +237,7 @@
     }
   });
 
+  loadHidden();
   load();
 })();
 </script>
