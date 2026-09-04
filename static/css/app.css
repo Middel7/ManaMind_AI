@@ -258,6 +258,24 @@ table { border-collapse: collapse; width: 100%; }
 
 .topbar__burger { display: none; }
 
+/* Numero de version, ancre en haut a droite de la fenetre. Discret par
+   defaut, lisible au survol : il sert a verifier, pas a etre lu sans cesse. */
+.version-tag {
+  position: fixed; top: 6px; right: 10px;
+  z-index: var(--z-sticky);
+  padding: 1px 7px;
+  border-radius: var(--r-full);
+  background: var(--overlay);
+  border: 1px solid var(--line);
+  color: var(--text-3);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-decoration: none;
+  opacity: 0.45;
+  transition: opacity var(--dur) var(--ease);
+}
+.version-tag:hover { opacity: 1; color: var(--text-1); }
+
 /* La barre du haut ne porte plus que le burger : sur grand ecran, ou la sidebar
    est deployee, elle n'a plus rien a montrer et disparait. Elle ne subsiste en
    dessous de 860 px que parce que son burger y est le seul acces au tiroir. */

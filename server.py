@@ -235,6 +235,36 @@ def index() -> FileResponse:
     )
 
 
+# ── Version deployee ──────────────────────────────────────────────────────────
+# Calculee une fois : appeler git a chaque requete couterait plus cher que la
+# reponse elle-meme. Le numero est le nombre de commits, qui ne fait que croitre
+# et se compare donc d'un coup d'oeil.
+def _read_version() -> dict:
+    import subprocess
+    def _git(*args: str) -> str:
+        try:
+            return subprocess.run(["git", *args], cwd=str(ROOT), capture_output=True,
+                                  text=True, timeout=5).stdout.strip()
+        except Exception:
+            return ""
+    count = _git("rev-list", "--count", "HEAD")
+    return {
+        "build": int(count) if count.isdigit() else 0,
+        "sha": _git("rev-parse", "--short", "HEAD"),
+        "date": _git("log", "-1", "--format=%cI"),
+        "subject": _git("log", "-1", "--format=%s")[:120],
+    }
+
+
+_VERSION = _read_version()
+
+
+@app.get("/api/version")
+def api_version() -> Response:
+    """Version deployee, pour savoir d'un coup d'oeil si l'on est a jour."""
+    return _json_response(_VERSION)
+
+
 @app.get("/health")
 def health_check() -> JSONResponse:
     from sqlalchemy import text as _health_text

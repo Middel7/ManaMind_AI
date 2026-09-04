@@ -553,7 +553,22 @@
       bindLogout();
     }
     if (fresh) MM.decorateAvatar(fresh);
+    MM.showVersion();
     return fresh;
+  };
+
+  /** Numero de version, en haut a droite : dit d'un coup d'oeil si la page
+   *  qu'on regarde vient bien du dernier deploiement. */
+  MM.showVersion = async function () {
+    if (el('#mmVersion')) return;
+    try {
+      const v = await MM.api.get('/api/version');
+      const tag = node(`<a class="version-tag" id="mmVersion" href="/api/version"
+        target="_blank" rel="noopener"
+        title="${esc(v.subject || '')} — ${esc(v.sha || '')} du ${esc((v.date || '').slice(0, 10))}"
+        >v${v.build}</a>`);
+      document.body.appendChild(tag);
+    } catch { /* l'absence de version n'empeche rien */ }
   };
 
   /** Remplace les initiales par la carte fetiche du profil, si elle existe. */

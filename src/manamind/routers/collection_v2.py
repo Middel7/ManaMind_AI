@@ -128,6 +128,14 @@ def api_clear(request: Request) -> Response:
 
 # ── Recherche de cartes ──────────────────────────────────────────────────────
 
+_LIGATURES = str.maketrans({"Æ": "Ae", "æ": "ae", "Œ": "Oe", "œ": "oe"})
+
+
+def _unligature(term: str) -> str:
+    """« Æther » -> « Aether » : la base ne connait que la forme depliee."""
+    return term.translate(_LIGATURES)
+
+
 @router.get("/api/v2/cards/suggest")
 def api_card_suggest(
     request: Request,
@@ -156,10 +164,11 @@ def api_card_suggest(
             -- ou un btree ne sert pas pour LIKE — c'est l'index trigram de
             -- printed_name qui repond, et il exige ILIKE (216 ms -> 30 ms).
             WITH matched AS (
-                SELECT id FROM scryfall_cards WHERE name ILIKE :prefix
+                SELECT id FROM scryfall_cards
+                WHERE name ILIKE :prefix OR name ILIKE :prefix_alt
                 UNION
                 SELECT DISTINCT card_id FROM scryfall_card_printings
-                WHERE printed_name ILIKE :prefix
+                WHERE (printed_name ILIKE :prefix OR printed_name ILIKE :prefix_alt)
                   AND card_id IS NOT NULL
             )
             SELECT c.id, c.name, c.type_line, c.mana_cost, c.mana_value,
@@ -174,7 +183,8 @@ def api_card_suggest(
                 SELECT pr3.printed_name
                 FROM scryfall_card_printings pr3
                 WHERE pr3.card_id = c.id
-                  AND pr3.printed_name ILIKE :prefix
+                  AND (pr3.printed_name ILIKE :prefix
+                       OR pr3.printed_name ILIKE :prefix_alt)
                 ORDER BY pr3.printed_name
                 LIMIT 1
             ) tr ON TRUE
@@ -212,6 +222,9 @@ def api_card_suggest(
             # aussi par son second mot — « isochronique » doit ramener
             # Sceptre isochronique.
             "uid": user["id"], "prefix": f"%{term}%",
+            # Scryfall ecrit « Aether », jamais « Æther » : sans cette variante,
+            # taper le nom tel qu'il figure sur la carte ne trouvait rien.
+            "prefix_alt": f"%{_unligature(term)}%",
             "starts": f"{term}%",
             "exact": term, "limit": limit,
         }).fetchall()
