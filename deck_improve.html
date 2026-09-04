@@ -12,14 +12,6 @@
 <link rel="stylesheet" href="/static/css/app.css">
 <style>
   .suggestion { position: relative; }
-  .suggestion__rate {
-    position: absolute; top: 6px; left: 6px;
-    padding: 2px 7px; border-radius: var(--r-sm);
-    background: var(--overlay); border: 1px solid var(--line-accent);
-    color: var(--accent-bright);
-    font-size: var(--text-xs); font-weight: 600;
-    backdrop-filter: blur(4px);
-  }
   .suggestion.is-added .mtg-card__frame { border-color: var(--ok); opacity: 0.6; }
 </style>
 <style>
@@ -126,7 +118,6 @@
                data-name="${MM.esc(card.card_name)}">
         <div class="mtg-card__frame">
           ${MM.img.frame({ card_name: card.card_name, ...(resolved[card.card_name] || {}) })}
-          <span class="suggestion__rate">${Math.round(card.inclusion_rate)} %</span>
           ${card.copies_owned > 1
             ? `<span class="mtg-card__qty">${card.copies_owned}</span>` : ''}
           ${card.source === 'opened_sets' ? `
@@ -140,7 +131,9 @@
           <span class="mtg-card__name" title="${MM.esc(card.card_name)}">
             ${MM.esc(card.card_name)}</span>
           <span class="mtg-card__meta">
-            <span class="dim">${MM.fmt.int(card.decks_with_card)} / ${MM.fmt.int(card.total_decks)} decks</span>
+            <span class="dim"
+                  title="${MM.fmt.int(card.decks_with_card)} des ${MM.fmt.int(card.total_decks)} decks du même commandant jouent cette carte">
+              ${Math.round(card.inclusion_rate)} % des decks similaires</span>
             ${(resolved[card.card_name] || {}).unit_price != null
               ? `<span class="mtg-card__price">${MM.fmt.eur(resolved[card.card_name].unit_price)}</span>`
               : ''}
