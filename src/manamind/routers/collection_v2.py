@@ -271,7 +271,7 @@ async def api_cards_resolve(request: Request) -> Response:
                    COALESCE(c.game_changer, false) AS game_changer,
                    art.scryfall_id, art.image_small, art.image_normal,
                    art.rarity, art.set_code,
-                   price.unit_price,
+                   price.low_price,
                    COALESCE(owned.qty, 0) AS owned
             FROM unnest(CAST(:names AS text[])) AS n(raw)
             LEFT JOIN LATERAL (
@@ -318,19 +318,8 @@ async def api_cards_resolve(request: Request) -> Response:
                          p.released_at DESC NULLS LAST
                 LIMIT 1
             ) art ON TRUE
-            LEFT JOIN LATERAL (
-                SELECT MIN(latest.trend_price) AS unit_price
-                FROM scryfall_card_printings p2
-                CROSS JOIN LATERAL (
-                    SELECT pge.trend_price
-                    FROM cardmarket_price_guide_entries pge
-                    WHERE pge.id_product = p2.cardmarket_id
-                    ORDER BY pge.captured_at DESC
-                    LIMIT 1
-                ) latest
-                WHERE p2.card_id = c.id AND p2.cardmarket_id IS NOT NULL
-                  AND latest.trend_price > 0
-            ) price ON TRUE
+            -- Prix de reference : low_price de l'edition la moins chere
+            LEFT JOIN card_min_price price ON price.card_id = c.id
             LEFT JOIN LATERAL (
                 SELECT SUM(uc.quantity) AS qty
                 FROM user_collection uc

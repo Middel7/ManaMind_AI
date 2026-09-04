@@ -61,27 +61,18 @@ _ENRICH_SQL = """
 
     LEFT JOIN scryfall_cards sc ON sc.id = uc.card_id
 
-    -- La vue v_cardmarket_* se materialise en entier : on lit la table de prix
-    -- via l'index (id_product, captured_at).
-    LEFT JOIN LATERAL (
-        SELECT pge.trend_price, pge.low_price, pge.foil_trend, pge.foil_low
-        FROM cardmarket_price_guide_entries pge
-        WHERE pge.id_product = COALESCE(pd.cardmarket_id, pf.cardmarket_id)
-        ORDER BY pge.captured_at DESC
-        LIMIT 1
-    ) cm ON TRUE
+    -- Prix de reference du projet : le low_price Cardmarket de l'edition la
+    -- moins chere, precalcule par la vue card_min_price. Il ne depend ni de
+    -- l'edition possedee ni de la finition.
+    LEFT JOIN card_min_price cm ON cm.card_id = uc.card_id
 
     LEFT JOIN scryfall_mtg_sets st
            ON UPPER(st.code) = UPPER(COALESCE(pd.set_code, pf.set_code, uc.set_code))
 """
 
-# Prix unitaire : tendance Cardmarket d'abord, prix Scryfall EUR en secours.
+# Prix unitaire : low_price Cardmarket de l'edition la moins chere.
 _UNIT_PRICE_SQL = """
-    COALESCE(
-        CASE WHEN uc.finish = 'nonfoil' THEN cm.trend_price ELSE cm.foil_trend END,
-        CASE WHEN uc.finish = 'nonfoil' THEN cm.low_price   ELSE cm.foil_low   END,
-        NULL
-    )
+    cm.low_price
 """
 
 _RARITY_RANK_SQL = """

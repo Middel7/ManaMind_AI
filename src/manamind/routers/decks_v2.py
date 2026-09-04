@@ -36,23 +36,15 @@ _ART_SQL = """
     ) art ON TRUE
 """
 
-# Sans edition connue, la valeur de reference est l'impression la moins chere :
-# celle de l'impression illustrative surevaluerait les cartes reimprimees en premium.
+# Prix de reference du projet : le low_price Cardmarket de l'edition la moins
+# chere. L'impression illustrative surevaluerait les cartes reimprimees en
+# premium, et la tendance depasse presque toujours la meilleure offre.
 _PRICE_SQL = """
     LEFT JOIN LATERAL (
-        SELECT MIN(latest.trend_price) AS unit_price
+        SELECT MIN(cmp.low_price) AS unit_price
         FROM scryfall_cards c2
-        JOIN scryfall_card_printings p2 ON p2.card_id = c2.id
-        CROSS JOIN LATERAL (
-            SELECT pge.trend_price
-            FROM cardmarket_price_guide_entries pge
-            WHERE pge.id_product = p2.cardmarket_id
-            ORDER BY pge.captured_at DESC
-            LIMIT 1
-        ) latest
+        JOIN card_min_price cmp ON cmp.card_id = c2.id
         WHERE c2.normalized_name = mm_normalize_name({name_expr})
-          AND p2.cardmarket_id IS NOT NULL
-          AND latest.trend_price > 0
     ) price ON TRUE
 """
 
