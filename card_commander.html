@@ -152,6 +152,9 @@
                 ? `<span class="badge badge--ok">${state.card.owned} en collection</span>`
                 : '<span class="dim">absente de votre collection</span>'}
             </span>
+            <button class="btn btn--sm btn--primary" id="addToCollection"
+                    style="margin-top:6px;justify-content:center">
+              Ajouter à ma collection</button>
             ${state.card.owned ? `
               <span class="mtg-card__market">
                 <a class="btn btn--sm" target="_blank" rel="noopener"
@@ -195,6 +198,32 @@
         </div>
       </div>`;
   }
+
+  /** Ajoute un exemplaire de la carte affichee, et met a jour son compte. */
+  async function addToCollection(button) {
+    button.disabled = true;
+    button.textContent = 'Ajout…';
+    try {
+      await MM.api.post('/api/v2/collection/items', {
+        card_name: state.card.name,
+        quantity: 1,
+        set_code: state.card.set_code,
+        collector_number: state.card.collector_number,
+      });
+      state.card.owned = (state.card.owned || 0) + 1;
+      MM.toast.ok(`${state.card.name} ajoutée à votre collection.`);
+      load();
+    } catch (err) {
+      MM.toast.error(err.message);
+      button.disabled = false;
+      button.textContent = 'Ajouter à ma collection';
+    }
+  }
+
+  results.addEventListener('click', (event) => {
+    const button = event.target.closest('#addToCollection');
+    if (button) addToCollection(button);
+  });
 
   // Permet d'arriver depuis un lien : /cartes/commandant?card=Sol+Ring
   const requested = new URLSearchParams(location.search).get('card');
