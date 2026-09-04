@@ -49,8 +49,10 @@
   .sentinel { height: 40px; }
 
   /* Vignettes agrandies : les illustrations restent lisibles sans zoom */
-  #results .card-grid { --card-min: 232px; }
-  @media (max-width: 860px) { #results .card-grid { --card-min: 152px; } }
+  #results .card-grid, #catalog .card-grid { --card-min: 232px; }
+  @media (max-width: 860px) {
+    #results .card-grid, #catalog .card-grid { --card-min: 152px; }
+  }
 
   /* En vue liste, les liens marchands se rangent a droite de la ligne */
   .list-view .mtg-card__market { margin-top: 0; flex-shrink: 0; }
