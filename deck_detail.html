@@ -333,24 +333,86 @@
     });
 
     MM.el('#addCard').addEventListener('click', () => {
+      // La recherche part sur Entree, pas a chaque frappe : les resultats
+      // s'affichent en grille, assez grands pour reconnaitre une carte a son
+      // illustration avant de l'ajouter.
       const modal = MM.modal({
         title: 'Ajouter une carte au deck',
-        body: `<div class="field">
-                 <label class="label" for="newCard">Nom de la carte</label>
-                 <div class="autocomplete">
+        wide: true,
+        body: `<div class="stack">
+                 <div class="field">
+                   <label class="label" for="newCard">Nom de la carte</label>
                    <input class="input" id="newCard" type="text" autocomplete="off"
-                          placeholder="Rechercher…">
+                          placeholder="Tapez un nom puis appuyez sur Entrée">
                  </div>
+                 <div id="cardResults"></div>
                </div>`,
       });
-      MM.autocomplete(MM.el('#newCard', modal.root), async (card) => {
+
+      const input = MM.el('#newCard', modal.root);
+      const host = MM.el('#cardResults', modal.root);
+      input.focus();
+
+      async function search() {
+        const term = input.value.trim();
+        if (term.length < 2) {
+          host.innerHTML = '<p class="muted small">Saisissez au moins deux caractères.</p>';
+          return;
+        }
+        host.innerHTML = `<div class="card-grid">${MM.cardSkeletons(8)}</div>`;
         try {
-          await MM.api.post('/api/deck-card/add',
-            { commander: deck.commander, card_name: card.name });
-          MM.toast.ok(`${card.name} ajoutée au deck.`);
-          modal.close();
-          await reload();
-        } catch (err) { MM.toast.error(err.message); }
+          const data = await MM.api.get(
+            `/api/v2/cards/suggest?q=${encodeURIComponent(term)}&limit=20`);
+          const cards = data.cards || [];
+          if (!cards.length) {
+            host.innerHTML = MM.empty({
+              icon: 'search', title: 'Aucune carte trouvée',
+              text: `Aucune carte ne correspond à « ${term} ».` });
+            return;
+          }
+          host.innerHTML = `<div class="card-grid">${cards.map((card, index) => `
+            <article class="mtg-card" data-pick="${index}" style="cursor:pointer"
+                     title="Ajouter ${MM.esc(card.name)} au deck">
+              <div class="mtg-card__frame">
+                ${MM.img.frame({ card_name: card.name, ...card })}
+              </div>
+              <div class="mtg-card__foot">
+                <span class="mtg-card__name" title="${MM.esc(card.name)}">
+                  ${MM.esc(card.name)}</span>
+                <span class="mtg-card__meta">
+                  ${card.set_code ? `<span>${MM.esc(card.set_code)}</span>` : ''}
+                  ${card.unit_price != null
+                    ? `<span class="mtg-card__price">${MM.fmt.eur(card.unit_price)}</span>` : ''}
+                </span>
+              </div>
+            </article>`).join('')}</div>`;
+
+          host.onclick = async (event) => {
+            const tile = event.target.closest('[data-pick]');
+            if (!tile) return;
+            const card = cards[Number(tile.dataset.pick)];
+            tile.style.opacity = '0.5';
+            try {
+              await MM.api.post('/api/deck-card/add',
+                { commander: deck.commander, card_name: card.name });
+              MM.toast.ok(`${card.name} ajoutée au deck.`);
+              modal.close();
+              await reload();
+            } catch (err) {
+              MM.toast.error(err.message);
+              tile.style.opacity = '';
+            }
+          };
+        } catch (err) {
+          host.innerHTML = MM.empty({
+            icon: 'warning', title: 'Recherche impossible', text: err.message });
+        }
+      }
+
+      input.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter') return;
+        event.preventDefault();
+        search();
       });
     });
 
