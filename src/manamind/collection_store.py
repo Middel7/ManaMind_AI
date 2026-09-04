@@ -146,13 +146,16 @@ def _row_to_item(row: Any) -> dict:
 
 
 def _deck_usage(session: Any, user_id: int) -> dict[str, list[str]]:
-    """{ nom normalise: [commandants des decks qui l'utilisent] }"""
+    """{ nom normalise: [commandants des decks qui l'utilisent] }
+
+    Le rapprochement se fait par deck_id : joindre par commandant confondait deux
+    decks qui partagent le meme, et n'en comptait alors qu'un.
+    """
     rows = session.execute(text("""
-        SELECT DISTINCT dc.card_name, d.commander
+        SELECT DISTINCT dc.card_name, dc.deck_id, d.commander
         FROM user_moxfield_decks d
         JOIN user_deck_cards dc
-          ON dc.user_id = d.user_id
-         AND mm_normalize_name(dc.commander) = mm_normalize_name(d.commander)
+          ON dc.user_id = d.user_id AND dc.deck_id = d.deck_id
         WHERE d.user_id = :uid
     """), {"uid": user_id}).fetchall()
     usage: dict[str, list[str]] = {}

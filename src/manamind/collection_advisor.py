@@ -970,14 +970,13 @@ def suggest_from_collection_for_user(user_id: int, top_n: int = 40, commander_fi
         """), {"uid": user_id}).fetchall()
     collection = {_normalize(r.card_name): r.qty for r in coll_rows}
 
-    # Decks de l'utilisateur
-    decks_cfg = load_config_for_user(user_id)
-    if commander_filter:
-        decks_cfg = [d for d in decks_cfg if _normalize(d.get("commander", "")) == _normalize(commander_filter)]
+    # Tous les decks servent a mesurer ce qui est deja engage : filtrer avant
+    # ce calcul faisait passer pour libre une carte jouee dans un autre deck.
+    all_decks = load_config_for_user(user_id)
 
     deck_usage: dict[str, int] = {}
     deck_cards_index: dict[str, set[str]] = {}
-    for deck in decks_cfg:
+    for deck in all_decks:
         commander = deck.get("commander", "")
         if not commander:
             continue
@@ -987,6 +986,12 @@ def suggest_from_collection_for_user(user_id: int, top_n: int = 40, commander_fi
         for card_name, _qty in entries:
             norm = _normalize(card_name)
             deck_usage[norm] = deck_usage.get(norm, 0) + 1
+
+    # Le filtre ne joue qu'apres : il choisit les commandants a analyser.
+    decks_cfg = all_decks
+    if commander_filter:
+        decks_cfg = [d for d in all_decks
+                     if _normalize(d.get("commander", "")) == _normalize(commander_filter)]
 
     # Cartes disponibles : celles de la collection non deja engagees dans un deck...
     available_collection: dict[str, tuple[int, str]] = {
