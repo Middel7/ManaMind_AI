@@ -261,8 +261,10 @@ table { border-collapse: collapse; width: 100%; }
 /* Numero de version, ancre en haut a droite de la fenetre. Discret par
    defaut, lisible au survol : il sert a verifier, pas a etre lu sans cesse. */
 .version-tag {
+  /* Au-dessus de tout : le numero doit rester lisible meme sur une modale,
+     puisqu'il sert justement a verifier qu'on regarde la bonne version. */
   position: fixed; top: 6px; right: 10px;
-  z-index: var(--z-sticky);
+  z-index: var(--z-toast);
   padding: 1px 7px;
   border-radius: var(--r-full);
   background: var(--overlay);
@@ -271,7 +273,7 @@ table { border-collapse: collapse; width: 100%; }
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   text-decoration: none;
-  opacity: 0.45;
+  opacity: 0.7;
   transition: opacity var(--dur) var(--ease);
 }
 .version-tag:hover { opacity: 1; color: var(--text-1); }

@@ -484,6 +484,11 @@
     const page = el('#page');
     if (!page) throw new Error('MM.boot : #page introuvable');
 
+    // Des l'entree, avant toute requete : le numero de version doit s'afficher
+    // meme si la session ou les donnees echouent — c'est souvent la qu'on veut
+    // savoir quelle version on regarde.
+    MM.showVersion();
+
     // La barre du haut n'affiche plus le titre de l'ecran : il repetait
     // l'entree de menu active et le titre de la page juste en dessous. Il ne
     // sert plus qu'a nommer l'onglet du navigateur, si la page ne l'a pas fait.
@@ -553,7 +558,6 @@
       bindLogout();
     }
     if (fresh) MM.decorateAvatar(fresh);
-    MM.showVersion();
     return fresh;
   };
 
