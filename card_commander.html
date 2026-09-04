@@ -293,6 +293,13 @@
                       ? `<span class="mtg-card__price">${MM.fmt.eur(item.unit_price)}</span>`
                       : ''}
                   </span>
+                  <span class="mtg-card__ops">
+                    <span class="stepper">
+                      <button data-qty="dec" aria-label="Retirer un exemplaire">−</button>
+                      <span class="stepper__value">${item.quantity}</span>
+                      <button data-qty="inc" aria-label="Ajouter un exemplaire">+</button>
+                    </span>
+                  </span>
                   <span class="mtg-card__market">
                     <a class="btn btn--sm" target="_blank" rel="noopener"
                        href="${MM.esc(MM.market.sell(item.card_name))}"
@@ -317,15 +324,43 @@
         };
         load();
       };
+      /** Ajuste la quantite d'une carte, ou la retire a zero. */
+      async function adjust(button, node) {
+        const item = items[Number(node.dataset.dormant)];
+        const next = item.quantity + (button.dataset.qty === 'inc' ? 1 : -1);
+        button.disabled = true;
+        try {
+          if (next <= 0) {
+            await MM.api.del(`/api/v2/collection/items/${item.id}`);
+            node.remove();
+            MM.toast(`${item.card_name} retirée de la collection.`);
+          } else {
+            await MM.api.patch(`/api/v2/collection/items/${item.id}`, { quantity: next });
+            item.quantity = next;
+            MM.el('.stepper__value', node).textContent = next;
+            const badge = MM.el('.mtg-card__qty', node);
+            if (badge) badge.textContent = next;
+          }
+        } catch (err) {
+          MM.toast.error(err.message);
+        } finally {
+          button.disabled = false;
+        }
+      }
+
       results.onclick = (event) => {
         // Le lien de vente vit dans la vignette : sans cette sortie, le clic
         // lancerait aussi la recherche de commandant derriere l'onglet ouvert.
         if (event.target.closest('a')) return;
         const node = event.target.closest('[data-dormant]');
-        if (node) pick(node);
+        if (!node) return;
+        const qty = event.target.closest('[data-qty]');
+        if (qty) return adjust(qty, node);
+        pick(node);
       };
       results.onkeydown = (event) => {
         if (event.key !== 'Enter' && event.key !== ' ') return;
+        if (event.target.closest('[data-qty]') || event.target.closest('a')) return;
         const node = event.target.closest('[data-dormant]');
         if (node) { event.preventDefault(); pick(node); }
       };
