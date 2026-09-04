@@ -137,6 +137,9 @@
             <button class="btn btn--sm btn--primary" id="addToCollection"
                     style="margin-top:6px;justify-content:center">
               Ajouter à ma collection</button>
+            <button class="btn btn--sm btn--ghost" id="backToDormant"
+                    style="margin-top:4px;justify-content:center">
+              Regarder une autre carte</button>
             <span class="mtg-card__market">
               ${state.card.owned ? `
                 <a class="btn btn--sm" target="_blank" rel="noopener"
@@ -234,7 +237,16 @@
 
   results.addEventListener('click', (event) => {
     const button = event.target.closest('#addToCollection');
-    if (button) addToCollection(button);
+    if (button) return addToCollection(button);
+
+    if (event.target.closest('#backToDormant')) {
+      // Retour a l'ecran de depart : le champ se vide et l'URL oublie la carte,
+      // pour qu'un rechargement ramene bien la liste et non le resultat.
+      MM.el('#cardInput').value = '';
+      state.card = null;
+      history.replaceState(null, '', '/cartes/commandant');
+      showDormant();
+    }
   });
 
   /** Ecran d'accueil : les cartes rares et mythiques qu'aucun deck n'utilise,
@@ -281,6 +293,12 @@
                       ? `<span class="mtg-card__price">${MM.fmt.eur(item.unit_price)}</span>`
                       : ''}
                   </span>
+                  <span class="mtg-card__market">
+                    <a class="btn btn--sm" target="_blank" rel="noopener"
+                       href="${MM.esc(MM.market.sell(item.card_name))}"
+                       title="Proposer ${MM.esc(item.card_name)} à la vente sur RELIC-TRADE"
+                      >Vendre</a>
+                  </span>
                 </div>
               </article>`).join('')}
           </div>
@@ -300,6 +318,9 @@
         load();
       };
       results.onclick = (event) => {
+        // Le lien de vente vit dans la vignette : sans cette sortie, le clic
+        // lancerait aussi la recherche de commandant derriere l'onglet ouvert.
+        if (event.target.closest('a')) return;
         const node = event.target.closest('[data-dormant]');
         if (node) pick(node);
       };
