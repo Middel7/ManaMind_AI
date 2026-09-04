@@ -975,6 +975,22 @@
       return counts;
     },
 
+    /** Terrains du deck : ceux qui en sont un d'emblee, et ceux qui ne le
+     *  deviennent qu'au verso — a ne pas confondre dans un compte de mana. */
+    lands(list) {
+      let front = 0;
+      let back = 0;
+      list.forEach((card) => {
+        const faces = (card.type_line || '').split('//');
+        const quantity = card.quantity || 1;
+        if (/\bLand\b/i.test(faces[0])) front += quantity;
+        else if (faces.length > 1 && /\bLand\b/i.test(faces.slice(1).join(' '))) {
+          back += quantity;
+        }
+      });
+      return { front, back };
+    },
+
     /** Courbe de mana, terrains exclus. */
     curve(list, height = 40) {
       const buckets = [0, 0, 0, 0, 0, 0, 0, 0];
@@ -1009,15 +1025,23 @@
         </div>`;
     },
 
-    /** Bloc complet : courbe, symboles exiges, sources. */
+    /** Bloc complet : courbe, symboles exiges, sources, terrains. */
     block(list, height = 40) {
       const src = MM.mana.sources(list);
+      const land = MM.mana.lands(list);
       return `
         ${MM.mana.curve(list, height)}
         <div class="mana-rows">
           ${MM.mana.row('Symboles', MM.mana.symbols(list))}
           ${MM.mana.row('Sources', src, src.any
             ? `<span class="xs dim">+ ${src.any} toutes couleurs</span>` : '')}
+          <div class="mana-row">
+            <span class="mana-row__label">Terrains</span>
+            <span class="mana-count"><span class="strong">${land.front}</span></span>
+            ${land.back ? `<span class="xs dim"
+              title="Cartes dont seule la face arrière est un terrain"
+              >+ ${land.back} au verso</span>` : ''}
+          </div>
         </div>`;
     },
   };

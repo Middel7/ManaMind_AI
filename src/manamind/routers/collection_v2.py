@@ -315,13 +315,23 @@ async def api_cards_resolve(request: Request) -> Response:
 
     with SessionLocal() as session:
         rows = session.execute(text("""
+            -- Engagement en deck, agrege une seule fois : correle nom par nom,
+            -- le compte relancerait un parcours complet pour chacun des 400.
+            WITH deck_use AS (
+                SELECT split_part(mm_normalize_name(dc.card_name), ' // ', 1) AS key,
+                       count(DISTINCT dc.deck_id) AS decks
+                FROM user_deck_cards dc
+                WHERE dc.user_id = :uid
+                GROUP BY 1
+            )
             SELECT n.raw,
                    c.name, c.type_line, c.mana_cost, c.mana_value, c.color_identity,
                    COALESCE(c.game_changer, false) AS game_changer,
                    art.scryfall_id, art.image_small, art.image_normal,
                    art.rarity, art.set_code,
                    price.low_price AS unit_price,
-                   COALESCE(owned.qty, 0) AS owned
+                   COALESCE(owned.qty, 0) AS owned,
+                   COALESCE(du.decks, 0) AS decks_used
             FROM unnest(CAST(:names AS text[])) AS n(raw)
             LEFT JOIN LATERAL (
                 SELECT sc.id, sc.name, sc.type_line, sc.mana_cost, sc.mana_value,
@@ -375,6 +385,8 @@ async def api_cards_resolve(request: Request) -> Response:
                 WHERE uc.user_id = :uid
                   AND mm_normalize_name(uc.card_name) = c.normalized_name
             ) owned ON TRUE
+            LEFT JOIN deck_use du
+              ON du.key = split_part(c.normalized_name, ' // ', 1)
         """), {"names": names, "uid": user["id"]}).fetchall()
 
     cards = {}
@@ -393,6 +405,10 @@ async def api_cards_resolve(request: Request) -> Response:
             "game_changer": bool(r.game_changer),
             "unit_price": float(r.unit_price) if r.unit_price is not None else None,
             "owned": int(r.owned or 0),
+            # Un deck ne joue qu'un exemplaire d'une carte : autant de decks,
+            # autant de copies engagees.
+            "used": int(r.decks_used or 0),
+            "free": max(0, int(r.owned or 0) - int(r.decks_used or 0)),
         }
     return _json_response({"cards": cards})
 

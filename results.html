@@ -478,6 +478,28 @@
   // n'ont pas de commandant : sans lui, impossible de modifier une liste.
   const canEdit = Boolean(deckInfo.commander);
 
+  /**
+   * Ce qu'on possede deja d'une carte proposee : le total en collection et,
+   * surtout, ce qui n'est engage dans aucun deck — la carte est alors jouable
+   * sans rien acheter ni demonter.
+   */
+  const ownership = (info) => {
+    const owned = info.owned || 0;
+    if (!owned) {
+      return '<span class="mtg-card__meta"><span class="dim">absente de la collection</span></span>';
+    }
+    const free = info.free != null ? info.free : owned;
+    return `
+      <span class="mtg-card__meta">
+        <span title="${owned} exemplaire${owned > 1 ? 's' : ''} en collection"
+          ><span class="strong">${owned}</span> en collection</span>
+        <span class="${free ? 'accent' : 'dim'}"
+              title="${free ? `${free} exemplaire${free > 1 ? 's' : ''} qu'aucun deck n'utilise`
+                            : 'tous les exemplaires sont engagés dans des decks'}"
+          >${free ? `${free} libre${free > 1 ? 's' : ''}` : 'aucune libre'}</span>
+      </span>`;
+  };
+
   /** Vignette d'une carte proposee, avec le lien marchand qui va avec. */
   const tile = (row, kind) => {
     const info = resolved[row.name] || {};
@@ -501,6 +523,7 @@
               ? `<span class="mtg-card__price">${MM.fmt.eur(info.unit_price)}</span>`
               : ''}
           </span>
+          ${kind === 'add' ? ownership(info) : ''}
           <span class="mtg-card__market">
             ${kind === 'add'
               ? `<a class="btn btn--sm btn--outline" target="_blank" rel="noopener"

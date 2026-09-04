@@ -152,6 +152,8 @@
             <span class="muted small">en collection</span></span>
           ${missing ? `<span class="hero__stat"><b class="accent">${MM.fmt.int(missing)}</b>
             <span class="muted small">manquantes</span></span>` : ''}
+          <span class="hero__stat"><b>${MM.fmt.int(MM.mana.lands(cards).front)}</b>
+            <span class="muted small">terrains</span></span>
           <span class="hero__stat"><b>${MM.fmt.eur(deck.value_eur, { compact: true })}</b>
             <span class="muted small">de valeur</span></span>
         </div>
