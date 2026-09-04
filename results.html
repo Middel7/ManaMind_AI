@@ -75,6 +75,10 @@
   }
   .curve__label { font-size: 10px; color: var(--text-3); }
 
+  /* Colonne de droite du bandeau : actions, puis courbe et couleurs */
+  .hero__side { display: flex; flex-direction: column; gap: var(--sp-3); flex-shrink: 0; }
+  @media (max-width: 860px) { .hero__side { width: 100%; } }
+
   .mana-split { display: flex; gap: var(--sp-4); flex-wrap: wrap; align-items: center; }
   .mana-count { display: inline-flex; align-items: center; gap: 5px; font-size: var(--text-sm); }
   .mana-count .pip { width: 13px; height: 13px; }
@@ -125,13 +129,15 @@
             <h2 class="hero__title">${MM.esc(deckInfo.name || "Résultats d’analyse")}</h2>
             <p class="muted">${MM.esc(subtitle)}</p>
             ${stats || ''}
-            <div id="manaBlock" class="stack-2" style="margin-top:var(--sp-4)"></div>
           </div>
-          <div class="hero__actions">
-            ${deckInfo.deck_id
-              ? `<a class="btn" href="/decks/${encodeURIComponent(deckInfo.deck_id)}">
-                   Ouvrir le deck</a>` : ''}
-            <a class="btn btn--ghost" href="/decks/analyse">Nouvelle analyse</a>
+          <div class="hero__side">
+            <div class="hero__actions">
+              ${deckInfo.deck_id
+                ? `<a class="btn" href="/decks/${encodeURIComponent(deckInfo.deck_id)}">
+                     Ouvrir le deck</a>` : ''}
+              <a class="btn btn--ghost" href="/decks/analyse">Nouvelle analyse</a>
+            </div>
+            <div id="manaBlock" class="stack-2"></div>
           </div>
         </div>
       </div>`;
@@ -566,22 +572,63 @@
     ? `<div class="card-grid">${list.map((row) => tile(row, kind)).join('')}</div>`
     : `<p class="muted small">${empty}</p>`;
 
+  // Plafond de prix, commun aux deux onglets. null = aucun filtre.
+  const CAPS = [null, 20, 10, 5];
+  let priceCap = null;
+
+  /** Une carte sans prix connu ne peut pas etre garantie sous le plafond :
+   *  elle sort de la liste des que l'on en fixe un. */
+  const underCap = (row) => {
+    if (priceCap == null) return true;
+    const price = (resolved[row.name] || {}).unit_price;
+    return price != null && price <= priceCap;
+  };
+
   // Les deux listes deviennent deux onglets plutot que deux panneaux empiles.
   content.innerHTML = `
     <div class="stack-2">
-      <div class="chips" id="tabs" role="tablist">
-        <button class="chip" data-tab="add" aria-pressed="true">
-          Cartes à ajouter <span class="chip__count">${additions.length}</span></button>
-        <button class="chip" data-tab="cut" aria-pressed="false">
-          Cartes à retirer <span class="chip__count">${removals.length}</span></button>
+      <div class="toolbar">
+        <div class="chips" id="tabs" role="tablist">
+          <button class="chip" data-tab="add" aria-pressed="true">
+            Cartes à ajouter <span class="chip__count" id="countAdd">${additions.length}</span></button>
+          <button class="chip" data-tab="cut" aria-pressed="false">
+            Cartes à retirer <span class="chip__count" id="countCut">${removals.length}</span></button>
+        </div>
+        <div class="toolbar__spacer"></div>
+        <div class="chips" id="priceFilter">
+          ${CAPS.map((cap) => `
+            <button class="chip" data-cap="${cap === null ? '' : cap}"
+                    aria-pressed="${cap === null}">
+              ${cap === null ? 'Tous les prix' : `${cap} € et moins`}</button>`).join('')}
+        </div>
       </div>
-      <div id="panel-add">
-        ${grid(additions, 'add', 'Aucun ajout proposé pour ce deck.')}
-      </div>
-      <div id="panel-cut" hidden>
-        ${grid(removals, 'cut', 'Aucun retrait proposé pour ce deck.')}
-      </div>
+      <div id="panel-add"></div>
+      <div id="panel-cut" hidden></div>
     </div>`;
+
+  function renderPanels() {
+    const shownAdd = additions.filter(underCap);
+    const shownCut = removals.filter(underCap);
+    MM.el('#countAdd').textContent = shownAdd.length;
+    MM.el('#countCut').textContent = shownCut.length;
+    MM.el('#panel-add').innerHTML = grid(shownAdd, 'add', priceCap
+      ? `Aucun ajout proposé à ${priceCap} € ou moins.`
+      : 'Aucun ajout proposé pour ce deck.');
+    MM.el('#panel-cut').innerHTML = grid(shownCut, 'cut', priceCap
+      ? `Aucun retrait proposé à ${priceCap} € ou moins.`
+      : 'Aucun retrait proposé pour ce deck.');
+  }
+
+  renderPanels();
+
+  MM.el('#priceFilter').addEventListener('click', (event) => {
+    const chip = event.target.closest('.chip');
+    if (!chip) return;
+    priceCap = chip.dataset.cap ? Number(chip.dataset.cap) : null;
+    MM.els('#priceFilter .chip').forEach((other) =>
+      other.setAttribute('aria-pressed', String(other === chip)));
+    renderPanels();
+  });
 
   content.addEventListener('click', async (event) => {
     const button = event.target.closest('.card-op');
