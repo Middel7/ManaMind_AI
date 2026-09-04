@@ -393,6 +393,10 @@
         <span class="muted small">retraits proposés</span></span>
     </div>`);
 
+  // Les analyses ouvertes sans contexte de deck (lien direct, session vidée)
+  // n'ont pas de commandant : sans lui, impossible de modifier une liste.
+  const canEdit = Boolean(deckInfo.commander);
+
   /** Vignette d'une carte proposee, avec le lien marchand qui va avec. */
   const tile = (row, kind) => {
     const info = resolved[row.name] || {};
@@ -426,6 +430,14 @@
                     href="${MM.esc(MM.market.sell(row.name))}"
                     title="Proposer ${MM.esc(row.name)} à la vente sur RELIC-TRADE"
                    >Vendre</a>`}
+            ${canEdit ? `<button class="btn btn--sm btn--icon card-op"
+                    data-op="${kind === 'add' ? 'add' : 'remove'}"
+                    data-card="${MM.esc(row.name)}"
+                    title="${kind === 'add'
+                      ? `Ajouter ${MM.esc(row.name)} au deck`
+                      : `Retirer ${MM.esc(row.name)} du deck`}"
+                    aria-label="${kind === 'add' ? 'Ajouter au deck' : 'Retirer du deck'}"
+                   >${kind === 'add' ? '+' : '−'}</button>` : ''}
           </span>
         </div>
       </article>`;
@@ -451,6 +463,29 @@
         ${grid(removals, 'cut', 'Aucun retrait proposé pour ce deck.')}
       </div>
     </div>`;
+
+  content.addEventListener('click', async (event) => {
+    const button = event.target.closest('.card-op');
+    if (!button) return;
+
+    const op = button.dataset.op;
+    const name = button.dataset.card;
+    const label = button.textContent;
+    button.disabled = true;
+    try {
+      await MM.api.post(`/api/deck-card/${op}`, {
+        commander: deckInfo.commander, card_name: name,
+      });
+      button.textContent = '✓';
+      MM.toast.ok(op === 'add'
+        ? `${name} ajoutée au deck.`
+        : `${name} retirée du deck.`);
+    } catch (err) {
+      MM.toast.error(err.message);
+      button.disabled = false;
+      button.textContent = label;
+    }
+  });
 
   MM.el('#tabs').addEventListener('click', (event) => {
     const chip = event.target.closest('.chip');
