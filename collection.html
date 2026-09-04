@@ -282,13 +282,17 @@
   /* ── Cartes hors collection ───────────────────────────────────────────── */
 
   /** Une recherche ne doit pas s'arreter a ce que l'on possede : les cartes du
-   *  catalogue qui correspondent sont proposees en dessous, prêtes a rejoindre
-   *  la collection. */
+   *  catalogue qui correspondent sont proposees en dessous, sur le modele de
+   *  l'ecran « Ajouter des cartes » — vignette entiere cliquable. */
   async function renderCatalog() {
     const host = MM.el('#catalog');
     if (!host) return;
     const term = state.search;
     if (term.length < 2) { host.innerHTML = ''; return; }
+
+    host.innerHTML = `<div class="stack-2" style="margin-top:var(--sp-8)">
+      <h3 class="h3">Pas encore dans votre collection</h3>
+      <div class="card-grid">${MM.cardSkeletons(6)}</div></div>`;
 
     try {
       const data = await MM.api.get(
@@ -303,11 +307,13 @@
             <h3 class="h3">Pas encore dans votre collection</h3>
             <span class="badge">${MM.fmt.int(cards.length)}</span>
           </div>
-          <p class="muted small">Ces cartes correspondent à « ${MM.esc(term)} ».
-            Ajoutez-les d’un clic.</p>
+          <p class="muted small">Ces cartes correspondent à « ${MM.esc(term)} » mais ne sont
+            pas dans votre collection. Cliquez sur l’une d’elles pour l’ajouter.</p>
           <div class="card-grid">
             ${cards.map((card, index) => `
-              <article class="mtg-card mtg-card--muted card-absent" data-catalog="${index}">
+              <article class="mtg-card mtg-card--muted card-absent" data-add="${index}"
+                       tabindex="0" role="button"
+                       aria-label="Ajouter ${MM.esc(card.name)} à ma collection">
                 <div class="mtg-card__frame">
                   ${MM.img.frame(card)}
                   <span class="card-absent__flag">Pas en collection</span>
@@ -322,19 +328,16 @@
                     ${card.unit_price != null
                       ? `<span class="mtg-card__price">${MM.fmt.eur(card.unit_price)}</span>` : ''}
                   </span>
-                  <button class="btn btn--sm" data-add="${index}"
-                          style="margin-top:6px">Ajouter à ma collection</button>
+                  <span class="btn btn--sm" style="margin-top:6px;justify-content:center"
+                    >Ajouter à ma collection</span>
                 </div>
               </article>`).join('')}
           </div>
         </div>`;
 
-      host.onclick = async (event) => {
-        const button = event.target.closest('[data-add]');
-        if (!button) return;
-        const card = cards[Number(button.dataset.add)];
-        button.disabled = true;
-        button.textContent = 'Ajout…';
+      const add = async (node) => {
+        const card = cards[Number(node.dataset.add)];
+        node.style.opacity = '0.5';
         try {
           await MM.api.post('/api/v2/collection/items', {
             card_name: card.name,
@@ -343,13 +346,21 @@
             collector_number: card.collector_number,
           });
           MM.toast.ok(`${card.name} ajoutée à votre collection.`);
-          button.textContent = 'Ajoutée ✓';
           load(true);
         } catch (err) {
           MM.toast.error(err.message);
-          button.disabled = false;
-          button.textContent = 'Ajouter à ma collection';
+          node.style.opacity = '';
         }
+      };
+
+      host.onclick = (event) => {
+        const node = event.target.closest('[data-add]');
+        if (node) add(node);
+      };
+      host.onkeydown = (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        const node = event.target.closest('[data-add]');
+        if (node) { event.preventDefault(); add(node); }
       };
     } catch { host.innerHTML = ''; }
   }
