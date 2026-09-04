@@ -701,6 +701,10 @@
     const { actions = false, muted = false, price = true, qty = true,
             market = false } = options;
     const finish = MM.fmt.finish(item.finish);
+    // Exemplaires libres : ceux qu'aucun deck n'utilise. in_decks liste les
+    // commandants qui jouent la carte, donc un exemplaire par deck.
+    const usedIn = (item.in_decks || []).length;
+    const free = Math.max(0, (item.quantity ?? 0) - usedIn);
     // La finition et le nombre d'exemplaires descendent sous la carte, avec
     // l'edition et le prix : poses sur l'illustration, ils masquaient le titre
     // et l'art de la carte.
@@ -716,6 +720,15 @@
         <div class="mtg-card__frame">
           ${MM.img.frame(item)}
           ${badges.length ? `<div class="mtg-card__badges">${badges.join('')}</div>` : ''}
+          ${qty && item.quantity ? `
+            <span class="mtg-card__counts">
+              <span class="mtg-card__qty"
+                    title="${item.quantity} exemplaire${item.quantity > 1 ? 's' : ''} en collection"
+                >${item.quantity}</span>
+              ${usedIn ? `<span class="mtg-card__qty mtg-card__qty--free"
+                    title="${free} non utilisé${free > 1 ? 's' : ''} dans un deck — ${usedIn} engagé${usedIn > 1 ? 's' : ''}"
+                >${free}</span>` : ''}
+            </span>` : ''}
         </div>
         <div class="mtg-card__foot">
           <span class="mtg-card__name" title="${esc(item.card_name || '')}">
@@ -723,8 +736,6 @@
           </span>
           <span class="mtg-card__meta">
             ${item.set_code ? `<span>${esc(item.set_code)}</span>` : ''}
-            ${qty && item.quantity > 1 ? `<span title="Exemplaires en collection"
-              >×${item.quantity}</span>` : ''}
             ${finish ? `<span class="accent">${esc(finish)}</span>` : ''}
             ${price && item.unit_price != null
               ? `<span class="mtg-card__price">${MM.fmt.eur(item.unit_price)}</span>` : ''}

@@ -763,11 +763,16 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
   color: var(--text-2);
 }
 
-.mtg-card__qty {
-  /* Sous le coin superieur droit : c'est la que la carte imprime son cout de
-     mana, que la pastille masquait entierement. */
+/* Comptes empiles a droite, sous le coin superieur : c'est la que la carte
+   imprime son cout de mana, que la pastille masquait entierement. */
+.mtg-card__counts {
   position: absolute;
   top: 15%; right: 6px;
+  display: flex; flex-direction: column; gap: 4px; align-items: flex-end;
+}
+
+.mtg-card__qty {
+  position: relative;
   min-width: 22px; height: 22px;
   padding: 0 6px;
   display: grid; place-items: center;
@@ -778,6 +783,13 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   backdrop-filter: blur(4px);
+}
+
+/* Exemplaires libres : distingues du total par la couleur d'accent. */
+.mtg-card__qty--free {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--text-inverse);
 }
 
 .mtg-card__badges {
