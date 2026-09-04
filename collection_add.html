@@ -307,7 +307,7 @@
           <article class="mtg-card result-card" data-p="${index}">
             <div class="mtg-card__frame">${MM.img.frame(printing)}</div>
             <div class="mtg-card__foot">
-              <span class="mtg-card__name">${MM.esc(printing.set_code)}
+              <span class="mtg-card__name" data-no-detail>${MM.esc(printing.set_code)}
                 ${printing.collector_number ? '#' + MM.esc(printing.collector_number) : ''}</span>
               <span class="mtg-card__meta truncate">${MM.esc(printing.set_name || '')}</span>
             </div>

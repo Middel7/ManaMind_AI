@@ -320,21 +320,7 @@
         </div>
       </div>
 
-      <div class="grid-2" style="align-items:start;grid-template-columns:minmax(0,2fr) minmax(260px,1fr)">
-        <div class="stack-6">
-          <div class="stack-2" id="searchBlock" hidden>
-            <h3 class="h3">Résultats de la recherche</h3>
-            <div id="searchResults"></div>
-          </div>
-
-          <div class="stack-2">
-            <h3 class="h3">Suggéré par la popularité, dans votre collection</h3>
-            <p class="muted small">Les cartes que vous possédez et que jouent le plus les
-              autres decks de ${MM.esc(deck.commander)}.</p>
-            <div id="suggested"></div>
-          </div>
-        </div>
-
+      <div class="grid-2" style="align-items:start;grid-template-columns:minmax(300px,1fr) minmax(0,2fr)">
         <div class="deck-side">
           <div class="field">
             <label class="label" for="cardSearch">Ajouter une autre carte</label>
@@ -348,6 +334,20 @@
               <span class="badge">${MM.fmt.int(count)}</span>
             </div>
             <div class="panel__body" id="deckList"></div>
+          </div>
+        </div>
+
+        <div class="stack-6">
+          <div class="stack-2" id="searchBlock" hidden>
+            <h3 class="h3">Résultats de la recherche</h3>
+            <div id="searchResults"></div>
+          </div>
+
+          <div class="stack-2">
+            <h3 class="h3">Suggéré par la popularité, dans votre collection</h3>
+            <p class="muted small">Les cartes que vous possédez et que jouent le plus les
+              autres decks de ${MM.esc(deck.commander)}.</p>
+            <div id="suggested"></div>
           </div>
         </div>
       </div>`;

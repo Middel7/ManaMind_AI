@@ -943,6 +943,73 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
 /* Symboles de couleur */
 .pips { display: inline-flex; gap: 3px; align-items: center; }
 
+/* ── Fiche detaillee d'une carte ──────────────────────────────────────────── */
+
+/* Le titre d'une carte ouvre sa fiche, partout ou il parait. */
+.mtg-card__name:not([data-no-detail]),
+.deck-line__name { cursor: pointer; }
+.mtg-card__name:not([data-no-detail]):hover,
+.deck-line__name:hover { text-decoration: underline; }
+
+.card-detail { display: flex; gap: var(--sp-5); align-items: flex-start; flex-wrap: wrap; }
+.card-detail__art { width: 236px; flex: none; display: flex; flex-direction: column; gap: 4px; }
+.card-detail__art img { width: 100%; border-radius: var(--r-md); display: block; }
+.card-detail__info {
+  flex: 1; min-width: 260px;
+  display: flex; flex-direction: column; gap: var(--sp-3);
+}
+.card-detail__head { display: flex; align-items: center; gap: var(--sp-2); }
+.card-detail__oracle {
+  font-size: var(--text-sm); line-height: 1.55; color: var(--text-2);
+  white-space: pre-line;
+}
+.card-detail__tags,
+.card-detail__market { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+.card-detail__mine {
+  display: flex; gap: var(--sp-2); flex-wrap: wrap; align-items: baseline;
+  font-size: var(--text-sm);
+}
+.card-detail__mine a { color: var(--accent); }
+
+.card-detail__editions { margin-top: var(--sp-5); }
+/* La liste peut compter plus de cent editions : elle defile pour elle-meme. */
+.editions {
+  margin-top: var(--sp-2);
+  max-height: 320px; overflow-y: auto;
+  border: 1px solid var(--line); border-radius: var(--r-md);
+}
+.edition {
+  width: 100%; display: grid; align-items: center; gap: var(--sp-3);
+  grid-template-columns: 20px minmax(0, 1fr) 90px 108px 96px 92px;
+  padding: 6px var(--sp-3); text-align: left;
+  background: none; border: 0; border-bottom: 1px solid var(--line);
+  color: inherit; cursor: pointer; font: inherit;
+}
+.edition:last-child { border-bottom: 0; }
+.edition:hover { background: var(--surface); }
+.edition.is-current { background: var(--info-wash); }
+.edition__icon { width: 20px; height: 20px; object-fit: contain; opacity: 0.85; }
+.edition__set { display: flex; flex-direction: column; min-width: 0; }
+.edition__price { display: flex; flex-direction: column; align-items: flex-end; }
+@media (max-width: 720px) {
+  .edition { grid-template-columns: 20px minmax(0, 1fr) 92px; }
+  .edition__rarity, .edition__date { display: none; }
+}
+
+/* Cout de mana, en jetons */
+.mana-cost { display: inline-flex; gap: 2px; }
+.mana-token {
+  min-width: 18px; height: 18px; padding: 0 4px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 999px; background: var(--mtg-c); color: #1b1b1b;
+  font-size: 11px; font-weight: 700;
+}
+.mana-token--W { background: var(--mtg-w); }
+.mana-token--U { background: var(--mtg-u); }
+.mana-token--B { background: var(--mtg-b); color: #e8e8e8; }
+.mana-token--R { background: var(--mtg-r); }
+.mana-token--G { background: var(--mtg-g); }
+
 .pip {
   width: 13px; height: 13px;
   border-radius: var(--r-full);

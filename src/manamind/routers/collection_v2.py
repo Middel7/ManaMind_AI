@@ -397,6 +397,118 @@ async def api_cards_resolve(request: Request) -> Response:
     return _json_response({"cards": cards})
 
 
+@router.get("/api/v2/cards/{card_name}/detail")
+def api_card_detail(card_name: str, request: Request) -> Response:
+    """Fiche complete d'une carte : texte, editions cotees, et ce qu'on en fait.
+
+    Rassemblee en une route pour la fenetre de detail, qui s'ouvre depuis
+    n'importe quel ecran et n'a que le nom de la carte pour point de depart.
+    """
+    user = _user(request)
+
+    with SessionLocal() as session:
+        # Repli sur la face avant : les listes ne citent souvent qu'elle.
+        card = session.execute(text("""
+            SELECT c.id, c.name, c.mana_cost, c.mana_value, c.type_line,
+                   c.oracle_text, c.power, c.toughness, c.loyalty, c.defense,
+                   c.color_identity, c.keywords, c.legal_commander,
+                   c.edhrec_rank, COALESCE(c.game_changer, false) AS game_changer
+            FROM scryfall_cards c
+            WHERE c.normalized_name = mm_normalize_name(:name)
+               OR split_part(c.normalized_name, ' // ', 1) = mm_normalize_name(:name)
+            ORDER BY (c.normalized_name = mm_normalize_name(:name)) DESC,
+                     (c.type_line NOT ILIKE '%Token%') DESC, c.id
+            LIMIT 1
+        """), {"name": card_name}).fetchone()
+
+        if card is None:
+            return _json_response({"error": "Carte inconnue"}, status_code=404)
+
+        # Une edition par impression, avec sa derniere cote Cardmarket.
+        printings = session.execute(text("""
+            SELECT p.scryfall_id, UPPER(p.set_code) AS set_code, p.collector_number,
+                   p.rarity, p.image_small, p.image_normal, p.released_at,
+                   p.promo, p.full_art, p.artist, p.scryfall_uri,
+                   ms.name AS set_name, ms.icon_svg_uri,
+                   latest.low_price, latest.trend_price, latest.foil_low
+            FROM scryfall_card_printings p
+            LEFT JOIN scryfall_mtg_sets ms ON LOWER(ms.code) = LOWER(p.set_code)
+            LEFT JOIN LATERAL (
+                SELECT pge.low_price, pge.trend_price, pge.foil_low
+                FROM cardmarket_price_guide_entries pge
+                WHERE pge.id_product = p.cardmarket_id
+                ORDER BY pge.captured_at DESC
+                LIMIT 1
+            ) latest ON TRUE
+            WHERE p.card_id = :cid AND p.lang = 'en'
+            ORDER BY p.released_at DESC NULLS LAST, p.collector_number
+        """), {"cid": card.id}).fetchall()
+
+        owned = session.execute(text("""
+            SELECT COALESCE(SUM(quantity), 0) FROM user_collection
+            WHERE user_id = :uid
+              AND split_part(mm_normalize_name(card_name), ' // ', 1)
+                = split_part(mm_normalize_name(:name), ' // ', 1)
+        """), {"uid": user["id"], "name": card.name}).scalar()
+
+        decks = session.execute(text("""
+            SELECT DISTINCT d.deck_id, COALESCE(d.name, d.commander) AS name
+            FROM user_deck_cards dc
+            JOIN user_moxfield_decks d
+              ON d.user_id = dc.user_id AND d.deck_id = dc.deck_id
+            WHERE dc.user_id = :uid
+              AND split_part(mm_normalize_name(dc.card_name), ' // ', 1)
+                = split_part(mm_normalize_name(:name), ' // ', 1)
+            ORDER BY 2
+        """), {"uid": user["id"], "name": card.name}).fetchall()
+
+    def _num(value):
+        return float(value) if value is not None else None
+
+    return _json_response({
+        "card": {
+            "name": card.name,
+            "mana_cost": card.mana_cost or "",
+            "mana_value": card.mana_value,
+            "type_line": card.type_line or "",
+            "oracle_text": card.oracle_text or "",
+            "power": card.power,
+            "toughness": card.toughness,
+            "loyalty": card.loyalty,
+            "defense": card.defense,
+            "color_identity": list(card.color_identity or []),
+            "keywords": list(card.keywords or []),
+            "legal_commander": bool(card.legal_commander),
+            "game_changer": bool(card.game_changer),
+            # Rang de popularite dans les decks publics, du plus joue au moins joue.
+            "popularity_rank": card.edhrec_rank,
+        },
+        "owned": int(owned or 0),
+        "decks": [{"deck_id": r.deck_id, "name": r.name} for r in decks],
+        "printings": [
+            {
+                "scryfall_id": r.scryfall_id,
+                "set_code": r.set_code,
+                "set_name": r.set_name,
+                "set_icon": r.icon_svg_uri,
+                "collector_number": r.collector_number,
+                "rarity": r.rarity,
+                "image_small": r.image_small,
+                "image_normal": r.image_normal,
+                "released_at": r.released_at.isoformat() if r.released_at else None,
+                "promo": bool(r.promo),
+                "full_art": bool(r.full_art),
+                "artist": r.artist,
+                "scryfall_uri": r.scryfall_uri,
+                "low_price": _num(r.low_price),
+                "trend_price": _num(r.trend_price),
+                "foil_low": _num(r.foil_low),
+            }
+            for r in printings
+        ],
+    })
+
+
 @router.get("/api/v2/cards/{card_name}/printings")
 def api_card_printings(
     card_name: str,

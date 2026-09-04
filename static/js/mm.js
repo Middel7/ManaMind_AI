@@ -766,6 +766,153 @@
   };
 
   /** Squelettes de chargement pour une grille de cartes. */
+  /**
+   * Fenetre de detail d'une carte : son texte, ce qu'on en possede, et toutes
+   * ses editions cotees. Ouverte depuis le titre d'une carte, sur n'importe
+   * quel ecran — d'ou le simple nom en entree.
+   *
+   * @param {string} name
+   */
+  MM.cardDetail = async function (name) {
+    const dialog = MM.modal({
+      title: name, wide: true,
+      body: '<p class="muted">Chargement…</p>',
+    });
+
+    let data;
+    try {
+      data = await MM.api.get(`/api/v2/cards/${encodeURIComponent(name)}/detail`);
+    } catch (error) {
+      dialog.body.innerHTML = MM.empty({
+        icon: 'warning', title: 'Carte introuvable', text: error.message });
+      return;
+    }
+
+    const card = data.card;
+    const printings = data.printings || [];
+    // L'edition la moins chere sert de reference de prix dans tout le projet :
+    // elle ouvre la fiche et porte un repere dans la liste.
+    const priced = printings.filter((p) => p.low_price != null);
+    const cheapest = priced.length
+      ? priced.reduce((best, p) => (p.low_price < best.low_price ? p : best))
+      : null;
+    const shown = cheapest || printings[0] || {};
+
+    const stats = [];
+    if (card.power != null) stats.push(`${esc(card.power)}/${esc(card.toughness)}`);
+    if (card.loyalty != null) stats.push(`Loyauté ${esc(card.loyalty)}`);
+    if (card.defense != null) stats.push(`Défense ${esc(card.defense)}`);
+
+    const tags = [];
+    if (card.legal_commander) tags.push('<span class="badge">Peut être commandant</span>');
+    if (card.game_changer) tags.push('<span class="badge badge--warn">Game changer</span>');
+    if (card.popularity_rank) {
+      tags.push(`<span class="badge badge--info"
+        title="Rang de popularité dans les decks publics, du plus joué au moins joué"
+        >Popularité nº ${MM.fmt.int(card.popularity_rank)}</span>`);
+    }
+
+    dialog.body.innerHTML = `
+      <div class="card-detail">
+        <div class="card-detail__art">
+          <img id="cdArt" src="${esc(MM.img.card(shown) || '')}" alt="${esc(card.name)}">
+          <p class="xs dim" id="cdArtLabel">${shown.set_name
+            ? `${esc(shown.set_name)} · ${esc(shown.set_code || '')}` : ''}</p>
+        </div>
+
+        <div class="card-detail__info">
+          <div class="card-detail__head">
+            <p class="h3">${esc(card.name)}</p>
+            <span class="grow"></span>
+            ${MM.mana.cost(card.mana_cost)}
+          </div>
+          <p class="small dim">${MM.img.pips(card.color_identity)} ${esc(card.type_line)}
+            ${stats.length ? `· <span class="strong">${stats.join(' · ')}</span>` : ''}</p>
+
+          ${card.oracle_text
+            ? `<p class="card-detail__oracle">${esc(card.oracle_text).replace(/\n/g, '<br>')}</p>`
+            : ''}
+
+          ${tags.length ? `<div class="card-detail__tags">${tags.join('')}</div>` : ''}
+
+          <div class="card-detail__mine">
+            <span>${data.owned
+              ? `<span class="strong">${MM.fmt.plural(data.owned, 'exemplaire')}</span> en collection`
+              : '<span class="dim">Absente de votre collection</span>'}</span>
+            ${data.decks.length ? `<span class="dim">·</span>
+              <span>Jouée dans ${data.decks.map((d) =>
+                `<a href="/decks/${encodeURIComponent(d.deck_id)}">${esc(d.name)}</a>`)
+                .join(', ')}</span>` : ''}
+          </div>
+
+          <div class="card-detail__market">
+            <a class="btn btn--sm" target="_blank" rel="noopener"
+               href="${esc(MM.market.buy(card.name))}">Acheter</a>
+            <a class="btn btn--sm" target="_blank" rel="noopener"
+               href="${esc(MM.market.sell(card.name))}">Vendre</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-detail__editions">
+        <p class="label">${MM.fmt.plural(printings.length, 'édition')}
+          ${priced.length < printings.length
+            ? `<span class="dim">· ${MM.fmt.int(printings.length - priced.length)} sans cote</span>`
+            : ''}</p>
+        <div class="editions">
+          ${printings.map((p) => `
+            <button class="edition ${p === shown ? 'is-current' : ''}"
+                    data-img="${esc(MM.img.card(p) || '')}"
+                    data-label="${esc([p.set_name, p.set_code].filter(Boolean).join(' · '))}">
+              ${p.set_icon ? `<img class="edition__icon" src="${esc(p.set_icon)}" alt="">`
+                           : '<span class="edition__icon"></span>'}
+              <span class="edition__set truncate">
+                <span class="strong truncate">${esc(p.set_name || p.set_code || '—')}</span>
+                <span class="xs dim">${esc(p.set_code || '')}${p.collector_number
+                  ? ` #${esc(p.collector_number)}` : ''}${p.promo ? ' · promo' : ''}</span>
+              </span>
+              <span class="xs dim edition__rarity">${esc(MM.fmt.rarity(p.rarity))}</span>
+              <span class="xs dim edition__date">${MM.fmt.date(p.released_at)}</span>
+              <span class="edition__price">
+                ${p.low_price != null
+                  ? `<span class="strong">${MM.fmt.eur(p.low_price)}</span>`
+                  : '<span class="dim">—</span>'}
+                ${p.foil_low != null
+                  ? `<span class="xs dim">foil ${MM.fmt.eur(p.foil_low)}</span>` : ''}
+              </span>
+              ${p === cheapest
+                ? '<span class="badge badge--info" title="Prix de référence du projet">moins chère</span>'
+                : '<span></span>'}
+            </button>`).join('')}
+        </div>
+      </div>`;
+
+    // Choisir une edition change l'illustration montree, sans quitter la fiche.
+    dialog.body.addEventListener('click', (event) => {
+      const row = event.target.closest('.edition');
+      if (!row) return;
+      if (row.dataset.img) el('#cdArt', dialog.body).src = row.dataset.img;
+      el('#cdArtLabel', dialog.body).textContent = row.dataset.label || '';
+      els('.edition', dialog.body).forEach((node) => node.classList.remove('is-current'));
+      row.classList.add('is-current');
+    });
+  };
+
+  // Le titre d'une carte ouvre sa fiche, sur tous les ecrans. En phase de
+  // capture : la vignette entiere est souvent cliquable pour autre chose.
+  document.addEventListener('click', (event) => {
+    const label = event.target.closest(
+      '[data-card-detail], .mtg-card__name, .deck-line__name');
+    if (!label || label.hasAttribute('data-no-detail')) return;
+    const name = label.dataset.cardDetail
+      || label.getAttribute('title')
+      || label.textContent.trim();
+    if (!name) return;
+    event.preventDefault();
+    event.stopPropagation();
+    MM.cardDetail(name);
+  }, true);
+
   MM.cardSkeletons = function (count = 12) {
     return Array.from({ length: count }, () => `
       <div class="mtg-card">
@@ -785,6 +932,18 @@
 
   MM.mana = {
     COLORS: ['W', 'U', 'B', 'R', 'G'],
+
+    /** Un cout « {2}{U}{U} » rendu en jetons lisibles. */
+    cost(value) {
+      const parts = (value || '').match(/\{[^}]+\}/g) || [];
+      if (!parts.length) return '';
+      return `<span class="mana-cost">${parts.map((symbol) => {
+        const inner = symbol.slice(1, -1);
+        const color = MM.mana.COLORS.find((c) => inner === c);
+        return `<span class="mana-token ${color ? `mana-token--${color}` : ''}"
+                      title="${esc(symbol)}">${esc(inner)}</span>`;
+      }).join('')}</span>`;
+    },
 
     /** Symboles colores exiges par les couts. Un symbole hybride compte pour
      *  chacune de ses couleurs, faute de savoir laquelle sera payee. */
