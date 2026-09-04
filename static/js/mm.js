@@ -815,8 +815,8 @@
     dialog.body.innerHTML = `
       <div class="card-detail">
         <div class="card-detail__art">
-          <img id="cdArt" src="${esc(MM.img.card(shown) || '')}" alt="${esc(card.name)}">
-          <p class="xs dim" id="cdArtLabel">${shown.set_name
+          <img src="${esc(MM.img.card(shown) || '')}" alt="${esc(card.name)}">
+          <p class="xs dim">${shown.set_name
             ? `${esc(shown.set_name)} · ${esc(shown.set_code || '')}` : ''}</p>
         </div>
 
@@ -859,43 +859,39 @@
           ${priced.length < printings.length
             ? `<span class="dim">· ${MM.fmt.int(printings.length - priced.length)} sans cote</span>`
             : ''}</p>
-        <div class="editions">
+        <div class="card-grid card-grid--lg editions">
           ${printings.map((p) => `
-            <button class="edition ${p === shown ? 'is-current' : ''}"
-                    data-img="${esc(MM.img.card(p) || '')}"
-                    data-label="${esc([p.set_name, p.set_code].filter(Boolean).join(' · '))}">
-              ${p.set_icon ? `<img class="edition__icon" src="${esc(p.set_icon)}" alt="">`
-                           : '<span class="edition__icon"></span>'}
-              <span class="edition__set truncate">
-                <span class="strong truncate">${esc(p.set_name || p.set_code || '—')}</span>
-                <span class="xs dim">${esc(p.set_code || '')}${p.collector_number
-                  ? ` #${esc(p.collector_number)}` : ''}${p.promo ? ' · promo' : ''}</span>
-              </span>
-              <span class="xs dim edition__rarity">${esc(MM.fmt.rarity(p.rarity))}</span>
-              <span class="xs dim edition__date">${MM.fmt.date(p.released_at)}</span>
-              <span class="edition__price">
-                ${p.low_price != null
-                  ? `<span class="strong">${MM.fmt.eur(p.low_price)}</span>`
-                  : '<span class="dim">—</span>'}
-                ${p.foil_low != null
-                  ? `<span class="xs dim">foil ${MM.fmt.eur(p.foil_low)}</span>` : ''}
-              </span>
-              ${p === cheapest
-                ? '<span class="badge badge--info" title="Prix de référence du projet">moins chère</span>'
-                : '<span></span>'}
-            </button>`).join('')}
+            <article class="mtg-card ${p === cheapest ? 'is-cheapest' : ''}">
+              <div class="mtg-card__frame">
+                ${MM.img.frame({
+                  card_name: card.name,
+                  image_normal: p.image_normal, image_small: p.image_small,
+                })}
+              </div>
+              <div class="mtg-card__foot">
+                <span class="mtg-card__name" data-no-detail
+                      title="${esc(p.set_name || p.set_code || '')}"
+                  >${esc(p.set_name || p.set_code || '—')}</span>
+                <span class="mtg-card__meta">
+                  <span>${esc(p.set_code || '')}${p.collector_number
+                    ? ` #${esc(p.collector_number)}` : ''}</span>
+                  <span class="dim">${esc(MM.fmt.rarity(p.rarity))}</span>
+                  ${p.low_price != null
+                    ? `<span class="mtg-card__price">${MM.fmt.eur(p.low_price)}</span>`
+                    : '<span class="dim">non cotée</span>'}
+                </span>
+                <span class="mtg-card__meta">
+                  <span class="dim">${MM.fmt.date(p.released_at)}</span>
+                  ${p.foil_low != null
+                    ? `<span class="dim">foil ${MM.fmt.eur(p.foil_low)}</span>` : ''}
+                  ${p === cheapest
+                    ? '<span class="badge badge--info" title="Prix de référence du projet"'
+                      + '>moins chère</span>' : ''}
+                </span>
+              </div>
+            </article>`).join('')}
         </div>
       </div>`;
-
-    // Choisir une edition change l'illustration montree, sans quitter la fiche.
-    dialog.body.addEventListener('click', (event) => {
-      const row = event.target.closest('.edition');
-      if (!row) return;
-      if (row.dataset.img) el('#cdArt', dialog.body).src = row.dataset.img;
-      el('#cdArtLabel', dialog.body).textContent = row.dataset.label || '';
-      els('.edition', dialog.body).forEach((node) => node.classList.remove('is-current'));
-      row.classList.add('is-current');
-    });
   };
 
   // Le titre d'une carte ouvre sa fiche, sur tous les ecrans. En phase de

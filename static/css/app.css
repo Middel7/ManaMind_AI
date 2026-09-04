@@ -972,28 +972,16 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
 .card-detail__mine a { color: var(--accent); }
 
 .card-detail__editions { margin-top: var(--sp-5); }
-/* La liste peut compter plus de cent editions : elle defile pour elle-meme. */
+/* Une carte peut compter plus de cent editions : la grille defile pour elle. */
 .editions {
   margin-top: var(--sp-2);
-  max-height: 320px; overflow-y: auto;
-  border: 1px solid var(--line); border-radius: var(--r-md);
+  max-height: 62vh; overflow-y: auto;
+  padding-right: var(--sp-2);
 }
-.edition {
-  width: 100%; display: grid; align-items: center; gap: var(--sp-3);
-  grid-template-columns: 20px minmax(0, 1fr) 90px 108px 96px 92px;
-  padding: 6px var(--sp-3); text-align: left;
-  background: none; border: 0; border-bottom: 1px solid var(--line);
-  color: inherit; cursor: pointer; font: inherit;
-}
-.edition:last-child { border-bottom: 0; }
-.edition:hover { background: var(--surface); }
-.edition.is-current { background: var(--info-wash); }
-.edition__icon { width: 20px; height: 20px; object-fit: contain; opacity: 0.85; }
-.edition__set { display: flex; flex-direction: column; min-width: 0; }
-.edition__price { display: flex; flex-direction: column; align-items: flex-end; }
-@media (max-width: 720px) {
-  .edition { grid-template-columns: 20px minmax(0, 1fr) 92px; }
-  .edition__rarity, .edition__date { display: none; }
+.editions .mtg-card__meta { justify-content: space-between; gap: var(--sp-2); }
+/* L'edition la moins chere fixe le prix de reference : elle se repere. */
+.editions .is-cheapest .mtg-card__frame {
+  outline: 2px solid var(--info); outline-offset: 2px; border-radius: var(--r-md);
 }
 
 /* Cout de mana, en jetons */
