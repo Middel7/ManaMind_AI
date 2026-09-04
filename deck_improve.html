@@ -58,10 +58,19 @@
   let suggestions = [];
   let resolved = {};
 
+  // Rien n'est suggere tant qu'un deck n'a pas ete choisi : les suggestions
+  // d'un deck pris au hasard passeraient pour celles du deck voulu.
+  results.innerHTML = MM.empty({
+    icon: 'sparkle',
+    title: 'Choisissez un deck',
+    text: 'Sélectionnez le deck à améliorer : nous chercherons dans votre collection '
+      + 'les cartes que jouent les autres decks du même commandant.',
+  });
+
   await MM.deckPicker(MM.el('#deckPicker'), (deck) => {
     currentDeck = deck;
     load();
-  }, { label: 'Deck à améliorer' });
+  }, { label: 'Deck à améliorer', autoSelect: false });
 
   async function load() {
     if (!currentDeck) return;
