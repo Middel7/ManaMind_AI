@@ -90,6 +90,13 @@
       data = await response.json().catch(() => null);
     }
 
+    // 405 : la route existe dans le code mais pas dans le serveur qui tourne.
+    // Le message par defaut (« Method Not Allowed ») n'aide en rien.
+    if (response.status === 405) {
+      throw new Error('Cette action n’est pas disponible sur le serveur en cours '
+        + "d'exécution. Redémarrez-le pour charger la dernière version.");
+    }
+
     if (!response.ok) {
       throw new Error(errorText(data) || `Erreur ${response.status}`);
     }

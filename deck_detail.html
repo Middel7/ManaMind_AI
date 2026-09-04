@@ -40,7 +40,7 @@
     min-width: 22px; text-align: right;
     font-variant-numeric: tabular-nums; color: var(--text-3); font-size: var(--text-sm);
   }
-  .card-line__name { flex: 1; min-width: 0; font-size: var(--text-sm); }
+  .card-line__name { flex: 0 1 auto; min-width: 0; font-size: var(--text-sm); }
   .card-line--missing .card-line__name { color: var(--accent); }
   /* Le retrait etait invisible hors survol : on le montre en permanence,
      en retrait, et il s'affirme au survol de la ligne. */
@@ -264,8 +264,15 @@
                  data-image="${MM.esc(card.image_normal || '')}">
               <span class="card-line__qty">${card.quantity}</span>
               <span class="card-line__name truncate">${MM.esc(card.card_name)}</span>
+              ${/Legendary/i.test(card.type_line || '')
+                && card.card_name.toLowerCase() !== (deck.commander || '').toLowerCase()
+                ? `<button class="btn btn--ghost btn--icon btn--sm card-line__setcmd"
+                           data-setcmd="${MM.esc(card.card_name)}"
+                           title="Définir « ${MM.esc(card.card_name)} » comme commandant de ce deck"
+                           aria-label="Définir comme commandant">${MM.icons.crown}</button>` : ''}
               ${card.game_changer
                 ? '<span class="badge badge--warn" title="Carte à fort impact">GC</span>' : ''}
+              <span class="grow"></span>
               <span class="xs dim num" style="min-width:52px;text-align:right">
                 ${card.unit_price != null ? MM.fmt.eur(card.unit_price) : '—'}</span>
               ${card.owned < card.quantity
@@ -274,12 +281,6 @@
                       title="Voir les offres d'achat de ${MM.esc(card.card_name)} sur Cardmarket"
                      >à acquérir</a>`
                 : '<span class="card-line__spacer"></span>'}
-              ${/Legendary/i.test(card.type_line || '')
-                && card.card_name.toLowerCase() !== (deck.commander || '').toLowerCase()
-                ? `<button class="btn btn--ghost btn--icon btn--sm card-line__setcmd"
-                           data-setcmd="${MM.esc(card.card_name)}"
-                           title="Définir « ${MM.esc(card.card_name)} » comme commandant de ce deck"
-                           aria-label="Définir comme commandant">${MM.icons.crown}</button>` : ''}
               <button class="btn btn--ghost btn--icon btn--sm card-line__remove"
                       data-remove="${MM.esc(card.card_name)}"
                       aria-label="Retirer ${MM.esc(card.card_name)}">${MM.icons.close}</button>
