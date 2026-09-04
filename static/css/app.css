@@ -797,20 +797,10 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
 .mtg-card__market .btn { flex: 1; padding: 5px 6px; justify-content: center; }
 
 /* Actions au survol */
-.mtg-card__actions {
-  position: absolute;
-  inset: auto 0 0 0;
-  display: flex;
-  gap: var(--sp-1);
-  padding: var(--sp-2);
-  background: linear-gradient(0deg, var(--overlay) 20%, transparent);
-  opacity: 0;
-  transform: translateY(6px);
-  transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
-}
-
-.mtg-card:hover .mtg-card__actions,
-.mtg-card:focus-within .mtg-card__actions { opacity: 1; transform: none; }
+/* Ajouter et retirer un exemplaire, sous la carte. Ces boutons etaient poses
+   sur l'illustration et n'apparaissaient qu'au survol : on ne savait pas
+   qu'ils existaient, et ils masquaient l'art quand ils se montraient. */
+.mtg-card__ops { display: flex; align-items: center; gap: var(--sp-1); margin-top: 4px; }
 
 .stepper {
   display: inline-flex;

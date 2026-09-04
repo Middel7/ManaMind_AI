@@ -697,16 +697,6 @@
         <div class="mtg-card__frame">
           ${MM.img.frame(item)}
           ${badges.length ? `<div class="mtg-card__badges">${badges.join('')}</div>` : ''}
-          ${actions ? `
-            <div class="mtg-card__actions">
-              <span class="stepper">
-                <button data-act="dec" aria-label="Retirer un exemplaire">−</button>
-                <span class="stepper__value">${item.quantity ?? 0}</span>
-                <button data-act="inc" aria-label="Ajouter un exemplaire">+</button>
-              </span>
-              <button class="btn btn--sm btn--icon" data-act="detail" style="margin-left:auto"
-                      aria-label="Détails">${MM.icons.chevron}</button>
-            </div>` : ''}
         </div>
         <div class="mtg-card__foot">
           <span class="mtg-card__name" title="${esc(item.card_name || '')}">
@@ -721,7 +711,17 @@
               ? `<span class="mtg-card__price">${MM.fmt.eur(item.unit_price)}</span>` : ''}
           </span>
           ${market ? `
-            <span class="mtg-card__market">
+            ${actions ? `
+            <div class="mtg-card__ops">
+              <span class="stepper">
+                <button data-act="dec" aria-label="Retirer un exemplaire">−</button>
+                <span class="stepper__value">${item.quantity ?? 0}</span>
+                <button data-act="inc" aria-label="Ajouter un exemplaire">+</button>
+              </span>
+              <button class="btn btn--sm btn--icon" data-act="detail" style="margin-left:auto"
+                      aria-label="Détails">${MM.icons.chevron}</button>
+            </div>` : ''}
+          <span class="mtg-card__market">
               <a class="btn btn--sm" target="_blank" rel="noopener"
                  href="${esc(MM.market.sell(item.card_name))}"
                  title="Proposer ${esc(item.card_name || '')} à la vente sur RELIC-TRADE"
