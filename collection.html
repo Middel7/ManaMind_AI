@@ -49,27 +49,15 @@
   .sentinel { height: 40px; }
 
   /* Vignettes agrandies : les illustrations restent lisibles sans zoom */
-  #results .card-grid, #catalog .card-grid { --card-min: 232px; }
+
   @media (max-width: 860px) {
-    #results .card-grid, #catalog .card-grid { --card-min: 152px; }
+
   }
 
   /* En vue liste, les liens marchands se rangent a droite de la ligne */
   .list-view .mtg-card__market { margin-top: 0; flex-shrink: 0; }
   .list-view .mtg-card__market .btn { flex: none; }
   /* Carte absente de la collection : grisee, avec une etiquette explicite */
-  .card-absent__flag {
-    position: absolute; top: 6px; left: 6px;
-    padding: 2px 7px;
-    border-radius: var(--r-sm);
-    background: var(--overlay);
-    border: 1px solid var(--line-strong);
-    color: var(--text-2);
-    font-size: var(--text-xs); font-weight: 600;
-    backdrop-filter: blur(4px);
-  }
-  .card-absent { border: 1px dashed var(--line-strong); border-radius: var(--r-lg);
-                 padding: var(--sp-2); }
 </style>
 </head>
 <body>
@@ -312,58 +300,17 @@
           <p class="muted small">Ces cartes correspondent à « ${MM.esc(term)} » mais ne sont
             pas dans votre collection. Cliquez sur l’une d’elles pour l’ajouter.</p>
           <div class="card-grid">
-            ${cards.map((card, index) => `
-              <article class="mtg-card mtg-card--muted card-absent" data-add="${index}"
-                       tabindex="0" role="button"
-                       aria-label="Ajouter ${MM.esc(card.name)} à ma collection">
-                <div class="mtg-card__frame">
-                  ${MM.img.frame(card)}
-                  <span class="card-absent__flag">Pas en collection</span>
-                </div>
-                <div class="mtg-card__foot">
-                  <span class="mtg-card__name" title="${MM.esc(card.name)}">
-                    ${MM.esc(card.name)}</span>
-                  ${card.printed_name && card.printed_name !== card.name
-                    ? `<span class="xs dim truncate">${MM.esc(card.printed_name)}</span>` : ''}
-                  <span class="mtg-card__meta">
-                    ${card.set_code ? `<span>${MM.esc(card.set_code)}</span>` : ''}
-                    ${card.unit_price != null
-                      ? `<span class="mtg-card__price">${MM.fmt.eur(card.unit_price)}</span>` : ''}
-                  </span>
-                  <span class="btn btn--sm" style="margin-top:6px;justify-content:center"
-                    >Ajouter à ma collection</span>
-                </div>
-              </article>`).join('')}
+            ${cards.map((card) => MM.cardTile(card, {
+              context: 'collection',
+              muted: true,
+              note: card.printed_name && card.printed_name !== card.name
+                ? MM.esc(card.printed_name) : '',
+            })).join('')}
           </div>
         </div>`;
 
-      const add = async (node) => {
-        const card = cards[Number(node.dataset.add)];
-        node.style.opacity = '0.5';
-        try {
-          await MM.api.post('/api/v2/collection/items', {
-            card_name: card.name,
-            quantity: 1,
-            set_code: card.set_code,
-            collector_number: card.collector_number,
-          });
-          MM.toast.ok(`${card.name} ajoutée à votre collection.`);
-          load(true);
-        } catch (err) {
-          MM.toast.error(err.message);
-          node.style.opacity = '';
-        }
-      };
-
-      host.onclick = (event) => {
-        const node = event.target.closest('[data-add]');
-        if (node) add(node);
-      };
-      host.onkeydown = (event) => {
-        if (event.key !== 'Enter' && event.key !== ' ') return;
-        const node = event.target.closest('[data-add]');
-        if (node) { event.preventDefault(); add(node); }
-      };
+      // Le reglage « en collection » de la vignette fait l'ajout : la liste
+      // des absentes se relit ensuite, la carte n'en fait plus partie.
     } catch { host.innerHTML = ''; }
   }
 
@@ -432,7 +379,11 @@
         });
       } else {
         grid.insertAdjacentHTML('beforeend',
-          data.items.map((item) => MM.cardTile(item, { actions: true, market: true })).join(''));
+          data.items.map((item) => MM.cardTile(item, {
+            context: 'collection',
+            actions: [{ label: 'Modifier', act: 'edit', variant: 'ghost',
+                        title: 'Édition, finition, langue et notes' }],
+          })).join(''));
         cache = cache.concat(data.items);
       }
 
@@ -491,39 +442,28 @@
 
   /* ── Actions sur une carte ────────────────────────────────────────────── */
 
-  results.addEventListener('click', async (event) => {
-    const button = event.target.closest('[data-act]');
+  results.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-act="edit"]');
     if (!button) return;
-    const card = button.closest('.mtg-card');
-    const id = Number(card.dataset.id);
-    const item = cache.find((entry) => entry.id === id);
-    if (!item) return;
+    const node = button.closest('.mtg-card');
+    const item = cache.find((entry) => entry.id === Number(node.dataset.id));
+    if (item) openDetail(item, node);
+  });
 
-    if (button.dataset.act === 'detail') return openDetail(item, card);
-
-    const delta = button.dataset.act === 'inc' ? 1 : -1;
-    const next = item.quantity + delta;
-    button.disabled = true;
-    try {
-      if (next <= 0) {
-        await MM.api.del(`/api/v2/collection/items/${id}`);
-        card.remove();
-        cache = cache.filter((entry) => entry.id !== id);
+  // Le reglage commun a modifie une ligne : le resume et la liste suivent.
+  document.addEventListener('mm:card-change', (event) => {
+    if (event.detail.scope !== 'coll') return;
+    const item = cache.find((entry) => entry.id === event.detail.id);
+    if (item) {
+      item.quantity += event.detail.delta;
+      if (item.quantity <= 0) {
+        cache = cache.filter((entry) => entry !== item);
         state.total -= 1;
-        MM.toast(`${item.card_name} retirée de la collection.`);
-      } else {
-        await MM.api.patch(`/api/v2/collection/items/${id}`, { quantity: next });
-        item.quantity = next;
-        MM.el('.stepper__value', card).textContent = next;
-        const badge = MM.el('.mtg-card__qty', card);
-        if (badge) badge.textContent = next;
+        const node = MM.el(`.mtg-card[data-id="${event.detail.id}"]`, results);
+        if (node) node.remove();
       }
-      updateSummary();
-    } catch (err) {
-      MM.toast.error(err.message);
-    } finally {
-      button.disabled = false;
     }
+    updateSummary();
   });
 
   function openDetail(item, cardNode) {

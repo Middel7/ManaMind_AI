@@ -66,10 +66,6 @@
   .curve__label { font-size: 10px; color: var(--text-3); }
   /* Vignettes a la taille de « Ma collection » : les deux ecrans montrent des
      cartes que l'on inspecte avant d'agir, ils doivent se ressembler. */
-  #panel-add .card-grid, #panel-cut .card-grid { --card-min: 232px; }
-  @media (max-width: 860px) {
-    #panel-add .card-grid, #panel-cut .card-grid { --card-min: 152px; }
-  }
 
   /* Courbe de mana et repartition des couleurs, dans le bandeau */
   .curve { display: flex; align-items: flex-end; gap: 5px; height: 68px; width: 280px; }
@@ -272,21 +268,11 @@
             </div>
             <div class="panel__body">
               <div class="card-grid card-grid--sm">
-                ${(result.top_additions || []).slice(0, 24).map((card) => `
-                  <article class="mtg-card mtg-card--flat">
-                    <div class="mtg-card__frame">
-                      ${MM.img.frame({ card_name: card.card_name, ...(resolved[card.card_name] || {}) })}
-                    </div>
-                    <div class="mtg-card__foot">
-                      <span class="mtg-card__name">${MM.esc(card.card_name)}</span>
-                      <span class="mtg-card__meta">
-                        <span class="dim">${((card.addition_score || 0) * 100).toFixed(0)} pts</span>
-                        ${(resolved[card.card_name] || {}).unit_price != null
-                          ? `<span class="mtg-card__price">${
-                              MM.fmt.eur(resolved[card.card_name].unit_price)}</span>` : ''}
-                      </span>
-                    </div>
-                  </article>`).join('')}
+                ${(result.top_additions || []).slice(0, 24).map((card) => MM.cardTile(
+                  { ...(resolved[card.card_name] || {}), card_name: card.card_name },
+                  { context: null,
+                    note: `${((card.addition_score || 0) * 100).toFixed(0)} pts` }
+                )).join('')}
               </div>
             </div>
           </div>
@@ -298,18 +284,11 @@
             </div>
             <div class="panel__body">
               <div class="card-grid card-grid--sm">
-                ${(result.top_cuts || []).slice(0, 24).map((card) => `
-                  <article class="mtg-card mtg-card--flat">
-                    <div class="mtg-card__frame">
-                      ${MM.img.frame({ card_name: card.card_name, ...(resolved[card.card_name] || {}) })}
-                    </div>
-                    <div class="mtg-card__foot">
-                      <span class="mtg-card__name">${MM.esc(card.card_name)}</span>
-                      <span class="mtg-card__meta">
-                        <span class="dim">${((card.cut_score || 0) * 100).toFixed(0)} pts</span>
-                      </span>
-                    </div>
-                  </article>`).join('')}
+                ${(result.top_cuts || []).slice(0, 24).map((card) => MM.cardTile(
+                  { ...(resolved[card.card_name] || {}), card_name: card.card_name },
+                  { context: null,
+                    note: `${((card.cut_score || 0) * 100).toFixed(0)} pts` }
+                )).join('')}
               </div>
             </div>
           </div>
@@ -468,94 +447,23 @@
         <span class="muted small">retraits proposés</span></span>
     </div>`);
 
-  // Cartes deja traitees, par onglet : le bouton doit rester coche quand le
-  // filtre de prix redessine les panneaux.
-  const applied = new Set();
-  const SYMBOL = { add: '+', cut: '−' };
-  const INVERSE = { add: 'remove', remove: 'add' };
-
   // Les analyses ouvertes sans contexte de deck (lien direct, session vidée)
   // n'ont pas de commandant : sans lui, impossible de modifier une liste.
   const canEdit = Boolean(deckInfo.commander);
+  if (canEdit) MM.deckContext = deckInfo;   // cible des reglages « dans le deck »
 
-  /**
-   * Ce qu'on possede deja d'une carte proposee : le total en collection et,
-   * surtout, ce qui n'est engage dans aucun deck — la carte est alors jouable
-   * sans rien acheter ni demonter.
-   */
-  const ownership = (info) => {
-    const owned = info.owned || 0;
-    if (!owned) {
-      return '<span class="mtg-card__meta"><span class="dim">absente de la collection</span></span>';
-    }
-    const free = info.free != null ? info.free : owned;
-    return `
-      <span class="mtg-card__meta">
-        <span title="${owned} exemplaire${owned > 1 ? 's' : ''} en collection"
-          ><span class="strong">${owned}</span> en collection</span>
-        <span class="${free ? 'accent' : 'dim'}"
-              title="${free ? `${free} exemplaire${free > 1 ? 's' : ''} qu'aucun deck n'utilise`
-                            : 'tous les exemplaires sont engagés dans des decks'}"
-          >${free ? `${free} libre${free > 1 ? 's' : ''}` : 'aucune libre'}</span>
-      </span>`;
-  };
-
-  /** Vignette d'une carte proposee, avec le lien marchand qui va avec. */
-  const tile = (row, kind) => {
-    const info = resolved[row.name] || {};
-    return `
-      <article class="mtg-card">
-        <div class="mtg-card__frame">
-          ${MM.img.frame({ card_name: row.name, ...info })}
-          ${info.owned ? `<span class="mtg-card__qty"
-            title="Déjà en collection">${info.owned}</span>` : ''}
-        </div>
-        <div class="mtg-card__foot">
-          <span class="mtg-card__name" title="${MM.esc(row.name)}">
-            ${MM.esc(row.name)}</span>
-          <span class="mtg-card__meta">
-            ${row.frequency
-              ? `<span class="dim" title="Part des decks du commandant">
-                   ${MM.esc(row.frequency)} %</span>`
-              : (row.score ? `<span class="dim"
-                   title="Score de recommandation">${MM.esc(row.score)}</span>` : '')}
-            ${info.unit_price != null
-              ? `<span class="mtg-card__price">${MM.fmt.eur(info.unit_price)}</span>`
-              : ''}
-          </span>
-          ${kind === 'add' ? ownership(info) : ''}
-          <span class="mtg-card__market">
-            ${kind === 'add'
-              ? `<a class="btn btn--sm btn--outline" target="_blank" rel="noopener"
-                    href="${MM.esc(MM.market.buy(row.name))}"
-                    title="Voir les offres d'achat de ${MM.esc(row.name)} sur Cardmarket"
-                   >Acheter</a>`
-              : `<a class="btn btn--sm" target="_blank" rel="noopener"
-                    href="${MM.esc(MM.market.sell(row.name))}"
-                    title="Proposer ${MM.esc(row.name)} à la vente sur RELIC-TRADE"
-                   >Vendre</a>`}
-            ${canEdit ? (() => {
-              const done = applied.has(`${kind}:${row.name}`);
-              const undo = kind === 'add'
-                ? `Annuler l'ajout de ${MM.esc(row.name)}`
-                : `Annuler le retrait de ${MM.esc(row.name)}`;
-              const act = kind === 'add'
-                ? `Ajouter ${MM.esc(row.name)} au deck`
-                : `Retirer ${MM.esc(row.name)} du deck`;
-              return `<button class="btn btn--sm btn--icon card-op"
-                    data-op="${kind === 'add' ? 'add' : 'remove'}"
-                    data-kind="${kind}"
-                    data-card="${MM.esc(row.name)}"
-                    data-done="${done ? '1' : ''}"
-                    title="${done ? undo : act}"
-                    aria-pressed="${done}"
-                    aria-label="${done ? 'Annuler' : (kind === 'add' ? 'Ajouter au deck' : 'Retirer du deck')}"
-                   >${done ? '✓' : SYMBOL[kind]}</button>`;
-            })() : ''}
-          </span>
-        </div>
-      </article>`;
-  };
+  /** Vignette d'une carte proposee : le reglage « dans le deck » applique la
+   *  suggestion, dans un sens comme dans l'autre. */
+  const tile = (row, kind) => MM.cardTile(
+    { ...(resolved[row.name] || {}), card_name: row.name },
+    {
+      context: canEdit ? 'deck' : null,
+      // Un ajout propose part de zero ; un retrait porte sur une carte du deck.
+      deckQty: kind === 'add' ? 0 : 1,
+      note: row.frequency
+        ? `${MM.esc(row.frequency)} % des decks`
+        : (row.score ? `score ${MM.esc(row.score)}` : ''),
+    });
 
   const grid = (list, kind, empty) => list.length
     ? `<div class="card-grid">${list.map((row) => tile(row, kind)).join('')}</div>`
@@ -617,40 +525,6 @@
     MM.els('#priceFilter .chip').forEach((other) =>
       other.setAttribute('aria-pressed', String(other === chip)));
     renderPanels();
-  });
-
-  content.addEventListener('click', async (event) => {
-    const button = event.target.closest('.card-op');
-    if (!button) return;
-
-    const kind = button.dataset.kind;
-    const name = button.dataset.card;
-    const done = button.dataset.done === '1';
-    // Un second clic defait le premier : le meme bouton sert d'aller et retour.
-    const op = done ? INVERSE[button.dataset.op] : button.dataset.op;
-
-    button.disabled = true;
-    try {
-      await MM.api.post(`/api/deck-card/${op}`, {
-        deck_id: deckInfo.deck_id, commander: deckInfo.commander, card_name: name,
-      });
-      const key = `${kind}:${name}`;
-      if (done) applied.delete(key); else applied.add(key);
-
-      button.dataset.done = done ? '' : '1';
-      button.textContent = done ? SYMBOL[kind] : '✓';
-      button.setAttribute('aria-pressed', String(!done));
-      button.title = done
-        ? (kind === 'add' ? `Ajouter ${name} au deck` : `Retirer ${name} du deck`)
-        : (kind === 'add' ? `Annuler l'ajout de ${name}` : `Annuler le retrait de ${name}`);
-      MM.toast.ok(op === 'add'
-        ? `${name} ajoutée au deck.`
-        : `${name} retirée du deck.`);
-    } catch (err) {
-      MM.toast.error(err.message);
-    } finally {
-      button.disabled = false;
-    }
   });
 
   MM.el('#tabs').addEventListener('click', (event) => {

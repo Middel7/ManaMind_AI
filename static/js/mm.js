@@ -692,78 +692,181 @@
 
   /* ══ Rendu de cartes ═══════════════════════════════════════════════════ */
 
+  /* ══ Vignette de carte ═════════════════════════════════════════════════
+   *
+   * Une seule vignette pour tout le projet : meme taille, memes informations,
+   * memes gestes. Chaque ecran n'y ajoute que ses propres boutons.
+   *
+   * Gestes uniformes, partout :
+   *   - un clic sur l'illustration ou sur le nom ouvre la fiche de la carte ;
+   *   - « Acheter » et « Vendre » sont toujours proposes ;
+   *   - « + » et « − » reglent le deck courant sur un ecran de deck, la
+   *     collection ailleurs — un libelle le dit sous les boutons.
+   */
+
+  /** Deck vise par les reglages des vignettes. Pose par les ecrans de deck. */
+  MM.deckContext = null;
+
+  /** Ce qu'une API peut nommer de dix facons, ramene a un seul jeu de champs. */
+  function cardFacts(item) {
+    const owned = item.owned ?? item.quantity ?? item.copies_owned ?? 0;
+    const used = item.used
+      ?? (item.in_decks ? item.in_decks.length : undefined)
+      ?? item.copies_used ?? 0;
+    return {
+      name: item.card_name || item.name || '',
+      owned: Number(owned) || 0,
+      used: Number(used) || 0,
+      free: item.free != null ? Number(item.free) : Math.max(0, (Number(owned) || 0) - (Number(used) || 0)),
+      price: item.unit_price != null ? item.unit_price : (item.low_price ?? null),
+      decks: item.in_decks || [],
+    };
+  }
+
   /**
-   * Vignette de carte de collection.
-   * @param {object} item exemplaire renvoye par l'API
-   * @param {object} options { actions:boolean, muted:boolean, price:boolean }
+   * Vignette de carte, unique pour tout le projet.
+   *
+   * @param {object} item     carte, sous n'importe quelle forme d'API
+   * @param {object} options
+   *   context {'deck'|'collection'|null} ce que reglent « + » et « − »
+   *   deckQty {number}   exemplaires dans le deck courant, pour le reglage deck
+   *   actions {Array}    boutons propres a l'ecran : { label, act, variant, title, done }
+   *   note    {string}   mention de l'ecran (frequence, score, motif…)
+   *   muted   {boolean}  vignette grisee
+   *   market  {boolean}  proposer l'achat et la vente (vrai par defaut)
    */
   MM.cardTile = function (item, options = {}) {
-    const { actions = false, muted = false, price = true, qty = true,
-            market = false } = options;
+    const { context = 'collection', deckQty = null, actions = [],
+            note = '', muted = false, market = true } = options;
+    const facts = cardFacts(item);
     const finish = MM.fmt.finish(item.finish);
-    // Exemplaires libres : ceux qu'aucun deck n'utilise. in_decks liste les
-    // commandants qui jouent la carte, donc un exemplaire par deck.
-    const usedIn = (item.in_decks || []).length;
-    const free = Math.max(0, (item.quantity ?? 0) - usedIn);
-    // La finition et le nombre d'exemplaires descendent sous la carte, avec
-    // l'edition et le prix : poses sur l'illustration, ils masquaient le titre
-    // et l'art de la carte.
+
     const badges = [];
-    if (item.in_decks && item.in_decks.length) {
-      badges.push(`<span class="badge badge--info" title="${esc(item.in_decks.join(', '))}">
-        ${item.in_decks.length} deck${item.in_decks.length > 1 ? 's' : ''}</span>`);
+    if (facts.decks.length) {
+      badges.push(`<span class="badge badge--info" title="${esc(facts.decks.join(', '))}"
+        >${facts.decks.length} deck${facts.decks.length > 1 ? 's' : ''}</span>`);
+    }
+    if (item.game_changer) {
+      badges.push('<span class="badge badge--warn" title="Carte à fort impact">GC</span>');
     }
 
+    // Reglage : le deck quand on est sur un ecran de deck, la collection sinon.
+    const stepper = (kind, value, label, hint) => `
+      <span class="mtg-card__ops">
+        <span class="stepper">
+          <button data-mm="${kind}-dec" data-card="${esc(facts.name)}"
+                  ${item.id ? `data-item="${esc(item.id)}"` : ''}
+                  aria-label="Retirer un exemplaire ${hint}">−</button>
+          <span class="stepper__value">${MM.fmt.int(value)}</span>
+          <button data-mm="${kind}-inc" data-card="${esc(facts.name)}"
+                  ${item.id ? `data-item="${esc(item.id)}"` : ''}
+                  aria-label="Ajouter un exemplaire ${hint}">+</button>
+        </span>
+        <span class="xs dim">${label}</span>
+      </span>`;
+
     return `
-      <article class="mtg-card ${muted ? 'mtg-card--muted' : ''}" data-id="${esc(item.id ?? '')}"
-               data-name="${esc(item.card_name || '')}">
+      <article class="mtg-card ${muted ? 'mtg-card--muted' : ''}"
+               data-id="${esc(item.id ?? '')}" data-name="${esc(facts.name)}">
         <div class="mtg-card__frame">
-          ${MM.img.frame(item)}
+          ${MM.img.frame({ ...item, card_name: facts.name })}
           ${badges.length ? `<div class="mtg-card__badges">${badges.join('')}</div>` : ''}
-          ${qty && item.quantity ? `
-            <span class="mtg-card__counts">
-              <span class="mtg-card__qty"
-                    title="${item.quantity} exemplaire${item.quantity > 1 ? 's' : ''} en collection"
-                >${item.quantity}</span>
-              ${usedIn ? `<span class="mtg-card__qty mtg-card__qty--free"
-                    title="${free} non utilisé${free > 1 ? 's' : ''} dans un deck — ${usedIn} engagé${usedIn > 1 ? 's' : ''}"
-                >${free}</span>` : ''}
-            </span>` : ''}
         </div>
         <div class="mtg-card__foot">
-          <span class="mtg-card__name" title="${esc(item.card_name || '')}">
-            ${esc(item.card_name || '')}
-          </span>
+          <span class="mtg-card__name" title="${esc(facts.name)}">${esc(facts.name)}</span>
+
           <span class="mtg-card__meta">
             ${item.set_code ? `<span>${esc(item.set_code)}</span>` : ''}
             ${finish ? `<span class="accent">${esc(finish)}</span>` : ''}
-            ${price && item.unit_price != null
-              ? `<span class="mtg-card__price">${MM.fmt.eur(item.unit_price)}</span>` : ''}
+            ${note ? `<span class="dim">${note}</span>` : ''}
+            ${facts.price != null
+              ? `<span class="mtg-card__price">${MM.fmt.eur(facts.price)}</span>` : ''}
           </span>
+
+          <span class="mtg-card__owned">
+            ${facts.owned
+              ? `<span title="${facts.owned} exemplaire${facts.owned > 1 ? 's' : ''} en collection"
+                  ><span class="strong">${MM.fmt.int(facts.owned)}</span> en collection</span>
+                 <span class="${facts.free ? 'accent' : 'dim'}"
+                       title="${facts.free
+                         ? `${facts.free} qu'aucun deck n'utilise`
+                         : 'tous les exemplaires sont engagés dans des decks'}"
+                   >${facts.free ? `${MM.fmt.int(facts.free)} libre${facts.free > 1 ? 's' : ''}`
+                                 : 'aucune libre'}</span>`
+              : '<span class="dim">absente de la collection</span>'}
+          </span>
+
+          ${context === 'deck'
+            ? stepper('deck', deckQty ?? 0, 'dans le deck', 'de ce deck')
+            : (context === 'collection'
+              ? stepper('coll', facts.owned, 'en collection', 'de ma collection')
+              : '')}
+
           ${market ? `
-            ${actions ? `
-            <div class="mtg-card__ops">
-              <span class="stepper">
-                <button data-act="dec" aria-label="Retirer un exemplaire">−</button>
-                <span class="stepper__value">${item.quantity ?? 0}</span>
-                <button data-act="inc" aria-label="Ajouter un exemplaire">+</button>
-              </span>
-              <button class="btn btn--sm btn--icon" data-act="detail" style="margin-left:auto"
-                      aria-label="Détails">${MM.icons.chevron}</button>
-            </div>` : ''}
-          <span class="mtg-card__market">
+            <span class="mtg-card__market">
               <a class="btn btn--sm" target="_blank" rel="noopener"
-                 href="${esc(MM.market.sell(item.card_name))}"
-                 title="Proposer ${esc(item.card_name || '')} à la vente sur RELIC-TRADE"
-                >Vendre</a>
-              <a class="btn btn--sm" target="_blank" rel="noopener"
-                 href="${esc(MM.market.buy(item.card_name))}"
-                 title="Voir les offres d'achat de ${esc(item.card_name || '')} sur Cardmarket"
+                 href="${esc(MM.market.buy(facts.name))}"
+                 title="Voir les offres d'achat de ${esc(facts.name)} sur Cardmarket"
                 >Acheter</a>
+              <a class="btn btn--sm" target="_blank" rel="noopener"
+                 href="${esc(MM.market.sell(facts.name))}"
+                 title="Proposer ${esc(facts.name)} à la vente sur RELIC-TRADE"
+                >Vendre</a>
+            </span>` : ''}
+
+          ${actions.length ? `
+            <span class="mtg-card__actions">
+              ${actions.map((action) => `
+                <button class="btn btn--sm ${action.variant ? `btn--${action.variant}` : ''}
+                               ${action.done ? 'is-done' : ''}"
+                        data-act="${esc(action.act)}" data-card="${esc(facts.name)}"
+                        ${action.title ? `title="${esc(action.title)}"` : ''}
+                  >${esc(action.label)}</button>`).join('')}
             </span>` : ''}
         </div>
       </article>`;
   };
+
+  /* Reglages de quantite : une seule ecoute pour tout le projet. La page qui
+     affiche les vignettes n'a qu'a se rafraichir sur l'evenement emis. */
+  document.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-mm]');
+    if (!button) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    const [scope, direction] = button.dataset.mm.split('-');
+    const name = button.dataset.card;
+    const delta = direction === 'inc' ? 1 : -1;
+    const value = button.parentElement.querySelector('.stepper__value');
+    button.disabled = true;
+
+    try {
+      if (scope === 'coll') {
+        const res = await MM.api.post('/api/v2/collection/adjust', {
+          card_name: name, delta,
+          // La ligne visee, quand la vignette en designe une : une carte peut
+          // exister en plusieurs editions dans la collection.
+          id: button.dataset.item ? Number(button.dataset.item) : undefined,
+        });
+        if (value) value.textContent = MM.fmt.int(res.quantity);
+      } else {
+        const deck = MM.deckContext;
+        if (!deck) throw new Error('Aucun deck sélectionné.');
+        await MM.api.post(delta > 0 ? '/api/deck-card/add' : '/api/deck-card/remove',
+          { deck_id: deck.deck_id, commander: deck.commander, card_name: name });
+        if (value) value.textContent = MM.fmt.int(Math.max(0, Number(value.textContent) + delta));
+      }
+      document.dispatchEvent(new CustomEvent('mm:card-change', {
+        detail: { card_name: name, scope, delta,
+                  id: button.dataset.item ? Number(button.dataset.item) : null },
+      }));
+    } catch (error) {
+      MM.toast.error(error.message);
+    } finally {
+      button.disabled = false;
+    }
+  }, true);
 
   /** Squelettes de chargement pour une grille de cartes. */
   /**
@@ -898,11 +1001,13 @@
   // capture : la vignette entiere est souvent cliquable pour autre chose.
   document.addEventListener('click', (event) => {
     const label = event.target.closest(
-      '[data-card-detail], .mtg-card__name, .deck-line__name');
+      '[data-card-detail], .mtg-card__name, .mtg-card__frame, .deck-line__name');
     if (!label || label.hasAttribute('data-no-detail')) return;
+    const tile = label.closest('.mtg-card');
     const name = label.dataset.cardDetail
-      || label.getAttribute('title')
-      || label.textContent.trim();
+      || (label.classList.contains('mtg-card__frame')
+        ? (tile && tile.dataset.name)
+        : (label.getAttribute('title') || label.textContent.trim()));
     if (!name) return;
     event.preventDefault();
     event.stopPropagation();

@@ -12,11 +12,7 @@
 <link rel="stylesheet" href="/static/css/app.css">
 <style>
   /* Vignettes a la taille de « Ma collection » */
-  #results .card-grid { --card-min: 232px; }
-  @media (max-width: 860px) { #results .card-grid { --card-min: 152px; } }
 
-  .suggestion { position: relative; }
-  .suggestion.is-added .mtg-card__frame { border-color: var(--ok); opacity: 0.6; }
 </style>
 <style>
   /* Encart compact, aligne sur le selecteur de deck plutot qu'en grille */
@@ -65,6 +61,7 @@
 
   await MM.deckPicker(MM.el('#deckPicker'), (deck) => {
     currentDeck = deck;
+    MM.deckContext = deck;   // cible des reglages « dans le deck »
     load();
   }, { label: 'Deck à améliorer', autoSelect: false });
 
@@ -117,58 +114,25 @@
         <span class="stat__label">Taux moyen des ${head.length} premières</span>
       </div>`;
 
-    MM.el('#grid').innerHTML = suggestions.map((card, index) => `
-      <article class="mtg-card suggestion" data-index="${index}"
-               data-name="${MM.esc(card.card_name)}">
-        <div class="mtg-card__frame">
-          ${MM.img.frame({ card_name: card.card_name, ...(resolved[card.card_name] || {}) })}
-        </div>
-        <div class="mtg-card__foot">
-          <span class="mtg-card__name" title="${MM.esc(card.card_name)}">
-            ${MM.esc(card.card_name)}</span>
-          <span class="mtg-card__meta">
-            <span class="dim"
-                  title="${MM.fmt.int(card.decks_with_card)} des ${MM.fmt.int(card.total_decks)} decks du même commandant jouent cette carte">
-              ${Math.round(card.inclusion_rate)} % des decks similaires</span>
-            ${card.copies_owned
-              ? `<span title="${card.copies_owned} exemplaire${card.copies_owned > 1 ? 's' : ''} en collection"
-                  >${card.copies_owned} en collection</span>
-                 <span class="accent"
-                       title="${Math.max(0, card.copies_owned - (card.copies_used || 0))} qu'aucun deck n'utilise"
-                  >${Math.max(0, card.copies_owned - (card.copies_used || 0))} libre${
-                    Math.max(0, card.copies_owned - (card.copies_used || 0)) > 1 ? 's' : ''}</span>`
-              : ''}
-            ${(resolved[card.card_name] || {}).unit_price != null
-              ? `<span class="mtg-card__price">${MM.fmt.eur(resolved[card.card_name].unit_price)}</span>`
-              : ''}
-          </span>
-          <button class="btn btn--sm btn--outline" data-add="${index}"
-                  style="margin-top:6px">Ajouter au deck</button>
-        </div>
-      </article>`).join('');
-
+    MM.el('#grid').innerHTML = suggestions.map((card) => MM.cardTile({
+      ...(resolved[card.card_name] || {}),
+      card_name: card.card_name,
+      owned: card.copies_owned,
+      used: card.copies_used,
+    }, {
+      context: 'deck',
+      deckQty: 0,   // ces cartes sont justement celles qui n'y sont pas encore
+      note: `${Math.round(card.inclusion_rate)} % des decks similaires`,
+    })).join('');
   }
 
-  results.addEventListener('click', async (event) => {
-    const button = event.target.closest('[data-add]');
-    if (!button) return;
-    const card = suggestions[Number(button.dataset.add)];
-    button.disabled = true;
-    button.textContent = 'Ajout…';
-    try {
-      await MM.api.post('/api/deck-card/add', {
-        deck_id: currentDeck.deck_id,
-        commander: currentDeck.commander,
-        card_name: card.card_name,
-      });
-      button.closest('.suggestion').classList.add('is-added');
-      button.textContent = 'Ajoutée ✓';
-      MM.toast.ok(`${card.card_name} ajoutée à ${currentDeck.name}.`);
-    } catch (err) {
-      MM.toast.error(err.message);
-      button.disabled = false;
-      button.textContent = 'Ajouter au deck';
-    }
+  // Le reglage de la vignette ajoute au deck : la carte quitte alors la liste
+  // des suggestions, qui ne montre que ce qui n'y est pas encore.
+  document.addEventListener('mm:card-change', (event) => {
+    if (event.detail.scope !== 'deck' || event.detail.delta < 0) return;
+    suggestions = suggestions.filter((card) => card.card_name !== event.detail.card_name);
+    MM.toast.ok(`${event.detail.card_name} ajoutée à ${currentDeck.name}.`);
+    render();
   });
 })();
 </script>

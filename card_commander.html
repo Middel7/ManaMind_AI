@@ -124,122 +124,20 @@
    *  Elle s'affiche qu'un commandant ait ete trouve ou non — c'est la carte
    *  qui interesse l'utilisateur, pas seulement le resultat de l'analyse. */
   function cardTile() {
-    return `
-        <div class="mtg-card mtg-card--flat">
-          <div class="mtg-card__frame">${MM.img.frame(state.card, { lazy: false })}</div>
-          <div class="mtg-card__foot">
-            <span class="mtg-card__name">${MM.esc(state.card.name)}</span>
-            <span class="mtg-card__meta">
-              ${state.card.owned
-                ? `<span class="badge badge--ok">${state.card.owned} en collection</span>`
-                : '<span class="dim">absente de votre collection</span>'}
-            </span>
-            <button class="btn btn--sm btn--primary" id="addToCollection"
-                    style="margin-top:6px;justify-content:center">
-              Ajouter à ma collection</button>
-            <button class="btn btn--sm btn--ghost" id="backToDormant"
-                    style="margin-top:4px;justify-content:center">
-              Regarder une autre carte</button>
-            <span class="mtg-card__market">
-              ${state.card.owned ? `
-                <a class="btn btn--sm" target="_blank" rel="noopener"
-                   href="${MM.esc(MM.market.sell(state.card.name))}"
-                   title="Proposer ${MM.esc(state.card.name)} à la vente sur RELIC-TRADE"
-                  >Vendre</a>` : ''}
-              <a class="btn btn--sm btn--outline" target="_blank" rel="noopener"
-                 href="${MM.esc(MM.market.buy(state.card.name))}"
-                 title="Voir les offres d'achat de ${MM.esc(state.card.name)} sur Cardmarket"
-                >Acheter</a>
-            </span>
-          </div>
-        </div>`;
-  }
-
-  function render(all) {
-    const filtered = (state.mode === 'all' && state.significant)
-      ? all.filter((entry) => entry.total_decks >= MIN_DECKS)
-      : all;
-    const hidden = all.length - filtered.length;
-
-    if (!filtered.length) {
-      results.innerHTML = `
-        <div class="search-hero">
-          ${cardTile()}
-          <div>${MM.empty({
-            icon: 'crown',
-            title: 'Aucun commandant trouvé',
-            text: state.mode === 'mine'
-              ? `Aucun de vos commandants ne joue « ${state.card.name} ». `
-                + 'Essayez avec « Tous » pour élargir la recherche.'
-              : `Aucune donnée exploitable pour « ${state.card.name} ».`,
-          })}</div>
-        </div>`;
-      return;
-    }
-
-    const best = Math.max(...filtered.map((entry) => entry.inclusion_rate)) || 1;
-    const image = MM.img.card(state.card);
-
-    results.innerHTML = `
-      <div class="search-hero">
-        ${cardTile()}
-
-        <div class="stack-2">
-          ${hidden ? `<p class="xs dim">${hidden} résultat${hidden > 1 ? 's' : ''}
-            écarté${hidden > 1 ? 's' : ''} faute de decks suffisants
-            (moins de ${MIN_DECKS}).</p>` : ''}
-          ${filtered.map((entry) => `
-            <article class="cmd-row">
-              ${entry.image_url
-                ? `<img class="cmd-row__thumb" src="${MM.esc(entry.image_url)}"
-                     alt="" loading="lazy">`
-                : '<span class="cmd-row__thumb"></span>'}
-              <div class="grow" style="min-width:0">
-                <p class="strong truncate">${MM.esc(entry.commander)}
-                  ${entry.in_my_decks
-                    ? '<span class="badge badge--info">dans vos decks</span>' : ''}</p>
-                <p class="xs dim">${MM.fmt.int(entry.decks_with_card)} decks sur
-                  ${MM.fmt.int(entry.total_decks)} l'incluent</p>
-              </div>
-              <div class="cmd-row__bar">
-                <div class="progress">
-                  <div class="progress__bar"
-                       style="width:${(entry.inclusion_rate / best) * 100}%"></div>
-                </div>
-              </div>
-              <span class="strong num" style="width:64px;text-align:right">
-                ${entry.inclusion_rate.toFixed(1)} %</span>
-            </article>`).join('')}
-        </div>
-      </div>`;
-  }
-
-  /** Ajoute un exemplaire de la carte affichee, et met a jour son compte. */
-  async function addToCollection(button) {
-    button.disabled = true;
-    button.textContent = 'Ajout…';
-    try {
-      await MM.api.post('/api/v2/collection/items', {
-        card_name: state.card.name,
-        quantity: 1,
-        set_code: state.card.set_code,
-        collector_number: state.card.collector_number,
+    return MM.cardTile(
+      { ...state.card, card_name: state.card.name, owned: state.card.owned },
+      {
+        context: 'collection',
+        actions: [
+          { label: 'Regarder une autre carte', act: 'back', variant: 'ghost',
+            title: 'Revenir à la liste des cartes qui dorment' },
+        ],
       });
-      state.card.owned = (state.card.owned || 0) + 1;
-      MM.toast.ok(`${state.card.name} ajoutée à votre collection.`);
-      load();
-    } catch (err) {
-      MM.toast.error(err.message);
-      button.disabled = false;
-      button.textContent = 'Ajouter à ma collection';
-    }
   }
+
 
   results.addEventListener('click', (event) => {
-    const button = event.target.closest('#addToCollection');
-    if (button) return addToCollection(button);
-
-    if (event.target.closest('#backToDormant')) {
+    if (event.target.closest('[data-act="back"]')) {
       // Retour a l'ecran de depart : le champ se vide et l'URL oublie la carte,
       // pour qu'un rechargement ramene bien la liste et non le resultat.
       MM.el('#cardInput').value = '';
@@ -276,43 +174,18 @@
             plus chère à la moins chère. Cliquez sur l’une d’elles pour lui chercher un
             commandant, ou saisissez un autre nom ci-dessus.</p>
           <div class="card-grid">
-            ${items.map((item, index) => `
-              <article class="mtg-card" data-dormant="${index}" tabindex="0" role="button"
-                       aria-label="Chercher un commandant pour ${MM.esc(item.card_name)}">
-                <div class="mtg-card__frame">
-                  ${MM.img.frame(item)}
-                  ${item.quantity > 1
-                    ? `<span class="mtg-card__qty">${item.quantity}</span>` : ''}
-                </div>
-                <div class="mtg-card__foot">
-                  <span class="mtg-card__name" title="${MM.esc(item.card_name)}">
-                    ${MM.esc(item.card_name)}</span>
-                  <span class="mtg-card__meta">
-                    ${item.set_code ? `<span>${MM.esc(item.set_code)}</span>` : ''}
-                    ${item.unit_price != null
-                      ? `<span class="mtg-card__price">${MM.fmt.eur(item.unit_price)}</span>`
-                      : ''}
-                  </span>
-                  <span class="mtg-card__ops">
-                    <span class="stepper">
-                      <button data-qty="dec" aria-label="Retirer un exemplaire">−</button>
-                      <span class="stepper__value">${item.quantity}</span>
-                      <button data-qty="inc" aria-label="Ajouter un exemplaire">+</button>
-                    </span>
-                  </span>
-                  <span class="mtg-card__market">
-                    <a class="btn btn--sm" target="_blank" rel="noopener"
-                       href="${MM.esc(MM.market.sell(item.card_name))}"
-                       title="Proposer ${MM.esc(item.card_name)} à la vente sur RELIC-TRADE"
-                      >Vendre</a>
-                  </span>
-                </div>
-              </article>`).join('')}
+            ${items.map((item) => MM.cardTile(item, {
+              context: 'collection',
+              actions: [{ label: 'Chercher un commandant', act: 'pick',
+                          variant: 'outline',
+                          title: 'Voir quels commandants jouent cette carte' }],
+            })).join('')}
           </div>
         </div>`;
 
       const pick = (node) => {
-        const item = items[Number(node.dataset.dormant)];
+        const item = items.find((card) => card.card_name === node.dataset.card);
+        if (!item) return;
         MM.el('#cardInput').value = item.card_name;
         state.card = {
           name: item.card_name,
@@ -324,45 +197,9 @@
         };
         load();
       };
-      /** Ajuste la quantite d'une carte, ou la retire a zero. */
-      async function adjust(button, node) {
-        const item = items[Number(node.dataset.dormant)];
-        const next = item.quantity + (button.dataset.qty === 'inc' ? 1 : -1);
-        button.disabled = true;
-        try {
-          if (next <= 0) {
-            await MM.api.del(`/api/v2/collection/items/${item.id}`);
-            node.remove();
-            MM.toast(`${item.card_name} retirée de la collection.`);
-          } else {
-            await MM.api.patch(`/api/v2/collection/items/${item.id}`, { quantity: next });
-            item.quantity = next;
-            MM.el('.stepper__value', node).textContent = next;
-            const badge = MM.el('.mtg-card__qty', node);
-            if (badge) badge.textContent = next;
-          }
-        } catch (err) {
-          MM.toast.error(err.message);
-        } finally {
-          button.disabled = false;
-        }
-      }
-
       results.onclick = (event) => {
-        // Le lien de vente vit dans la vignette : sans cette sortie, le clic
-        // lancerait aussi la recherche de commandant derriere l'onglet ouvert.
-        if (event.target.closest('a')) return;
-        const node = event.target.closest('[data-dormant]');
-        if (!node) return;
-        const qty = event.target.closest('[data-qty]');
-        if (qty) return adjust(qty, node);
-        pick(node);
-      };
-      results.onkeydown = (event) => {
-        if (event.key !== 'Enter' && event.key !== ' ') return;
-        if (event.target.closest('[data-qty]') || event.target.closest('a')) return;
-        const node = event.target.closest('[data-dormant]');
-        if (node) { event.preventDefault(); pick(node); }
+        const node = event.target.closest('[data-act="pick"]');
+        if (node) pick(node);
       };
     } catch (err) {
       results.innerHTML = MM.empty({

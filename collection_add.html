@@ -61,19 +61,6 @@
   .basket-row:last-child { border-bottom: none; }
   .basket-row img { width: 30px; aspect-ratio: var(--card-ratio); object-fit: cover; border-radius: 3px; }
 
-  .result-card { cursor: pointer; }
-  .result-card .mtg-card__frame::after {
-    content: "+";
-    position: absolute; inset: 0;
-    display: grid; place-items: center;
-    font-size: 2.4rem; font-weight: 300;
-    color: var(--accent-bright);
-    background: rgba(6, 6, 10, 0.62);
-    opacity: 0;
-    transition: opacity var(--dur) var(--ease);
-  }
-  .result-card:hover .mtg-card__frame::after { opacity: 1; }
-  .result-card.is-added .mtg-card__frame { border-color: var(--ok); }
 
   @media (max-width: 1080px) {
     .basket { position: static; }
@@ -200,25 +187,12 @@
       });
       return;
     }
-    results.innerHTML = `<div class="card-grid">${cards.map((card, index) => `
-      <article class="mtg-card result-card" data-index="${index}" tabindex="0" role="button"
-               aria-label="Ajouter ${MM.esc(card.name)}">
-        <div class="mtg-card__frame">
-          ${MM.img.frame(card)}
-          ${card.owned ? `<span class="mtg-card__qty" title="Déjà en collection">
-            ${card.owned}</span>` : ''}
-        </div>
-        <div class="mtg-card__foot">
-          <span class="mtg-card__name" title="${MM.esc(card.name)}">${MM.esc(card.name)}</span>
-          <span class="mtg-card__meta">
-            <button class="btn btn--sm btn--ghost" data-printings="${index}"
-                    style="padding:0;font-size:var(--text-xs)"
-                    title="Choisir une autre édition">
-              ${MM.esc(card.set_code)} ▾
-            </button>
-          </span>
-        </div>
-      </article>`).join('')}</div>`;
+    results.innerHTML = `<div class="card-grid">${cards.map((card) => MM.cardTile(card, {
+      context: 'collection',
+      actions: [{ label: `${MM.esc(card.set_code || '')} · autre édition`,
+                  act: 'printings', variant: 'ghost',
+                  title: 'Choisir une autre édition de cette carte' }],
+    })).join('')}</div>`;
   }
 
   MM.el('#q').addEventListener('input', (event) => {
@@ -237,23 +211,14 @@
   /* ── Ajout ────────────────────────────────────────────────────────────── */
 
   results.addEventListener('click', (event) => {
-    const printings = event.target.closest('[data-printings]');
-    if (printings) {
-      event.stopPropagation();
-      return choosePrinting(state.results[Number(printings.dataset.printings)]);
-    }
-    const card = event.target.closest('.result-card');
-    if (card) addCard(state.results[Number(card.dataset.index)], card);
+    // L'ajout passe par le reglage « en collection » de la vignette ; ce
+    // bouton ne sert qu'a choisir une edition precise.
+    const printings = event.target.closest('[data-act="printings"]');
+    if (!printings) return;
+    const card = state.results.find((item) => item.name === printings.dataset.card);
+    if (card) choosePrinting(card);
   });
 
-  results.addEventListener('keydown', (event) => {
-    if (event.key !== 'Enter' && event.key !== ' ') return;
-    const card = event.target.closest('.result-card');
-    if (card) {
-      event.preventDefault();
-      addCard(state.results[Number(card.dataset.index)], card);
-    }
-  });
 
   async function addCard(card, node, override) {
     if (!card) return;
@@ -304,7 +269,7 @@
         `/api/v2/cards/${encodeURIComponent(card.name)}/printings?limit=60`);
       modal.body.innerHTML = `<div class="card-grid card-grid--sm">
         ${data.printings.map((printing, index) => `
-          <article class="mtg-card result-card" data-p="${index}">
+          <article class="mtg-card" data-p="${index}" style="cursor:pointer">
             <div class="mtg-card__frame">${MM.img.frame(printing)}</div>
             <div class="mtg-card__foot">
               <span class="mtg-card__name" data-no-detail>${MM.esc(printing.set_code)}

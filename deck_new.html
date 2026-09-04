@@ -67,8 +67,6 @@
   .mana-count .pip { width: 12px; height: 12px; }
 
   /* Carte que les regles interdisent : grisee, non cliquable */
-  .card-illegal { opacity: 0.45; }
-  .card-illegal .mtg-card__frame { filter: grayscale(0.7); }
   .illegal-why {
     display: block; font-size: var(--text-xs); color: var(--warn);
     margin-top: 2px;
@@ -143,24 +141,18 @@
           text: `Rien ne correspond à « ${term} ».` });
         return;
       }
-      cmdResults.innerHTML = `<div class="card-grid">${cards.map((card, index) => `
-        <article class="mtg-card" data-cmd="${index}" tabindex="0" role="button"
-                 style="cursor:pointer"
-                 aria-label="Créer un deck avec ${MM.esc(card.name)}">
-          <div class="mtg-card__frame">${MM.img.frame(card)}</div>
-          <div class="mtg-card__foot">
-            <span class="mtg-card__name" title="${MM.esc(card.name)}">
-              ${MM.esc(card.name)}</span>
-            <span class="mtg-card__meta">
-              ${MM.img.pips(card.color_identity)}
-              ${card.set_code ? `<span>${MM.esc(card.set_code)}</span>` : ''}
-            </span>
-          </div>
-        </article>`).join('')}</div>`;
+      cmdResults.innerHTML = `<div class="card-grid">${cards.map((card) => MM.cardTile(card, {
+        context: null,   // le deck n'existe pas encore
+        market: false,   // on choisit un commandant, on n'achete pas
+        actions: [{ label: 'Créer le deck', act: 'cmd', variant: 'primary',
+                    title: `Créer un deck avec ${MM.esc(card.name)} comme commandant` }],
+      })).join('')}</div>`;
 
       cmdResults.onclick = (event) => {
-        const node = event.target.closest('[data-cmd]');
-        if (node) createDeck(cards[Number(node.dataset.cmd)], node);
+        const node = event.target.closest('[data-act="cmd"]');
+        if (!node) return;
+        const card = cards.find((item) => item.name === node.dataset.card);
+        if (card) createDeck(card, node);
       };
     } catch (err) {
       cmdResults.innerHTML = MM.empty({
@@ -187,6 +179,7 @@
         mana_cost: card.mana_cost, mana_value: card.mana_value,
         type_line: card.type_line, oracle_text: card.oracle_text,
       };
+      MM.deckContext = state.deck;
       enterBuild();
       MM.toast.ok(`Deck « ${deck.name} » créé.`);
       await Promise.all([loadCards(), loadSuggestions()]);
@@ -225,6 +218,7 @@
         type_line: cmd.type_line, oracle_text: '',
       };
       state.cards = data.cards || [];
+      MM.deckContext = state.deck;
       enterBuild();
       await loadSuggestions();
       render();
@@ -277,40 +271,20 @@
     return null;
   }
 
-  function cardTile(card, index, kind) {
+  function cardTile(card) {
     const name = card.card_name || card.name;
     const why = illegalReason(card);
-    const price = card.unit_price ?? card.low_price;
-    return `
-      <article class="mtg-card ${why ? 'card-illegal' : ''}"
-               ${why ? '' : `data-add="${kind}:${index}" tabindex="0" role="button"
-               style="cursor:pointer" aria-label="Ajouter ${MM.esc(name)} au deck"`}>
-        <div class="mtg-card__frame">
-          ${MM.img.frame({ card_name: name, ...card })}
-        </div>
-        <div class="mtg-card__foot">
-          <span class="mtg-card__name" title="${MM.esc(name)}">${MM.esc(name)}</span>
-          <span class="mtg-card__meta">
-            ${card.inclusion_rate != null
-              ? `<span class="dim">${Math.round(card.inclusion_rate)} % des decks</span>` : ''}
-            ${card.copies_owned ? `<span class="dim">${card.copies_owned} en collection</span>
-                 <span class="accent">${Math.max(0, card.copies_owned - (card.copies_used || 0))} libre${
-                   Math.max(0, card.copies_owned - (card.copies_used || 0)) > 1 ? 's' : ''}</span>` : ''}
-            ${price != null ? `<span class="mtg-card__price">${MM.fmt.eur(price)}</span>` : ''}
-          </span>
-          ${why ? `<span class="illegal-why">${MM.esc(why)}</span>` : ''}
-          <span class="mtg-card__ops" data-stop>
-            <span class="stepper">
-              <button data-coll="dec" data-card="${MM.esc(name)}"
-                      aria-label="Retirer un exemplaire de ma collection">−</button>
-              <span class="stepper__value">${card.copies_owned ?? card.owned ?? 0}</span>
-              <button data-coll="inc" data-card="${MM.esc(name)}"
-                      aria-label="Ajouter un exemplaire a ma collection">+</button>
-            </span>
-            <span class="xs dim">en collection</span>
-          </span>
-        </div>
-      </article>`;
+    // Le reglage « dans le deck » fait office d'ajout ; une carte que les
+    // regles refusent garde sa vignette, grisee, avec le motif.
+    return MM.cardTile({ ...card, card_name: name }, {
+      context: why ? null : 'deck',
+      deckQty: 0,
+      muted: Boolean(why),
+      note: [
+        card.inclusion_rate != null ? `${Math.round(card.inclusion_rate)} % des decks` : '',
+        why ? `<span class="warn">${MM.esc(why)}</span>` : '',
+      ].filter(Boolean).join(' · '),
+    });
   }
 
   function render() {
@@ -395,7 +369,7 @@
     const host = MM.el('#suggested');
     const list = state.suggestions;
     host.innerHTML = list.length
-      ? `<div class="card-grid">${list.map((c, i) => cardTile(c, i, 'sug')).join('')}</div>`
+      ? `<div class="card-grid">${list.map((c) => cardTile(c)).join('')}</div>`
       : `<p class="muted small">Aucune carte de votre collection ne ressort pour ce
          commandant. Utilisez la recherche ci-dessous.</p>`;
   }
@@ -406,7 +380,7 @@
     const block = MM.el('#searchBlock');
     if (block) block.hidden = !state.search.length;
     host.innerHTML = state.search.length
-      ? `<div class="card-grid">${state.search.map((c, i) => cardTile(c, i, 'sea')).join('')}</div>`
+      ? `<div class="card-grid">${state.search.map((c) => cardTile(c)).join('')}</div>`
       : '';
   }
 
@@ -435,41 +409,7 @@
       </div>`).join('');
   }
 
-  async function addCard(card) {
-    const name = card.card_name || card.name;
-    const why = illegalReason(card);
-    if (why) return MM.toast.error(`${name} : ${why}.`);
-    try {
-      await MM.api.post('/api/deck-card/add',
-        { deck_id: state.deck.deck_id, commander: state.deck.commander, card_name: name });
-      await loadCards();
-      MM.toast.ok(`${name} ajoutée.`);
-      render();
-    } catch (err) { MM.toast.error(err.message); }
-  }
 
-  /** Ajuste la quantite en collection, sans toucher au deck. */
-  async function adjustCollection(button) {
-    const name = button.dataset.card;
-    const delta = button.dataset.coll === 'inc' ? 1 : -1;
-    const value = button.parentElement.querySelector('.stepper__value');
-    button.disabled = true;
-    try {
-      const res = await MM.api.post('/api/v2/collection/adjust',
-        { card_name: name, delta });
-      value.textContent = res.quantity;
-      // Les suggestions gardent le compte a jour pour les rendus suivants.
-      const found = state.suggestions.find((c) => (c.card_name || c.name) === name);
-      if (found) found.copies_owned = res.quantity;
-      MM.toast.ok(delta > 0
-        ? `${name} ajoutée à votre collection.`
-        : `${name} retirée de votre collection.`);
-    } catch (err) {
-      MM.toast.error(err.message);
-    } finally {
-      button.disabled = false;
-    }
-  }
 
   async function dropCard(name, all = false) {
     try {
@@ -509,16 +449,6 @@
 
       const step = event.target.closest('[data-dq]');
       if (step) return changeQuantity(step.dataset.name, step.dataset.dq === 'inc' ? 1 : -1, step);
-
-      // Le compteur de collection vit dans la vignette, qui ajoute au deck :
-      // sans cette sortie, un clic ferait les deux.
-      const coll = event.target.closest('[data-coll]');
-      if (coll) return adjustCollection(coll);
-
-      const add = event.target.closest('[data-add]');
-      if (!add) return;
-      const [kind, index] = add.dataset.add.split(':');
-      addCard((kind === 'sug' ? state.suggestions : state.search)[Number(index)]);
     });
 
     // La recherche renait a chaque rendu : l'ecoute se delegue au conteneur.
@@ -543,6 +473,13 @@
       }
     });
   }
+
+  // Les reglages des vignettes touchent le deck : la liste se relit.
+  document.addEventListener('mm:card-change', async (event) => {
+    if (event.detail.scope !== 'deck' || !state.deck) return;
+    await loadCards();
+    render();
+  });
 
   if (resumeId) await resumeDeck(resumeId);
 })();

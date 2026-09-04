@@ -709,6 +709,8 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
   gap: var(--sp-4);
 }
 
+/* Taille unique dans tout le projet, celle de « Ma collection ». */
+.card-grid { --card-min: 232px; }
 .card-grid--sm { --card-min: 116px; gap: var(--sp-3); }
 .card-grid--lg { --card-min: 210px; }
 
@@ -997,6 +999,23 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
 .mana-token--B { background: var(--mtg-b); color: #e8e8e8; }
 .mana-token--R { background: var(--mtg-r); }
 .mana-token--G { background: var(--mtg-g); }
+
+/* ── Vignette unique : possession, reglage, marche ───────────────────────── */
+
+.mtg-card__frame { cursor: pointer; }
+.mtg-card__owned {
+  display: flex; gap: var(--sp-2); flex-wrap: wrap;
+  font-size: var(--text-xs); color: var(--text-2);
+}
+.mtg-card__ops { display: flex; align-items: center; gap: var(--sp-2); }
+.mtg-card__actions { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+.mtg-card__actions .btn,
+.mtg-card__market .btn { flex: 1; justify-content: center; }
+.mtg-card__actions .btn.is-done { border-color: var(--line-accent); color: var(--accent); }
+
+@media (max-width: 860px) {
+  .card-grid { --card-min: 152px; }
+}
 
 .pip {
   width: 13px; height: 13px;

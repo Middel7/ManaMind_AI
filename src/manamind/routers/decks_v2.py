@@ -181,7 +181,15 @@ def api_deck_detail(deck_id: str, request: Request) -> Response:
             return _json_response({"error": "Deck introuvable"}, status_code=404)
 
         rows = session.execute(text(f"""
-            WITH owned_idx AS ({_OWNED_SQL})
+            WITH owned_idx AS ({_OWNED_SQL}),
+            -- Exemplaires engages dans un deck, pour dire ce qui reste libre.
+            deck_use AS (
+                SELECT split_part(mm_normalize_name(dc.card_name), ' // ', 1) AS key,
+                       count(DISTINCT dc.deck_id) AS decks
+                FROM user_deck_cards dc
+                WHERE dc.user_id = :uid
+                GROUP BY 1
+            )
             SELECT dc.card_name, dc.quantity,
                    sc.type_line, sc.mana_cost, sc.mana_value,
                    sc.color_identity, sc.oracle_text,
@@ -189,6 +197,7 @@ def api_deck_detail(deck_id: str, request: Request) -> Response:
                    art.scryfall_id, art.image_small, art.image_normal,
                    art.rarity, art.set_code, art.collector_number,
                    COALESCE(owned.qty, 0) AS owned,
+                   COALESCE(du.decks, 0) AS decks_used,
                    price.unit_price
             FROM user_deck_cards dc
             LEFT JOIN LATERAL (
@@ -203,6 +212,8 @@ def api_deck_detail(deck_id: str, request: Request) -> Response:
             {_PRICE_SQL.format(name_expr="dc.card_name")}
             LEFT JOIN owned_idx owned
               ON owned.key = split_part(mm_normalize_name(dc.card_name), ' // ', 1)
+            LEFT JOIN deck_use du
+              ON du.key = split_part(mm_normalize_name(dc.card_name), ' // ', 1)
             WHERE dc.user_id = :uid AND dc.deck_id = :did
             ORDER BY dc.card_name
         """), {"uid": user["id"], "did": deck_id}).fetchall()
@@ -222,6 +233,8 @@ def api_deck_detail(deck_id: str, request: Request) -> Response:
             "card_name": row.card_name,
             "quantity": quantity,
             "owned": int(row.owned or 0),
+            "used": int(row.decks_used or 0),
+            "free": max(0, int(row.owned or 0) - int(row.decks_used or 0)),
             "type_line": row.type_line or "",
             "mana_cost": row.mana_cost or "",
             "mana_value": row.mana_value,

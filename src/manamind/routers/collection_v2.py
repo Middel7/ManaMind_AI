@@ -265,15 +265,25 @@ async def api_adjust(request: Request) -> Response:
 
     name = (body.get("card_name") or "").strip()
     delta = int(body.get("delta") or 0)
+    item_id = body.get("id")
     if not name or delta == 0:
         return _json_response({"error": "card_name et delta sont requis"}, status_code=400)
 
     with SessionLocal() as session:
-        rows = session.execute(text("""
-            SELECT id, quantity FROM user_collection
-            WHERE user_id = :uid AND mm_normalize_name(card_name) = mm_normalize_name(:n)
-            ORDER BY quantity DESC, id
-        """), {"uid": user["id"], "n": name}).fetchall()
+        # Une carte occupe souvent plusieurs lignes (editions, finitions).
+        # L'ecran de collection en montre une par vignette et transmet son id ;
+        # ailleurs, seul le nom est connu.
+        if item_id:
+            rows = session.execute(text("""
+                SELECT id, quantity FROM user_collection
+                WHERE user_id = :uid AND id = :id
+            """), {"uid": user["id"], "id": int(item_id)}).fetchall()
+        else:
+            rows = session.execute(text("""
+                SELECT id, quantity FROM user_collection
+                WHERE user_id = :uid AND mm_normalize_name(card_name) = mm_normalize_name(:n)
+                ORDER BY quantity DESC, id
+            """), {"uid": user["id"], "n": name}).fetchall()
 
         if not rows:
             if delta < 0:

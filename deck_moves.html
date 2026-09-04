@@ -98,37 +98,23 @@
       return;
     }
 
-    results.innerHTML = `<div class="card-grid card-grid--lg">${moves.map((move, index) => {
-      const info = resolved[move.card_name] || {};
-      return `
-        <article class="mtg-card" data-index="${index}">
-          <div class="mtg-card__frame">
-            ${MM.img.frame({ card_name: move.card_name, ...info })}
-            <span class="move__gain">+${move.gain.toFixed(0)} %</span>
-          </div>
-          <div class="mtg-card__foot">
-            <span class="mtg-card__name" title="${MM.esc(move.card_name)}">
-              ${MM.esc(move.card_name)}</span>
-            <span class="mtg-card__meta">
-              <span class="dim">${MM.fmt.int(move.decks_with_card)} /
-                ${MM.fmt.int(move.total_decks)} decks</span>
-              ${info.unit_price != null
-                ? `<span class="mtg-card__price">${MM.fmt.eur(info.unit_price)}</span>` : ''}
-            </span>
-            <span class="move__flow">
-              <span class="xs dim">Retirer de ${MM.esc(move.from_commander)}
-                <span class="num">${move.from_rate.toFixed(1)} %</span></span>
-              <span class="xs accent">Ajouter à ${MM.esc(move.to_commander)}
-                <span class="num">${move.to_rate.toFixed(1)} %</span></span>
-            </span>
-            <span class="cluster-2" style="margin-top:6px">
-              <button class="btn btn--sm grow" data-move="${index}">Déplacer</button>
-              <button class="btn btn--sm btn--ghost" data-hide="${index}"
-                      title="Ne plus proposer ce déplacement">Écarter</button>
-            </span>
-          </div>
-        </article>`;
-    }).join('')}</div>`;
+    results.innerHTML = `<div class="card-grid">${moves.map((move) => MM.cardTile({
+      ...(resolved[move.card_name] || {}),
+      card_name: move.card_name,
+    }, {
+      // Aucun deck courant ici : la carte passe d'un deck a un autre, le
+      // reglage n'aurait pas de cible.
+      context: null,
+      note: `+${move.gain.toFixed(0)} % · ${MM.esc(move.from_commander)}`
+        + ` → ${MM.esc(move.to_commander)}`,
+      actions: [
+        { label: 'Déplacer', act: 'move',
+          title: `Retirer de ${MM.esc(move.from_commander)} et ajouter à `
+            + `${MM.esc(move.to_commander)}` },
+        { label: 'Écarter', act: 'hide', variant: 'ghost',
+          title: 'Ne plus proposer ce déplacement' },
+      ],
+    })).join('')}</div>`;
   }
 
   /* ── Propositions ecartees ────────────────────────────────────────────── */
@@ -189,7 +175,7 @@
       return;
     }
 
-    const skip = event.target.closest('[data-hide]');
+    const skip = event.target.closest('[data-act="hide"]');
     if (skip) {
       const move = moves[Number(skip.dataset.hide)];
       skip.disabled = true;
@@ -206,7 +192,7 @@
       return;
     }
 
-    const button = event.target.closest('[data-move]');
+    const button = event.target.closest('[data-act="move"]');
     if (!button) return;
     const move = moves[Number(button.dataset.move)];
 

@@ -29,56 +29,6 @@
     border-bottom: 1px solid var(--line);
   }
 
-  .card-line {
-    display: flex; align-items: center; gap: var(--sp-3);
-    padding: 5px var(--sp-2);
-    border-radius: var(--r-sm);
-    transition: background var(--dur-fast) var(--ease);
-  }
-  .card-line:hover { background: var(--surface); }
-  /* La quantite s'ajuste sur place — un deck compte plusieurs terrains de
-     base. Les boutons ne paraissent qu'au survol : permanents, ils
-     alourdiraient une liste de cent lignes. */
-  .card-line__qty {
-    display: inline-flex; align-items: center; gap: 2px;
-    min-width: 56px; justify-content: flex-end;
-  }
-  .card-line__qty output {
-    min-width: 18px; text-align: right;
-    font-variant-numeric: tabular-nums; color: var(--text-3); font-size: var(--text-sm);
-  }
-  .card-line__qty button {
-    width: 18px; height: 18px; display: grid; place-items: center;
-    border-radius: var(--r-sm); border: 1px solid var(--line-strong);
-    color: var(--text-2); font-size: 12px; line-height: 1;
-    opacity: 0; transition: opacity var(--dur-fast) var(--ease);
-  }
-  .card-line:hover .card-line__qty button,
-  .card-line__qty button:focus-visible { opacity: 1; }
-  .card-line__qty button:hover { background: var(--surface-2); color: var(--text); }
-  .card-line__name { flex: 0 1 auto; min-width: 0; font-size: var(--text-sm); }
-  .card-line--missing .card-line__name { color: var(--accent); }
-  /* Le retrait etait invisible hors survol : on le montre en permanence,
-     en retrait, et il s'affirme au survol de la ligne. */
-  .card-line__remove { opacity: 0.4; transition: opacity var(--dur-fast) var(--ease); }
-  .card-line:hover .card-line__remove { opacity: 1; }
-  .card-line__setcmd { opacity: 0.4; transition: opacity var(--dur-fast) var(--ease); }
-  .card-line:hover .card-line__setcmd { opacity: 1; }
-
-  /* Apercu de la carte au survol, comme sur les sites de decklists */
-  .peek {
-    position: fixed; z-index: var(--z-modal);
-    width: 244px; pointer-events: none;
-    border-radius: 4.6% / 3.3%;
-    box-shadow: var(--shadow-lg);
-    display: none;
-  }
-  @media (hover: none) { .peek { display: none !important; } }
-  /* Place du badge « a acquerir », reservee meme quand il est absent :
-     sinon les boutons d'action sautaient d'une ligne a l'autre. */
-  .card-line__spacer { width: 74px; flex-shrink: 0; }
-  .card-line .badge--link { width: 74px; flex-shrink: 0; justify-content: center;
-                            display: inline-flex; }
 
   /* La courbe de mana tient dans le bandeau, sous les chiffres du deck */
   .hero__curve { max-width: 420px; margin: var(--sp-2) 0 0; }
@@ -268,62 +218,25 @@
             <h3 class="h4">${MM.esc(label)}</h3>
             <span class="xs dim">${copies}</span>
           </div>
-          ${list.map((card) => `
-            <div class="card-line ${card.owned < card.quantity ? 'card-line--missing' : ''}"
-                 data-name="${MM.esc(card.card_name)}"
-                 data-image="${MM.esc(card.image_normal || '')}">
-              <span class="card-line__qty">
-                <button data-qty="dec" data-name="${MM.esc(card.card_name)}"
-                        aria-label="Retirer un exemplaire de ${MM.esc(card.card_name)}">−</button>
-                <output>${card.quantity}</output>
-                <button data-qty="inc" data-name="${MM.esc(card.card_name)}"
-                        aria-label="Ajouter un exemplaire de ${MM.esc(card.card_name)}">+</button>
-              </span>
-              <span class="card-line__name truncate">${MM.esc(card.card_name)}</span>
-              ${/Legendary/i.test(card.type_line || '')
-                && card.card_name.toLowerCase() !== (deck.commander || '').toLowerCase()
-                ? `<button class="btn btn--ghost btn--icon btn--sm card-line__setcmd"
-                           data-setcmd="${MM.esc(card.card_name)}"
-                           title="Définir « ${MM.esc(card.card_name)} » comme commandant de ce deck"
-                           aria-label="Définir comme commandant">${MM.icons.crown}</button>` : ''}
-              ${card.game_changer
-                ? '<span class="badge badge--warn" title="Carte à fort impact">GC</span>' : ''}
-              <span class="grow"></span>
-              <span class="xs dim num" style="min-width:52px;text-align:right">
-                ${card.unit_price != null ? MM.fmt.eur(card.unit_price) : '—'}</span>
-              ${card.owned < card.quantity
-                ? `<a class="badge badge--warn badge--link" target="_blank" rel="noopener"
-                      href="${MM.esc(MM.market.buy(card.card_name))}"
-                      title="Voir les offres d'achat de ${MM.esc(card.card_name)} sur Cardmarket"
-                     >à acquérir</a>`
-                : '<span class="card-line__spacer"></span>'}
-              <button class="btn btn--ghost btn--icon btn--sm card-line__remove"
-                      data-remove="${MM.esc(card.card_name)}"
-                      aria-label="Retirer ${MM.esc(card.card_name)}">${MM.icons.close}</button>
-            </div>`).join('')}
+          <div class="card-grid">
+            ${list.map((card) => MM.cardTile(card, {
+              context: 'deck',
+              deckQty: card.quantity,
+              actions: [
+                ...(/Legendary/i.test(card.type_line || '')
+                    && card.card_name.toLowerCase() !== (deck.commander || '').toLowerCase()
+                  ? [{ label: 'Commandant', act: 'setcmd', variant: 'ghost',
+                       title: `Définir « ${MM.esc(card.card_name)} » comme commandant` }]
+                  : []),
+                { label: 'Retirer', act: 'drop', variant: 'ghost',
+                  title: `Retirer ${MM.esc(card.card_name)} du deck` },
+              ],
+            })).join('')}
+          </div>
         </div>`;
     }).join('');
   }
 
-  /** Ajuste d'un exemplaire la carte dans le deck, sans toucher a la
-   *  collection. Le compte est repris sur place : le rendu recalcule alors la
-   *  courbe, la valeur et les manquantes. */
-  async function changeQuantity(name, delta, button) {
-    button.disabled = true;
-    try {
-      await MM.api.post(delta > 0 ? '/api/deck-card/add' : '/api/deck-card/remove',
-        { deck_id: deckId, commander: deck.commander, card_name: name });
-      const card = cards.find((item) => item.card_name === name);
-      if (card) {
-        card.quantity += delta;
-        if (card.quantity <= 0) cards = cards.filter((item) => item !== card);
-      }
-      render();
-    } catch (err) {
-      MM.toast.error(err.message);
-      button.disabled = false;
-    }
-  }
 
   async function reload() {
     const fresh = await MM.api.get(`/api/v2/decks/${encodeURIComponent(deckId)}`);
@@ -354,17 +267,24 @@
     }
   }
 
+  // Les reglages « dans le deck » des vignettes visent ce deck.
+  MM.deckContext = { deck_id: deckId, commander: deck.commander };
+  document.addEventListener('mm:card-change', (event) => {
+    if (event.detail.scope !== 'deck') return;
+    // La recherche d'ajout vit dans une fenetre : elle a fait son office.
+    const open = MM.el('.modal');
+    if (open) open.remove();
+    reload();
+  });
+
   function bind() {
     MM.el('#cardList').addEventListener('click', async (event) => {
-      const crown = event.target.closest('[data-setcmd]');
-      if (crown) return setCommander(crown.dataset.setcmd, crown);
+      const crown = event.target.closest('[data-act="setcmd"]');
+      if (crown) return setCommander(crown.dataset.card, crown);
 
-      const step = event.target.closest('[data-qty]');
-      if (step) return changeQuantity(step.dataset.name, step.dataset.qty === 'inc' ? 1 : -1, step);
-
-      const button = event.target.closest('[data-remove]');
+      const button = event.target.closest('[data-act="drop"]');
       if (!button) return;
-      const name = button.dataset.remove;
+      const name = button.dataset.card;
       const line = cards.find((card) => card.card_name === name);
       const copies = line ? line.quantity : 1;
       const ok = await MM.confirm({
@@ -420,42 +340,13 @@
               text: `Aucune carte ne correspond à « ${term} ».` });
             return;
           }
-          host.innerHTML = `<div class="card-grid">${cards.map((card, index) => `
-            <article class="mtg-card" data-pick="${index}" style="cursor:pointer"
-                     title="Ajouter ${MM.esc(card.name)} au deck">
-              <div class="mtg-card__frame">
-                ${MM.img.frame({ card_name: card.name, ...card })}
-              </div>
-              <div class="mtg-card__foot">
-                <span class="mtg-card__name" title="${MM.esc(card.name)}">
-                  ${MM.esc(card.name)}</span>
-                ${card.printed_name && card.printed_name !== card.name
-                  ? `<span class="xs dim truncate" title="Nom trouvé : ${MM.esc(card.printed_name)}"
-                      >${MM.esc(card.printed_name)}</span>` : ''}
-                <span class="mtg-card__meta">
-                  ${card.set_code ? `<span>${MM.esc(card.set_code)}</span>` : ''}
-                  ${card.unit_price != null
-                    ? `<span class="mtg-card__price">${MM.fmt.eur(card.unit_price)}</span>` : ''}
-                </span>
-              </div>
-            </article>`).join('')}</div>`;
+          host.innerHTML = `<div class="card-grid">${cards.map((card) => MM.cardTile(card, {
+            context: 'deck',
+            deckQty: 0,
+            note: card.printed_name && card.printed_name !== card.name
+              ? MM.esc(card.printed_name) : '',
+          })).join('')}</div>`;
 
-          host.onclick = async (event) => {
-            const tile = event.target.closest('[data-pick]');
-            if (!tile) return;
-            const card = cards[Number(tile.dataset.pick)];
-            tile.style.opacity = '0.5';
-            try {
-              await MM.api.post('/api/deck-card/add',
-                { deck_id: deckId, commander: deck.commander, card_name: card.name });
-              MM.toast.ok(`${card.name} ajoutée au deck.`);
-              modal.close();
-              await reload();
-            } catch (err) {
-              MM.toast.error(err.message);
-              tile.style.opacity = '';
-            }
-          };
         } catch (err) {
           host.innerHTML = MM.empty({
             icon: 'warning', title: 'Recherche impossible', text: err.message });

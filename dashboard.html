@@ -234,7 +234,8 @@
       MM.el('#dormantCount').textContent =
         `${MM.fmt.int(stats.dormant)} au total`;
       MM.el('#dormantGrid').innerHTML =
-        highlights.dormant.map((item) => MM.cardTile(item)).join('');
+        highlights.dormant.map((item) => MM.cardTile(item,
+          { context: 'collection' })).join('');
 
       // Cliquer une carte qui dort cherche un commandant capable de la jouer
       MM.el('#dormantGrid').addEventListener('click', (event) => {
@@ -251,7 +252,8 @@
     if (highlights.recent.length) {
       MM.el('#recentSection').hidden = false;
       MM.el('#recentGrid').innerHTML =
-        highlights.recent.map((item) => MM.cardTile(item, { price: false })).join('');
+        highlights.recent.map((item) => MM.cardTile(item,
+          { context: 'collection' })).join('');
     }
   } catch { /* les mises en avant sont secondaires */ }
 })();
