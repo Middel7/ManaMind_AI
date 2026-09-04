@@ -82,7 +82,10 @@
 <script src="/static/js/mm.js"></script>
 <script>
 (async () => {
-  const user = await MM.boot({ title: 'Créer un deck', nav: 'decks' });
+  // ?deck= reprend un deck existant : l'ecran sert alors a le completer.
+  const resumeId = new URLSearchParams(location.search).get('deck');
+  const user = await MM.boot({
+    title: resumeId ? 'Terminer le deck' : 'Créer un deck', nav: 'decks' });
   if (!user) return;
 
   const state = {
@@ -103,7 +106,7 @@
 
   const cmdInput = MM.el('#cmdInput');
   const cmdResults = MM.el('#cmdResults');
-  cmdInput.focus();
+  if (!resumeId) cmdInput.focus();
 
   async function searchCommander() {
     const term = cmdInput.value.trim();
@@ -166,16 +169,50 @@
         mana_cost: card.mana_cost, mana_value: card.mana_value,
         type_line: card.type_line, oracle_text: card.oracle_text,
       };
-      // L'entete a fait son office : le bandeau du deck le remplace.
-      MM.el('#intro').hidden = true;
-      MM.el('#step-commander').hidden = true;
-      MM.el('#build').hidden = false;
+      enterBuild();
       MM.toast.ok(`Deck « ${deck.name} » créé.`);
       await Promise.all([loadCards(), loadSuggestions()]);
       render();
     } catch (err) {
       MM.toast.error(err.message);
       node.style.opacity = '';
+    }
+  }
+
+  /** L'entete a fait son office : le bandeau du deck le remplace. */
+  function enterBuild() {
+    MM.el('#intro').hidden = true;
+    MM.el('#step-commander').hidden = true;
+    MM.el('#build').hidden = false;
+  }
+
+  /** Reprend un deck deja commence : meme ecran, sans l'etape du commandant.
+   *
+   *  Le detail du deck ne porte ni l'illustration ni l'identite de couleur de
+   *  son commandant, que les regles d'ajout exigent : on les resout a part.
+   */
+  async function resumeDeck(deckId) {
+    try {
+      const data = await MM.api.get(`/api/v2/decks/${encodeURIComponent(deckId)}`);
+      const resolved = await MM.resolveCards([data.deck.commander]);
+      const cmd = resolved[data.deck.commander] || {};
+      state.deck = {
+        ...data.deck,
+        color_identity: cmd.color_identity || [],
+        image: cmd.image_normal || cmd.image_small || null,
+      };
+      state.commanderCard = {
+        card_name: data.deck.commander, quantity: 1,
+        mana_cost: cmd.mana_cost, mana_value: cmd.mana_value,
+        type_line: cmd.type_line, oracle_text: '',
+      };
+      state.cards = data.cards || [];
+      enterBuild();
+      await loadSuggestions();
+      render();
+    } catch (err) {
+      MM.el('#intro').innerHTML = MM.empty({
+        icon: 'warning', title: 'Deck introuvable', text: err.message });
     }
   }
 
@@ -254,6 +291,10 @@
   function render() {
     const deck = state.deck;
     const count = state.cards.reduce((sum, c) => sum + (c.quantity || 1), 0);
+    const total = count + 1;  // le commandant n'est pas dans la liste
+    const remaining = Math.max(0, 100 - total);
+    // Le champ de recherche est recree a chaque rendu : sa saisie survit.
+    const term = MM.el('#cardSearch') ? MM.el('#cardSearch').value : '';
 
     MM.el('#build').innerHTML = `
       <div class="panel" style="margin-bottom:var(--sp-4)">
@@ -265,8 +306,10 @@
               Commandant : ${MM.esc(deck.commander)}</p>
           </div>
           <div class="stat" style="padding:var(--sp-2) var(--sp-4)">
-            <span class="stat__value">${MM.fmt.int(count + 1)}</span>
-            <span class="stat__label">cartes avec le commandant</span>
+            <span class="stat__value">${MM.fmt.int(total)}</span>
+            <span class="stat__label">${remaining
+              ? `cartes · encore ${MM.fmt.int(remaining)} pour arriver à 100`
+              : 'cartes : le deck est complet'}</span>
           </div>
           <div id="manaBlock"></div>
           <a class="btn btn--primary" href="/decks/${encodeURIComponent(deck.deck_id)}">
@@ -302,6 +345,7 @@
         </div>
       </div>`;
 
+    if (term) MM.el('#cardSearch').value = term;
     renderSuggested();
     renderSearch();
     renderDeck();
@@ -399,7 +443,12 @@
     } catch (err) { MM.toast.error(err.message); }
   }
 
+  let bound = false;
+
   function bind() {
+    if (bound) return;  // #build survit aux rendus : une seule ecoute suffit
+    bound = true;
+
     MM.el('#build').addEventListener('click', (event) => {
       const drop = event.target.closest('[data-drop]');
       if (drop) return dropCard(drop.dataset.drop);
@@ -415,10 +464,11 @@
       addCard((kind === 'sug' ? state.suggestions : state.search)[Number(index)]);
     });
 
-    const search = MM.el('#cardSearch');
-    if (!search) return;
-    search.addEventListener('keydown', async (event) => {
+    // La recherche renait a chaque rendu : l'ecoute se delegue au conteneur.
+    MM.el('#build').addEventListener('keydown', async (event) => {
       if (event.key !== 'Enter') return;
+      const search = event.target.closest('#cardSearch');
+      if (!search) return;
       event.preventDefault();
       const term = search.value.trim();
       if (term.length < 2) return;
@@ -435,6 +485,8 @@
       }
     });
   }
+
+  if (resumeId) await resumeDeck(resumeId);
 })();
 </script>
 </body>

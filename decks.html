@@ -141,6 +141,11 @@
             </p>
           </a>
           <div class="deck-tile__actions">
+            ${deck.card_count + 1 < 95 ? `<a class="btn btn--sm btn--primary"
+               href="/decks/nouveau?deck=${encodeURIComponent(deck.deck_id)}"
+               title="Il manque ${MM.fmt.int(100 - deck.card_count - 1)} cartes à ce deck :
+                      reprendre sa composition avec vos suggestions">
+               Terminer le deck</a>` : ''}
             ${missing ? `<button class="btn btn--sm" data-fill="${MM.esc(deck.deck_id)}"
                title="Ajouter à votre collection les ${MM.fmt.int(missing)} cartes de ce deck
                       que vous ne possédez pas encore">
