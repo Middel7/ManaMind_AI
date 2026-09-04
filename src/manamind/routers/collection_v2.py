@@ -199,13 +199,20 @@ def api_card_suggest(
                   AND mm_normalize_name(uc.card_name) = c.normalized_name
             ) owned ON TRUE
             WHERE c.type_line NOT ILIKE '%Token%'
+            -- Correspondance exacte d'abord, puis les noms qui commencent par
+            -- le terme, puis ceux qui le contiennent ailleurs.
             ORDER BY (c.name ILIKE :exact) DESC,
                      (LOWER(tr.printed_name) = LOWER(:exact)) DESC,
+                     (c.name ILIKE :starts) DESC,
                      c.edhrec_rank ASC NULLS LAST,
                      c.name
             LIMIT :limit
         """), {
-            "uid": user["id"], "prefix": f"{term}%",
+            # « contient » et non « commence par » : un nom compose se cherche
+            # aussi par son second mot — « isochronique » doit ramener
+            # Sceptre isochronique.
+            "uid": user["id"], "prefix": f"%{term}%",
+            "starts": f"{term}%",
             "exact": term, "limit": limit,
         }).fetchall()
 
