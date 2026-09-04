@@ -192,7 +192,18 @@ def list_items(
     params: dict[str, Any] = {"uid": user_id}
 
     if search:
-        where.append("LOWER(uc.card_name) LIKE :search")
+        # Le nom stocke est l'anglais : sans la seconde branche, chercher
+        # « Oiseaux de paradis » ne trouvait pas Birds of Paradise pourtant
+        # presente. ILIKE, et non LOWER(...) LIKE : c'est l'index trigram de
+        # printed_name qui repond (la base est en collation French_France).
+        where.append("""(
+            LOWER(uc.card_name) LIKE :search
+            OR EXISTS (
+                SELECT 1 FROM scryfall_card_printings tr
+                WHERE tr.card_id = uc.card_id
+                  AND tr.printed_name ILIKE :search
+            )
+        )""")
         params["search"] = f"%{search.strip().lower()}%"
     if sets:
         where.append("UPPER(COALESCE(pd.set_code, pf.set_code, uc.set_code)) = ANY(:sets)")
