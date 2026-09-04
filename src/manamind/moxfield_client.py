@@ -112,50 +112,20 @@ def _read_local_txt(commander_name: str) -> list[tuple[str, int]]:
 
 
 def add_card_to_deck(commander_name: str, card_name: str, user_id: int = 1) -> None:
-    """Ajoute une carte (qty 1) dans user_deck_cards (DB) pour le commandant."""
-    from sqlalchemy import text as _text
-    from manamind.db.engine import SessionLocal as _SessionLocal
-    with _SessionLocal() as s:
-        s.execute(_text("""
-            INSERT INTO user_deck_cards (user_id, commander, card_name, quantity)
-            VALUES (:uid, :cmd, :name, 1)
-            ON CONFLICT (user_id, commander, card_name) DO UPDATE
-              SET quantity = user_deck_cards.quantity + 1
-        """), {"uid": user_id, "cmd": commander_name, "name": card_name})
-        s.commit()
+    """Ajoute un exemplaire au deck de ce commandant.
+
+    Delegue a user_decks, qui rattache la carte au deck par son identifiant :
+    depuis que plusieurs decks peuvent partager un commandant, ecrire ici une
+    ligne sans deck_id violerait la contrainte de la table.
+    """
+    from manamind.user_decks import add_card_to_deck_db
+    add_card_to_deck_db(user_id, commander_name, card_name)
 
 
 def remove_card_from_deck(commander_name: str, card_name: str, user_id: int = 1) -> bool:
-    """Retire une carte de user_deck_cards (DB) pour le commandant.
-    Retourne False si la carte est absente.
-    """
-    from sqlalchemy import text as _text
-    from manamind.db.engine import SessionLocal as _SessionLocal
-    with _SessionLocal() as s:
-        row = s.execute(_text("""
-            SELECT quantity FROM user_deck_cards
-            WHERE user_id = :uid
-              AND LOWER(TRIM(commander)) = LOWER(TRIM(:cmd))
-              AND LOWER(TRIM(card_name)) = LOWER(TRIM(:name))
-        """), {"uid": user_id, "cmd": commander_name, "name": card_name}).fetchone()
-        if row is None:
-            return False
-        if row.quantity <= 1:
-            s.execute(_text("""
-                DELETE FROM user_deck_cards
-                WHERE user_id = :uid
-                  AND LOWER(TRIM(commander)) = LOWER(TRIM(:cmd))
-                  AND LOWER(TRIM(card_name)) = LOWER(TRIM(:name))
-            """), {"uid": user_id, "cmd": commander_name, "name": card_name})
-        else:
-            s.execute(_text("""
-                UPDATE user_deck_cards SET quantity = quantity - 1
-                WHERE user_id = :uid
-                  AND LOWER(TRIM(commander)) = LOWER(TRIM(:cmd))
-                  AND LOWER(TRIM(card_name)) = LOWER(TRIM(:name))
-            """), {"uid": user_id, "cmd": commander_name, "name": card_name})
-        s.commit()
-    return True
+    """Retire un exemplaire. False si la carte est absente."""
+    from manamind.user_decks import remove_card_from_deck_db
+    return remove_card_from_deck_db(user_id, commander_name, card_name)
 
 
 def get_local_txt_content(commander_name: str, user_id: int = 1) -> str | None:

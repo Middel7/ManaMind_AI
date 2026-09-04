@@ -157,6 +157,7 @@
     button.textContent = 'Ajout…';
     try {
       await MM.api.post('/api/deck-card/add', {
+        deck_id: currentDeck.deck_id,
         commander: currentDeck.commander,
         card_name: card.card_name,
       });

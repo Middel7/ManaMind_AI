@@ -304,7 +304,7 @@
     if (why) return MM.toast.error(`${name} : ${why}.`);
     try {
       await MM.api.post('/api/deck-card/add',
-        { commander: state.deck.commander, card_name: name });
+        { deck_id: state.deck.deck_id, commander: state.deck.commander, card_name: name });
       await loadCards();
       MM.toast.ok(`${name} ajoutée.`);
       render();
@@ -314,7 +314,7 @@
   async function dropCard(name) {
     try {
       await MM.api.post('/api/deck-card/remove',
-        { commander: state.deck.commander, card_name: name });
+        { deck_id: state.deck.deck_id, commander: state.deck.commander, card_name: name });
       await loadCards();
       MM.toast(`${name} retirée.`);
       render();

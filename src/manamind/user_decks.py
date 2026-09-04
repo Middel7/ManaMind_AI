@@ -112,62 +112,110 @@ def get_deck_cards(user_id: int, commander: str) -> list[tuple[str, int]]:
     return [(r.card_name, r.quantity) for r in rows]
 
 
-def set_deck_cards(user_id: int, commander: str, cards: list[tuple[str, int]]) -> None:
-    """Remplace toutes les cartes du deck pour ce commandant (opération atomique)."""
+def get_deck_cards_by_id(user_id: int, deck_id: str) -> list[tuple[str, int]]:
+    """Cartes d'un deck precis, quand plusieurs partagent un commandant."""
+    with SessionLocal() as sess:
+        rows = sess.execute(text("""
+            SELECT card_name, quantity FROM user_deck_cards
+            WHERE user_id = :uid AND deck_id = :did
+        """), {"uid": user_id, "did": deck_id}).fetchall()
+    return [(r.card_name, r.quantity) for r in rows]
+
+
+def set_deck_cards(user_id: int, commander: str, cards: list[tuple[str, int]],
+                   deck_id: str | None = None) -> None:
+    """Remplace toutes les cartes d'un deck (opération atomique)."""
+    target = resolve_deck(user_id, deck_id, commander)
+    if target is None:
+        raise ValueError("Deck introuvable")
+    did, cmd = target
     with SessionLocal() as sess:
         with sess.begin():  # transaction atomique — rollback auto si exception
             sess.execute(text("""
-                DELETE FROM user_deck_cards
-                WHERE user_id = :uid AND LOWER(TRIM(commander)) = LOWER(TRIM(:cmd))
-            """), {"uid": user_id, "cmd": commander})
+                DELETE FROM user_deck_cards WHERE user_id = :uid AND deck_id = :did
+            """), {"uid": user_id, "did": did})
             if cards:
                 for card_name, qty in cards:
                     sess.execute(text("""
-                        INSERT INTO user_deck_cards (user_id, commander, card_name, quantity)
-                        VALUES (:uid, :cmd, :name, :qty)
-                    """), {"uid": user_id, "cmd": commander, "name": card_name, "qty": qty})
+                        INSERT INTO user_deck_cards
+                               (user_id, deck_id, commander, card_name, quantity)
+                        VALUES (:uid, :did, :cmd, :name, :qty)
+                    """), {"uid": user_id, "did": did, "cmd": cmd,
+                             "name": card_name, "qty": qty})
         # commit automatique à la sortie du with sess.begin()
 
 
-def add_card_to_deck_db(user_id: int, commander: str, card_name: str) -> None:
+def resolve_deck(user_id: int, deck_id: str | None, commander: str | None) -> tuple[str, str] | None:
+    """(deck_id, commandant) du deck vise, ou None s'il n'existe pas.
+
+    Le deck_id prime : plusieurs decks peuvent partager un commandant depuis que
+    les cartes portent l'identifiant de leur deck. Le commandant reste accepte
+    pour les appels qui ne connaissent que lui, et vise alors le deck le plus
+    ancien qui le joue.
+    """
+    with SessionLocal() as sess:
+        if deck_id:
+            row = sess.execute(text("""
+                SELECT deck_id, commander FROM user_moxfield_decks
+                WHERE user_id = :uid AND deck_id = :did
+            """), {"uid": user_id, "did": deck_id}).fetchone()
+        else:
+            row = sess.execute(text("""
+                SELECT deck_id, commander FROM user_moxfield_decks
+                WHERE user_id = :uid
+                  AND mm_normalize_name(commander) = mm_normalize_name(:cmd)
+                ORDER BY id
+                LIMIT 1
+            """), {"uid": user_id, "cmd": commander or ""}).fetchone()
+    return (row.deck_id, row.commander) if row else None
+
+
+def add_card_to_deck_db(user_id: int, commander: str, card_name: str,
+                        deck_id: str | None = None) -> None:
+    target = resolve_deck(user_id, deck_id, commander)
+    if target is None:
+        raise ValueError("Deck introuvable")
+    did, cmd = target
     with SessionLocal() as sess:
         sess.execute(text("""
-            INSERT INTO user_deck_cards (user_id, commander, card_name, quantity)
-            VALUES (:uid, :cmd, :name, 1)
-            ON CONFLICT (user_id, commander, card_name) DO UPDATE
+            INSERT INTO user_deck_cards (user_id, deck_id, commander, card_name, quantity)
+            VALUES (:uid, :did, :cmd, :name, 1)
+            ON CONFLICT (user_id, deck_id, card_name) DO UPDATE
               SET quantity = user_deck_cards.quantity + 1
-        """), {"uid": user_id, "cmd": commander, "name": card_name})
+        """), {"uid": user_id, "did": did, "cmd": cmd, "name": card_name})
         sess.commit()
     mark_locally_modified(user_id, _deck_id_for_commander(user_id, commander), True)
 
 
-def remove_card_from_deck_db(user_id: int, commander: str, card_name: str) -> bool:
+def remove_card_from_deck_db(user_id: int, commander: str, card_name: str,
+                             deck_id: str | None = None) -> bool:
+    """Retire un exemplaire, puis la ligne si elle tombe a zero."""
+    target = resolve_deck(user_id, deck_id, commander)
+    if target is None:
+        return False
+    did, _ = target
     with SessionLocal() as sess:
-        row = sess.execute(text("""
+        qty = sess.execute(text("""
             SELECT quantity FROM user_deck_cards
-            WHERE user_id = :uid AND LOWER(TRIM(commander)) = LOWER(TRIM(:cmd))
-              AND LOWER(TRIM(card_name)) = LOWER(TRIM(:name))
-        """), {"uid": user_id, "cmd": commander, "name": card_name}).fetchone()
-        if row is None:
+            WHERE user_id = :uid AND deck_id = :did
+              AND mm_normalize_name(card_name) = mm_normalize_name(:name)
+        """), {"uid": user_id, "did": did, "name": card_name}).scalar()
+        if qty is None:
             return False
-        if row.quantity <= 1:
+        if qty <= 1:
             sess.execute(text("""
                 DELETE FROM user_deck_cards
-                WHERE user_id = :uid AND LOWER(TRIM(commander)) = LOWER(TRIM(:cmd))
-                  AND LOWER(TRIM(card_name)) = LOWER(TRIM(:name))
-            """), {"uid": user_id, "cmd": commander, "name": card_name})
+                WHERE user_id = :uid AND deck_id = :did
+                  AND mm_normalize_name(card_name) = mm_normalize_name(:name)
+            """), {"uid": user_id, "did": did, "name": card_name})
         else:
             sess.execute(text("""
                 UPDATE user_deck_cards SET quantity = quantity - 1
-                WHERE user_id = :uid AND LOWER(TRIM(commander)) = LOWER(TRIM(:cmd))
-                  AND LOWER(TRIM(card_name)) = LOWER(TRIM(:name))
-            """), {"uid": user_id, "cmd": commander, "name": card_name})
+                WHERE user_id = :uid AND deck_id = :did
+                  AND mm_normalize_name(card_name) = mm_normalize_name(:name)
+            """), {"uid": user_id, "did": did, "name": card_name})
         sess.commit()
-    deck_id = _deck_id_for_commander(user_id, commander)
-    if deck_id:
-        mark_locally_modified(user_id, deck_id, True)
     return True
-
 
 def get_deck_txt_content(user_id: int, commander: str) -> Optional[str]:
     """Retourne le contenu texte de la decklist (format Moxfield/EDHREC).

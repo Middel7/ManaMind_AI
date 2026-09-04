@@ -153,12 +153,13 @@ async def api_deck_card_add(request: Request) -> JSONResponse:
     user = get_current_user(mm_token=request.cookies.get(COOKIE_NAME))
     body = await request.json()
     commander = (body.get("commander") or "").strip()
+    deck_id   = (body.get("deck_id") or "").strip() or None
     card      = (body.get("card_name") or "").strip()
-    if not commander or not card:
+    if not (commander or deck_id) or not card:
         return _json_response({"error": "Paramètres manquants"}, status_code=400)
     try:
         from manamind.user_decks import add_card_to_deck_db
-        add_card_to_deck_db(user["id"], commander, card)
+        add_card_to_deck_db(user["id"], commander, card, deck_id)
         return _json_response({"ok": True})
     except Exception as e:
         return _json_response({"error": str(e)}, status_code=500)
@@ -170,12 +171,13 @@ async def api_deck_card_remove(request: Request) -> JSONResponse:
     user = get_current_user(mm_token=request.cookies.get(COOKIE_NAME))
     body = await request.json()
     commander = (body.get("commander") or "").strip()
+    deck_id   = (body.get("deck_id") or "").strip() or None
     card      = (body.get("card_name") or "").strip()
-    if not commander or not card:
+    if not (commander or deck_id) or not card:
         return _json_response({"error": "Paramètres manquants"}, status_code=400)
     try:
         from manamind.user_decks import remove_card_from_deck_db
-        found = remove_card_from_deck_db(user["id"], commander, card)
+        found = remove_card_from_deck_db(user["id"], commander, card, deck_id)
         if not found:
             return _json_response({"ok": False, "error": f"« {card} » n'est pas dans le deck de {commander}"}, status_code=404)
         return _json_response({"ok": True})

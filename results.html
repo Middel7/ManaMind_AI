@@ -685,7 +685,7 @@
     button.disabled = true;
     try {
       await MM.api.post(`/api/deck-card/${op}`, {
-        commander: deckInfo.commander, card_name: name,
+        deck_id: deckInfo.deck_id, commander: deckInfo.commander, card_name: name,
       });
       const key = `${kind}:${name}`;
       if (done) applied.delete(key); else applied.add(key);

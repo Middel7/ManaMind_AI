@@ -326,7 +326,7 @@
       if (!ok) return;
       try {
         await MM.api.post('/api/deck-card/remove',
-          { commander: deck.commander, card_name: name });
+          { deck_id: deckId, commander: deck.commander, card_name: name });
         MM.toast('Carte retirée du deck.');
         await reload();
       } catch (err) { MM.toast.error(err.message); }
@@ -397,7 +397,7 @@
             tile.style.opacity = '0.5';
             try {
               await MM.api.post('/api/deck-card/add',
-                { commander: deck.commander, card_name: card.name });
+                { deck_id: deckId, commander: deck.commander, card_name: card.name });
               MM.toast.ok(`${card.name} ajoutée au deck.`);
               modal.close();
               await reload();

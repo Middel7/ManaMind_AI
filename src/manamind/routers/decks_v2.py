@@ -78,7 +78,7 @@ def api_decks(request: Request) -> Response:
             -- Un seul parcours de user_deck_cards, groupe par commandant :
             -- le LATERAL correle en refaisait un par deck.
             agg AS (
-                SELECT mm_normalize_name(dc.commander) AS commander_key,
+                SELECT dc.deck_id,
                        SUM(dc.quantity) AS cards,
                        SUM(dc.quantity) FILTER (WHERE o.key IS NOT NULL) AS owned
                 FROM user_deck_cards dc
@@ -94,7 +94,7 @@ def api_decks(request: Request) -> Response:
                    COALESCE(agg.owned, 0)  AS owned_count,
                    art.scryfall_id, art.image_small, art.image_normal
             FROM user_moxfield_decks d
-            LEFT JOIN agg ON agg.commander_key = mm_normalize_name(d.commander)
+            LEFT JOIN agg ON agg.deck_id = d.deck_id
             {_ART_SQL.format(name_expr="split_part(d.commander, '//', 1)")}
             WHERE d.user_id = :uid
             ORDER BY COALESCE(d.fetched_at, d.created_at) DESC NULLS LAST
@@ -140,17 +140,6 @@ async def api_create_deck(request: Request) -> Response:
         return _json_response({"error": "Commandant manquant"}, status_code=400)
 
     with SessionLocal() as session:
-        taken = session.execute(text("""
-            SELECT name FROM user_moxfield_decks
-            WHERE user_id = :uid
-              AND mm_normalize_name(commander) = mm_normalize_name(:cmd)
-        """), {"uid": user["id"], "cmd": commander}).scalar()
-        if taken:
-            return _json_response(
-                {"error": f"« {taken} » a deja ce commandant. "
-                          "Deux decks ne peuvent pas partager le meme commandant."},
-                status_code=409)
-
         # L'identite de couleur du commandant borne ce que le deck peut jouer.
         identity = session.execute(text("""
             SELECT color_identity FROM scryfall_cards
@@ -214,10 +203,9 @@ def api_deck_detail(deck_id: str, request: Request) -> Response:
             {_PRICE_SQL.format(name_expr="dc.card_name")}
             LEFT JOIN owned_idx owned
               ON owned.key = split_part(mm_normalize_name(dc.card_name), ' // ', 1)
-            WHERE dc.user_id = :uid
-              AND mm_normalize_name(dc.commander) = mm_normalize_name(:commander)
+            WHERE dc.user_id = :uid AND dc.deck_id = :did
             ORDER BY dc.card_name
-        """), {"uid": user["id"], "commander": deck.commander}).fetchall()
+        """), {"uid": user["id"], "did": deck_id}).fetchall()
 
     cards = []
     total_value = 0.0
@@ -294,35 +282,21 @@ async def api_set_commander(deck_id: str, request: Request) -> Response:
 
         in_deck = session.execute(text("""
             SELECT 1 FROM user_deck_cards
-            WHERE user_id = :uid
-              AND mm_normalize_name(commander) = mm_normalize_name(:cmd)
+            WHERE user_id = :uid AND deck_id = :did
               AND mm_normalize_name(card_name) = mm_normalize_name(:card)
-        """), {"uid": user["id"], "cmd": current, "card": card_name}).scalar()
+        """), {"uid": user["id"], "did": deck_id, "card": card_name}).scalar()
         if not in_deck:
             return _json_response(
                 {"error": "Cette carte ne fait pas partie du deck"}, status_code=400)
 
-        # Deux decks ne peuvent pas partager un commandant : les cartes sont
-        # uniques par (utilisateur, commandant, carte), les listes fusionneraient.
-        taken = session.execute(text("""
-            SELECT name FROM user_moxfield_decks
-            WHERE user_id = :uid AND deck_id <> :did
-              AND mm_normalize_name(commander) = mm_normalize_name(:cmd)
-        """), {"uid": user["id"], "did": deck_id, "card": card_name,
-               "cmd": card_name}).scalar()
-        if taken:
-            return _json_response(
-                {"error": f"« {taken} » a deja ce commandant. "
-                          "Deux decks ne peuvent pas partager le meme commandant."},
-                status_code=409)
-
         # Les SELECT ci-dessus ont deja ouvert la transaction : les deux UPDATE
         # y prennent place et sont valides ensemble par le commit final.
+        # Le commandant reste ecrit sur les cartes pour les analyses qui
+        # raisonnent par commandant, mais il ne les rattache plus au deck.
         session.execute(text("""
             UPDATE user_deck_cards SET commander = :new
-            WHERE user_id = :uid
-              AND mm_normalize_name(commander) = mm_normalize_name(:old)
-        """), {"uid": user["id"], "old": current, "new": card_name})
+            WHERE user_id = :uid AND deck_id = :did
+        """), {"uid": user["id"], "did": deck_id, "new": card_name})
         session.execute(text("""
             UPDATE user_moxfield_decks SET commander = :new, locally_modified = TRUE
             WHERE user_id = :uid AND deck_id = :did
@@ -408,10 +382,10 @@ def api_deck_missing(
     user = _user(request)
 
     with SessionLocal() as session:
-        commander = session.execute(text(
-            "SELECT commander FROM user_moxfield_decks WHERE user_id = :uid AND deck_id = :did"
+        exists = session.execute(text(
+            "SELECT 1 FROM user_moxfield_decks WHERE user_id = :uid AND deck_id = :did"
         ), {"uid": user["id"], "did": deck_id}).scalar()
-        if commander is None:
+        if not exists:
             return _json_response({"error": "Deck introuvable"}, status_code=404)
 
         rows = session.execute(text(f"""
@@ -422,8 +396,7 @@ def api_deck_missing(
             FROM user_deck_cards dc
             {_ART_SQL.format(name_expr="dc.card_name")}
             {_PRICE_SQL.format(name_expr="dc.card_name")}
-            WHERE dc.user_id = :uid
-              AND mm_normalize_name(dc.commander) = mm_normalize_name(:commander)
+            WHERE dc.user_id = :uid AND dc.deck_id = :did
               AND NOT EXISTS (
                   SELECT 1 FROM user_collection uc
                   WHERE uc.user_id = :uid
@@ -432,7 +405,7 @@ def api_deck_missing(
               )
             ORDER BY price.unit_price DESC NULLS LAST
             LIMIT :limit
-        """), {"uid": user["id"], "commander": commander, "limit": limit}).fetchall()
+        """), {"uid": user["id"], "did": deck_id, "limit": limit}).fetchall()
 
     missing = [
         {
