@@ -46,7 +46,7 @@
      en retrait, et il s'affirme au survol de la ligne. */
   .card-line__remove { opacity: 0.4; transition: opacity var(--dur-fast) var(--ease); }
   .card-line:hover .card-line__remove { opacity: 1; }
-  .card-line__setcmd { opacity: 0; transition: opacity var(--dur-fast) var(--ease); }
+  .card-line__setcmd { opacity: 0.4; transition: opacity var(--dur-fast) var(--ease); }
   .card-line:hover .card-line__setcmd { opacity: 1; }
 
   /* Apercu de la carte au survol, comme sur les sites de decklists */
@@ -58,8 +58,23 @@
     display: none;
   }
   @media (hover: none) { .peek { display: none !important; } }
+  /* Place du badge « a acquerir », reservee meme quand il est absent :
+     sinon les boutons d'action sautaient d'une ligne a l'autre. */
+  .card-line__spacer { width: 74px; flex-shrink: 0; }
+  .card-line .badge--link { width: 74px; flex-shrink: 0; justify-content: center;
+                            display: inline-flex; }
+
   /* La courbe de mana tient dans le bandeau, sous les chiffres du deck */
-  .hero__curve { max-width: 420px; margin: var(--sp-4) 0 var(--sp-2); }
+  .hero__curve { max-width: 420px; margin: var(--sp-2) 0 0; }
+
+  /* Actions rangees a droite du bandeau : le contenu remonte d'autant */
+  .hero__split { display: flex; gap: var(--sp-6); align-items: flex-start; }
+  .hero__split > .grow { min-width: 0; }
+  .hero__split .hero__actions { flex-direction: column; align-items: stretch; flex-shrink: 0; }
+  @media (max-width: 860px) {
+    .hero__split { flex-direction: column; }
+    .hero__split .hero__actions { flex-direction: row; flex-wrap: wrap; }
+  }
 
   /* Badge cliquable : « a acquerir » mene a l'offre Cardmarket de la carte */
   .badge--link { text-decoration: none; cursor: pointer; }
@@ -118,6 +133,8 @@
     MM.el('#hero').innerHTML = `
       ${art ? `<div class="hero__art" style="background-image:url('${MM.esc(art)}')"></div>` : ''}
       <div class="hero__body">
+        <div class="hero__split">
+        <div class="grow">
         <p class="eyebrow">${MM.esc(deck.commander || 'Deck')}</p>
         <h2 class="hero__title">${MM.esc(deck.name)}</h2>
         <div class="hero__stats">
@@ -131,6 +148,7 @@
             <span class="muted small">de valeur</span></span>
         </div>
         <div class="hero__curve">${manaCurve(cards)}</div>
+        </div>
         <div class="hero__actions">
           <a class="btn btn--primary" href="/decks/ameliorer?deck=${encodeURIComponent(deckId)}"
              title="Cartes de votre collection qui amélioreraient ce deck">
@@ -139,8 +157,7 @@
              title="Analyser le deck : ajouts et retraits suggérés, sans se limiter à
                     votre collection">
             ${MM.icons.chart} Améliorer avec l'analyse</a>
-          <a class="btn" href="/decks/commandant?deck=${encodeURIComponent(deckId)}">
-            Changer de commandant</a>
+        </div>
         </div>
       </div>`;
   }
@@ -249,13 +266,14 @@
               <span class="card-line__name truncate">${MM.esc(card.card_name)}</span>
               ${card.game_changer
                 ? '<span class="badge badge--warn" title="Carte à fort impact">GC</span>' : ''}
+              <span class="xs dim num" style="min-width:52px;text-align:right">
+                ${card.unit_price != null ? MM.fmt.eur(card.unit_price) : '—'}</span>
               ${card.owned < card.quantity
                 ? `<a class="badge badge--warn badge--link" target="_blank" rel="noopener"
                       href="${MM.esc(MM.market.buy(card.card_name))}"
                       title="Voir les offres d'achat de ${MM.esc(card.card_name)} sur Cardmarket"
-                     >à acquérir</a>` : ''}
-              <span class="xs dim num" style="min-width:52px;text-align:right">
-                ${card.unit_price != null ? MM.fmt.eur(card.unit_price) : '—'}</span>
+                     >à acquérir</a>`
+                : '<span class="card-line__spacer"></span>'}
               ${/Legendary/i.test(card.type_line || '')
                 && card.card_name.toLowerCase() !== (deck.commander || '').toLowerCase()
                 ? `<button class="btn btn--ghost btn--icon btn--sm card-line__setcmd"
