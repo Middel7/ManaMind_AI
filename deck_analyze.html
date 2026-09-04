@@ -156,6 +156,22 @@
       </div>`;
   }
 
+  /** Remet l'ecran en etat d'accueil : boutons actifs, message d'attente
+   *  efface. Le navigateur restaure la page telle qu'elle etait au moment de
+   *  la navigation — donc figee sur « analyse en cours » — quand on revient
+   *  par le bouton retour. */
+  function resetAnalysis() {
+    MM.els('[data-analysis]').forEach((button) => { button.disabled = false; });
+    if (progress) progress.innerHTML = '';
+  }
+
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) resetAnalysis();
+  });
+  // Safari et Firefox restaurent parfois sans passer par pageshow persisted :
+  // le retour depuis l'historique passe alors par popstate.
+  window.addEventListener('popstate', resetAnalysis);
+
   MM.els('[data-analysis]').forEach((button) => {
     button.addEventListener('click', () => {
       if (!currentDeck) return MM.toast.error('Choisissez un deck à analyser.');
