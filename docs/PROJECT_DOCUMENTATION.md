@@ -19,7 +19,7 @@ python server.py
 
 ## 1. Objectif du projet
 
-Système de recommandation de cartes Magic: The Gathering pour le format Commander/EDH.
+Système de recommandation de cartes Magic.venv\Scripts\python.exe server.py: The Gathering pour le format Commander/EDH.
 
 - Analyser un deck fourni par l'utilisateur (fichier texte).
 - Recommander des cartes à **ajouter** (popularité, synergie).

@@ -518,6 +518,12 @@
         <span class="muted small">retraits proposés</span></span>
     </div>`);
 
+  // Cartes deja traitees, par onglet : le bouton doit rester coche quand le
+  // filtre de prix redessine les panneaux.
+  const applied = new Set();
+  const SYMBOL = { add: '+', cut: '−' };
+  const INVERSE = { add: 'remove', remove: 'add' };
+
   // Les analyses ouvertes sans contexte de deck (lien direct, session vidée)
   // n'ont pas de commandant : sans lui, impossible de modifier une liste.
   const canEdit = Boolean(deckInfo.commander);
@@ -555,14 +561,24 @@
                     href="${MM.esc(MM.market.sell(row.name))}"
                     title="Proposer ${MM.esc(row.name)} à la vente sur RELIC-TRADE"
                    >Vendre</a>`}
-            ${canEdit ? `<button class="btn btn--sm btn--icon card-op"
+            ${canEdit ? (() => {
+              const done = applied.has(`${kind}:${row.name}`);
+              const undo = kind === 'add'
+                ? `Annuler l'ajout de ${MM.esc(row.name)}`
+                : `Annuler le retrait de ${MM.esc(row.name)}`;
+              const act = kind === 'add'
+                ? `Ajouter ${MM.esc(row.name)} au deck`
+                : `Retirer ${MM.esc(row.name)} du deck`;
+              return `<button class="btn btn--sm btn--icon card-op"
                     data-op="${kind === 'add' ? 'add' : 'remove'}"
+                    data-kind="${kind}"
                     data-card="${MM.esc(row.name)}"
-                    title="${kind === 'add'
-                      ? `Ajouter ${MM.esc(row.name)} au deck`
-                      : `Retirer ${MM.esc(row.name)} du deck`}"
-                    aria-label="${kind === 'add' ? 'Ajouter au deck' : 'Retirer du deck'}"
-                   >${kind === 'add' ? '+' : '−'}</button>` : ''}
+                    data-done="${done ? '1' : ''}"
+                    title="${done ? undo : act}"
+                    aria-pressed="${done}"
+                    aria-label="${done ? 'Annuler' : (kind === 'add' ? 'Ajouter au deck' : 'Retirer du deck')}"
+                   >${done ? '✓' : SYMBOL[kind]}</button>`;
+            })() : ''}
           </span>
         </div>
       </article>`;
@@ -634,22 +650,33 @@
     const button = event.target.closest('.card-op');
     if (!button) return;
 
-    const op = button.dataset.op;
+    const kind = button.dataset.kind;
     const name = button.dataset.card;
-    const label = button.textContent;
+    const done = button.dataset.done === '1';
+    // Un second clic defait le premier : le meme bouton sert d'aller et retour.
+    const op = done ? INVERSE[button.dataset.op] : button.dataset.op;
+
     button.disabled = true;
     try {
       await MM.api.post(`/api/deck-card/${op}`, {
         commander: deckInfo.commander, card_name: name,
       });
-      button.textContent = '✓';
+      const key = `${kind}:${name}`;
+      if (done) applied.delete(key); else applied.add(key);
+
+      button.dataset.done = done ? '' : '1';
+      button.textContent = done ? SYMBOL[kind] : '✓';
+      button.setAttribute('aria-pressed', String(!done));
+      button.title = done
+        ? (kind === 'add' ? `Ajouter ${name} au deck` : `Retirer ${name} du deck`)
+        : (kind === 'add' ? `Annuler l'ajout de ${name}` : `Annuler le retrait de ${name}`);
       MM.toast.ok(op === 'add'
         ? `${name} ajoutée au deck.`
         : `${name} retirée du deck.`);
     } catch (err) {
       MM.toast.error(err.message);
+    } finally {
       button.disabled = false;
-      button.textContent = label;
     }
   });
 
