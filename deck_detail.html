@@ -67,14 +67,6 @@
   /* La courbe de mana tient dans le bandeau, sous les chiffres du deck */
   .hero__curve { max-width: 420px; margin: var(--sp-2) 0 0; }
 
-  /* Actions rangees a droite du bandeau : le contenu remonte d'autant */
-  .hero__split { display: flex; gap: var(--sp-6); align-items: flex-start; }
-  .hero__split > .grow { min-width: 0; }
-  .hero__split .hero__actions { flex-direction: column; align-items: stretch; flex-shrink: 0; }
-  @media (max-width: 860px) {
-    .hero__split { flex-direction: column; }
-    .hero__split .hero__actions { flex-direction: row; flex-wrap: wrap; }
-  }
 
   /* Badge cliquable : « a acquerir » mene a l'offre Cardmarket de la carte */
   .badge--link { text-decoration: none; cursor: pointer; }

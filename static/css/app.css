@@ -307,21 +307,23 @@ table { border-collapse: collapse; width: 100%; }
     linear-gradient(0deg, var(--bg) 0%, transparent 62%);
 }
 
+/* Le bandeau occupe toute la largeur et se fait le plus bas possible : le
+   contenu s'etale au lieu d'etre empile dans une colonne de 720 px. */
 .hero__body {
   position: relative;
-  padding: var(--sp-10) var(--sp-10) var(--sp-8);
+  padding: var(--sp-5) var(--sp-8);
   display: flex;
   flex-direction: column;
-  gap: var(--sp-4);
-  max-width: 720px;
+  gap: var(--sp-3);
+  max-width: none;
 }
 
-.hero--tall .hero__body { padding-block: var(--sp-16) var(--sp-10); }
+.hero--tall .hero__body { padding-block: var(--sp-8) var(--sp-6); }
 
 .hero__title {
   font-family: var(--font-display);
-  font-size: var(--text-4xl);
-  line-height: 1.05;
+  font-size: var(--text-3xl);
+  line-height: 1.1;
   letter-spacing: -0.01em;
 }
 
@@ -339,7 +341,17 @@ table { border-collapse: collapse; width: 100%; }
   font-variant-numeric: tabular-nums;
 }
 
-.hero__actions { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-top: var(--sp-2); }
+.hero__actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+
+/* Bandeau en deux colonnes : contenu a gauche, actions a droite. Etale le
+   bandeau sur la largeur au lieu de l'allonger vers le bas. */
+.hero__split { display: flex; gap: var(--sp-6); align-items: flex-start; }
+.hero__split > .grow { min-width: 0; }
+.hero__split .hero__actions { flex-direction: column; align-items: stretch; flex-shrink: 0; }
+@media (max-width: 860px) {
+  .hero__split { flex-direction: column; }
+  .hero__split .hero__actions { flex-direction: row; flex-wrap: wrap; }
+}
 
 .hero__credit {
   position: absolute;

@@ -127,6 +127,8 @@
   MM.el('#hero').innerHTML = `
     ${art ? `<div class="hero__art" style="background-image:url('${MM.esc(art)}')"></div>` : ''}
     <div class="hero__body">
+      <div class="hero__split">
+      <div class="grow">
       <p class="eyebrow">${MM.esc(greeting)}</p>
       <h2 class="hero__title">${empty
         ? 'Votre collection vous attend'
@@ -135,6 +137,8 @@
         ? "Importez vos cartes une fois, et l'outil vous dira quels decks construire, "
           + 'quelles cartes dorment et lesquelles amélioreraient vos listes.'
         : `Dernière mise à jour ${MM.esc(MM.fmt.since(stats.last_update) || 'inconnue')}.`}</p>
+      ${heroStats}
+      </div>
       <div class="hero__actions">
         ${empty
           ? `<a class="btn btn--primary btn--lg" href="/collection/import">
@@ -145,7 +149,7 @@
              <a class="btn" href="/collection/import">
                ${MM.icons.upload} Ajouter des decks</a>`}
       </div>
-      ${heroStats}
+      </div>
     </div>
     ${featured && !profile.banner_scryfall_id && !empty
       ? `<span class="hero__credit">${MM.esc(featured.card_name)}</span>` : ''}`;
