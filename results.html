@@ -203,12 +203,18 @@
   function countRow(label, counts, extra) {
     const shown = COLORS.filter((color) => counts[color] > 0);
     if (!shown.length && !extra) return '';
+    // Part de chaque couleur dans le total de la ligne. Les sources « de
+    // n'importe quelle couleur » restent hors du calcul : elles alimentent
+    // toutes les couleurs a la fois et fausseraient la repartition.
+    const total = shown.reduce((sum, color) => sum + counts[color], 0);
     return `
       <div class="mana-row">
         <span class="mana-row__label">${MM.esc(label)}</span>
         ${shown.map((color) => `
-          <span class="mana-count" title="${counts[color]} ${MM.esc(label.toLowerCase())} ${color}">
-            <span class="pip pip--${color}"></span>${MM.fmt.int(counts[color])}</span>`).join('')}
+          <span class="mana-count"
+                title="${counts[color]} sur ${total} — ${MM.esc(label.toLowerCase())} ${color}">
+            <span class="pip pip--${color}"></span>${MM.fmt.int(counts[color])}
+            <span class="dim">${Math.round((counts[color] / total) * 100)} %</span></span>`).join('')}
         ${extra || ''}
       </div>`;
   }
