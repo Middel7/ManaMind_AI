@@ -16,6 +16,10 @@ sys.path.insert(0, str(ROOT / "src"))
 
 # Variables d'environnement de test — à définir AVANT tout import applicatif
 os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
+# Les tests attaquent l'authentification avec des jeux d'essai (comptes
+# inexistants, jetons invalides) sur une base vide : sans cela, chaque
+# execution remontait des centaines d'incidents en production.
+os.environ["SENTRY_DSN"] = ""
 os.environ.setdefault("JWT_SECRET", "test-secret-key-for-tests-only-not-prod")
 os.environ.setdefault("DEBUG", "true")
 # Empêcher le lifespan d'appeler alembic upgrade head (pas de vraie DB en test)

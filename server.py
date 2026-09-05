@@ -26,6 +26,10 @@ logger = logging.getLogger("manamind")
 
 # Sentry — monitoring des erreurs (optionnel, activé si SENTRY_DSN est défini)
 _SENTRY_DSN = _os_server.environ.get("SENTRY_DSN", "")
+# Une suite de tests qui importe ce module n'est pas une production : ses
+# erreurs attendues n'ont rien a faire dans la supervision.
+if "pytest" in sys.modules:
+    _SENTRY_DSN = ""
 if _SENTRY_DSN:
     import sentry_sdk
     from sentry_sdk.integrations.fastapi import FastApiIntegration

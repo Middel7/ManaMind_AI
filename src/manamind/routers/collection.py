@@ -1035,19 +1035,30 @@ def api_card_inclusion(
     card: str = Query(...),
     commander: str = Query(...),
 ) -> JSONResponse:
-    """Taux d'inclusion d'une carte pour un commandant donné."""
-    from manamind.card_commander_matcher import _normalize, _load_frequency_index
-    idx = _load_frequency_index()
-    cmd_norm  = _normalize(commander)
-    card_norm = _normalize(card)
-    cmd_data  = idx.get(cmd_norm, {})
-    entry     = cmd_data.get(card_norm)
-    if entry is None:
+    """Taux d'inclusion d'une carte pour un commandant donné.
+
+    La statistique se lit dans deck_stat_commander : l'index en memoire dont
+    cette route dependait a disparu avec une refonte, et l'appel echouait
+    depuis sur un ImportError.
+    """
+    from sqlalchemy import text as _text
+    from manamind.db.engine import SessionLocal
+
+    with SessionLocal() as session:
+        row = session.execute(_text("""
+            SELECT decks_with_card, total_decks, inclusion_rate
+            FROM deck_stat_commander
+            WHERE LOWER(TRIM(commander)) = LOWER(TRIM(:cmd))
+              AND LOWER(TRIM(card_name)) = LOWER(TRIM(:card))
+            LIMIT 1
+        """), {"cmd": commander, "card": card}).fetchone()
+
+    if row is None:
         return _json_response({"inclusion_rate": None})
     return _json_response({
-        "inclusion_rate": round(entry["inclusion_rate"], 1),
-        "decks_with_card": entry["decks_with_card"],
-        "total_decks": entry["total_decks"],
+        "inclusion_rate": round(float(row.inclusion_rate or 0), 1),
+        "decks_with_card": int(row.decks_with_card or 0),
+        "total_decks": int(row.total_decks or 0),
     })
 
 
