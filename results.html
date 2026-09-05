@@ -444,12 +444,27 @@
   const CAPS = [null, 20, 10, 5];
   let priceCap = null;
 
+  // Au-dela de cette part des decks publics, une carte est un incontournable :
+  // la proposer n'apprend rien, elle est jouee partout.
+  const STAPLE_RATE = 40;
+  let hideStaples = false;
+  let hideLands = false;
+
   /** Une carte sans prix connu ne peut pas etre garantie sous le plafond :
    *  elle sort de la liste des que l'on en fixe un. */
   const underCap = (row) => {
     if (priceCap == null) return true;
     const price = (resolved[row.name] || {}).unit_price;
     return price != null && price <= priceCap;
+  };
+
+  /** Filtres d'affichage, sur les cartes a ajouter. */
+  const shown = (row) => {
+    if (!underCap(row)) return false;
+    const info = resolved[row.name] || {};
+    if (hideStaples && (info.global_frequency || 0) > STAPLE_RATE) return false;
+    if (hideLands && /\bLand\b/i.test(info.type_line || '')) return false;
+    return true;
   };
 
   // Les deux listes deviennent deux onglets plutot que deux panneaux empiles.
@@ -469,13 +484,21 @@
                     aria-pressed="${cap === null}">
               ${cap === null ? 'Tous les prix' : `${cap} € et moins`}</button>`).join('')}
         </div>
+        <div class="chips" id="kindFilter">
+          <button class="chip" data-hide="staples" aria-pressed="false"
+                  title="Masquer les cartes jouées dans plus de ${STAPLE_RATE} % des decks,
+                         comme Sol Ring ou Arcane Signet">
+            Sans les incontournables</button>
+          <button class="chip" data-hide="lands" aria-pressed="false"
+                  title="Masquer les terrains">Sans les terrains</button>
+        </div>
       </div>
       <div id="panel-add"></div>
       <div id="panel-cut" hidden></div>
     </div>`;
 
   function renderPanels() {
-    const shownAdd = additions.filter(underCap);
+    const shownAdd = additions.filter(shown);
     const shownCut = removals.filter(underCap);
     MM.el('#countAdd').textContent = shownAdd.length;
     MM.el('#countCut').textContent = shownCut.length;
@@ -495,6 +518,16 @@
     priceCap = chip.dataset.cap ? Number(chip.dataset.cap) : null;
     MM.els('#priceFilter .chip').forEach((other) =>
       other.setAttribute('aria-pressed', String(other === chip)));
+    renderPanels();
+  });
+
+  MM.el('#kindFilter').addEventListener('click', (event) => {
+    const chip = event.target.closest('.chip');
+    if (!chip) return;
+    const actif = chip.getAttribute('aria-pressed') !== 'true';
+    chip.setAttribute('aria-pressed', String(actif));
+    if (chip.dataset.hide === 'staples') hideStaples = actif;
+    else hideLands = actif;
     renderPanels();
   });
 

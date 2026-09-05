@@ -357,7 +357,8 @@ async def api_cards_resolve(request: Request) -> Response:
                    art.rarity, art.set_code,
                    price.low_price AS unit_price,
                    COALESCE(owned.qty, 0) AS owned,
-                   COALESCE(du.decks, 0) AS decks_used
+                   COALESCE(du.decks, 0) AS decks_used,
+                   COALESCE(g.global_frequency, 0) AS global_frequency
             FROM unnest(CAST(:names AS text[])) AS n(raw)
             LEFT JOIN LATERAL (
                 SELECT sc.id, sc.name, sc.type_line, sc.mana_cost, sc.mana_value,
@@ -414,6 +415,10 @@ async def api_cards_resolve(request: Request) -> Response:
             ) owned ON TRUE
             LEFT JOIN deck_use du
               ON du.key = split_part(c.normalized_name, ' // ', 1)
+            -- Part des decks publics qui jouent la carte, toutes couleurs
+            -- confondues : c'est ce qui distingue un incontournable.
+            LEFT JOIN deck_stat_global g
+              ON mm_normalize_name(g.card_name) = c.normalized_name
         """), {"names": names, "uid": user["id"]}).fetchall()
 
     cards = {}
@@ -435,6 +440,7 @@ async def api_cards_resolve(request: Request) -> Response:
             # Un deck ne joue qu'un exemplaire d'une carte : autant de decks,
             # autant de copies engagees.
             "used": int(r.decks_used or 0),
+            "global_frequency": float(r.global_frequency or 0),
             "free": max(0, int(r.owned or 0) - int(r.decks_used or 0)),
         }
     return _json_response({"cards": cards})

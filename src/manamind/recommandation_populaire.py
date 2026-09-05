@@ -98,6 +98,16 @@ def _query_stats(commander: str) -> list:
     """
     db_url = os.environ.get("DATABASE_URL", "")
     if not db_url:
+        # Lance a la main, le script n'hérite pas de l'environnement du serveur :
+        # sans cela il rendait un CSV vide sans rien dire.
+        try:
+            from dotenv import load_dotenv
+            load_dotenv()
+            db_url = os.environ.get("DATABASE_URL", "")
+        except Exception:
+            pass
+    if not db_url:
+        print("Avertissement : DATABASE_URL absente, aucune recommandation possible.")
         return []
     try:
         import sqlalchemy as sa
@@ -123,6 +133,7 @@ def recommend_from_db(
     cards: dict[str, int],
     commander: str | None,
     limit: int = 20,
+    add_limit: int | None = None,
 ) -> tuple[list[tuple[str, int, float]], list[tuple[str, int, float]]]:
     """Retourne (additions, removals) depuis deck_stat_commander.
 
@@ -159,7 +170,9 @@ def recommend_from_db(
     # Removals  : inclusion_rate ASC — les cartes les moins populaires en tête
     removals.sort(key=lambda x: x[2])
 
-    return additions[:limit], removals[:limit]
+    # Les ajouts sont plus nombreux : on en ecarte a la lecture (incontournables,
+    # terrains, prix), il faut de quoi voir apres filtrage.
+    return additions[:(add_limit or limit)], removals[:limit]
 
 
 def save_recommendations(
@@ -191,7 +204,7 @@ def main() -> None:
     cards, commander = parse_decklist_text(Path(args.input))
     print(f"Commander détecté : {commander or '(aucun)'}")
 
-    additions, removals = recommend_from_db(cards, commander)
+    additions, removals = recommend_from_db(cards, commander, add_limit=30)
     print(f"{len(additions)} cartes à ajouter, {len(removals)} cartes à retirer suggérées")
 
     save_recommendations(Path(args.output), commander, additions, removals)
