@@ -994,8 +994,11 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
 /* ── Courbe et repartition du mana, communes a tous les ecrans ───────────── */
 
 .curve {
-  display: flex; align-items: stretch; gap: 5px;
-  height: var(--curve-h, 40px); min-width: 190px;
+  display: flex; align-items: stretch; gap: 6px;
+  height: var(--curve-h, 40px);
+  /* Elle prend la largeur qu'on lui laisse : dans un bandeau, une courbe de
+     190 px se lisait mal a cote des chiffres. */
+  flex: 1 1 260px; min-width: 240px; max-width: 460px;
 }
 .curve__bar {
   flex: 1; display: flex; flex-direction: column; align-items: center;
@@ -1045,6 +1048,13 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
   font-size: var(--text-xs); color: var(--text-2);
 }
 .mtg-card__ops { display: flex; align-items: center; gap: var(--sp-2); }
+/* Les boutons tombent au bas de la vignette : d'une carte a l'autre, ils
+   s'alignent alors sur une meme ligne, quelle que soit la longueur du titre. */
+.mtg-card__foot { flex: 1; }
+.mtg-card__bottom {
+  margin-top: auto; padding-top: var(--sp-2);
+  display: flex; flex-direction: column; gap: var(--sp-2);
+}
 .mtg-card__actions { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
 .mtg-card__actions .btn,
 .mtg-card__market .btn { flex: 1; justify-content: center; }

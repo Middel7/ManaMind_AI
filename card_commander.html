@@ -176,31 +176,12 @@
           <div class="card-grid">
             ${items.map((item) => MM.cardTile(item, {
               context: 'collection',
-              actions: [{ label: 'Chercher un commandant', act: 'pick',
-                          variant: 'outline',
-                          title: 'Voir quels commandants jouent cette carte' }],
+              // L'illustration lance la recherche : c'est l'objet de l'ecran.
+              frameLink: `/cartes/commandant?card=${encodeURIComponent(item.card_name)}`,
+              frameTitle: `Chercher un commandant pour ${item.card_name}`,
             })).join('')}
           </div>
         </div>`;
-
-      const pick = (node) => {
-        const item = items.find((card) => card.card_name === node.dataset.card);
-        if (!item) return;
-        MM.el('#cardInput').value = item.card_name;
-        state.card = {
-          name: item.card_name,
-          set_code: item.set_code,
-          collector_number: item.collector_number,
-          image_normal: item.image_normal,
-          image_small: item.image_small,
-          owned: item.quantity,
-        };
-        load();
-      };
-      results.onclick = (event) => {
-        const node = event.target.closest('[data-act="pick"]');
-        if (node) pick(node);
-      };
     } catch (err) {
       results.innerHTML = MM.empty({
         icon: 'warning', title: 'Chargement impossible', text: err.message });

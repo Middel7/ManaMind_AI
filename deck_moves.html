@@ -14,19 +14,6 @@
   /* Le trajet d'une carte, lisible sous sa vignette. Les noms de commandants
      s'ecrivent en entier : tronques, ils devenaient indistinguables entre deux
      versions d'un meme commandant. */
-  .move__flow { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
-  .move__flow > span {
-    white-space: normal;
-    overflow-wrap: anywhere;
-    line-height: 1.35;
-  }
-  .move__gain {
-    position: absolute; top: var(--sp-2); left: var(--sp-2);
-    padding: 2px var(--sp-2);
-    border-radius: var(--r-full);
-    background: var(--accent); color: var(--text-inverse);
-    font-size: var(--text-xs); font-weight: 700;
-  }
   .move--done { opacity: 0.45; }
 </style>
 </head>
@@ -105,13 +92,14 @@
       // Aucun deck courant ici : la carte passe d'un deck a un autre, le
       // reglage n'aurait pas de cible.
       context: null,
-      note: `+${move.gain.toFixed(0)} % · ${MM.esc(move.from_commander)}`
-        + ` → ${MM.esc(move.to_commander)}`,
+      flag: `+${move.gain.toFixed(0)} %`,
+      flagTitle: `Gain de popularité si la carte change de deck`,
+      note: `${MM.esc(move.from_commander)} → ${MM.esc(move.to_commander)}`,
       actions: [
         { label: 'Déplacer', act: 'move',
           title: `Retirer de ${MM.esc(move.from_commander)} et ajouter à `
             + `${MM.esc(move.to_commander)}` },
-        { label: 'Écarter', act: 'hide', variant: 'ghost',
+        { label: 'Écarter', act: 'hide',
           title: 'Ne plus proposer ce déplacement' },
       ],
     })).join('')}</div>`;

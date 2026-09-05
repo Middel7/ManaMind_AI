@@ -30,7 +30,10 @@ _ART_SQL = """
         LEFT JOIN scryfall_mtg_sets ms ON LOWER(ms.code) = LOWER(p.set_code)
         WHERE c.normalized_name = mm_normalize_name({name_expr})
           AND p.lang = 'en'
-        ORDER BY (p.image_normal IS NOT NULL) DESC,
+        -- Les visuels Secret Lair passent en dernier : ils ne representent pas
+        -- la carte, mais quelques-unes n'existent que la.
+        ORDER BY (p.set_code NOT ILIKE 'sl%%') DESC,
+                 (p.image_normal IS NOT NULL) DESC,
                  (p.promo IS NOT TRUE) DESC,
                  (COALESCE(ms.set_type, '') NOT IN ('promo', 'memorabilia')) DESC,
                  p.released_at DESC NULLS LAST

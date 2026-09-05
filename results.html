@@ -66,17 +66,18 @@
 
   /* Colonne de droite : la courbe et les couleurs. Les actions sont passees a
      gauche, sous le titre et les chiffres, ou elles se lisent en ligne. */
-  .hero__side { display: flex; flex-direction: column; gap: var(--sp-3); flex-shrink: 0; }
+  /* La courbe et la repartition occupent le flanc du bandeau : sans largeur
+     donnee, la courbe se tassait a cote des chiffres. */
+  .hero__side {
+    display: flex; flex-direction: column; gap: var(--sp-3);
+    flex-shrink: 0; width: min(620px, 48vw);
+  }
   .hero__split .grow .hero__actions {
     flex-direction: row; flex-wrap: wrap; align-items: center;
     margin-top: var(--sp-2);
   }
   @media (max-width: 860px) { .hero__side { width: 100%; } }
 
-  /* Courbe a gauche, symboles et sources a droite : empilees, elles
-     ajoutaient une centaine de pixels au bandeau pour rien. */
-  /* Comptes et parts lisibles sans effort : c'est l'information que l'on vient
-     chercher dans ce bandeau. */
 
 </style>
 </head>
@@ -142,7 +143,7 @@
   function renderMana() {
     const host = MM.el('#manaBlock');
     if (!host || !deckCards) return;
-    host.innerHTML = MM.mana.block(deckCards, 52);
+    host.innerHTML = MM.mana.block(deckCards, 112);
   }
 
   if (deckInfo.deck_id) {

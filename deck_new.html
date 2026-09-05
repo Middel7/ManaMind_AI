@@ -344,7 +344,7 @@
     const host = MM.el('#manaBlock');
     if (!host) return;
     const list = state.cards.concat(state.commanderCard ? [state.commanderCard] : []);
-    host.innerHTML = list.length ? MM.mana.block(list, 34) : '';
+    host.innerHTML = list.length ? MM.mana.block(list, 68) : '';
   }
 
   function renderSuggested() {

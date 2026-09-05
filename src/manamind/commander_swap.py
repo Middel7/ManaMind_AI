@@ -117,7 +117,7 @@ LEFT JOIN LATERAL (
     WHERE p.card_id = dc.card_id
       AND p.image_normal IS NOT NULL
       AND p.lang = 'en'
-    ORDER BY p.released_at DESC NULLS LAST, p.id
+    ORDER BY (p.set_code NOT ILIKE 'sl%') DESC, p.released_at DESC NULLS LAST, p.id
     LIMIT 1
 ) img ON TRUE
 """
@@ -232,6 +232,7 @@ cmd_img AS (
                   REPLACE(b.commander, ' & ', ' / '), ' / ', 1)))
           AND p.image_normal IS NOT NULL
           AND p.lang = 'en'
+        ORDER BY (p.set_code NOT ILIKE 'sl%') DESC
         LIMIT 1
     ) img ON TRUE
 )
@@ -333,7 +334,7 @@ LEFT JOIN LATERAL (
     WHERE p.card_id = rk_.card_id
       AND p.image_normal IS NOT NULL
       AND p.lang = 'en'
-    ORDER BY p.released_at DESC NULLS LAST, p.id
+    ORDER BY (p.set_code NOT ILIKE 'sl%') DESC, p.released_at DESC NULLS LAST, p.id
     LIMIT 1
 ) img ON TRUE
 WHERE rk_.rk <= :missing_top

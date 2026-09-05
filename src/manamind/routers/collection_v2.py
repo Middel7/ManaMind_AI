@@ -397,7 +397,8 @@ async def api_cards_resolve(request: Request) -> Response:
                 FROM scryfall_card_printings p
                 LEFT JOIN scryfall_mtg_sets ms ON LOWER(ms.code) = LOWER(p.set_code)
                 WHERE p.card_id = c.id AND p.lang = 'en'
-                ORDER BY (p.image_normal IS NOT NULL) DESC,
+                ORDER BY (p.set_code NOT ILIKE 'sl%') DESC,
+                         (p.image_normal IS NOT NULL) DESC,
                          (p.promo IS NOT TRUE) DESC,
                          (COALESCE(ms.set_type, '') NOT IN ('promo', 'memorabilia')) DESC,
                          p.released_at DESC NULLS LAST
@@ -483,6 +484,11 @@ def api_card_detail(card_name: str, request: Request) -> Response:
                 LIMIT 1
             ) latest ON TRUE
             WHERE p.card_id = :cid AND p.lang = 'en'
+              -- Editions Secret Lair ecartees, sauf si la carte n'existe que la.
+              AND (p.set_code NOT ILIKE 'sl%' OR NOT EXISTS (
+                    SELECT 1 FROM scryfall_card_printings q
+                    WHERE q.card_id = p.card_id AND q.lang = 'en'
+                      AND q.set_code NOT ILIKE 'sl%'))
             ORDER BY p.released_at DESC NULLS LAST, p.collector_number
         """), {"cid": card.id}).fetchall()
 
@@ -586,6 +592,11 @@ def api_card_printings(
             JOIN scryfall_cards c ON c.id = p.card_id
             LEFT JOIN scryfall_mtg_sets s ON LOWER(s.code) = LOWER(p.set_code)
             WHERE c.normalized_name = mm_normalize_name(:name) AND p.lang = 'en'
+              -- Editions Secret Lair ecartees, sauf si la carte n'existe que la.
+              AND (p.set_code NOT ILIKE 'sl%' OR NOT EXISTS (
+                    SELECT 1 FROM scryfall_card_printings q
+                    WHERE q.card_id = p.card_id AND q.lang = 'en'
+                      AND q.set_code NOT ILIKE 'sl%'))
             ORDER BY p.released_at DESC NULLS LAST
             LIMIT :limit
         """), {"name": card_name, "limit": limit}).fetchall()

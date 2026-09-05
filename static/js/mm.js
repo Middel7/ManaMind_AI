@@ -747,6 +747,11 @@
     if (item.game_changer) {
       badges.push('<span class="badge badge--warn" title="Carte à fort impact">GC</span>');
     }
+    if (options.flag) {
+      badges.push(`<span class="badge badge--ok"
+        ${options.flagTitle ? `title="${esc(options.flagTitle)}"` : ''}
+        >${esc(options.flag)}</span>`);
+    }
 
     // Reglage : le deck quand on est sur un ecran de deck, la collection sinon.
     const stepper = (kind, value, label, hint) => `
@@ -802,6 +807,7 @@
               ? stepper('coll', facts.owned, 'en collection', 'de ma collection')
               : '')}
 
+          <span class="mtg-card__bottom">
           ${market ? `
             <span class="mtg-card__market">
               <a class="btn btn--sm" target="_blank" rel="noopener"
@@ -823,6 +829,7 @@
                         ${action.title ? `title="${esc(action.title)}"` : ''}
                   >${esc(action.label)}</button>`).join('')}
             </span>` : ''}
+          </span>
         </div>
       </article>`;
   };

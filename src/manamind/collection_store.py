@@ -42,20 +42,29 @@ SORTS = {
     "rarity": "rarity_rank DESC NULLS LAST, card_name ASC",
 }
 
+# Les editions Secret Lair (codes SL*) sont ecartees de tout choix
+# d'illustration : leurs visuels alternatifs ne representent pas la carte.
+NO_SECRET_LAIR = "{alias}.set_code NOT ILIKE 'sl%%'"
+
 # Bloc SQL commun : resout impression, carte, prix et extension d'un exemplaire.
 _ENRICH_SQL = """
     -- Impression exacte de l'exemplaire (renseignee a l'ajout)
-    LEFT JOIN scryfall_card_printings pd ON pd.id = uc.printing_id
+    LEFT JOIN scryfall_card_printings pd
+           ON pd.id = uc.printing_id AND pd.set_code NOT ILIKE 'sl%'
 
-    -- Repli : impression illustrative, quand l'edition n'est pas connue
+    -- Repli : impression illustrative, quand l'edition n'est pas connue —
+    -- ou quand celle qui est enregistree est un Secret Lair.
     LEFT JOIN LATERAL (
         SELECT p.id, p.scryfall_id, p.set_code, p.collector_number, p.rarity,
                p.image_small, p.image_normal, p.scryfall_uri, p.artist,
                p.cardmarket_id
         FROM scryfall_card_printings p
-        WHERE uc.printing_id IS NULL
+        WHERE pd.id IS NULL
           AND p.card_id = uc.card_id AND p.lang = 'en'
-        ORDER BY (p.image_normal IS NOT NULL) DESC, p.released_at DESC NULLS LAST
+        -- Les Secret Lair passent en dernier plutot que d'etre exclues : une
+        -- poignee de cartes n'existent que la, et resteraient sans visuel.
+        ORDER BY (p.set_code NOT ILIKE 'sl%') DESC,
+                 (p.image_normal IS NOT NULL) DESC, p.released_at DESC NULLS LAST
         LIMIT 1
     ) pf ON TRUE
 
@@ -552,6 +561,7 @@ def _resolve_printing(session: Any, name: str, set_code: str | None,
           AND p.lang = 'en'
           AND (:set IS NULL OR UPPER(p.set_code) = UPPER(:set))
         ORDER BY (c.normalized_name = mm_normalize_name(:name)) DESC,
+                 (p.set_code NOT ILIKE 'sl%') DESC,
                  (p.image_normal IS NOT NULL) DESC, p.released_at DESC NULLS LAST
         LIMIT 1
     """), {"name": name, "set": set_code}).fetchone()
