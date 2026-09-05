@@ -17,9 +17,10 @@
   .hero-dash .hero__body { padding-block: var(--sp-5); }
 
   /* Les six chiffres tiennent sur une seule ligne : le bandeau occupe ici
-     toute la largeur disponible et les écarts sont resserrés. */
+     toute la largeur disponible. Sans boutons a loger, ils respirent. */
   .hero-dash .hero__body { max-width: none; padding-right: var(--sp-6); }
-  .hero-dash .hero__stats { gap: var(--sp-2) var(--sp-4); }
+  .hero-dash .hero__stats { gap: var(--sp-2) var(--sp-6); margin-top: var(--sp-3); }
+  .hero-dash .hero__stat b { font-size: var(--text-xl); }
 
   /* Le bonjour a la meme voix que la phrase qui le suit. */
   .hero-dash .hero__hello { margin-bottom: 2px; }
@@ -140,8 +141,6 @@
   MM.el('#hero').innerHTML = `
     ${art ? `<div class="hero__art" style="background-image:url('${MM.esc(art)}')"></div>` : ''}
     <div class="hero__body">
-      <div class="hero__split">
-      <div class="grow">
       <p class="hero__title hero__hello">${MM.esc(greeting)}</p>
       <h2 class="hero__title">${empty
         ? 'Votre collection vous attend'
@@ -150,18 +149,12 @@
         decks construire, quelles cartes dorment et lesquelles amélioreraient vos
         listes.</p>` : ''}
       ${heroStats}
-      </div>
-      <div class="hero__actions">
-        ${empty
-          ? `<a class="btn btn--primary btn--lg" href="/collection/import">
-               ${MM.icons.upload} Importer ma collection</a>
-             <a class="btn btn--lg" href="/collection/ajout">Ajouter carte par carte</a>`
-          : `<a class="btn btn--primary" href="/collection/ajout">
-               ${MM.icons.plus} Ajouter des cartes à ma collection</a>
-             <a class="btn" href="/collection/import?type=deck">
-               ${MM.icons.upload} Ajouter des decks</a>`}
-      </div>
-      </div>
+      ${empty ? `
+        <div class="hero__actions" style="margin-top:var(--sp-4)">
+          <a class="btn btn--primary btn--lg" href="/collection/import">
+            ${MM.icons.upload} Importer ma collection</a>
+          <a class="btn btn--lg" href="/collection/ajout">Ajouter carte par carte</a>
+        </div>` : ''}
     </div>
     ${featured && !profile.banner_scryfall_id && !empty
       ? `<span class="hero__credit">${MM.esc(featured.card_name)}</span>` : ''}`;
