@@ -452,6 +452,9 @@
 
   // Le reglage commun a modifie une ligne : le resume et la liste suivent.
   document.addEventListener('mm:card-change', (event) => {
+    // Une edition vient d'etre choisie : la vignette doit reprendre son
+    // illustration et son code d'extension.
+    if (event.detail.scope === 'printing') return reload();
     if (event.detail.scope !== 'coll') return;
     const item = cache.find((entry) => entry.id === event.detail.id);
     if (item) {

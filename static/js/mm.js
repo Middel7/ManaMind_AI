@@ -876,7 +876,7 @@
    *
    * @param {string} name
    */
-  MM.cardDetail = async function (name) {
+  MM.cardDetail = async function (name, options = {}) {
     const dialog = MM.modal({
       title: name, wide: true,
       body: '<p class="muted">Chargement…</p>',
@@ -900,6 +900,13 @@
       ? priced.reduce((best, p) => (p.low_price < best.low_price ? p : best))
       : null;
     const shown = cheapest || printings[0] || {};
+
+    // Ligne de collection a laquelle rattacher l'edition choisie : celle d'ou
+    // la fiche a ete ouverte, sinon la seule que l'on possede.
+    const items = data.items || [];
+    const target = items.find((line) => line.id === options.itemId)
+      || (items.length === 1 ? items[0] : null);
+    const current = target && target.scryfall_id;
 
     const stats = [];
     if (card.power != null) stats.push(`${esc(card.power)}/${esc(card.toughness)}`);
@@ -964,7 +971,11 @@
             : ''}</p>
         <div class="card-grid card-grid--lg editions">
           ${printings.map((p) => `
-            <article class="mtg-card ${p === cheapest ? 'is-cheapest' : ''}">
+            <article class="mtg-card ${p === cheapest ? 'is-cheapest' : ''}
+                            ${p.scryfall_id === current ? 'is-mine' : ''}"
+                     ${target ? `data-pick="${esc(p.scryfall_id)}"
+                     title="Enregistrer cette édition comme celle que vous possédez"`
+                     : ''}>
               <div class="mtg-card__frame">
                 ${MM.img.frame({
                   card_name: card.name,
@@ -987,14 +998,43 @@
                   <span class="dim">${MM.fmt.date(p.released_at)}</span>
                   ${p.foil_low != null
                     ? `<span class="dim">foil ${MM.fmt.eur(p.foil_low)}</span>` : ''}
-                  ${p === cheapest
-                    ? '<span class="badge badge--info" title="Prix de référence du projet"'
-                      + '>moins chère</span>' : ''}
+                  ${p.scryfall_id === current
+                    ? '<span class="badge badge--ok">votre édition</span>'
+                    : (p === cheapest
+                      ? '<span class="badge badge--info" title="Prix de référence du projet">moins chère</span>'
+                      : '')}
                 </span>
               </div>
             </article>`).join('')}
         </div>
       </div>`;
+
+    // Choisir une edition l'enregistre comme celle que l'on possede : c'est
+    // elle qui paraitra ensuite dans la collection.
+    if (target) {
+      dialog.body.addEventListener('click', async (event) => {
+        const chosen = event.target.closest('[data-pick]');
+        if (!chosen) return;
+        try {
+          await MM.api.post(`/api/v2/collection/items/${target.id}/printing`,
+            { scryfall_id: chosen.dataset.pick });
+          els('.mtg-card.is-mine', dialog.body).forEach((node) => {
+            node.classList.remove('is-mine');
+            const flag = el('.badge--ok', node);
+            if (flag) flag.remove();
+          });
+          chosen.classList.add('is-mine');
+          MM.toast.ok('Édition enregistrée.');
+          document.dispatchEvent(new CustomEvent('mm:card-change', {
+            detail: { card_name: card.name, scope: 'printing', delta: 0,
+                      id: target.id },
+          }));
+        } catch (error) {
+          MM.toast.error(error.message);
+        }
+      });
+    }
+
   };
 
   // Le titre d'une carte ouvre sa fiche, sur tous les ecrans. En phase de
@@ -1014,6 +1054,7 @@
     }
 
     const tile = label.closest('.mtg-card');
+    const itemId = tile && tile.dataset.id ? Number(tile.dataset.id) : null;
     const name = label.dataset.cardDetail
       || (label.classList.contains('mtg-card__frame')
         ? (tile && tile.dataset.name)
@@ -1021,7 +1062,7 @@
     if (!name) return;
     event.preventDefault();
     event.stopPropagation();
-    MM.cardDetail(name);
+    MM.cardDetail(name, { itemId });
   }, true);
 
   MM.cardSkeletons = function (count = 12) {
@@ -1106,7 +1147,8 @@
       return { front, back };
     },
 
-    /** Courbe de mana, terrains exclus. */
+    /** Courbe de mana, terrains exclus. Chaque barre porte sa part du deck,
+     *  et la plus haute occupe toute la hauteur donnee. */
     curve(list, height = 40) {
       const buckets = [0, 0, 0, 0, 0, 0, 0, 0];
       list.forEach((card) => {
@@ -1114,9 +1156,13 @@
         buckets[Math.min(7, Math.floor(card.mana_value ?? 0))] += card.quantity || 1;
       });
       const max = Math.max(...buckets, 1);
-      return `<div class="curve">${buckets.map((count, index) => `
-        <span class="curve__bar" title="${count} carte${count > 1 ? 's' : ''} à ${index}${index === 7 ? '+' : ''}">
-          <span class="curve__fill" style="height:${(count / max) * height}px"></span>
+      const total = buckets.reduce((sum, count) => sum + count, 0) || 1;
+      return `<div class="curve" style="--curve-h:${height}px">${buckets.map((count, index) => `
+        <span class="curve__bar"
+              title="${count} carte${count > 1 ? 's' : ''} à ${index}${index === 7 ? '+' : ''}
+                     — ${Math.round((count / total) * 100)} % des sorts">
+          <span class="curve__pct">${count ? `${Math.round((count / total) * 100)} %` : ''}</span>
+          <span class="curve__fill" style="height:${(count / max) * 100}%"></span>
           <span class="curve__label">${index === 7 ? '7+' : index}</span>
         </span>`).join('')}</div>`;
     },
@@ -1145,6 +1191,7 @@
       const src = MM.mana.sources(list);
       const land = MM.mana.lands(list);
       return `
+        <div class="mana-block">
         ${MM.mana.curve(list, height)}
         <div class="mana-rows">
           ${MM.mana.row('Symboles', MM.mana.symbols(list))}
@@ -1157,6 +1204,7 @@
               title="Cartes dont seule la face arrière est un terrain"
               >+ ${land.back} au verso</span>` : ''}
           </div>
+        </div>
         </div>`;
     },
   };

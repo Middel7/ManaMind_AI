@@ -112,6 +112,22 @@ async def api_update(item_id: int, request: Request) -> Response:
     return _json_response({"ok": True, **result})
 
 
+@router.post("/api/v2/collection/items/{item_id}/printing")
+async def api_set_printing(item_id: int, request: Request) -> Response:
+    """Designe l'edition possedee d'un exemplaire, par son identifiant Scryfall."""
+    user = _user(request)
+    body = await request.json()
+    scryfall_id = (body.get("scryfall_id") or "").strip()
+    if not scryfall_id:
+        return _json_response({"error": "scryfall_id requis"}, status_code=400)
+
+    result = store.set_item_printing(user["id"], item_id, scryfall_id)
+    if result is None:
+        return _json_response({"error": "Exemplaire ou édition introuvable"},
+                              status_code=404)
+    return _json_response({"ok": True, **result})
+
+
 @router.delete("/api/v2/collection/items/{item_id}")
 def api_delete(item_id: int, request: Request) -> Response:
     user = _user(request)
@@ -470,6 +486,19 @@ def api_card_detail(card_name: str, request: Request) -> Response:
             ORDER BY p.released_at DESC NULLS LAST, p.collector_number
         """), {"cid": card.id}).fetchall()
 
+        # Lignes de collection de cette carte : la fiche doit savoir laquelle
+        # porte l'edition, pour pouvoir la changer.
+        items = session.execute(text("""
+            SELECT uc.id, uc.quantity, UPPER(uc.set_code) AS set_code,
+                   p.scryfall_id
+            FROM user_collection uc
+            LEFT JOIN scryfall_card_printings p ON p.id = uc.printing_id
+            WHERE uc.user_id = :uid
+              AND split_part(mm_normalize_name(uc.card_name), ' // ', 1)
+                = split_part(mm_normalize_name(:name), ' // ', 1)
+            ORDER BY uc.quantity DESC, uc.id
+        """), {"uid": user["id"], "name": card.name}).fetchall()
+
         owned = session.execute(text("""
             SELECT COALESCE(SUM(quantity), 0) FROM user_collection
             WHERE user_id = :uid
@@ -510,6 +539,11 @@ def api_card_detail(card_name: str, request: Request) -> Response:
             "popularity_rank": card.edhrec_rank,
         },
         "owned": int(owned or 0),
+        "items": [
+            {"id": r.id, "quantity": int(r.quantity or 0),
+             "set_code": r.set_code, "scryfall_id": r.scryfall_id}
+            for r in items
+        ],
         "decks": [{"deck_id": r.deck_id, "name": r.name} for r in decks],
         "printings": [
             {

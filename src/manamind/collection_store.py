@@ -649,6 +649,38 @@ def add_item(
             "set_code": set_code, "finish": finish}
 
 
+def set_item_printing(user_id: int, item_id: int, scryfall_id: str) -> dict | None:
+    """Fixe l'edition possedee d'un exemplaire.
+
+    L'affichage de la collection suit printing_id quand il est renseigne : c'est
+    ce qui fait paraitre l'illustration et le code d'extension de l'edition que
+    l'on possede reellement, et non d'une impression choisie par defaut.
+    """
+    with SessionLocal() as session:
+        printing = session.execute(text("""
+            SELECT id, card_id, UPPER(set_code) AS set_code, collector_number, scryfall_id
+            FROM scryfall_card_printings WHERE scryfall_id = :sid
+        """), {"sid": scryfall_id}).fetchone()
+        if printing is None:
+            return None
+
+        row = session.execute(text("""
+            UPDATE user_collection
+               SET printing_id = :pid, card_id = COALESCE(card_id, :cid),
+                   set_code = :set_code, collector_number = :num,
+                   scryfall_id = :sid, updated_at = NOW()
+             WHERE id = :id AND user_id = :uid
+         RETURNING id, card_name, set_code
+        """), {"pid": printing.id, "cid": printing.card_id,
+               "set_code": printing.set_code, "num": printing.collector_number,
+               "sid": printing.scryfall_id, "id": item_id, "uid": user_id}).fetchone()
+        session.commit()
+
+    if row is None:
+        return None
+    return {"id": row.id, "card_name": row.card_name, "set_code": row.set_code}
+
+
 def update_item(user_id: int, item_id: int, **fields: Any) -> dict | None:
     """Met a jour un exemplaire. quantity <= 0 le supprime."""
     allowed = {"quantity", "condition", "location", "note", "finish", "language"}

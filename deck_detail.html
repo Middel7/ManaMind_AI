@@ -31,7 +31,8 @@
 
 
   /* La courbe de mana tient dans le bandeau, sous les chiffres du deck */
-  .hero__curve { max-width: 420px; margin: var(--sp-2) 0 0; }
+  /* La courbe partage la ligne avec la repartition : elle ne se bride plus. */
+  .hero__curve { margin: var(--sp-3) 0 0; }
 
 
   /* Badge cliquable : « a acquerir » mene a l'offre Cardmarket de la carte */
@@ -107,7 +108,8 @@
           <span class="hero__stat"><b>${MM.fmt.eur(deck.value_eur, { compact: true })}</b>
             <span class="muted small">de valeur</span></span>
         </div>
-        <div class="hero__curve">${manaCurve(cards)}</div>
+        <div class="hero__curve">${MM.mana.block(
+          cards.concat(commanderCard ? [commanderCard] : []), 96)}</div>
         </div>
         <div class="hero__actions">
           <a class="btn btn--primary" href="/decks/ameliorer?deck=${encodeURIComponent(deckId)}"
@@ -153,20 +155,6 @@
     return groups;
   }
 
-  function manaCurve(list) {
-    const buckets = [0, 0, 0, 0, 0, 0, 0, 0];
-    list.forEach((card) => {
-      if (/Land/i.test(card.type_line)) return;
-      const value = Math.min(7, Math.floor(card.mana_value ?? 0));
-      buckets[value] += card.quantity;
-    });
-    const max = Math.max(...buckets, 1);
-    return `<div class="curve">${buckets.map((count, index) => `
-      <span class="curve__bar" title="${count} carte${count > 1 ? 's' : ''} à ${index}${index === 7 ? '+' : ''}">
-        <span class="curve__fill" style="height:${(count / max) * 46}px"></span>
-        <span class="curve__label">${index === 7 ? '7+' : index}</span>
-      </span>`).join('')}</div>`;
-  }
 
   function render() {
     renderHero();

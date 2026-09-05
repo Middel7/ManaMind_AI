@@ -59,24 +59,10 @@
     .swap-row__arrow { display: none; }
   }
 
-  .curve { display: flex; align-items: flex-end; gap: 5px; height: 84px; }
-  .curve__bar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-  .curve__fill { width: 100%; background: linear-gradient(180deg, var(--accent), var(--accent-deep));
-    border-radius: 3px 3px 0 0; min-height: 2px; }
-  .curve__label { font-size: 10px; color: var(--text-3); }
   /* Vignettes a la taille de « Ma collection » : les deux ecrans montrent des
      cartes que l'on inspecte avant d'agir, ils doivent se ressembler. */
 
   /* Courbe de mana et repartition des couleurs, dans le bandeau */
-  .curve { display: flex; align-items: flex-end; gap: 5px; height: 68px; width: 280px; }
-  .curve__bar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-  .curve__fill {
-    width: 100%;
-    background: linear-gradient(180deg, var(--accent), var(--accent-deep));
-    border-radius: 3px 3px 0 0;
-    min-height: 2px;
-  }
-  .curve__label { font-size: 10px; color: var(--text-3); }
 
   /* Colonne de droite : la courbe et les couleurs. Les actions sont passees a
      gauche, sous le titre et les chiffres, ou elles se lisent en ligne. */
@@ -87,26 +73,10 @@
   }
   @media (max-width: 860px) { .hero__side { width: 100%; } }
 
-  .mana-split { display: flex; gap: var(--sp-4); flex-wrap: wrap; align-items: center; }
-  .mana-count { display: inline-flex; align-items: center; gap: 5px; font-size: var(--text-sm); }
-  .mana-count .pip { width: 13px; height: 13px; }
   /* Courbe a gauche, symboles et sources a droite : empilees, elles
      ajoutaient une centaine de pixels au bandeau pour rien. */
-  #manaBlock {
-    display: flex; gap: var(--sp-6);
-    align-items: center; justify-content: center; flex-wrap: wrap;
-  }
-  .mana-rows { display: flex; flex-direction: column; gap: var(--sp-2); }
-  .mana-row { display: flex; gap: var(--sp-3); flex-wrap: wrap; align-items: center; }
-  .mana-row__label {
-    font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.06em;
-    color: var(--text-3); min-width: 82px;
-  }
   /* Comptes et parts lisibles sans effort : c'est l'information que l'on vient
      chercher dans ce bandeau. */
-  .mana-count { font-size: var(--text-base); font-weight: 600; }
-  .mana-count .pip { width: 15px; height: 15px; }
-  .mana-count .dim { font-weight: 400; }
 
 </style>
 </head>

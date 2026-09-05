@@ -47,24 +47,6 @@
   .deck-line:hover .deck-line__drop { opacity: 1; }
 
   /* Courbe et repartition du mana, dans le bandeau du deck */
-  .curve { display: flex; align-items: flex-end; gap: 3px; height: 46px; width: 168px; }
-  .curve__bar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
-  .curve__fill {
-    width: 100%;
-    background: linear-gradient(180deg, var(--accent), var(--accent-deep));
-    border-radius: 3px 3px 0 0;
-    min-height: 2px;
-  }
-  .curve__label { font-size: 10px; color: var(--text-3); }
-  #manaBlock { display: flex; gap: var(--sp-4); align-items: center; flex-wrap: wrap; }
-  .mana-rows { display: flex; flex-direction: column; gap: 2px; }
-  .mana-row { display: flex; gap: var(--sp-2); flex-wrap: wrap; align-items: center; }
-  .mana-row__label {
-    font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
-    color: var(--text-3); min-width: 66px;
-  }
-  .mana-count { display: inline-flex; align-items: center; gap: 4px; font-size: var(--text-sm); }
-  .mana-count .pip { width: 12px; height: 12px; }
 
   /* Carte que les regles interdisent : grisee, non cliquable */
   .illegal-why {
