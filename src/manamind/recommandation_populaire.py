@@ -204,7 +204,7 @@ def main() -> None:
     cards, commander = parse_decklist_text(Path(args.input))
     print(f"Commander détecté : {commander or '(aucun)'}")
 
-    additions, removals = recommend_from_db(cards, commander, add_limit=30)
+    additions, removals = recommend_from_db(cards, commander, add_limit=40)
     print(f"{len(additions)} cartes à ajouter, {len(removals)} cartes à retirer suggérées")
 
     save_recommendations(Path(args.output), commander, additions, removals)
