@@ -741,11 +741,9 @@
     const facts = cardFacts(item);
     const finish = MM.fmt.finish(item.finish);
 
+    // Le nombre de decks ne se pose plus sur l'illustration : la ligne sous la
+    // carte dit deja ce qui est possede et ce qui reste libre.
     const badges = [];
-    if (facts.decks.length) {
-      badges.push(`<span class="badge badge--info" title="${esc(facts.decks.join(', '))}"
-        >${facts.decks.length} deck${facts.decks.length > 1 ? 's' : ''}</span>`);
-    }
     if (item.game_changer) {
       badges.push('<span class="badge badge--warn" title="Carte à fort impact">GC</span>');
     }
