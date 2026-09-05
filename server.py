@@ -29,9 +29,14 @@ _SENTRY_DSN = _os_server.environ.get("SENTRY_DSN", "")
 if _SENTRY_DSN:
     import sentry_sdk
     from sentry_sdk.integrations.fastapi import FastApiIntegration
+    from sentry_sdk.integrations.excepthook import ExcepthookIntegration
     sentry_sdk.init(
         dsn=_SENTRY_DSN,
         integrations=[FastApiIntegration()],
+        # Un script de verification qui importe ce module remontait ses propres
+        # plantages comme des incidents de production : seules les erreurs
+        # servies par l'application nous interessent.
+        disabled_integrations=[ExcepthookIntegration()],
         traces_sample_rate=0.1,
         environment=_os_server.environ.get("ENVIRONMENT", "production"),
     )
@@ -153,6 +158,20 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+async def _bad_body_handler(request: Request, exc: Exception) -> Response:
+    """Corps de requete illisible : la faute est a l'appelant.
+
+    Un JSON tronque ou encode dans un autre jeu de caracteres levait une
+    exception non rattrapee, soit une 500 et une alerte pour une requete
+    simplement malformee.
+    """
+    return _json_response({"error": "Corps de requête illisible."}, status_code=400)
+
+
+app.add_exception_handler(UnicodeDecodeError, _bad_body_handler)
+app.add_exception_handler(_json.JSONDecodeError, _bad_body_handler)
 
 # ── CORS ─────────────────────────────────────────────────────────────────────
 _ALLOWED_ORIGINS = [o.strip() for o in _os_server.environ.get("CORS_ORIGINS", "http://localhost:8080,http://localhost:3000").split(",") if o.strip()]
