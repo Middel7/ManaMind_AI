@@ -21,6 +21,9 @@
   .hero-dash .hero__body { max-width: none; padding-right: var(--sp-6); }
   .hero-dash .hero__stats { gap: var(--sp-2) var(--sp-4); }
 
+  /* Le bonjour a la meme voix que la phrase qui le suit. */
+  .hero-dash .hero__hello { margin-bottom: 2px; }
+
   /* La phrase d'accueil tient sur une seule ligne : elle retrecit plutot que
      de se couper, et ne revient au fil du texte que sur un ecran etroit. */
   .hero-dash .hero__title {
@@ -139,14 +142,13 @@
     <div class="hero__body">
       <div class="hero__split">
       <div class="grow">
-      <p class="eyebrow">${MM.esc(greeting)}</p>
+      <p class="hero__title hero__hello">${MM.esc(greeting)}</p>
       <h2 class="hero__title">${empty
         ? 'Votre collection vous attend'
-        : 'Je vous aide au mieux à optimiser et à utiliser en jeu votre collection'}</h2>
-      <p class="muted">${empty
-        ? "Importez vos cartes une fois, et l'outil vous dira quels decks construire, "
-          + 'quelles cartes dorment et lesquelles amélioreraient vos listes.'
-        : `Dernière mise à jour ${MM.esc(MM.fmt.since(stats.last_update) || 'inconnue')}.`}</p>
+        : 'Je vous aide à mieux piloter votre collection !'}</h2>
+      ${empty ? `<p class="muted">Importez vos cartes une fois, et l'outil vous dira quels
+        decks construire, quelles cartes dorment et lesquelles amélioreraient vos
+        listes.</p>` : ''}
       ${heroStats}
       </div>
       <div class="hero__actions">
