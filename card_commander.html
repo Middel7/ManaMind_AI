@@ -120,6 +120,65 @@
     }
   }
 
+  function render(all) {
+    const filtered = (state.mode === 'all' && state.significant)
+      ? all.filter((entry) => entry.total_decks >= MIN_DECKS)
+      : all;
+    const hidden = all.length - filtered.length;
+
+    if (!filtered.length) {
+      results.innerHTML = `
+        <div class="search-hero">
+          ${cardTile()}
+          <div>${MM.empty({
+            icon: 'crown',
+            title: 'Aucun commandant trouvé',
+            text: state.mode === 'mine'
+              ? `Aucun de vos commandants ne joue « ${state.card.name} ». `
+                + 'Essayez avec « Tous » pour élargir la recherche.'
+              : `Aucune donnée exploitable pour « ${state.card.name} ».`,
+          })}</div>
+        </div>`;
+      return;
+    }
+
+    const best = Math.max(...filtered.map((entry) => entry.inclusion_rate)) || 1;
+    const image = MM.img.card(state.card);
+
+    results.innerHTML = `
+      <div class="search-hero">
+        ${cardTile()}
+
+        <div class="stack-2">
+          ${hidden ? `<p class="xs dim">${hidden} résultat${hidden > 1 ? 's' : ''}
+            écarté${hidden > 1 ? 's' : ''} faute de decks suffisants
+            (moins de ${MIN_DECKS}).</p>` : ''}
+          ${filtered.map((entry) => `
+            <article class="cmd-row">
+              ${entry.image_url
+                ? `<img class="cmd-row__thumb" src="${MM.esc(entry.image_url)}"
+                     alt="" loading="lazy">`
+                : '<span class="cmd-row__thumb"></span>'}
+              <div class="grow" style="min-width:0">
+                <p class="strong truncate">${MM.esc(entry.commander)}
+                  ${entry.in_my_decks
+                    ? '<span class="badge badge--info">dans vos decks</span>' : ''}</p>
+                <p class="xs dim">${MM.fmt.int(entry.decks_with_card)} decks sur
+                  ${MM.fmt.int(entry.total_decks)} l'incluent</p>
+              </div>
+              <div class="cmd-row__bar">
+                <div class="progress">
+                  <div class="progress__bar"
+                       style="width:${(entry.inclusion_rate / best) * 100}%"></div>
+                </div>
+              </div>
+              <span class="strong num" style="width:64px;text-align:right">
+                ${entry.inclusion_rate.toFixed(1)} %</span>
+            </article>`).join('')}
+        </div>
+      </div>`;
+  }
+
   /** Vignette de la carte cherchee : illustration, possession et actions.
    *  Elle s'affiche qu'un commandant ait ete trouve ou non — c'est la carte
    *  qui interesse l'utilisateur, pas seulement le resultat de l'analyse. */
