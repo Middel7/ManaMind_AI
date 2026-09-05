@@ -11,16 +11,6 @@
 <link rel="stylesheet" href="/static/css/tokens.css">
 <link rel="stylesheet" href="/static/css/app.css">
 <style>
-  .curve { display: flex; align-items: flex-end; gap: 4px; height: 68px; }
-  .curve__bar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-  .curve__fill {
-    width: 100%;
-    background: linear-gradient(180deg, var(--accent), var(--accent-deep));
-    border-radius: 3px 3px 0 0;
-    min-height: 2px;
-    transition: height var(--dur-slow) var(--ease-out);
-  }
-  .curve__label { font-size: 10px; color: var(--text-3); }
 
   .type-group { margin-bottom: var(--sp-6); }
   .type-group__head {
@@ -148,8 +138,11 @@
         if (test(remaining[i])) matched.unshift(remaining.splice(i, 1)[0]);
       }
       if (matched.length) {
+        // Dans chaque categorie, les cartes les plus cheres d'abord : c'est ce
+        // qui saute aux yeux quand on regarde ce que vaut un deck.
         groups.push([label, matched.sort((a, b) =>
-          a.card_name.localeCompare(b.card_name, 'fr'))]);
+          (b.unit_price ?? -1) - (a.unit_price ?? -1)
+          || a.card_name.localeCompare(b.card_name, 'fr'))]);
       }
     });
     return groups;

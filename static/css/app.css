@@ -1001,7 +1001,8 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
   flex: 1 1 260px; min-width: 240px; max-width: 460px;
 }
 .curve__bar {
-  flex: 1; display: flex; flex-direction: column; align-items: stretch;
+  flex: 1; height: 100%;
+  display: flex; flex-direction: column; align-items: stretch;
   gap: 2px; min-width: 0;
 }
 /* La piste occupe ce qui reste une fois la part et le cout poses ; la barre s'y
