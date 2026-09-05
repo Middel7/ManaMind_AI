@@ -1014,11 +1014,18 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
   min-height: 2px; border-radius: 3px 3px 0 0;
   background: linear-gradient(180deg, var(--accent), var(--accent-deep));
 }
-.curve__pct, .curve__label { font-size: 10px; color: var(--text-3); line-height: 1.1; }
+/* La part et le cout se centrent sur leur barre : la colonne est etiree, sans
+   quoi les deux se collaient a gauche. */
+.curve__pct, .curve__label {
+  font-size: 10px; color: var(--text-3); line-height: 1.1; text-align: center;
+}
 .curve__pct { min-height: 11px; }
 
 .mana-block { display: flex; gap: var(--sp-4); align-items: center; flex-wrap: wrap; }
-.mana-rows { display: flex; flex-direction: column; gap: var(--sp-1, 4px); }
+.mana-rows {
+  display: flex; flex-direction: column; gap: var(--sp-1, 4px);
+  margin-left: var(--sp-4);   /* respire a cote de la courbe */
+}
 .mana-row { display: flex; gap: var(--sp-3); flex-wrap: wrap; align-items: center; }
 .mana-row__label {
   font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.06em;
