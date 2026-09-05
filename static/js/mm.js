@@ -1169,7 +1169,9 @@
               title="${count} carte${count > 1 ? 's' : ''} à ${index}${index === 7 ? '+' : ''}
                      — ${Math.round((count / total) * 100)} % des sorts">
           <span class="curve__pct">${count ? `${Math.round((count / total) * 100)} %` : ''}</span>
-          <span class="curve__fill" style="height:${(count / max) * 100}%"></span>
+          <span class="curve__track">
+            <span class="curve__fill" style="height:${(count / max) * 100}%"></span>
+          </span>
           <span class="curve__label">${index === 7 ? '7+' : index}</span>
         </span>`).join('')}</div>`;
     },
