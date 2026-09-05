@@ -400,7 +400,7 @@
     {
       label: 'Analyser',
       items: [
-        { key: 'build', label: 'Construire un deck avec mes cartes',
+        { key: 'build', label: 'Construire un deck avec mes cartes disponibles',
           href: '/collection/commandants', icon: 'crown' },
         { key: 'improve', label: 'Améliorer mon deck avec les cartes de ma collection',
           href: '/decks/ameliorer', icon: 'sparkle' },
