@@ -482,6 +482,15 @@
                   title="Masquer les terrains">Sans les terrains</button>
         </div>
       </div>
+      ${canEdit ? `
+        <div class="stack-2" style="margin-bottom:var(--sp-5)">
+          <div class="field" style="max-width:520px">
+            <label class="label" for="cardSearch">Ajouter une autre carte au deck</label>
+            <input class="input" id="cardSearch" type="text" autocomplete="off"
+                   placeholder="Tapez un nom puis appuyez sur Entrée">
+          </div>
+          <div id="searchResults"></div>
+        </div>` : ''}
       <div id="panel-add"></div>
       <div id="panel-cut" hidden></div>
     </div>`;
@@ -519,6 +528,43 @@
     else hideLands = actif;
     renderPanels();
   });
+
+  if (canEdit) {
+    const champ = MM.el('#cardSearch');
+    const hote = MM.el('#searchResults');
+
+    champ.addEventListener('keydown', async (event) => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      const terme = champ.value.trim();
+      if (terme.length < 2) return;
+      hote.innerHTML = `<div class="card-grid">${MM.cardSkeletons(4)}</div>`;
+      try {
+        const data = await MM.api.get(
+          `/api/v2/cards/suggest?q=${encodeURIComponent(terme)}&limit=12`);
+        const cartes = data.cards || [];
+        hote.innerHTML = cartes.length
+          ? `<div class="card-grid">${cartes.map((card) => MM.cardTile(card, {
+              context: 'deck',
+              deckQty: 0,
+              note: card.printed_name && card.printed_name !== card.name
+                ? MM.esc(card.printed_name) : '',
+            })).join('')}</div>`
+          : MM.empty({ icon: 'search', title: 'Aucune carte trouvée',
+                       text: `Rien ne correspond à « ${terme} ».` });
+      } catch (err) {
+        hote.innerHTML = MM.empty({
+          icon: 'warning', title: 'Recherche impossible', text: err.message });
+      }
+    });
+
+    // Une carte ajoutee par le reglage de sa vignette : la recherche a fait son
+    // office, la liste se vide pour laisser la place aux propositions.
+    document.addEventListener('mm:card-change', (event) => {
+      if (event.detail.scope !== 'deck' || event.detail.delta < 0) return;
+      MM.toast.ok(`${event.detail.card_name} ajoutée à ${deckInfo.name || 'votre deck'}.`);
+    });
+  }
 
   MM.el('#tabs').addEventListener('click', (event) => {
     const chip = event.target.closest('.chip');
