@@ -1026,8 +1026,14 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
 /* Bandeau en trois colonnes : ce qu'est le deck, sa courbe, ses couleurs. */
 .hero__cols {
   display: grid; gap: var(--sp-6); align-items: center;
-  grid-template-columns: minmax(0, 1.1fr) minmax(260px, 0.9fr) auto;
+  /* La derniere colonne se limite a son contenu : etiree, elle laissait un
+     grand vide a droite des symboles. Les deux colonnes de droite se centrent
+     dans la place qui leur revient. */
+  grid-template-columns: minmax(0, 1.1fr) minmax(260px, 0.9fr) max-content;
 }
+/* La courbe s'etire sur sa colonne ; les couleurs, elles, tiennent leur
+   largeur propre — centrer la courbe la ramenait a sa largeur minimale. */
+.hero__cols > :nth-child(3) { justify-self: center; }
 .hero__cols .mana-rows { margin-left: 0; }
 /* Faute de largeur, les couleurs passent sous les deux premieres colonnes
    plutot que de les comprimer toutes les trois. */
