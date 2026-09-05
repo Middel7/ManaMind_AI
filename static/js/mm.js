@@ -766,7 +766,9 @@
     return `
       <article class="mtg-card ${muted ? 'mtg-card--muted' : ''}"
                data-id="${esc(item.id ?? '')}" data-name="${esc(facts.name)}">
-        <div class="mtg-card__frame">
+        <div class="mtg-card__frame"
+             ${options.frameLink ? `data-href="${esc(options.frameLink)}"` : ''}
+             ${options.frameTitle ? `title="${esc(options.frameTitle)}"` : ''}>
           ${MM.img.frame({ ...item, card_name: facts.name })}
           ${badges.length ? `<div class="mtg-card__badges">${badges.join('')}</div>` : ''}
         </div>
@@ -1001,6 +1003,16 @@
     const label = event.target.closest(
       '[data-card-detail], .mtg-card__name, .mtg-card__frame, .deck-line__name');
     if (!label || label.hasAttribute('data-no-detail')) return;
+    // Un ecran peut envoyer ailleurs le clic sur l'illustration ; le nom, lui,
+    // ouvre toujours la fiche.
+    const detour = label.dataset.href;
+    if (detour) {
+      event.preventDefault();
+      event.stopPropagation();
+      location.href = detour;
+      return;
+    }
+
     const tile = label.closest('.mtg-card');
     const name = label.dataset.cardDetail
       || (label.classList.contains('mtg-card__frame')

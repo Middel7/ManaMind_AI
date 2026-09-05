@@ -11,16 +11,27 @@
 <link rel="stylesheet" href="/static/css/tokens.css">
 <link rel="stylesheet" href="/static/css/app.css">
 <style>
-  .hero-dash { min-height: 300px; }
+  /* Le bandeau ne fait plus que la hauteur de ce qu'il porte : les 300 px
+     imposes laissaient un grand vide sous les chiffres. */
+  .hero-dash { min-height: 0; }
+  .hero-dash .hero__body { padding-block: var(--sp-5); }
 
   /* Les six chiffres tiennent sur une seule ligne : le bandeau occupe ici
      toute la largeur disponible et les écarts sont resserrés. */
   .hero-dash .hero__body { max-width: none; padding-right: var(--sp-6); }
   .hero-dash .hero__stats { gap: var(--sp-2) var(--sp-4); }
 
-  /* Seuls les chiffres profitent de toute la largeur : un titre courant
-     sur 1 400 px serait pénible à lire. */
-  .hero-dash .hero__title,
+  /* La phrase d'accueil tient sur une seule ligne : elle retrecit plutot que
+     de se couper, et ne revient au fil du texte que sur un ecran etroit. */
+  .hero-dash .hero__title {
+    white-space: nowrap;
+    font-size: clamp(1.1rem, 2vw, var(--text-2xl));
+  }
+  @media (max-width: 860px) {
+    .hero-dash .hero__title { white-space: normal; }
+  }
+
+  /* Le texte courant, lui, garde une largeur de lecture confortable. */
   .hero-dash .hero__body > p { max-width: 820px; }
 
   /* Deux de ces chiffres mènent à la collection filtrée */
@@ -29,7 +40,6 @@
   a.hero__stat:hover .muted { color: var(--text-2); }
 
   /* Une carte qui dort mène au choix d'un commandant qui la jouerait */
-  #dormantGrid .mtg-card { cursor: pointer; }
 </style>
 </head>
 <body>
@@ -80,7 +90,7 @@
   // avant son await ne remonte pas en unhandledrejection.
   const dashboardReq = MM.api.get('/api/dashboard')
     .then((value) => ({ value }), (error) => ({ error }));
-  const highlightsReq = MM.api.get('/api/dashboard/highlights?limit=8')
+  const highlightsReq = MM.api.get('/api/dashboard/highlights?limit=12')
     .then((value) => ({ value }), (error) => ({ error }));
 
   const user = await MM.boot({ title: 'Accueil', nav: 'home' });
@@ -234,19 +244,14 @@
       MM.el('#dormantCount').textContent =
         `${MM.fmt.int(stats.dormant)} au total`;
       MM.el('#dormantGrid').innerHTML =
-        highlights.dormant.map((item) => MM.cardTile(item,
-          { context: 'collection' })).join('');
+        highlights.dormant.map((item) => MM.cardTile(item, {
+          context: 'collection',
+          // Une carte qui dort appelle un commandant qui la jouerait : le clic
+          // sur l'illustration y mene directement.
+          frameLink: `/cartes/commandant?card=${encodeURIComponent(item.card_name)}`,
+          frameTitle: `Trouver un commandant pour ${item.card_name}`,
+        })).join('');
 
-      // Cliquer une carte qui dort cherche un commandant capable de la jouer
-      MM.el('#dormantGrid').addEventListener('click', (event) => {
-        const card = event.target.closest('.mtg-card');
-        if (!card || !card.dataset.name) return;
-        location.href = '/cartes/commandant?card='
-          + encodeURIComponent(card.dataset.name);
-      });
-      MM.els('#dormantGrid .mtg-card').forEach((card) => {
-        card.title = `Trouver un commandant pour ${card.dataset.name}`;
-      });
     }
 
     if (highlights.recent.length) {
