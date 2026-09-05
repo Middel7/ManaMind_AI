@@ -1195,13 +1195,11 @@
         </div>`;
     },
 
-    /** Bloc complet : courbe, symboles exiges, sources, terrains. */
-    block(list, height = 40) {
+    /** Symboles exiges, sources et terrains — la lecture des couleurs. */
+    rows(list) {
       const src = MM.mana.sources(list);
       const land = MM.mana.lands(list);
       return `
-        <div class="mana-block">
-        ${MM.mana.curve(list, height)}
         <div class="mana-rows">
           ${MM.mana.row('Symboles', MM.mana.symbols(list))}
           ${MM.mana.row('Sources', src, src.any
@@ -1213,8 +1211,16 @@
               title="Cartes dont seule la face arrière est un terrain"
               >+ ${land.back} au verso</span>` : ''}
           </div>
-        </div>
         </div>`;
+    },
+
+    /** Courbe et repartition cote a cote, pour les ecrans qui n'ont qu'une
+     *  place a leur donner. */
+    block(list, height = 40) {
+      return `<div class="mana-block">
+        ${MM.mana.curve(list, height)}
+        ${MM.mana.rows(list)}
+      </div>`;
     },
   };
 

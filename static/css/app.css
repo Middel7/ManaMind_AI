@@ -1022,6 +1022,23 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
 .curve__pct { min-height: 11px; }
 
 .mana-block { display: flex; gap: var(--sp-4); align-items: center; flex-wrap: wrap; }
+
+/* Bandeau en trois colonnes : ce qu'est le deck, sa courbe, ses couleurs. */
+.hero__cols {
+  display: grid; gap: var(--sp-6); align-items: center;
+  grid-template-columns: minmax(0, 1.1fr) minmax(260px, 0.9fr) auto;
+}
+.hero__cols .mana-rows { margin-left: 0; }
+/* Faute de largeur, les couleurs passent sous les deux premieres colonnes
+   plutot que de les comprimer toutes les trois. */
+@media (max-width: 1400px) {
+  .hero__cols { grid-template-columns: minmax(0, 1fr) minmax(240px, auto); }
+  .hero__cols > :nth-child(3) { grid-column: 1 / -1; }
+}
+@media (max-width: 860px) {
+  .hero__cols { grid-template-columns: 1fr; }
+  .hero__cols > :nth-child(3) { grid-column: auto; }
+}
 .mana-rows {
   display: flex; flex-direction: column; gap: var(--sp-1, 4px);
   margin-left: var(--sp-4);   /* respire a cote de la courbe */

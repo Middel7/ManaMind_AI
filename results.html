@@ -66,17 +66,6 @@
 
   /* Colonne de droite : la courbe et les couleurs. Les actions sont passees a
      gauche, sous le titre et les chiffres, ou elles se lisent en ligne. */
-  /* La courbe et la repartition occupent le flanc du bandeau : sans largeur
-     donnee, la courbe se tassait a cote des chiffres. */
-  .hero__side {
-    display: flex; flex-direction: column; gap: var(--sp-3);
-    flex-shrink: 0; width: min(620px, 48vw);
-  }
-  .hero__split .grow .hero__actions {
-    flex-direction: row; flex-wrap: wrap; align-items: center;
-    margin-top: var(--sp-2);
-  }
-  @media (max-width: 860px) { .hero__side { width: 100%; } }
 
 
 </style>
@@ -114,7 +103,7 @@
     MM.el('#hero').innerHTML = `
       ${art ? `<div class="hero__art" style="background-image:url('${MM.esc(art)}')"></div>` : ''}
       <div class="hero__body">
-        <div class="hero__split">
+        <div class="hero__cols">
           <div class="grow">
             <p class="eyebrow">${MM.esc(deckInfo.commander || 'Analyse')}</p>
             <h2 class="hero__title">${MM.esc(deckInfo.name || "Résultats d’analyse")}</h2>
@@ -127,9 +116,8 @@
               <a class="btn btn--sm btn--ghost" href="/decks/analyse">Nouvelle analyse</a>
             </div>
           </div>
-          <div class="hero__side">
-            <div id="manaBlock"></div>
-          </div>
+          <div id="manaCurve"></div>
+          <div id="manaRows"></div>
         </div>
       </div>`;
 
@@ -141,9 +129,10 @@
   let deckCards = null;
 
   function renderMana() {
-    const host = MM.el('#manaBlock');
-    if (!host || !deckCards) return;
-    host.innerHTML = MM.mana.block(deckCards, 112);
+    const courbe = MM.el('#manaCurve');
+    if (!courbe || !deckCards) return;
+    courbe.innerHTML = MM.mana.curve(deckCards, 112);
+    MM.el('#manaRows').innerHTML = MM.mana.rows(deckCards);
   }
 
   if (deckInfo.deck_id) {
