@@ -85,14 +85,24 @@
       return;
     }
 
-    results.innerHTML = `<div class="card-grid">${moves.map((move) => MM.cardTile({
+    // Le "+12 %" et la fleche entre deux commandants ne parlaient pas d'eux-memes.
+    results.innerHTML = `
+      ${MM.legend([
+        { icon: 'chart', strong: '+x % :',
+          text: 'écart entre la popularité de la carte dans son deck actuel et dans celui proposé.' },
+        { icon: 'swap', strong: 'Commandant A → commandant B :',
+          text: 'le deck où la carte se trouve, puis celui qui la jouerait plus volontiers.' },
+        { icon: 'move', strong: 'Déplacer :',
+          text: 'retire la carte du premier deck et l’ajoute au second, en une fois.' },
+      ])}
+      <div class="card-grid" style="margin-top:var(--sp-4)">${moves.map((move) => MM.cardTile({
       ...(resolved[move.card_name] || {}),
       card_name: move.card_name,
     }, {
       // Aucun deck courant ici : la carte passe d'un deck a un autre, le
       // reglage n'aurait pas de cible.
       context: null,
-      flag: `+${move.gain.toFixed(0)} %`,
+      flag: `+${MM.fmt.pct(move.gain, 0)}`,
       flagTitle: `Gain de popularité si la carte change de deck`,
       note: `${MM.esc(move.from_commander)} → ${MM.esc(move.to_commander)}`,
       actions: [

@@ -143,12 +143,61 @@
       .catch(() => {});
   }
 
+  /* Cette page n'affiche que le resultat de la derniere analyse : arriver ici
+     par un signet ou un rechargement ne montre rien. Plutot qu'un vide, on dit
+     pourquoi et par ou repartir. */
   function fail(message) {
-    renderHero('Analyse indisponible');
-    content.innerHTML = MM.empty({
-      icon: 'warning', title: 'Résultats indisponibles', text: message,
-      action: { href: '/decks/analyse', label: 'Relancer une analyse' },
-    });
+    // Sans deck connu, le bandeau n'a ni illustration ni titre a porter : il ne
+    // ferait qu'un grand rectangle vide au-dessus du message.
+    if (deckInfo.deck_id) renderHero('Analyse indisponible');
+    else MM.el('#hero').hidden = true;
+    content.innerHTML = `
+      <div class="intro">
+        <div class="intro__panel">
+          <div class="intro__head">
+            <span class="intro__mark">${MM.icons.warning}</span>
+            <div class="stack-2" style="gap:4px">
+              <p class="intro__title">Aucun résultat à afficher</p>
+              <p class="small muted">${MM.esc(message)}</p>
+            </div>
+          </div>
+          <p class="walk__text">
+            Les résultats d'analyse ne sont pas conservés : ils vivent le temps de
+            votre visite. Un rafraîchissement de la page, un lien mis en favori ou
+            un retour le lendemain ramènent donc ici. Relancer l'analyse prend
+            quelques secondes et repart de l'état actuel du deck — c'est aussi la
+            bonne façon de mesurer l'effet des cartes que vous venez d'ajouter.
+          </p>
+          <div class="cluster-2">
+            <a class="btn btn--primary" href="/decks/analyse">Relancer une analyse</a>
+            <a class="btn" href="/decks">Voir mes decks</a>
+          </div>
+        </div>
+
+        <div class="intro__panel intro__panel--soft">
+          <div class="stack-2" style="gap:var(--sp-4)">
+            <p class="h4">Autres façons d'améliorer un deck</p>
+            <div class="checks">
+              <div class="checks__item">${MM.icons.check}
+                <span><b>Avec les cartes que vous possédez déjà :</b>
+                  <a href="/decks/ameliorer" style="color:var(--accent)">Améliorer mon
+                  deck avec ma collection</a> ne propose rien qu'il faille acheter.</span>
+              </div>
+              <div class="checks__item">${MM.icons.check}
+                <span><b>En allégeant plutôt qu'en ajoutant :</b>
+                  <a href="/decks/alleger" style="color:var(--accent)">Quelles cartes
+                  retirer</a> montre celles que les autres decks du même commandant
+                  ne jouent pas.</span>
+              </div>
+              <div class="checks__item">${MM.icons.check}
+                <span><b>En changeant de tête :</b>
+                  <a href="/decks/commandant" style="color:var(--accent)">Un autre
+                  commandant pour ce deck</a> mesure ce que votre liste garderait.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>`;
   }
 
   /* ═══ Analyse par intelligence artificielle ═══════════════════════════ */
@@ -329,7 +378,7 @@
   /* ═══ Analyse par popularité (CSV) ════════════════════════════════════ */
 
   const csv = params.get('csv');
-  if (!csv) return fail('Aucun résultat à afficher.');
+  if (!csv) return fail("Aucune analyse n'a été lancée depuis cet onglet.");
 
   let rows;
   try {

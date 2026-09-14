@@ -73,6 +73,7 @@
     </p>
   </div>
 
+  <div id="legend"></div>
   <div id="results"></div>
 </div>
 
@@ -84,6 +85,17 @@
 
   const results = MM.el('#results');
   let mode = 'available';
+
+  // Chaque fiche annonce un nombre de cartes et une somme : sans legende, on ne
+  // savait pas si ce total comptait le deck entier ou seulement ce qu'on a.
+  MM.el('#legend').innerHTML = MM.legend([
+    { icon: 'collection', strong: 'n de vos cartes :',
+      text: 'cartes que vous possédez et que les decks de ce commandant jouent couramment.' },
+    { icon: 'coin', strong: 'Le montant :',
+      text: 'valeur estimée de ces cartes — c’est ce que le deck vous coûterait en moins.' },
+    { icon: 'crown', strong: 'Le classement :',
+      text: 'du commandant qui exploite le plus votre collection au moins bien servi.' },
+  ]);
 
   MM.els('[data-mode]').forEach((button) => {
     button.addEventListener('click', () => {

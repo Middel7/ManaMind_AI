@@ -81,6 +81,7 @@
 
   <div id="summary"></div>
   <div id="results"></div>
+  <div id="starter"></div>
 </div>
 
 <script src="/static/js/mm.js"></script>
@@ -91,21 +92,55 @@
   if (!user) return;
 
   const results = MM.el('#results');
+  const starter = MM.el('#starter');
   const state = { deck: null, sort: 'value', maxColors: 5, data: null };
 
   // Rien n'est analyse tant qu'un deck n'a pas ete choisi : l'analyse est
-  // couteuse et n'a aucun sens sur un deck pris au hasard.
-  results.innerHTML = MM.empty({
+  // couteuse et n'a aucun sens sur un deck pris au hasard. L'ecran de depart
+  // explique d'ici la ce que « conserver de la valeur » veut dire.
+  results.innerHTML = MM.toolIntro({
     icon: 'swap',
-    title: 'Choisissez un deck',
-    text: 'Sélectionnez le deck dont vous voulez changer le commandant : nous chercherons '
-      + 'ceux qui conserveraient le plus de valeur parmi ses cartes.',
+    title: 'Choisissez le deck à repiloter',
+    text: 'Changer de commandant sans racheter un deck : la question est de savoir '
+      + 'combien de vos cartes actuelles survivraient au changement.',
+    steps: [
+      { title: 'Vous désignez un deck',
+        text: 'Ses cartes forment la base de la comparaison — le commandant actuel, lui, '
+            + 'est mis de côté.' },
+      { title: 'Nous testons d’autres commandants',
+        text: 'Pour chacun, nous regardons quelles cartes de votre liste resteraient '
+            + 'jouables : identité de couleur respectée et carte effectivement jouée '
+            + 'dans ses decks.' },
+      { title: 'Nous classons les candidats',
+        text: 'Par valeur conservée, ou par affinité réelle. Chaque fiche ouvre le '
+            + 'détail : ce qui reste, ce qui saute, ce qu’il faudrait acquérir.' },
+    ],
+    checks: [
+      { strong: 'La valeur conservée :',
+        text: 'le prix des cartes de votre deck que le nouveau commandant garderait.' },
+      { strong: 'L’identité de couleur :',
+        text: 'une carte hors des couleurs du candidat est perdue d’office. Le filtre '
+            + '« couleurs max » resserre la recherche.' },
+      { strong: 'Les cartes neutres :',
+        text: 'celles jouées dans presque tous les decks sont retirées du score — '
+            + 'elles survivraient à n’importe quel changement.' },
+    ],
+    note: 'Le classement porte sur la valeur et l’usage, pas sur le plaisir de jeu. '
+        + 'Un commandant qui garde 90 % de vos cartes peut demander un tout autre '
+        + 'plan de partie.',
   });
 
-  await MM.deckPicker(MM.el('#deckPicker'), (deck) => {
+  const decks = await MM.deckPicker(MM.el('#deckPicker'), (deck) => {
     state.deck = deck;
+    starter.innerHTML = '';
     load();
   }, { label: 'Deck de départ', autoSelect: false });
+
+  if (!state.deck && decks.length) {
+    starter.innerHTML = MM.deckStrip(decks, {
+      text: 'Un clic lance la recherche de commandants pour ce deck.' });
+    MM.bindDeckStrip(starter, (deckId) => MM.pickDeck(MM.el('#deckPicker'), deckId));
+  }
 
   MM.el('#sortMode').addEventListener('change', (event) => {
     state.sort = event.target.value; load();

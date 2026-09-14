@@ -173,6 +173,15 @@
       return nfEur.format(amount);
     },
 
+    /** Pourcentage a la francaise : virgule decimale, et pas de decimale
+     *  inutile. toFixed() ecrivait « 0.0 % » au milieu d'une page en francais. */
+    pct(value, digits = 1) {
+      const amount = Number(value);
+      if (!isFinite(amount)) return '—';
+      const rounded = Number(amount.toFixed(digits));
+      return `${rounded.toLocaleString('fr-FR', { maximumFractionDigits: digits })} %`;
+    },
+
     /** "il y a 3 jours", "aujourd'hui", "il y a 2 mois" */
     since(iso) {
       if (!iso) return null;
@@ -373,6 +382,11 @@
     warning: svg('<path d="M12 4 2.5 20h19Z"/><path d="M12 10v4"/><path d="M12 17.2v.1"/>'),
     box: svg('<path d="m12 3 8 4.5v9L12 21l-8-4.5v-9Z"/><path d="M12 21v-9"/><path d="m4 7.5 8 4.5 8-4.5"/>'),
     shield: svg('<path d="M12 3 5 6v6c0 4.2 2.9 7.6 7 9 4.1-1.4 7-4.8 7-9V6Z"/>'),
+    info: svg('<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8v.1"/>'),
+    eye: svg('<path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6Z"/><circle cx="12" cy="12" r="2.6"/>'),
+    tag: svg('<path d="M3 12V4h8l9 9-8 8Z"/><path d="M7.5 7.5v.1"/>'),
+    coin: svg('<circle cx="12" cy="12" r="9"/><path d="M15 9.5A3 3 0 0 0 9 11c0 2.5 6 1.5 6 4a3 3 0 0 1-6-1.5"/>'),
+    layers: svg('<path d="m12 3 9 5-9 5-9-5Z"/><path d="m3 13 9 5 9-5"/>'),
   };
 
   /* ══ Coquille de navigation ════════════════════════════════════════════ */
@@ -1295,8 +1309,23 @@
       onChange(deck);
     });
 
+    // La bande de decks de l'ecran de depart selectionne le deck sans passer
+    // par le menu deroulant : les deux doivent rester d'accord.
+    host._mmSelect = (deckId) => {
+      const select = el('#mmDeckPick', host);
+      if (!select) return false;
+      select.value = deckId;
+      select.dispatchEvent(new Event('change'));
+      return true;
+    };
+
     if (current) onChange(current);
     return decks;
+  };
+
+  /** Selectionne un deck dans le selecteur monte sur `host`. */
+  MM.pickDeck = function (host, deckId) {
+    return Boolean(host && host._mmSelect && host._mmSelect(deckId));
   };
 
   /**
@@ -1332,6 +1361,124 @@
         </div>
         ${action ? `<a class="btn btn--primary" href="${esc(action.href)}">
                       ${esc(action.label)}</a>` : ''}
+      </div>`;
+  };
+
+  /**
+   * Ecran de depart d'un outil.
+   *
+   * Les pages d'analyse s'ouvraient sur un titre, un menu deroulant et un vide :
+   * rien ne disait ce que l'outil allait chercher ni sur quoi il s'appuie. Ce
+   * bloc occupe l'attente et repond aux deux questions avant le premier clic.
+   *
+   * @param {object} options
+   *   icon        cle dans MM.icons, pour la pastille de tete
+   *   title, text l'intention de l'outil, en une phrase
+   *   steps       [{ title, text }] — les trois temps du parcours
+   *   checks      [{ strong, text }] — ce que l'outil prend en compte
+   *   checksTitle intitule de la colonne de droite
+   *   note        la limite a connaitre, en bas de la colonne de droite
+   */
+  MM.toolIntro = function ({ icon = 'sparkle', title, text = '', steps = [],
+                             checks = [], checksTitle = "Ce que l'outil regarde",
+                             note = '' } = {}) {
+    const walk = steps.map((step, index) => `
+      <div class="walk__step">
+        <span class="walk__index">${index + 1}</span>
+        <div class="stack-2" style="gap:2px">
+          <p class="walk__title">${esc(step.title)}</p>
+          <p class="walk__text">${esc(step.text)}</p>
+        </div>
+      </div>`).join('');
+
+    const list = checks.map((item) => `
+      <div class="checks__item">
+        ${MM.icons.check}
+        <span>${item.strong ? `<b>${esc(item.strong)}</b> ` : ''}${esc(item.text)}</span>
+      </div>`).join('');
+
+    return `
+      <div class="intro">
+        <div class="intro__panel">
+          <div class="intro__head">
+            <span class="intro__mark">${MM.icons[icon] || MM.icons.sparkle}</span>
+            <div class="stack-2" style="gap:4px">
+              <p class="intro__title">${esc(title)}</p>
+              ${text ? `<p class="small muted">${esc(text)}</p>` : ''}
+            </div>
+          </div>
+          ${walk ? `<div class="walk">${walk}</div>` : ''}
+        </div>
+
+        ${(list || note) ? `
+          <div class="intro__panel intro__panel--soft">
+            ${list ? `<div class="stack-2" style="gap:var(--sp-4)">
+                        <p class="h4">${esc(checksTitle)}</p>
+                        <div class="checks">${list}</div>
+                      </div>` : ''}
+            ${note ? `<p class="note"><b>Bon à savoir.</b> ${esc(note)}</p>` : ''}
+          </div>` : ''}
+      </div>`;
+  };
+
+  /**
+   * Bande de decks cliquables. Elle double le menu deroulant : l'illustration
+   * du commandant vaut mieux qu'un nom dans une liste pour reconnaitre un deck.
+   */
+  MM.deckStrip = function (decks, { limit = 8, title = 'Démarrer sur un de vos decks',
+                                    text = '' } = {}) {
+    const shown = decks.slice(0, limit);
+    if (!shown.length) return '';
+
+    const chips = shown.map((deck) => {
+      const art = deck.scryfall_id ? MM.scryfallArt(deck.scryfall_id) : null;
+      const percent = Math.round((deck.owned_ratio || 0) * 100);
+      return `
+        <button class="deck-chip" type="button" data-deck="${esc(deck.deck_id)}">
+          ${art ? `<span class="deck-chip__art"
+                         style="background-image:url('${esc(art)}')"></span>` : ''}
+          <span class="deck-chip__name truncate">${esc(deck.name)}</span>
+          <span class="deck-chip__meta truncate">
+            ${MM.fmt.int(deck.card_count || 0)} cartes · ${percent} % en collection
+          </span>
+        </button>`;
+    }).join('');
+
+    return `
+      <section class="section">
+        <div class="section-head">
+          <div class="section-head__title">
+            <h3 class="h3">${esc(title)}</h3>
+            ${decks.length > shown.length
+              ? `<span class="muted small">${MM.fmt.int(decks.length)} au total</span>`
+              : ''}
+          </div>
+          <a class="btn btn--sm" href="/decks">Tous mes decks</a>
+        </div>
+        ${text ? `<p class="muted small" style="margin-top:-8px">${esc(text)}</p>` : ''}
+        <div class="deck-strip">${chips}</div>
+      </section>`;
+  };
+
+  /** Branche les vignettes de MM.deckStrip sur un selecteur de deck. */
+  MM.bindDeckStrip = function (root, onPick) {
+    root.addEventListener('click', (event) => {
+      const chip = event.target.closest('[data-deck]');
+      if (chip && root.contains(chip)) onPick(chip.dataset.deck);
+    });
+  };
+
+  /**
+   * Legende de lecture posee au-dessus d'une grille : elle nomme les reperes
+   * que porte chaque vignette, qui restaient sinon a deviner.
+   */
+  MM.legend = function (items) {
+    return `
+      <div class="legend">
+        ${items.map((item) => `
+          <span class="legend__item">${MM.icons[item.icon] || MM.icons.check}
+            <span>${item.strong ? `<b>${esc(item.strong)}</b> ` : ''}${esc(item.text)}</span>
+          </span>`).join('')}
       </div>`;
   };
 

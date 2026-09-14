@@ -834,9 +834,14 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
   gap: var(--sp-2);
   font-size: var(--text-xs);
   color: var(--text-3);
+  /* Une note longue — deux noms de commandants, par exemple — poussait le prix
+     hors de la vignette, et la page entiere debordait sur telephone. */
+  min-width: 0;
 }
 
-.mtg-card__price { margin-left: auto; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.mtg-card__meta > :not(.mtg-card__price) { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+.mtg-card__price { margin-left: auto; flex-shrink: 0; color: var(--text-2); font-variant-numeric: tabular-nums; }
 
 /* Vendre / acheter, sous la vignette */
 .mtg-card__market { display: flex; gap: 4px; margin-top: 6px; }
@@ -1292,6 +1297,147 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
 .spinner--lg { width: 34px; height: 34px; border-width: 3px; }
 
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ═══ Ecran de depart d'un outil ═════════════════════════════════════════ */
+/* Les pages d'analyse s'ouvraient sur un titre, un menu deroulant et un vide.
+   Ce bloc occupe l'attente : il explique la marche a suivre, ce que l'outil
+   regarde, et propose de demarrer directement sur l'un des decks. */
+
+.intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: var(--sp-5);
+  align-items: start;
+}
+
+.intro__panel {
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--bg-raised);
+  padding: var(--sp-6);
+  display: flex; flex-direction: column; gap: var(--sp-5);
+}
+
+.intro__panel--soft { background: var(--surface); }
+
+.intro__head { display: flex; gap: var(--sp-4); align-items: flex-start; }
+
+.intro__mark {
+  width: 40px; height: 40px; flex-shrink: 0;
+  display: grid; place-items: center;
+  border-radius: var(--r-md);
+  background: var(--accent-wash);
+  color: var(--accent);
+  border: 1px solid var(--line-accent);
+}
+.intro__mark svg { width: 20px; height: 20px; }
+
+.intro__title { font-family: var(--font-display); font-size: var(--text-xl); }
+
+/* Les trois temps de l'outil, numerotes. */
+.walk { display: flex; flex-direction: column; gap: var(--sp-4); }
+
+.walk__step { display: flex; gap: var(--sp-4); align-items: flex-start; }
+
+.walk__index {
+  width: 26px; height: 26px; flex-shrink: 0;
+  display: grid; place-items: center;
+  border-radius: var(--r-full);
+  border: 1px solid var(--line-accent);
+  background: var(--accent-wash);
+  color: var(--accent);
+  font-size: var(--text-xs); font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.walk__title { font-size: var(--text-sm); font-weight: 600; }
+.walk__text  { font-size: var(--text-sm); color: var(--text-2); line-height: var(--leading-normal); }
+
+/* Ce que l'outil prend en compte : une liste cochee, plus affirmative qu'une
+   suite de puces. */
+.checks { display: flex; flex-direction: column; gap: var(--sp-3); }
+
+.checks__item { display: flex; gap: var(--sp-3); align-items: flex-start; }
+.checks__item svg {
+  width: 15px; height: 15px; flex-shrink: 0; margin-top: 3px;
+  color: var(--accent);
+}
+.checks__item > span { font-size: var(--text-sm); color: var(--text-2); line-height: var(--leading-normal); }
+.checks__item b { color: var(--text); font-weight: 600; }
+
+/* Les limites de la lecture : dites une fois, a voix basse. */
+.note {
+  border-left: 2px solid var(--line-accent);
+  padding-left: var(--sp-4);
+  font-size: var(--text-sm);
+  color: var(--text-2);
+  line-height: var(--leading-normal);
+}
+.note b { color: var(--text); font-weight: 600; }
+
+/* Bande de decks : demarrer en un clic, sans passer par le menu deroulant. */
+.deck-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+  gap: var(--sp-3);
+}
+
+.deck-chip {
+  position: relative;
+  isolation: isolate;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  min-height: 108px;
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg-raised);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+
+.deck-chip:hover { border-color: var(--line-accent); transform: translateY(-2px); }
+
+.deck-chip__art {
+  position: absolute; inset: 0; z-index: -2;
+  background-size: cover; background-position: center 26%;
+  opacity: 0.42;
+  transition: opacity var(--dur) var(--ease);
+}
+.deck-chip:hover .deck-chip__art { opacity: 0.58; }
+
+.deck-chip::after {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(0deg, var(--bg-raised) 20%, rgba(14, 14, 21, 0.5) 100%);
+}
+
+.deck-chip__name { font-size: var(--text-sm); font-weight: 600; }
+.deck-chip__meta { font-size: var(--text-xs); color: var(--text-3); }
+
+/* Legende de lecture posee au-dessus d'une grille de resultats. */
+.legend {
+  display: flex; flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-5);
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+
+.legend__item { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--text-xs); color: var(--text-2); }
+.legend__item b { color: var(--text); font-weight: 600; }
+.legend__item svg { width: 14px; height: 14px; color: var(--accent); flex-shrink: 0; }
+
+@media (max-width: 1080px) {
+  .intro { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 680px) {
+  .intro__panel { padding: var(--sp-5) var(--sp-4); }
+  .deck-strip { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+}
 
 /* ═══ Utilitaires ════════════════════════════════════════════════════════ */
 

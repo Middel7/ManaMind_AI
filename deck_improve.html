@@ -37,6 +37,7 @@
   </div>
 
   <div id="results"></div>
+  <div id="starter"></div>
 </div>
 
 <script src="/static/js/mm.js"></script>
@@ -46,24 +47,57 @@
   if (!user) return;
 
   const results = MM.el('#results');
+  const starter = MM.el('#starter');
   let currentDeck = null;
   let suggestions = [];
   let resolved = {};
 
   // Rien n'est suggere tant qu'un deck n'a pas ete choisi : les suggestions
-  // d'un deck pris au hasard passeraient pour celles du deck voulu.
-  results.innerHTML = MM.empty({
+  // d'un deck pris au hasard passeraient pour celles du deck voulu. L'ecran de
+  // depart dit d'ici la ce que l'outil va chercher.
+  results.innerHTML = MM.toolIntro({
     icon: 'sparkle',
-    title: 'Choisissez un deck',
-    text: 'Sélectionnez le deck à améliorer : nous chercherons dans votre collection '
-      + 'les cartes que jouent les autres decks du même commandant.',
+    title: 'Choisissez le deck à améliorer',
+    text: 'L’outil ne propose que des cartes déjà dans vos boîtes : rien à acheter '
+      + 'pour appliquer ses suggestions.',
+    steps: [
+      { title: 'Vous désignez un deck',
+        text: 'Son commandant sert de point de comparaison. Choisissez-le dans la '
+            + 'liste ci-dessus ou parmi vos decks, plus bas.' },
+      { title: 'Nous lisons les decks du même commandant',
+        text: 'Des milliers de listes publiques sont dépouillées pour établir, carte '
+            + 'par carte, la part des decks qui la jouent.' },
+      { title: 'Nous croisons avec votre collection',
+        text: 'Ne restent que les cartes fréquemment jouées, que vous possédez, et '
+            + 'qui ne sont pas déjà dans ce deck. La plus jouée ouvre la liste.' },
+    ],
+    checks: [
+      { strong: 'Vos exemplaires disponibles :',
+        text: 'une carte déjà engagée dans un autre deck est signalée comme telle.' },
+      { strong: 'La popularité dans les decks :',
+        text: 'la part des listes du même commandant qui jouent la carte.' },
+      { strong: 'La composition actuelle du deck :',
+        text: 'ce qu’il contient déjà est écarté des suggestions.' },
+    ],
+    note: 'La popularité mesure l’usage, pas la qualité. Une carte jouée par 80 % '
+        + 'des listes reste à confronter à votre plan de jeu, votre budget de mana '
+        + 'et votre table.',
   });
 
-  await MM.deckPicker(MM.el('#deckPicker'), (deck) => {
+  const decks = await MM.deckPicker(MM.el('#deckPicker'), (deck) => {
     currentDeck = deck;
     MM.deckContext = deck;   // cible des reglages « dans le deck »
+    starter.innerHTML = '';  // le choix est fait : la bande n'a plus lieu d'etre
     load();
   }, { label: 'Deck à améliorer', autoSelect: false });
+
+  // Reconnaitre un deck a son illustration va plus vite que de le chercher
+  // dans un menu deroulant.
+  if (!currentDeck && decks.length) {
+    starter.innerHTML = MM.deckStrip(decks, {
+      text: 'Un clic suffit : les suggestions remplacent alors cet écran.' });
+    MM.bindDeckStrip(starter, (deckId) => MM.pickDeck(MM.el('#deckPicker'), deckId));
+  }
 
   async function load() {
     if (!currentDeck) return;
@@ -101,8 +135,18 @@
       return;
     }
 
+    // Les reperes que portent les vignettes — pourcentage, exemplaires libres,
+    // reglage — restaient a deviner : la legende les nomme une fois pour toutes.
     results.innerHTML = `
-      <div class="card-grid" id="grid"></div>`;
+      ${MM.legend([
+        { icon: 'chart', strong: 'x % des decks similaires :',
+          text: 'la part des listes du même commandant qui jouent cette carte.' },
+        { icon: 'collection', strong: 'n libre :',
+          text: 'exemplaires que vous possédez sans qu’aucun deck ne les utilise.' },
+        { icon: 'plus', strong: 'Le réglage :',
+          text: 'ajoute la carte au deck choisi, sans toucher à votre collection.' },
+      ])}
+      <div class="card-grid" id="grid" style="margin-top:var(--sp-4)"></div>`;
 
     // Les suggestions arrivent triees par taux decroissant : les vingt
     // premieres sont donc les plus pertinentes du lot.

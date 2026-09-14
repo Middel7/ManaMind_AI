@@ -38,7 +38,9 @@
   <div class="stack-2">
     <h2 class="h2">Améliorer mon deck grâce à des analyses IA</h2>
     <p class="muted small">
-      Obtenez des suggestions d'ajouts et de retraits pour l'un de vos decks.
+      Deux lectures de la même liste : l'une compare votre deck à ceux des autres
+      joueurs, l'autre en étudie la mécanique interne. Choisissez un deck, puis
+      l'analyse à lancer.
     </p>
   </div>
 
@@ -55,7 +57,17 @@
         <span class="h3" style="display:block">Amélioration utilisant la popularité
           des cartes</span>
         <span class="small muted">Compare votre liste à ce que jouent réellement les
-          autres decks du même commandant. Rapide et lisible.</span>
+          autres decks du même commandant.</span>
+      </span>
+      <span class="checks">
+        <span class="checks__item" data-check>
+          <span>Vous obtenez <b>les cartes absentes de votre liste</b> que jouent la
+            plupart des decks du même commandant, classées par fréquence.</span></span>
+        <span class="checks__item" data-check>
+          <span>S'appuie sur le <b>dépouillement de listes publiques</b> — aucune
+            appréciation du texte des cartes.</span></span>
+        <span class="checks__item" data-check>
+          <span>Résultat <b>en quelques secondes</b>.</span></span>
       </span>
       <span class="badge badge--ok" style="align-self:flex-start">Disponible</span>
     </button>
@@ -68,12 +80,89 @@
         <span class="small muted">Étudie la cohérence du deck, sa courbe, ses familles
           de cartes, et propose des remplacements argumentés.</span>
       </span>
+      <span class="checks">
+        <span class="checks__item" data-check>
+          <span>Vous obtenez <b>des échanges carte pour carte</b> : ce qui sort, ce qui
+            entre, et la raison du remplacement.</span></span>
+        <span class="checks__item" data-check>
+          <span>S'appuie sur un <b>modèle entraîné</b> sur les proximités entre cartes,
+            la courbe de mana et l'identité de couleur.</span></span>
+        <span class="checks__item" data-check>
+          <span>Compter <b>environ une minute</b> de calcul.</span></span>
+      </span>
       <span class="badge" id="engineBadge" style="align-self:flex-start">
         Vérification du moteur…</span>
     </button>
   </div>
 
   <div id="progress"></div>
+
+  <div class="intro">
+    <div class="intro__panel">
+      <div class="intro__head">
+        <span class="intro__mark" data-icon="layers"></span>
+        <div class="stack-2" style="gap:4px">
+          <p class="intro__title">Laquelle choisir ?</p>
+          <p class="small muted">Les deux analyses ne répondent pas à la même
+            question.</p>
+        </div>
+      </div>
+      <div class="walk">
+        <div class="walk__step">
+          <span class="walk__index">1</span>
+          <div class="stack-2" style="gap:2px">
+            <p class="walk__title">« Qu'est-ce que tout le monde joue et que je n'ai
+              pas ? »</p>
+            <p class="walk__text">C'est l'analyse par popularité. Elle situe votre deck
+              par rapport aux autres et repère les oublis manifestes. Elle ne connaît
+              rien de votre plan de jeu : elle compte.</p>
+          </div>
+        </div>
+        <div class="walk__step">
+          <span class="walk__index">2</span>
+          <div class="stack-2" style="gap:2px">
+            <p class="walk__title">« Ma liste tient-elle debout ? »</p>
+            <p class="walk__text">C'est l'analyse par le moteur. Elle regarde la courbe
+              de mana, l'équilibre entre familles de cartes et la proximité de chaque
+              carte avec le reste du deck, puis propose des échanges argumentés.</p>
+          </div>
+        </div>
+        <div class="walk__step">
+          <span class="walk__index">3</span>
+          <div class="stack-2" style="gap:2px">
+            <p class="walk__title">Les deux, dans cet ordre</p>
+            <p class="walk__text">La popularité comble les trous, le moteur resserre
+              l'ensemble. Relancer l'analyse après avoir modifié le deck donne un
+              résultat différent.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="intro__panel intro__panel--soft">
+      <div class="stack-2" style="gap:var(--sp-4)">
+        <p class="h4">Avant de lancer</p>
+        <div class="checks">
+          <span class="checks__item" data-check>
+            <span><b>Le commandant doit être identifié.</b> Toutes les comparaisons
+              partent de lui ; un deck importé sans commandant est refusé.</span></span>
+          <span class="checks__item" data-check>
+            <span><b>Rien n'est modifié automatiquement.</b> Les suggestions
+              s'affichent sur une page de résultats : vous décidez carte par
+              carte.</span></span>
+          <span class="checks__item" data-check>
+            <span><b>Votre collection n'est pas un filtre ici.</b> Les deux analyses
+              peuvent proposer des cartes que vous ne possédez pas. Pour rester dans
+              vos boîtes, passez par
+              <a href="/decks/ameliorer" style="color:var(--accent)">Améliorer mon deck
+              avec les cartes de ma collection</a>.</span></span>
+        </div>
+      </div>
+      <p class="note"><b>Bon à savoir.</b> Un deck se juge aussi à la table où il est
+        joué. Ces analyses ignorent la puissance de vos adversaires, votre budget et
+        les cartes auxquelles vous tenez.</p>
+    </div>
+  </div>
 </div>
 
 <script src="/static/js/mm.js"></script>
@@ -84,6 +173,11 @@
 
   MM.els('[data-icon]').forEach((holder) => {
     holder.innerHTML = MM.icons[holder.dataset.icon];
+  });
+  // Les puces de la page portent toutes la meme coche : elle est posee ici
+  // plutot que recopiee dans le balisage.
+  MM.els('[data-check]').forEach((item) => {
+    item.insertAdjacentHTML('afterbegin', MM.icons.check);
   });
 
   let currentDeck = null;

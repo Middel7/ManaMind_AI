@@ -77,7 +77,7 @@
       unit_price: card.price,
     }, {
       context: 'collection',
-      note: `${(card.inclusion_rate || 0).toFixed(0)} % des decks`,
+      note: `${MM.fmt.pct(card.inclusion_rate || 0, 0)} des decks`,
     });
   }
 

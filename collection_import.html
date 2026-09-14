@@ -170,6 +170,71 @@
         </p>
       </div>
     </div>
+
+    <!-- Ce qui suit le depot : l'import s'arretait jusqu'ici sur une zone vide,
+         sans dire que rien n'est ecrit avant l'ecran de verification. -->
+    <div class="intro">
+      <div class="intro__panel">
+        <div class="intro__head">
+          <span class="intro__mark" data-icon="upload"></span>
+          <div class="stack-2" style="gap:4px">
+            <p class="intro__title">Ce qui se passe ensuite</p>
+            <p class="small muted">Rien n'est enregistré avant votre confirmation.</p>
+          </div>
+        </div>
+        <div class="walk">
+          <div class="walk__step">
+            <span class="walk__index">1</span>
+            <div class="stack-2" style="gap:2px">
+              <p class="walk__title">Lecture de la liste</p>
+              <p class="walk__text">Chaque ligne est rapprochée d'une carte connue.
+                L'édition, le numéro de collection et la finition sont repris quand ils
+                figurent dans le fichier.</p>
+            </div>
+          </div>
+          <div class="walk__step">
+            <span class="walk__index">2</span>
+            <div class="stack-2" style="gap:2px">
+              <p class="walk__title">Vérification</p>
+              <p class="walk__text">L'écran suivant montre ce qui a été reconnu et ce
+                qui pose problème — nom mal orthographié, édition inconnue. Vous
+                corrigez ou écartez ligne par ligne.</p>
+            </div>
+          </div>
+          <div class="walk__step">
+            <span class="walk__index">3</span>
+            <div class="stack-2" style="gap:2px">
+              <p class="walk__title">Confirmation</p>
+              <p class="walk__text">C'est seulement là que les cartes rejoignent votre
+                collection, ou forment un nouveau deck si c'est ce que vous avez
+                choisi plus haut.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="intro__panel intro__panel--soft">
+        <div class="stack-2" style="gap:var(--sp-4)">
+          <p class="h4">Bon à savoir</p>
+          <div class="checks">
+            <span class="checks__item" data-check>
+              <span><b>Importer deux fois ne double pas votre collection</b> si vous
+                confirmez deux fois : les quantités s'additionnent. Vérifiez l'écran
+                récapitulatif avant de valider.</span></span>
+            <span class="checks__item" data-check>
+              <span><b>Les noms sont en anglais.</b> Une liste en français sera en
+                grande partie rejetée à l'étape de vérification.</span></span>
+            <span class="checks__item" data-check>
+              <span><b>Un deck n'entre pas dans la collection.</b> Il forme une liste à
+                part, que l'application compare ensuite à ce que vous
+                possédez.</span></span>
+            <span class="checks__item" data-check>
+              <span><b>Sans édition précisée</b>, la carte est rattachée à une impression
+                par défaut ; vous pourrez la corriger depuis votre collection.</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- Étape 2 — vérification -->
@@ -207,6 +272,15 @@
 
   MM.els('#destChoice .dest-card').forEach((card) => {
     card.setAttribute('aria-pressed', String(card.dataset.dest === state.destination));
+  });
+
+  // Les puces et pastilles de la page portent les memes icones : elles sont
+  // posees ici plutot que recopiees dans le balisage.
+  MM.els('.intro__mark[data-icon]').forEach((mark) => {
+    mark.innerHTML = MM.icons[mark.dataset.icon] || '';
+  });
+  MM.els('[data-check]').forEach((item) => {
+    item.insertAdjacentHTML('afterbegin', MM.icons.check);
   });
 
   MM.els('#destChoice .dest-card__mark').forEach((mark) => {

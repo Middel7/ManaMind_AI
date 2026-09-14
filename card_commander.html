@@ -150,6 +150,14 @@
         ${cardTile()}
 
         <div class="stack-2">
+          ${MM.legend([
+            { icon: 'chart', strong: 'Le pourcentage :',
+              text: 'part des decks de ce commandant qui jouent la carte.' },
+            { icon: 'layers', strong: 'La barre :',
+              text: 'situe chaque commandant par rapport au mieux classé de la liste.' },
+            { icon: 'eye', strong: 'Le périmètre :',
+              text: '« Mes commandants » se limite à vos decks, « Tous » ouvre à l’ensemble des commandants connus.' },
+          ])}
           ${hidden ? `<p class="xs dim">${hidden} résultat${hidden > 1 ? 's' : ''}
             écarté${hidden > 1 ? 's' : ''} faute de decks suffisants
             (moins de ${MIN_DECKS}).</p>` : ''}
@@ -173,7 +181,7 @@
                 </div>
               </div>
               <span class="strong num" style="width:64px;text-align:right">
-                ${entry.inclusion_rate.toFixed(1)} %</span>
+                ${MM.fmt.pct(entry.inclusion_rate)}</span>
             </article>`).join('')}
         </div>
       </div>`;

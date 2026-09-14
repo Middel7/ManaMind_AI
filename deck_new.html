@@ -72,6 +72,7 @@
              placeholder="Tapez un nom puis appuyez sur Entrée">
     </div>
     <div id="cmdResults"></div>
+    <div id="cmdStart"></div>
   </div>
 
   <div id="build" hidden style="margin-top:var(--sp-4)"></div>
@@ -110,8 +111,10 @@
     const term = cmdInput.value.trim();
     if (term.length < 2) {
       cmdResults.innerHTML = '<p class="muted small">Saisissez au moins deux caractères.</p>';
+      cmdStart.hidden = false;
       return;
     }
+    cmdStart.hidden = true;
     cmdResults.innerHTML = `<div class="card-grid">${MM.cardSkeletons(6)}</div>`;
     try {
       const data = await MM.api.get(
@@ -147,6 +150,91 @@
     event.preventDefault();
     searchCommander();
   });
+
+  /* ── Ecran de depart ──────────────────────────────────────────────────── */
+  /* Un champ de recherche seul sur une page blanche ne dit ni ce qui va se
+     passer ensuite, ni par quel nom commencer. */
+
+  const cmdStart = MM.el('#cmdStart');
+
+  function showStart() {
+    cmdStart.innerHTML = MM.toolIntro({
+      icon: 'crown',
+      title: 'Tout commence par le commandant',
+      text: 'Il fixe les couleurs autorisées et sert de fil conducteur au reste '
+        + 'de la liste.',
+      steps: [
+        { title: 'Vous choisissez un commandant',
+          text: 'Cherchez-le par son nom, ou partez de l’une des propositions '
+              + 'ci-dessous, tirées de votre collection.' },
+        { title: 'Le deck est créé aussitôt',
+          text: 'Il apparaît dans « Mes decks » et vous pouvez le reprendre à tout '
+              + 'moment : rien ne se perd entre deux visites.' },
+        { title: 'Vous composez les 99 cartes',
+          text: 'À chaque ajout, l’écran propose les cartes les plus jouées avec ce '
+              + 'commandant et signale celles que vous possédez déjà.' },
+      ],
+      checks: [
+        { strong: 'Identité de couleur :',
+          text: 'une carte hors des couleurs du commandant est refusée par les règles '
+              + '— l’écran l’affiche grisée, avec la raison.' },
+        { strong: 'Un seul exemplaire par carte :',
+          text: 'sauf les terrains de base, dont la quantité se règle librement.' },
+        { strong: 'Cent cartes commandant compris :',
+          text: 'le compteur du deck suit votre progression pendant la composition.' },
+      ],
+      checksTitle: 'Les règles du format',
+      note: 'Créer le deck n’engage à rien : un deck laissé à dix cartes reste '
+          + 'modifiable, et se supprime depuis sa fiche.',
+    });
+  }
+
+  /** Propositions tirees de la collection : de quoi partir sans idee precise. */
+  async function loadStartCommanders() {
+    try {
+      const data = await MM.api.get('/api/collection-commanders?top=8&mode=available');
+      const commanders = data.commanders || [];
+      if (!commanders.length) return;
+
+      cmdStart.insertAdjacentHTML('beforeend', `
+        <section class="section" style="margin-top:var(--sp-6)">
+          <div class="section-head">
+            <div class="section-head__title">
+              <h3 class="h3">Ce que votre collection permet déjà</h3>
+            </div>
+            <a class="btn btn--sm" href="/collection/commandants">Voir le classement</a>
+          </div>
+          <p class="muted small" style="margin-top:-8px">
+            Ces commandants sont ceux qui tirent le plus de valeur des cartes qui ne
+            sont dans aucun de vos decks. Cliquez pour partir de l’un d’eux.
+          </p>
+          <div class="deck-strip">
+            ${commanders.map((entry) => {
+              const art = entry.commander_image
+                ? entry.commander_image.replace('/normal/', '/art_crop/') : null;
+              return `
+                <button class="deck-chip" type="button"
+                        data-cmd="${MM.esc(entry.commander)}">
+                  ${art ? `<span class="deck-chip__art"
+                                 style="background-image:url('${MM.esc(art)}')"></span>` : ''}
+                  <span class="deck-chip__name truncate">${MM.esc(entry.commander)}</span>
+                  <span class="deck-chip__meta truncate">
+                    ${MM.fmt.int(entry.card_count)} de vos cartes ·
+                    ${MM.fmt.eur(entry.total_value, { compact: true })}
+                  </span>
+                </button>`;
+            }).join('')}
+          </div>
+        </section>`);
+
+      cmdStart.addEventListener('click', (event) => {
+        const chip = event.target.closest('[data-cmd]');
+        if (!chip) return;
+        cmdInput.value = chip.dataset.cmd;
+        searchCommander();
+      });
+    } catch { /* les propositions sont un confort, pas une condition */ }
+  }
 
   async function createDeck(card, node) {
     node.style.opacity = '0.5';
@@ -463,7 +551,12 @@
     render();
   });
 
-  if (resumeId) await resumeDeck(resumeId);
+  if (resumeId) {
+    await resumeDeck(resumeId);
+  } else {
+    showStart();
+    loadStartCommanders();
+  }
 })();
 </script>
 </body>

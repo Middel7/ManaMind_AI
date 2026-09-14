@@ -19,9 +19,9 @@
   <div class="stack-2">
     <h2 class="h2">Quelles cartes retirer ?</h2>
     <p class="muted small">
-      Ces cartes de votre deck sont les moins jouées par les autres decks du même
-      commandant. Ce sont des candidates au retrait, pas une vérité : vos choix
-      personnels priment.
+      Votre liste est comparée à celles des autres joueurs du même commandant : les
+      cartes que presque personne ne reprend arrivent en tête. Ce sont des candidates
+      au retrait, pas un verdict — vos choix personnels priment.
     </p>
   </div>
 
@@ -75,16 +75,37 @@
     }
 
     const total = cards[0].total_decks || 0;
+    // Le bandeau disait sur combien de decks portait l'analyse, sans dire ce
+    // qu'on en tire ni comment lire les chiffres des vignettes.
     results.innerHTML = `
-      <div class="panel panel--accent" style="margin-bottom:var(--sp-5)">
-        <div class="panel__body cluster">
-          <span class="grow small">
-            Analyse fondée sur <strong>${MM.fmt.int(total)} decks</strong> jouant
-            ${MM.esc(currentDeck.commander)}.
-          </span>
+      <div class="panel" style="margin-bottom:var(--sp-4)">
+        <div class="panel__body" style="display:flex;flex-direction:column;
+                                        gap:var(--sp-4)">
+          <div class="cluster">
+            <span class="accent">${MM.icons.chart}</span>
+            <span class="grow small">
+              Analyse fondée sur <strong>${MM.fmt.int(total)} decks</strong> jouant
+              ${MM.esc(currentDeck.commander)}.
+              <span class="muted">Les ${MM.fmt.int(cards.length)} cartes ci-dessous
+              sont celles que ces decks reprennent le moins, de la plus rare à la
+              plus courante.</span>
+            </span>
+          </div>
+          <p class="note"><b>Comment lire.</b> Une carte rare dans les autres decks
+            n'est pas une mauvaise carte : c'est souvent ce qui rend une liste
+            personnelle. Retirez d'abord celles que vous ne posez presque jamais en
+            partie, ou dont l'effet fait double emploi.</p>
         </div>
       </div>
-      <div class="card-grid" id="grid"></div>`;
+      ${MM.legend([
+        { icon: 'chart', strong: 'x % · n decks sur N :',
+          text: 'la part des listes du même commandant qui jouent cette carte.' },
+        { icon: 'minus', strong: 'Le réglage :',
+          text: 'retire la carte du deck ; elle reste dans votre collection.' },
+        { icon: 'coin', strong: 'Le prix :',
+          text: 'valeur estimée de l’exemplaire, utile pour arbitrer un retrait.' },
+      ])}
+      <div class="card-grid" id="grid" style="margin-top:var(--sp-4)"></div>`;
 
     MM.el('#grid').innerHTML = cards.map((card) => MM.cardTile({
       ...(resolved[card.card_name] || {}),
@@ -92,7 +113,7 @@
     }, {
       context: 'deck',
       deckQty: card.quantity ?? 1,
-      note: `${card.inclusion_rate.toFixed(1)} % · ${MM.fmt.int(card.decks_with_card)}`
+      note: `${MM.fmt.pct(card.inclusion_rate)} · ${MM.fmt.int(card.decks_with_card)}`
         + ` decks sur ${MM.fmt.int(card.total_decks)}`,
     })).join('');
   }
