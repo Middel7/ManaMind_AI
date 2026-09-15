@@ -1095,6 +1095,91 @@
   };
 
   /**
+   * Fenetre « Ajouter une carte au deck » : un nom a chercher, les resultats
+   * en grille, et le reglage « dans le deck » de chaque vignette pour ajouter.
+   *
+   * La recherche part sur Entree, pas a chaque frappe : les resultats
+   * s'affichent assez grands pour reconnaitre une carte a son illustration
+   * avant de l'ajouter. La fenetre ne se ferme pas apres un ajout — on enchaine
+   * les cartes — et rend la main au champ, son texte selectionne.
+   *
+   * Le deck vise est celui de MM.deckContext ; l'ecran qui l'ouvre se met a
+   * jour en ecoutant « mm:card-change ».
+   *
+   * @param {object} options
+   *   title   {string} titre de la fenetre
+   *   deckQty {(name:string)=>number} exemplaires deja dans le deck, pour que
+   *     le reglage d'une carte deja presente ne reparte pas d'un zero trompeur
+   * @returns {object} la fenetre { root, body, close }
+   */
+  MM.addCardDialog = function ({ title = 'Ajouter une carte au deck',
+                                 deckQty = () => 0 } = {}) {
+    const dialog = MM.modal({
+      title,
+      wide: true,
+      body: `<div class="stack">
+               <div class="field">
+                 <label class="label" for="mmAddCard">Nom de la carte</label>
+                 <input class="input" id="mmAddCard" type="text" autocomplete="off"
+                        placeholder="Tapez un nom puis appuyez sur Entrée">
+               </div>
+               <div id="mmAddResults"></div>
+             </div>`,
+      onClose: () => document.removeEventListener('mm:card-change', onChange),
+    });
+
+    const input = el('#mmAddCard', dialog.root);
+    const host = el('#mmAddResults', dialog.root);
+
+    async function search() {
+      const term = input.value.trim();
+      if (term.length < 2) {
+        host.innerHTML = '<p class="muted small">Saisissez au moins deux caractères.</p>';
+        return;
+      }
+      host.innerHTML = `<div class="card-grid">${MM.cardSkeletons(8)}</div>`;
+      try {
+        const data = await MM.api.get(
+          `/api/v2/cards/suggest?q=${encodeURIComponent(term)}&limit=20`);
+        const found = data.cards || [];
+        if (!found.length) {
+          host.innerHTML = MM.empty({
+            icon: 'search', title: 'Aucune carte trouvée',
+            text: `Aucune carte ne correspond à « ${term} ».` });
+          return;
+        }
+        host.innerHTML = `<div class="card-grid">${found.map((card) => MM.cardTile(card, {
+          context: 'deck',
+          deckQty: deckQty(card.card_name || card.name || ''),
+          note: card.printed_name && card.printed_name !== card.name
+            ? esc(card.printed_name) : '',
+        })).join('')}</div>`;
+      } catch (err) {
+        host.innerHTML = MM.empty({
+          icon: 'warning', title: 'Recherche impossible', text: err.message });
+      }
+    }
+
+    // Apres un ajout, le champ reprend la main, son texte selectionne : le nom
+    // suivant se tape sans avoir a effacer le precedent.
+    function onChange(event) {
+      if (event.detail.scope !== 'deck') return;
+      input.focus();
+      input.select();
+    }
+    document.addEventListener('mm:card-change', onChange);
+
+    input.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      search();
+    });
+
+    input.focus();
+    return dialog;
+  };
+
+  /**
    * Resout un lot de noms de cartes (illustration, rarete, prix, possession).
    * Les endpoints d'analyse ne renvoient que des noms.
    *

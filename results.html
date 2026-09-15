@@ -532,13 +532,9 @@
         </div>
       </div>
       ${canEdit ? `
-        <div class="stack-2" style="margin-bottom:var(--sp-5)">
-          <div class="field" style="max-width:520px">
-            <label class="label" for="cardSearch">Ajouter une autre carte au deck</label>
-            <input class="input" id="cardSearch" type="text" autocomplete="off"
-                   placeholder="Tapez un nom puis appuyez sur Entrée">
-          </div>
-          <div id="searchResults"></div>
+        <div style="margin-bottom:var(--sp-5)">
+          <button class="btn btn--primary" id="addCard" type="button">
+            Ajouter une autre carte au deck</button>
         </div>` : ''}
       <div id="panel-add"></div>
       <div id="panel-cut" hidden></div>
@@ -579,38 +575,38 @@
   });
 
   if (canEdit) {
-    const champ = MM.el('#cardSearch');
-    const hote = MM.el('#searchResults');
-
-    champ.addEventListener('keydown', async (event) => {
-      if (event.key !== 'Enter') return;
-      event.preventDefault();
-      const terme = champ.value.trim();
-      if (terme.length < 2) return;
-      hote.innerHTML = `<div class="card-grid">${MM.cardSkeletons(4)}</div>`;
+    // L'analyse ne porte pas le contenu du deck : ses quantites se lisent a la
+    // premiere ouverture de la fenetre, pour qu'une carte deja presente n'y
+    // affiche pas un zero trompeur.
+    let deckCards = null;
+    async function loadDeckCards() {
+      if (deckCards || !deckInfo.deck_id) return;
       try {
         const data = await MM.api.get(
-          `/api/v2/cards/suggest?q=${encodeURIComponent(terme)}&limit=12`);
-        const cartes = data.cards || [];
-        hote.innerHTML = cartes.length
-          ? `<div class="card-grid">${cartes.map((card) => MM.cardTile(card, {
-              context: 'deck',
-              deckQty: 0,
-              note: card.printed_name && card.printed_name !== card.name
-                ? MM.esc(card.printed_name) : '',
-            })).join('')}</div>`
-          : MM.empty({ icon: 'search', title: 'Aucune carte trouvée',
-                       text: `Rien ne correspond à « ${terme} ».` });
-      } catch (err) {
-        hote.innerHTML = MM.empty({
-          icon: 'warning', title: 'Recherche impossible', text: err.message });
-      }
+          `/api/v2/decks/${encodeURIComponent(deckInfo.deck_id)}`);
+        deckCards = data.cards || [];
+      } catch { deckCards = []; }
+    }
+
+    MM.el('#addCard').addEventListener('click', () => {
+      // Meme fenetre que sur la fiche du deck : elle reste ouverte pour
+      // enchainer les ajouts.
+      MM.addCardDialog({
+        deckQty: (name) => {
+          const line = (deckCards || []).find((entry) =>
+            entry.card_name.toLowerCase() === name.toLowerCase());
+          return line ? line.quantity : 0;
+        },
+      });
+      loadDeckCards();
     });
 
-    // Une carte ajoutee par le reglage de sa vignette : la recherche a fait son
-    // office, la liste se vide pour laisser la place aux propositions.
     document.addEventListener('mm:card-change', (event) => {
-      if (event.detail.scope !== 'deck' || event.detail.delta < 0) return;
+      if (event.detail.scope !== 'deck') return;
+      // Le deck vient de changer : ses quantites sont relues pour la suite.
+      deckCards = null;
+      loadDeckCards();
+      if (event.detail.delta < 0) return;
       MM.toast.ok(`${event.detail.card_name} ajoutée à ${deckInfo.name || 'votre deck'}.`);
     });
   }

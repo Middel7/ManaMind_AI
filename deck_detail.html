@@ -254,10 +254,6 @@
     if (event.detail.scope !== 'deck') return;
     MM.toast.ok(`${event.detail.card_name} ${event.detail.delta > 0
       ? `ajoutée à ${deck.name}` : `retirée de ${deck.name}`}.`);
-    // La fenetre de recherche ne se ferme pas : on enchaine les ajouts. Le
-    // champ reprend la main, son texte selectionne, pret pour un autre nom.
-    const search = MM.el('#newCard');
-    if (search) { search.focus(); search.select(); }
     reload();
   });
 
@@ -287,66 +283,14 @@
     });
 
     MM.el('#addCard').addEventListener('click', () => {
-      // La recherche part sur Entree, pas a chaque frappe : les resultats
-      // s'affichent en grille, assez grands pour reconnaitre une carte a son
-      // illustration avant de l'ajouter.
-      const modal = MM.modal({
-        title: 'Ajouter une carte au deck',
-        wide: true,
-        body: `<div class="stack">
-                 <div class="field">
-                   <label class="label" for="newCard">Nom de la carte</label>
-                   <input class="input" id="newCard" type="text" autocomplete="off"
-                          placeholder="Tapez un nom puis appuyez sur Entrée">
-                 </div>
-                 <div id="cardResults"></div>
-               </div>`,
-      });
-
-      const input = MM.el('#newCard', modal.root);
-      const host = MM.el('#cardResults', modal.root);
-      input.focus();
-
-      async function search() {
-        const term = input.value.trim();
-        if (term.length < 2) {
-          host.innerHTML = '<p class="muted small">Saisissez au moins deux caractères.</p>';
-          return;
-        }
-        host.innerHTML = `<div class="card-grid">${MM.cardSkeletons(8)}</div>`;
-        try {
-          const data = await MM.api.get(
-            `/api/v2/cards/suggest?q=${encodeURIComponent(term)}&limit=20`);
-          const found = data.cards || [];
-          if (!found.length) {
-            host.innerHTML = MM.empty({
-              icon: 'search', title: 'Aucune carte trouvée',
-              text: `Aucune carte ne correspond à « ${term} ».` });
-            return;
-          }
-          // Le reglage part de ce que le deck contient deja : rechercher une
-          // carte presente n'affiche pas un zero trompeur.
-          host.innerHTML = `<div class="card-grid">${found.map((card) => {
-            const line = cards.find((entry) =>
-              entry.card_name.toLowerCase() === (card.name || '').toLowerCase());
-            return MM.cardTile(card, {
-              context: 'deck',
-              deckQty: line ? line.quantity : 0,
-              note: card.printed_name && card.printed_name !== card.name
-                ? MM.esc(card.printed_name) : '',
-            });
-          }).join('')}</div>`;
-
-        } catch (err) {
-          host.innerHTML = MM.empty({
-            icon: 'warning', title: 'Recherche impossible', text: err.message });
-        }
-      }
-
-      input.addEventListener('keydown', (event) => {
-        if (event.key !== 'Enter') return;
-        event.preventDefault();
-        search();
+      // Fenetre commune a tous les ecrans qui ajoutent des cartes : elle reste
+      // ouverte pour en enchainer plusieurs.
+      MM.addCardDialog({
+        deckQty: (name) => {
+          const line = cards.find((entry) =>
+            entry.card_name.toLowerCase() === name.toLowerCase());
+          return line ? line.quantity : 0;
+        },
       });
     });
 
