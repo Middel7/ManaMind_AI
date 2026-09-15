@@ -138,10 +138,11 @@
         if (test(remaining[i])) matched.unshift(remaining.splice(i, 1)[0]);
       }
       if (matched.length) {
-        // Dans chaque categorie, les cartes les plus cheres d'abord : c'est ce
-        // qui saute aux yeux quand on regarde ce que vaut un deck.
+        // Dans chaque categorie, du moins cher en mana au plus cher : c'est
+        // ainsi qu'on lit une liste de deck, et que se voit sa courbe. Une
+        // carte dont le cout n'est pas connu ferme la marche.
         groups.push([label, matched.sort((a, b) =>
-          (b.unit_price ?? -1) - (a.unit_price ?? -1)
+          (a.mana_value ?? Infinity) - (b.mana_value ?? Infinity)
           || a.card_name.localeCompare(b.card_name, 'fr'))]);
       }
     });
