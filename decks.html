@@ -41,6 +41,14 @@
     display: flex; gap: var(--sp-1); flex-wrap: wrap;
     padding: 0 var(--sp-4) var(--sp-4);
   }
+
+  /* Renommage en place : le champ reprend la typographie du titre pour que la
+     tuile ne bouge pas quand il le remplace. */
+  .deck-tile__name { cursor: text; }
+  .deck-tile__rename {
+    font-size: var(--text-lg); font-weight: 600; letter-spacing: -0.01em;
+    padding: 4px 8px;
+  }
 </style>
 </head>
 <body>
@@ -128,7 +136,8 @@
         <article class="deck-tile">
           ${art ? `<div class="deck-tile__art" style="background-image:url('${MM.esc(art)}')"></div>` : ''}
           <a class="deck-tile__body" href="/decks/${encodeURIComponent(deck.deck_id)}">
-            <p class="h3 truncate">${MM.esc(deck.name)}</p>
+            <p class="h3 truncate deck-tile__name" data-rename="${MM.esc(deck.deck_id)}"
+               title="Double-cliquez pour renommer ce deck">${MM.esc(deck.name)}</p>
             <p class="xs dim truncate" style="margin-bottom:10px">
               ${MM.esc(deck.commander || '')}</p>
             <div class="progress" style="margin-bottom:6px">
@@ -153,6 +162,81 @@
           </div>
         </article>`;
     }).join('')}</div>`;
+  }
+
+  /* ── Renommer un deck depuis sa tuile ──────────────────────────── */
+
+  // Le titre ouvre toujours le deck au clic simple, mais la navigation attend
+  // de savoir si un second clic suit : sans cette attente, la page serait deja
+  // partie quand le double-clic arrive. Le reste de la tuile part aussitot.
+  const DOUBLE_CLICK_MS = 250;
+  let openTimer = null;
+
+  MM.el('#results').addEventListener('click', (event) => {
+    const title = event.target.closest('[data-rename]');
+    if (!title) return;
+    // Ouvrir dans un autre onglet reste l'affaire du navigateur.
+    if (event.button !== 0 || event.ctrlKey || event.metaKey
+        || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    clearTimeout(openTimer);
+    if (event.detail > 1) return;
+    const href = title.closest('a').getAttribute('href');
+    openTimer = setTimeout(() => { location.href = href; }, DOUBLE_CLICK_MS);
+  });
+
+  MM.el('#results').addEventListener('dblclick', (event) => {
+    const title = event.target.closest('[data-rename]');
+    if (!title) return;
+    event.preventDefault();
+    clearTimeout(openTimer);
+    rename(title);
+  });
+
+  function rename(title) {
+    const deckId = title.dataset.rename;
+    const deck = state.decks.find((item) => item.deck_id === deckId);
+    if (!deck) return;
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'input deck-tile__rename';
+    input.value = deck.name;
+    input.setAttribute('aria-label', 'Nom du deck');
+    // Le champ vit dans le lien de la tuile : aucun de ses clics n'y mene.
+    ['click', 'dblclick'].forEach((kind) => input.addEventListener(kind, (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    }));
+
+    let settled = false;
+
+    async function commit() {
+      if (settled) return;
+      settled = true;
+      const name = input.value.trim();
+      // Vide ou inchange : la tuile reprend simplement son titre.
+      if (!name || name === deck.name) return render();
+      input.disabled = true;
+      try {
+        await MM.api.post(`/api/deck-rename/${encodeURIComponent(deckId)}`, { name });
+        deck.name = name;
+        MM.toast.ok(`Deck renommé « ${name} ».`);
+      } catch (err) {
+        MM.toast.error(err.message);
+      }
+      render();
+    }
+
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') { event.preventDefault(); commit(); }
+      else if (event.key === 'Escape') { settled = true; render(); }
+    });
+    input.addEventListener('blur', commit);
+
+    title.replaceWith(input);
+    input.focus();
+    input.select();
   }
 
   // #results survit aux rendus successifs : l'ecoute peut y rester attachee.
