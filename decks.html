@@ -61,8 +61,8 @@
       <input class="input" id="search" type="search" placeholder="Rechercher un deck…">
     </div>
     <select class="select" id="sort" style="width:auto">
+      <option value="name" selected>Nom</option>
       <option value="recent">Modifié récemment</option>
-      <option value="name">Nom</option>
       <option value="owned">Taux de possession</option>
       <option value="size">Nombre de cartes</option>
     </select>
@@ -82,7 +82,8 @@
   const user = await MM.boot({ title: 'Mes decks', nav: 'decks' });
   if (!user) return;
 
-  const state = { decks: [], search: '', sort: 'recent' };
+  // Les decks se rangent par nom : c'est ainsi qu'on cherche le sien.
+  const state = { decks: [], search: '', sort: 'name' };
 
   try {
     const data = await MM.api.get('/api/v2/decks');
@@ -96,11 +97,12 @@
   function sorted(decks) {
     const copy = decks.slice();
     switch (state.sort) {
-      case 'name': return copy.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+      case 'recent': return copy.sort((a, b) =>
+        (b.updated_at || '').localeCompare(a.updated_at || ''));
       case 'owned': return copy.sort((a, b) => b.owned_ratio - a.owned_ratio);
       case 'size': return copy.sort((a, b) => b.card_count - a.card_count);
       default: return copy.sort((a, b) =>
-        (b.updated_at || '').localeCompare(a.updated_at || ''));
+        (a.name || '').localeCompare(b.name || '', 'fr'));
     }
   }
 
