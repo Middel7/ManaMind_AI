@@ -252,9 +252,12 @@
   MM.deckContext = { deck_id: deckId, commander: deck.commander };
   document.addEventListener('mm:card-change', (event) => {
     if (event.detail.scope !== 'deck') return;
-    // La recherche d'ajout vit dans une fenetre : elle a fait son office.
-    const open = MM.el('.modal');
-    if (open) open.remove();
+    MM.toast.ok(`${event.detail.card_name} ${event.detail.delta > 0
+      ? `ajoutée à ${deck.name}` : `retirée de ${deck.name}`}.`);
+    // La fenetre de recherche ne se ferme pas : on enchaine les ajouts. Le
+    // champ reprend la main, son texte selectionne, pret pour un autre nom.
+    const search = MM.el('#newCard');
+    if (search) { search.focus(); search.select(); }
     reload();
   });
 
@@ -314,19 +317,25 @@
         try {
           const data = await MM.api.get(
             `/api/v2/cards/suggest?q=${encodeURIComponent(term)}&limit=20`);
-          const cards = data.cards || [];
-          if (!cards.length) {
+          const found = data.cards || [];
+          if (!found.length) {
             host.innerHTML = MM.empty({
               icon: 'search', title: 'Aucune carte trouvée',
               text: `Aucune carte ne correspond à « ${term} ».` });
             return;
           }
-          host.innerHTML = `<div class="card-grid">${cards.map((card) => MM.cardTile(card, {
-            context: 'deck',
-            deckQty: 0,
-            note: card.printed_name && card.printed_name !== card.name
-              ? MM.esc(card.printed_name) : '',
-          })).join('')}</div>`;
+          // Le reglage part de ce que le deck contient deja : rechercher une
+          // carte presente n'affiche pas un zero trompeur.
+          host.innerHTML = `<div class="card-grid">${found.map((card) => {
+            const line = cards.find((entry) =>
+              entry.card_name.toLowerCase() === (card.name || '').toLowerCase());
+            return MM.cardTile(card, {
+              context: 'deck',
+              deckQty: line ? line.quantity : 0,
+              note: card.printed_name && card.printed_name !== card.name
+                ? MM.esc(card.printed_name) : '',
+            });
+          }).join('')}</div>`;
 
         } catch (err) {
           host.innerHTML = MM.empty({
