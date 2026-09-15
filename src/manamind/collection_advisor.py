@@ -5,6 +5,8 @@ import re
 import unicodedata
 from pathlib import Path
 
+from .commanders import split_commanders
+
 ROOT = Path(__file__).resolve().parents[2]
 # TODO: supprimer après migration complète — MY_DECKS_DIR et COMMANDERS_FILE sont des fallbacks legacy
 MY_DECKS_DIR    = ROOT / "data" / "My decks"
@@ -23,21 +25,21 @@ def _normalize(name: str) -> str:
 
 
 def _cmd_norms(commander_name: str) -> set[str]:
-    """Retourne l'ensemble des noms normalisés pour un commandant (gère Partner 'A + B')."""
-    return {_normalize(n.strip()) for n in commander_name.split("+") if n.strip()}
+    """Retourne l'ensemble des noms normalisés pour un commandant (gère Partner 'A & B')."""
+    return {_normalize(n) for n in split_commanders(commander_name)}
 
 
 def _cmd_freq_db(commander_name: str) -> dict[str, dict]:
     """
     Retourne { card_norm: {card_name, inclusion_rate, decks_with_card, total_decks} }
     depuis PostgreSQL pour un commandant.
-    Pour les Partner ("A + B"), essaie le nom complet puis chaque partie,
+    Pour les Partner ("A & B"), essaie le nom complet puis chaque partie,
     et retourne les données du jeu de decks le plus fourni.
     """
     from sqlalchemy import text as _text
     from manamind.db.engine import SessionLocal as _SessionLocal
 
-    parts = [n.strip() for n in commander_name.split("+")]
+    parts = split_commanders(commander_name)
     candidates_to_try = [commander_name] + (parts if len(parts) > 1 else [])
 
     best_total = -1

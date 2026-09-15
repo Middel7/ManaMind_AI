@@ -1420,6 +1420,31 @@
   };
 
   /**
+   * Les commandants d'un deck. Ils peuvent etre deux — Partner, Background,
+   * Doctor's companion — et tiennent alors dans une seule chaine, « A & B »,
+   * les noms ranges par ordre alphabetique. C'est sous cette forme que les
+   * statistiques indexent les decks : miroir de manamind/commanders.py.
+   *
+   * « // » ne separe pas deux commandants mais les deux faces d'une meme
+   * carte, qui n'en fait qu'un.
+   *
+   * @param {string} raw  le champ commander du deck
+   * @returns {string[]}
+   */
+  MM.commanders = function (raw) {
+    return String(raw || '').split(/\s*[&+]\s*/)
+      .map((name) => name.trim())
+      .filter((name) => name && name.toLowerCase() !== 'unknown');
+  };
+
+  /** Cette carte est-elle l'un des commandants du deck ? */
+  MM.isCommander = function (raw, cardName) {
+    const target = String(cardName || '').trim().toLowerCase();
+    return Boolean(target)
+      && MM.commanders(raw).some((name) => name.toLowerCase() === target);
+  };
+
+  /**
    * Un deck dont l'import n'a pas identifie le commandant est enregistre sous
    * « Unknown ». Les analyses partent toutes du commandant : sans lui, elles
    * ne renvoient rien d'exploitable.

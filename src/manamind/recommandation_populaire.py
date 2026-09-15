@@ -17,6 +17,8 @@ import os
 import re
 from pathlib import Path
 
+from .commanders import join_commanders
+
 LINE_PATTERN = re.compile(r"^(\d+)\s+(.*)$")
 BASIC_LANDS = {"Island", "Plains", "Swamp", "Mountain", "Forest", "Wastes"}
 
@@ -70,8 +72,11 @@ def parse_decklist_text(path: Path) -> tuple[dict[str, int], str | None]:
                 # même premier mot → DFC (//) sinon partners (&)
                 w0 = cmd_parts[0].split()[0].rstrip(",")
                 w1 = cmd_parts[1].split()[0].rstrip(",")
-                sep = " // " if w0 == w1 else " & "
-                commander = sep.join(cmd_parts)
+                # Les partners s'ecrivent dans l'ordre alphabetique : c'est
+                # ainsi que deck_stat_commander les indexe, et une paire prise
+                # dans l'ordre du fichier n'y trouverait aucune statistique.
+                commander = (" // ".join(cmd_parts) if w0 == w1
+                             else join_commanders(cmd_parts))
             else:
                 commander = cmd_parts[0]
 

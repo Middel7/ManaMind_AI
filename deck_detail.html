@@ -70,8 +70,10 @@
   /* ── Hero ─────────────────────────────────────────────────────────────── */
 
   function renderHero() {
+    // Un deck peut avoir deux commandants : l'illustration vient du premier
+    // d'entre eux qui en porte une.
     const commanderCard = cards.find((card) =>
-      card.card_name.toLowerCase() === (deck.commander || '').toLowerCase())
+      MM.isCommander(deck.commander, card.card_name) && card.scryfall_id)
       || cards.find((card) => card.scryfall_id);
     const art = commanderCard && commanderCard.scryfall_id
       ? MM.scryfallArt(commanderCard.scryfall_id) : null;
@@ -106,10 +108,8 @@
             ${MM.icons.chart} Améliorer avec l'analyse</a>
         </div>
         </div>
-        <div class="hero__curve">${MM.mana.curve(
-          cards.concat(commanderCard ? [commanderCard] : []), 112)}</div>
-        <div>${MM.mana.rows(
-          cards.concat(commanderCard ? [commanderCard] : []))}</div>
+        <div class="hero__curve">${MM.mana.curve(cards, 112)}</div>
+        <div>${MM.mana.rows(cards)}</div>
       </div>
       </div>`;
   }
@@ -117,8 +117,7 @@
   /* ── Regroupement par type ────────────────────────────────────────────── */
 
   const TYPE_ORDER = [
-    ['Commandant', (card) =>
-      card.card_name.toLowerCase() === (deck.commander || '').toLowerCase()],
+    ['Commandant', (card) => MM.isCommander(deck.commander, card.card_name)],
     ['Créatures', (card) => /Creature/i.test(card.type_line)],
     ['Éphémères', (card) => /Instant/i.test(card.type_line)],
     ['Rituels', (card) => /Sorcery/i.test(card.type_line)],
@@ -138,6 +137,7 @@
         if (test(remaining[i])) matched.unshift(remaining.splice(i, 1)[0]);
       }
       if (matched.length) {
+        if (label === 'Commandant' && matched.length > 1) label = 'Commandants';
         // Dans chaque categorie, du moins cher en mana au plus cher : c'est
         // ainsi qu'on lit une liste de deck, et que se voit sa courbe. Une
         // carte dont le cout n'est pas connu ferme la marche.
@@ -191,6 +191,27 @@
     bind();
   }
 
+  /** Boutons de commandement d'une vignette : une legendaire peut le devenir
+   *  — seule ou en second — et l'un des deux commandants peut cesser de l'etre.
+   *  Retirer le dernier laisserait le deck sans analyse possible : le bouton
+   *  n'apparait alors pas. */
+  function commanderActions(card) {
+    const current = MM.commanders(deck.commander);
+    if (MM.isCommander(deck.commander, card.card_name)) {
+      return current.length > 1
+        ? [{ label: 'Retirer des commandants', act: 'uncmd', variant: 'ghost',
+             title: `« ${MM.esc(card.card_name)} » redeviendrait une carte ordinaire` }]
+        : [];
+    }
+    if (!/Legendary/i.test(card.type_line || '')) return [];
+    return [{
+      label: 'Commandant', act: 'setcmd', variant: 'ghost',
+      title: current.length
+        ? `Faire de « ${MM.esc(card.card_name)} » un commandant de ce deck`
+        : `Définir « ${MM.esc(card.card_name)} » comme commandant`,
+    }];
+  }
+
   function renderCards() {
     MM.el('#cardList').innerHTML = group(cards).map(([label, list]) => {
       const copies = list.reduce((sum, card) => sum + card.quantity, 0);
@@ -205,11 +226,7 @@
               context: 'deck',
               deckQty: card.quantity,
               actions: [
-                ...(/Legendary/i.test(card.type_line || '')
-                    && card.card_name.toLowerCase() !== (deck.commander || '').toLowerCase()
-                  ? [{ label: 'Commandant', act: 'setcmd', variant: 'ghost',
-                       title: `Définir « ${MM.esc(card.card_name)} » comme commandant` }]
-                  : []),
+                ...commanderActions(card),
                 { label: 'Retirer', act: 'drop', variant: 'ghost',
                   title: `Retirer ${MM.esc(card.card_name)} du deck` },
               ],
@@ -224,24 +241,94 @@
     const fresh = await MM.api.get(`/api/v2/decks/${encodeURIComponent(deckId)}`);
     cards = fresh.cards;
     Object.assign(deck, fresh.deck);
+    // Les cartes ajoutees portent le nom du commandant : s'il vient de
+    // changer, le contexte des reglages doit suivre.
+    if (MM.deckContext) MM.deckContext.commander = deck.commander;
     render();
   }
 
+  /**
+   * Un deck qui a deja un commandant laisse le choix : la carte le rejoint —
+   * Partner, Background, Doctor's companion en donnent deux — ou prend sa
+   * place. Deux boutons valent mieux qu'une question fermee.
+   *
+   * @returns {Promise<'add'|'replace'|null>} null si l'on renonce
+   */
+  function askCommanderMode(name, current) {
+    return new Promise((resolve) => {
+      let settled = false;
+      const done = (value) => { if (!settled) { settled = true; resolve(value); } };
+      const dialog = MM.modal({
+        title: 'Commandant du deck',
+        body: `<p class="muted">${MM.esc(deck.name)} a pour commandant
+                 « ${MM.esc(current[0])} ». « ${MM.esc(name)} » peut le rejoindre
+                 — un deck en accepte deux — ou prendre sa place.</p>`,
+        footer: `<button class="btn" data-cancel>Annuler</button>
+                 <button class="btn" data-mode="replace">Remplacer</button>
+                 <button class="btn btn--primary" data-mode="add">Ajouter en second</button>`,
+        onClose: () => done(null),
+      });
+      dialog.root.addEventListener('click', (event) => {
+        const choice = event.target.closest('[data-mode]');
+        if (choice) { done(choice.dataset.mode); dialog.close(); return; }
+        if (event.target.closest('[data-cancel]')) { done(null); dialog.close(); }
+      });
+    });
+  }
+
+  /** Designe une carte comme commandant : seule, en second, ou a la place des
+   *  deux commandants en poste. */
   async function setCommander(name, button) {
+    const current = MM.commanders(deck.commander);
+    let mode = 'replace';
+
+    if (current.length === 1) {
+      mode = await askCommanderMode(name, current);
+      if (!mode) return;
+    } else {
+      const ok = await MM.confirm({
+        title: current.length > 1
+          ? 'Remplacer les deux commandants ?' : 'Définir comme commandant ?',
+        text: current.length > 1
+          ? `${deck.name} a deux commandants, « ${current.join(' » et « ')} ». `
+            + `« ${name} » prendra leur place.`
+          : `« ${name} » deviendra le commandant de ${deck.name}.`,
+        confirmLabel: current.length > 1 ? 'Remplacer' : 'Définir',
+      });
+      if (!ok) return;
+    }
+
+    button.disabled = true;
+    try {
+      const result = await MM.api.post(
+        `/api/v2/decks/${encodeURIComponent(deckId)}/commander`,
+        { card_name: name, mode });
+      MM.toast.ok(result.commanders && result.commanders.length > 1
+        ? `Ce deck est désormais commandé par « ${result.commanders.join(' » et « ')} ».`
+        : `${name} est désormais le commandant de ce deck.`);
+      await reload();
+    } catch (err) {
+      MM.toast.error(err.message);
+      button.disabled = false;
+    }
+  }
+
+  /** Retire l'un des deux commandants : la carte reste dans le deck. */
+  async function dropCommander(name, button) {
     const ok = await MM.confirm({
-      title: 'Définir comme commandant ?',
-      text: `« ${name} » deviendra le commandant de ${deck.name}`
-        + `${deck.commander && deck.commander !== 'Unknown'
-            ? `, à la place de « ${deck.commander} »` : ''}.`,
-      confirmLabel: 'Définir',
+      title: 'Retirer des commandants ?',
+      text: `« ${name} » redeviendra une carte ordinaire de ${deck.name}, `
+        + `qui sera analysé sous son seul autre commandant. La carte reste `
+        + `dans la liste.`,
+      confirmLabel: 'Retirer',
     });
     if (!ok) return;
 
     button.disabled = true;
     try {
       await MM.api.post(`/api/v2/decks/${encodeURIComponent(deckId)}/commander`,
-        { card_name: name });
-      MM.toast.ok(`${name} est désormais le commandant de ce deck.`);
+        { card_name: name, mode: 'remove' });
+      MM.toast.ok(`${name} n'est plus un commandant de ce deck.`);
       await reload();
     } catch (err) {
       MM.toast.error(err.message);
@@ -262,6 +349,9 @@
     MM.el('#cardList').addEventListener('click', async (event) => {
       const crown = event.target.closest('[data-act="setcmd"]');
       if (crown) return setCommander(crown.dataset.card, crown);
+
+      const uncrown = event.target.closest('[data-act="uncmd"]');
+      if (uncrown) return dropCommander(uncrown.dataset.card, uncrown);
 
       const button = event.target.closest('[data-act="drop"]');
       if (!button) return;

@@ -313,8 +313,10 @@
     try {
       const detail = await MM.api.get(
         `/api/v2/decks/${encodeURIComponent(currentDeck.deck_id)}`);
+      // Le corps du deck, commandants exclus : ils sont envoyes a part, et un
+      // deck peut en avoir deux.
       const decklist = detail.cards
-        .filter((card) => card.card_name !== currentDeck.commander)
+        .filter((card) => !MM.isCommander(currentDeck.commander, card.card_name))
         .flatMap((card) => Array(card.quantity).fill(card.card_name));
 
       const result = await MM.api.post('/api/deck/analyze', {

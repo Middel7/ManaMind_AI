@@ -11,6 +11,7 @@ from typing import Optional
 
 from sqlalchemy import text
 
+from manamind.commanders import split_commanders
 from manamind.db.engine import SessionLocal
 
 
@@ -258,13 +259,13 @@ def get_deck_txt_content(user_id: int, commander: str,
     if not cards:
         return None
     # Exclure le(s) commandant(s) du corps du deck
-    cmd_parts = {part.strip().lower() for part in commander.split("+")}
+    cmd_parts = {part.lower() for part in split_commanders(commander)}
     body_lines = [
         f"{qty} {name}"
         for name, qty in sorted(cards, key=lambda x: x[0])
         if name.strip().lower() not in cmd_parts
     ]
-    cmd_lines = [f"1 {part.strip()}" for part in commander.split("+")]
+    cmd_lines = [f"1 {part}" for part in split_commanders(commander)]
     # Ligne vide entre le corps et le commandant = section détectée par le parser
     return "\n".join(body_lines) + "\n\n" + "\n".join(cmd_lines)
 

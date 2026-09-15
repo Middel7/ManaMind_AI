@@ -5,6 +5,8 @@ import time
 import unicodedata
 from pathlib import Path
 
+from .commanders import join_commanders, split_commanders
+
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG_FILE  = ROOT / "data" / "moxfield_decks.json"
 CACHE_DIR    = ROOT / "data" / "moxfield_cache"
@@ -84,9 +86,9 @@ def _local_txt_path(commander_name: str) -> Path:
 
 def _write_local_txt(commander_name: str, cards: list[tuple[str, int]]) -> None:
     """Écrit la decklist au format Moxfield dans le .txt local.
-    Pour les decks Partner ("Cmd1 + Cmd2"), écrit une ligne par commandant."""
+    Pour les decks Partner ("Cmd1 & Cmd2"), écrit une ligne par commandant."""
     lines = [f"{qty} {name}" for name, qty in sorted(cards, key=lambda x: x[0])]
-    cmd_lines = "\n".join(f"1 {n.strip()}" for n in commander_name.split("+"))
+    cmd_lines = "\n".join(f"1 {n}" for n in split_commanders(commander_name))
     lines.append(f"\n{cmd_lines}")
     _local_txt_path(commander_name).write_text("\n".join(lines), encoding="utf-8")
 
@@ -96,8 +98,8 @@ def _read_local_txt(commander_name: str) -> list[tuple[str, int]]:
     path = _local_txt_path(commander_name)
     if not path.exists():
         return []
-    # Exclure chaque partie du nom (gère "Cmd1 + Cmd2")
-    cmd_norms = {_normalize(n.strip()) for n in commander_name.split("+")}
+    # Exclure chaque partie du nom (gère "Cmd1 & Cmd2")
+    cmd_norms = {_normalize(n) for n in split_commanders(commander_name)}
     result = []
     for line in path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
@@ -214,19 +216,19 @@ def _load_cache(deck_id: str) -> dict | None:
 
 def _extract_commander(data: dict) -> str:
     """Extrait le(s) nom(s) du/des commandant(s) depuis la réponse JSON Moxfield.
-    Pour les decks Partner, retourne "Cmd1 + Cmd2" (trié alphabétiquement)."""
+    Pour les decks Partner, retourne "Cmd1 & Cmd2" (trié alphabétiquement)."""
     commanders = (
         data.get("boards", {})
             .get("commanders", {})
             .get("cards", {})
     )
-    names = sorted(
+    names = [
         card_data.get("card", {}).get("name", "")
         for card_data in commanders.values()
         if card_data.get("card", {}).get("name", "")
-    )
+    ]
     if names:
-        return " + ".join(names)
+        return join_commanders(names)
     return data.get("name", "Commandant inconnu")
 
 

@@ -14,6 +14,7 @@ from fastapi.responses import Response
 from sqlalchemy import text
 
 from manamind.auth import COOKIE_NAME, get_current_user
+from manamind.commanders import MAX_COMMANDERS, join_commanders, split_commanders
 from manamind.db.engine import SessionLocal
 
 from ._shared import _json_response
@@ -272,11 +273,16 @@ def api_deck_detail(deck_id: str, request: Request) -> Response:
 
 @router.post("/api/v2/decks/{deck_id}/commander")
 async def api_set_commander(deck_id: str, request: Request) -> Response:
-    """Designe une carte du deck comme son commandant.
+    """Compose les commandants du deck a partir d'une de ses cartes.
 
-    Utile quand l'import n'a pas su l'identifier : le deck est alors enregistre
-    sous « Unknown ». Les cartes etant rattachees au deck par le nom de son
-    commandant, les deux tables doivent changer ensemble, d'ou la transaction.
+    Trois gestes, selon `mode` : « replace » installe la carte comme unique
+    commandant (le cas d'un import qui n'a pas su l'identifier, enregistre sous
+    « Unknown »), « add » lui adjoint un second — Partner, Background, Doctor's
+    companion — et « remove » en retire un.
+
+    Les cartes portent le nom du commandant pour les analyses qui raisonnent
+    par commandant : les deux tables doivent changer ensemble, d'ou la
+    transaction.
     """
     user = _user(request)
     try:
@@ -288,6 +294,10 @@ async def api_set_commander(deck_id: str, request: Request) -> Response:
     if not card_name:
         return _json_response({"error": "Nom de carte manquant"}, status_code=400)
 
+    mode = (body.get("mode") or "replace").strip().lower()
+    if mode not in {"replace", "add", "remove"}:
+        return _json_response({"error": "Mode inconnu"}, status_code=400)
+
     with SessionLocal() as session:
         current = session.execute(text("""
             SELECT commander FROM user_moxfield_decks
@@ -296,14 +306,34 @@ async def api_set_commander(deck_id: str, request: Request) -> Response:
         if current is None:
             return _json_response({"error": "Deck introuvable"}, status_code=404)
 
-        in_deck = session.execute(text("""
-            SELECT 1 FROM user_deck_cards
-            WHERE user_id = :uid AND deck_id = :did
-              AND mm_normalize_name(card_name) = mm_normalize_name(:card)
-        """), {"uid": user["id"], "did": deck_id, "card": card_name}).scalar()
-        if not in_deck:
-            return _json_response(
-                {"error": "Cette carte ne fait pas partie du deck"}, status_code=400)
+        existing = split_commanders(current)
+
+        if mode == "remove":
+            remaining = [n for n in existing if n.lower() != card_name.lower()]
+            if len(remaining) == len(existing):
+                return _json_response(
+                    {"error": "Cette carte n'est pas un commandant de ce deck"},
+                    status_code=400)
+            if not remaining:
+                return _json_response(
+                    {"error": "Un deck garde au moins un commandant"}, status_code=400)
+            commander = join_commanders(remaining)
+        else:
+            in_deck = session.execute(text("""
+                SELECT 1 FROM user_deck_cards
+                WHERE user_id = :uid AND deck_id = :did
+                  AND mm_normalize_name(card_name) = mm_normalize_name(:card)
+            """), {"uid": user["id"], "did": deck_id, "card": card_name}).scalar()
+            if not in_deck:
+                return _json_response(
+                    {"error": "Cette carte ne fait pas partie du deck"}, status_code=400)
+
+            wanted = [card_name] if mode == "replace" else [*existing, card_name]
+            commander = join_commanders(wanted)
+            if len(split_commanders(commander)) > MAX_COMMANDERS:
+                return _json_response(
+                    {"error": f"Un deck ne peut pas avoir plus de {MAX_COMMANDERS} "
+                              "commandants"}, status_code=400)
 
         # Les SELECT ci-dessus ont deja ouvert la transaction : les deux UPDATE
         # y prennent place et sont valides ensemble par le commit final.
@@ -312,14 +342,18 @@ async def api_set_commander(deck_id: str, request: Request) -> Response:
         session.execute(text("""
             UPDATE user_deck_cards SET commander = :new
             WHERE user_id = :uid AND deck_id = :did
-        """), {"uid": user["id"], "did": deck_id, "new": card_name})
+        """), {"uid": user["id"], "did": deck_id, "new": commander})
         session.execute(text("""
             UPDATE user_moxfield_decks SET commander = :new, locally_modified = TRUE
             WHERE user_id = :uid AND deck_id = :did
-        """), {"uid": user["id"], "did": deck_id, "new": card_name})
+        """), {"uid": user["id"], "did": deck_id, "new": commander})
         session.commit()
 
-    return _json_response({"ok": True, "commander": card_name})
+    return _json_response({
+        "ok": True,
+        "commander": commander,
+        "commanders": split_commanders(commander),
+    })
 
 
 @router.get("/api/v2/hidden-moves")

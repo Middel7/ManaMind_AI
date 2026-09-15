@@ -11,6 +11,7 @@ from fastapi import APIRouter, Request, UploadFile
 from fastapi.responses import JSONResponse
 
 from ..auth import COOKIE_NAME, get_current_user
+from ..commanders import MAX_COMMANDERS, join_commanders
 from ..deck_import.detector import detect
 from ..deck_import.models import CanonicalDeckImport, ResolutionStatus, Zone
 from ..deck_import.parsers.registry import parse as parse_deck
@@ -220,10 +221,21 @@ async def api_import_confirm(request: Request) -> JSONResponse:
         for e in unresolved[:20]
     ]
 
-    commander = next(
-        (e.canonical_name or e.raw_name for e in filtered if e.zone == Zone.COMMANDER),
-        None,
-    )
+    # Un deck Commander peut en avoir deux (Partner, Background, Doctor's
+    # companion) : n'en retenir qu'un ferait analyser le deck sous un
+    # commandant qui n'existe dans aucune statistique.
+    found = [
+        e.canonical_name or e.raw_name
+        for e in filtered
+        if e.zone == Zone.COMMANDER and (e.canonical_name or e.raw_name)
+    ]
+    if len(found) > MAX_COMMANDERS:
+        errors.append(
+            f"{len(found)} commandants dans la liste : seuls les "
+            f"{MAX_COMMANDERS} premiers sont retenus."
+        )
+        found = found[:MAX_COMMANDERS]
+    commander = join_commanders(found) or None
     name = deck_name or deck.deck_name or commander or "Deck importé"
 
     for destination in destinations:
@@ -284,7 +296,6 @@ def _save_to_collection(user_id: int, entries) -> tuple[int, int, list[str]]:
 
 def _save_to_deck(user_id: int, commander: str, deck_name: str, entries) -> tuple[int, int, list[str]]:
     """Sauvegarde les entrées dans user_moxfield_decks + user_deck_cards."""
-    from ..deck_import.models import Zone
     from ..user_decks import save_deck_for_user, set_deck_cards
 
     deck_id = f"import-{uuid.uuid4().hex[:12]}"
@@ -300,11 +311,11 @@ def _save_to_deck(user_id: int, commander: str, deck_name: str, entries) -> tupl
     except Exception as exc:
         return 0, 0, [f"Could not create deck: {exc}"]
 
-    # Sérialisation des cartes dans user_deck_cards
+    # Sérialisation des cartes dans user_deck_cards. Le ou les commandants en
+    # font partie : c'est ainsi que l'écran du deck les affiche, et qu'on peut
+    # désigner le second d'une paire. Le deck compte alors bien ses 100 cartes.
     cards: list[tuple[str, int]] = []
     for entry in entries:
-        if entry.zone == Zone.COMMANDER:
-            continue  # commander déjà stocké dans user_moxfield_decks.commander
         card_name = entry.canonical_name or entry.raw_name
         if not card_name:
             continue

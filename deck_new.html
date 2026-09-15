@@ -89,7 +89,7 @@
 
   const state = {
     deck: null,          // { deck_id, commander, name, color_identity }
-    commanderCard: null, // la carte du commandant, pour le calcul de mana
+    commanderCards: [],  // la ou les cartes du commandant, pour le calcul de mana
     cards: [],           // cartes du deck : { card_name, quantity }
     suggestions: [],
     search: [],
@@ -244,11 +244,11 @@
         name: card.name,
       });
       state.deck = { ...deck, image: card.image_normal || card.image_small };
-      state.commanderCard = {
+      state.commanderCards = [{
         card_name: card.name, quantity: 1,
         mana_cost: card.mana_cost, mana_value: card.mana_value,
         type_line: card.type_line, oracle_text: card.oracle_text,
-      };
+      }];
       MM.deckContext = state.deck;
       enterBuild();
       MM.toast.ok(`Deck « ${deck.name} » créé.`);
@@ -275,18 +275,24 @@
   async function resumeDeck(deckId) {
     try {
       const data = await MM.api.get(`/api/v2/decks/${encodeURIComponent(deckId)}`);
-      const resolved = await MM.resolveCards([data.deck.commander]);
-      const cmd = resolved[data.deck.commander] || {};
+      // Un deck peut avoir deux commandants : son identite de couleur est
+      // l'union des leurs, sans quoi la moitie de ses cartes passerait pour
+      // hors identite.
+      const names = MM.commanders(data.deck.commander);
+      const resolved = await MM.resolveCards(names);
+      const cmds = names.map((name) => ({ name, ...(resolved[name] || {}) }));
+      const illustrated = cmds.find((cmd) => cmd.image_normal || cmd.image_small);
       state.deck = {
         ...data.deck,
-        color_identity: cmd.color_identity || [],
-        image: cmd.image_normal || cmd.image_small || null,
+        color_identity: [...new Set(cmds.flatMap((cmd) => cmd.color_identity || []))],
+        image: illustrated
+          ? (illustrated.image_normal || illustrated.image_small) : null,
       };
-      state.commanderCard = {
-        card_name: data.deck.commander, quantity: 1,
+      state.commanderCards = cmds.map((cmd) => ({
+        card_name: cmd.name, quantity: 1,
         mana_cost: cmd.mana_cost, mana_value: cmd.mana_value,
         type_line: cmd.type_line, oracle_text: '',
-      };
+      }));
       state.cards = data.cards || [];
       MM.deckContext = state.deck;
       enterBuild();
@@ -431,7 +437,11 @@
   function renderMana() {
     const host = MM.el('#manaBlock');
     if (!host) return;
-    const list = state.cards.concat(state.commanderCard ? [state.commanderCard] : []);
+    // Le commandant compte dans la courbe, mais une seule fois : selon la
+    // facon dont le deck a ete cree, il figure deja parmi ses cartes.
+    const present = new Set(state.cards.map((card) => card.card_name.toLowerCase()));
+    const list = state.cards.concat(
+      state.commanderCards.filter((card) => !present.has(card.card_name.toLowerCase())));
     host.innerHTML = list.length ? MM.mana.block(list, 68) : '';
   }
 
