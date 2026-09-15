@@ -373,7 +373,10 @@ def _run_scrape_stale(job_id: str, count: int, limit_per: int, headless: bool, m
 
 @router.post("/api/admin/scrape/stale")
 def start_scrape_stale(
-    count: int = Query(default=1, ge=1, le=100),
+    # Le referentiel compte pres de deux mille commandants : plafonner a cent
+    # empechait d'en traiter le fond en une passe. Un lancement long reste
+    # arretable, et l'ecran en annonce la duree avant de le lancer.
+    count: int = Query(default=1, ge=1, le=2000),
     limit_per: int = Query(default=200, ge=10, le=1000),
     headless: bool = Query(default=True),
     mode: str = Query(default="stale"),

@@ -394,7 +394,7 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
       <div class="form-row" style="margin-top:10px;">
         <div class="field">
           <label>Nb commandants</label>
-          <input type="number" id="staleCount" min="1" max="100" value="1" />
+          <input type="number" id="staleCount" min="1" max="2000" value="1" />
         </div>
         <div class="field">
           <label>Décks / cmd.</label>
@@ -563,6 +563,26 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
     if (rmLoading) el.classList.remove('loading');
   }
 
+  /**
+   * Ce que le serveur reproche a une requete, plutot que son code.
+   * « HTTP 422 » ne disait pas quel champ etait en cause : FastAPI detaille
+   * ses refus de validation, et le detail vaut mieux que le numero.
+   */
+  async function errorText(response) {
+    try {
+      const body = await response.json();
+      const detail = body.detail ?? body.error;
+      if (typeof detail === 'string' && detail) return detail;
+      if (Array.isArray(detail) && detail.length) {
+        return detail.map((item) => {
+          const field = (item.loc || []).slice(-1)[0];
+          return `${field ? `${field} : ` : ''}${item.msg || ''}`;
+        }).join(' · ');
+      }
+    } catch { /* corps vide ou illisible : le code fera l'affaire */ }
+    return `HTTP ${response.status}`;
+  }
+
   // ── Stats ─────────────────────────────────────────────────────────────
   async function loadStats() {
     try {
@@ -696,7 +716,7 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
       '<tr class="empty-msg"><td colspan="8">Chargement…</td></tr>';
     try {
       const r = await fetch('/api/admin/commanders');
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      if (!r.ok) throw new Error(await errorText(r));
       _cmds = (await r.json()).commanders || [];
       renderTable();
     } catch (e) {
@@ -729,7 +749,7 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
     btn.disabled = true; btn.textContent = 'Synchronisation…';
     try {
       const r = await fetch('/api/admin/commanders/sync', { method: 'POST' });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      if (!r.ok) throw new Error(await errorText(r));
       const d = await r.json();
       btn.textContent = `+${d.added.toLocaleString('fr-FR')} ajouté${d.added !== 1 ? 's' : ''}`;
       await Promise.all([loadStats(), loadCommanders()]);
@@ -965,7 +985,7 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
     btn.disabled = true;
     try {
       const r = await fetch(`/api/admin/scrape/recent?limit=${limit}&headless=${headless}`, { method: 'POST' });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      if (!r.ok) throw new Error(await errorText(r));
       pollJob((await r.json()).job_id, 'recent', reportRecent);
     } catch (e) {
       btn.disabled = false;
@@ -1009,7 +1029,7 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
     btn.disabled = true;
     try {
       const r = await fetch(`/api/admin/scrape/stale?count=${count}&limit_per=${limitPer}&headless=${headless}&mode=${mode}`, { method: 'POST' });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      if (!r.ok) throw new Error(await errorText(r));
       pollJob((await r.json()).job_id, 'stale', reportStale);
     } catch (e) {
       btn.disabled = false;
@@ -1027,7 +1047,7 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
     btn.textContent = 'Calcul en cours…';
     try {
       const r = await fetch('/api/admin/stats/refresh', { method: 'POST' });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      if (!r.ok) throw new Error(await errorText(r));
       await loadStats();
       btn.textContent = 'Mis à jour !';
     } catch (e) {
@@ -1070,7 +1090,7 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ steps }),
       });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      if (!r.ok) throw new Error(await errorText(r));
       pollJob((await r.json()).job_id, 'ml', reportMl);
     } catch (e) {
       btn.disabled = false;
