@@ -42,15 +42,22 @@ async def upload_deck(
     stem = Path(filename).stem
 
     output_path = OUTPUTS_DIR / f"recommendations_{stem}.csv"
-    script = "src/manamind/recommandation_populaire.py"
     output_key = f"/outputs/recommendations_{stem}.csv"
 
     import os as _os
     import asyncio as _asyncio
     _env = _os.environ.copy()
     _env["PYTHONIOENCODING"] = "utf-8"
+    # Le module tourne comme membre de son package, et non comme script isole :
+    # sans cela ses imports internes n'ont pas de paquet parent. Le projet
+    # n'etant pas installe, « src » doit etre sur le chemin d'import.
+    _src = str(ROOT / "src")
+    _env["PYTHONPATH"] = (
+        f"{_src}{_os.pathsep}{_env['PYTHONPATH']}" if _env.get("PYTHONPATH") else _src
+    )
     proc = await _asyncio.create_subprocess_exec(
-        sys.executable, script, "--input", str(deck_path), "--output", str(output_path),
+        sys.executable, "-m", "manamind.recommandation_populaire",
+        "--input", str(deck_path), "--output", str(output_path),
         stdout=_asyncio.subprocess.PIPE,
         stderr=_asyncio.subprocess.PIPE,
         cwd=str(ROOT),
