@@ -1288,12 +1288,18 @@
     const current = decks.find((deck) => deck.deck_id === requested)
       || (autoSelect ? decks[0] : null);
 
+    // Le menu se lit de A a Z : c'est par son nom qu'on y cherche un deck.
+    // L'ordre de l'API, du plus recemment modifie au plus ancien, reste celui
+    // du choix par defaut ci-dessus.
+    const ordered = decks.slice()
+      .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'fr'));
+
     host.innerHTML = `
       <div class="field" style="max-width:420px">
         <label class="label" for="mmDeckPick">${esc(label)}</label>
         <select class="select" id="mmDeckPick">
           ${current ? '' : '<option value="" selected>Choisissez un deck…</option>'}
-          ${decks.map((deck) => `
+          ${ordered.map((deck) => `
             <option value="${esc(deck.deck_id)}" ${deck === current ? 'selected' : ''}>
               ${esc(deck.name)}
             </option>`).join('')}
