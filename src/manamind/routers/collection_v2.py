@@ -128,6 +128,34 @@ async def api_set_printing(item_id: int, request: Request) -> Response:
     return _json_response({"ok": True, **result})
 
 
+@router.post("/api/v2/cards/{card_name}/printing")
+async def api_set_preferred_printing(card_name: str, request: Request) -> Response:
+    """Retient l'edition a montrer pour une carte, possedee ou non.
+
+    L'edition d'un exemplaire (route ci-dessus) dit ce que l'on a dans ses
+    boites ; celle-ci dit ce que l'on veut voir. Les deux se posent du meme
+    geste dans la fiche d'une carte que l'on possede.
+    """
+    user = _user(request)
+    body = await request.json()
+    scryfall_id = (body.get("scryfall_id") or "").strip()
+    if not scryfall_id:
+        return _json_response({"error": "scryfall_id requis"}, status_code=400)
+
+    result = store.set_preferred_printing(user["id"], card_name, scryfall_id)
+    if result is None:
+        return _json_response({"error": "Édition introuvable"}, status_code=404)
+    return _json_response({"ok": True, **result})
+
+
+@router.delete("/api/v2/cards/{card_name}/printing")
+def api_clear_preferred_printing(card_name: str, request: Request) -> Response:
+    """Rend le choix de l'edition a l'heuristique par defaut."""
+    user = _user(request)
+    store.clear_preferred_printing(user["id"], card_name)
+    return _json_response({"ok": True})
+
+
 @router.delete("/api/v2/collection/items/{item_id}")
 def api_delete(item_id: int, request: Request) -> Response:
     user = _user(request)
@@ -518,6 +546,12 @@ def api_card_detail(card_name: str, request: Request) -> Response:
                 = split_part(mm_normalize_name(:name), ' // ', 1)
         """), {"uid": user["id"], "name": card.name}).scalar()
 
+        preferred = session.execute(text("""
+            SELECT scryfall_id FROM user_preferred_printings
+            WHERE user_id = :uid
+              AND card_key = split_part(mm_normalize_name(:name), ' // ', 1)
+        """), {"uid": user["id"], "name": card.name}).scalar()
+
         decks = session.execute(text("""
             SELECT DISTINCT d.deck_id, COALESCE(d.name, d.commander) AS name
             FROM user_deck_cards dc
@@ -551,6 +585,9 @@ def api_card_detail(card_name: str, request: Request) -> Response:
             "popularity_rank": card.edhrec_rank,
         },
         "owned": int(owned or 0),
+        # L'edition que l'utilisateur veut voir pour cette carte, s'il en a
+        # choisi une : elle prime sur l'illustration par defaut.
+        "preferred_printing": preferred,
         "items": [
             {"id": r.id, "quantity": int(r.quantity or 0),
              "set_code": r.set_code, "scryfall_id": r.scryfall_id}

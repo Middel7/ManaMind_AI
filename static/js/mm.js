@@ -920,7 +920,6 @@
     const cheapest = priced.length
       ? priced.reduce((best, p) => (p.low_price < best.low_price ? p : best))
       : null;
-    const shown = cheapest || printings[0] || {};
 
     // Ligne de collection a laquelle rattacher l'edition choisie : celle d'ou
     // la fiche a ete ouverte, sinon la seule que l'on possede.
@@ -928,6 +927,12 @@
     const target = items.find((line) => line.id === options.itemId)
       || (items.length === 1 ? items[0] : null);
     const current = target && target.scryfall_id;
+
+    // L'edition retenue pour cette carte, possedee ou non : c'est elle que
+    // montrent les autres ecrans, donc elle qui ouvre la fiche.
+    const preferred = data.preferred_printing || null;
+    const chosen = printings.find((p) => p.scryfall_id === (current || preferred));
+    const shown = chosen || cheapest || printings[0] || {};
 
     const stats = [];
     if (card.power != null) stats.push(`${esc(card.power)}/${esc(card.toughness)}`);
@@ -993,10 +998,11 @@
         <div class="card-grid card-grid--lg editions">
           ${printings.map((p) => `
             <article class="mtg-card ${p === cheapest ? 'is-cheapest' : ''}
-                            ${p.scryfall_id === current ? 'is-mine' : ''}"
-                     ${target ? `data-pick="${esc(p.scryfall_id)}"
-                     title="Enregistrer cette édition comme celle que vous possédez"`
-                     : ''}>
+                            ${p.scryfall_id === (current || preferred) ? 'is-mine' : ''}"
+                     data-pick="${esc(p.scryfall_id)}"
+                     title="${target
+                       ? 'Enregistrer cette édition comme celle que vous possédez'
+                       : 'Montrer cette carte dans cette édition partout'}">
               <div class="mtg-card__frame">
                 ${MM.img.frame({
                   card_name: card.name,
@@ -1021,40 +1027,58 @@
                     ? `<span class="dim">foil ${MM.fmt.eur(p.foil_low)}</span>` : ''}
                   ${p.scryfall_id === current
                     ? '<span class="badge badge--ok">votre édition</span>'
-                    : (p === cheapest
-                      ? '<span class="badge badge--info" title="Prix de référence du projet">moins chère</span>'
-                      : '')}
+                    : (p.scryfall_id === preferred
+                      ? '<span class="badge badge--ok">édition retenue</span>'
+                      : (p === cheapest
+                        ? '<span class="badge badge--info" title="Prix de référence du projet">moins chère</span>'
+                        : ''))}
                 </span>
               </div>
             </article>`).join('')}
         </div>
       </div>`;
 
-    // Choisir une edition l'enregistre comme celle que l'on possede : c'est
-    // elle qui paraitra ensuite dans la collection.
-    if (target) {
-      dialog.body.addEventListener('click', async (event) => {
-        const chosen = event.target.closest('[data-pick]');
-        if (!chosen) return;
-        try {
+    // Choisir une edition la retient pour cette carte : c'est elle que les
+    // ecrans montreront desormais, qu'on la possede ou non. Quand la fiche
+    // vise une ligne de collection, le meme geste dit aussi quelle edition on
+    // a dans ses boites.
+    dialog.body.addEventListener('click', async (event) => {
+      const picked = event.target.closest('[data-pick]');
+      if (!picked) return;
+      const printing = picked.dataset.pick;
+      try {
+        await MM.api.post(
+          `/api/v2/cards/${encodeURIComponent(card.name)}/printing`,
+          { scryfall_id: printing });
+        if (target) {
           await MM.api.post(`/api/v2/collection/items/${target.id}/printing`,
-            { scryfall_id: chosen.dataset.pick });
-          els('.mtg-card.is-mine', dialog.body).forEach((node) => {
-            node.classList.remove('is-mine');
-            const flag = el('.badge--ok', node);
-            if (flag) flag.remove();
-          });
-          chosen.classList.add('is-mine');
-          MM.toast.ok('Édition enregistrée.');
-          document.dispatchEvent(new CustomEvent('mm:card-change', {
-            detail: { card_name: card.name, scope: 'printing', delta: 0,
-                      id: target.id },
-          }));
-        } catch (error) {
-          MM.toast.error(error.message);
+            { scryfall_id: printing });
         }
-      });
-    }
+        els('.mtg-card.is-mine', dialog.body).forEach((node) => {
+          node.classList.remove('is-mine');
+          const flag = el('.badge--ok', node);
+          if (flag) flag.remove();
+        });
+        picked.classList.add('is-mine');
+        // Le repere se pose sur la derniere ligne d'informations, celle qui
+        // porte deja la date et la mention « moins chere ».
+        const lines = els('.mtg-card__meta', picked);
+        const foot = lines[lines.length - 1];
+        if (foot) {
+          const stale = el('.badge--info', foot);
+          if (stale) stale.remove();
+          foot.insertAdjacentHTML('beforeend',
+            `<span class="badge badge--ok">${target ? 'votre édition' : 'édition retenue'}</span>`);
+        }
+        MM.toast.ok('Édition enregistrée.');
+        document.dispatchEvent(new CustomEvent('mm:card-change', {
+          detail: { card_name: card.name, scope: 'printing', delta: 0,
+                    id: target ? target.id : null },
+        }));
+      } catch (error) {
+        MM.toast.error(error.message);
+      }
+    });
 
   };
 

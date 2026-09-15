@@ -691,6 +691,61 @@ def set_item_printing(user_id: int, item_id: int, scryfall_id: str) -> dict | No
     return {"id": row.id, "card_name": row.card_name, "set_code": row.set_code}
 
 
+# Cle d'une carte dans les preferences d'edition : son nom normalise, replie
+# sur la face avant comme partout ailleurs — les listes ne citent souvent
+# qu'elle d'une carte recto-verso.
+_CARD_KEY_SQL = "split_part(mm_normalize_name(:name), ' // ', 1)"
+
+
+def set_preferred_printing(user_id: int, card_name: str, scryfall_id: str) -> dict | None:
+    """Retient l'edition qu'un utilisateur veut voir pour une carte.
+
+    Independante de la possession : une carte que l'on n'a pas encore garde
+    ainsi l'edition choisie, et les ecrans cessent d'en decider a sa place par
+    heuristique. Renvoie None si l'edition ou la carte est inconnue.
+    """
+    with SessionLocal() as session:
+        printing = session.execute(text("""
+            SELECT p.scryfall_id, UPPER(p.set_code) AS set_code, c.name
+            FROM scryfall_card_printings p
+            JOIN scryfall_cards c ON c.id = p.card_id
+            WHERE p.scryfall_id = :sid
+        """), {"sid": scryfall_id}).fetchone()
+        if printing is None:
+            return None
+
+        session.execute(text(f"""
+            INSERT INTO user_preferred_printings (user_id, card_key, scryfall_id)
+            VALUES (:uid, {_CARD_KEY_SQL}, :sid)
+            ON CONFLICT (user_id, card_key) DO UPDATE
+              SET scryfall_id = EXCLUDED.scryfall_id, updated_at = NOW()
+        """), {"uid": user_id, "name": card_name, "sid": scryfall_id})
+        session.commit()
+
+    return {"card_name": printing.name, "scryfall_id": printing.scryfall_id,
+            "set_code": printing.set_code}
+
+
+def get_preferred_printing(user_id: int, card_name: str) -> str | None:
+    """L'edition retenue pour cette carte, si l'utilisateur en a choisi une."""
+    with SessionLocal() as session:
+        return session.execute(text(f"""
+            SELECT scryfall_id FROM user_preferred_printings
+            WHERE user_id = :uid AND card_key = {_CARD_KEY_SQL}
+        """), {"uid": user_id, "name": card_name}).scalar()
+
+
+def clear_preferred_printing(user_id: int, card_name: str) -> bool:
+    """Rend le choix de l'edition a l'heuristique par defaut."""
+    with SessionLocal() as session:
+        result = session.execute(text(f"""
+            DELETE FROM user_preferred_printings
+            WHERE user_id = :uid AND card_key = {_CARD_KEY_SQL}
+        """), {"uid": user_id, "name": card_name})
+        session.commit()
+        return result.rowcount > 0
+
+
 def update_item(user_id: int, item_id: int, **fields: Any) -> dict | None:
     """Met a jour un exemplaire. quantity <= 0 le supprime."""
     allowed = {"quantity", "condition", "location", "note", "finish", "language"}
