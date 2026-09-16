@@ -277,7 +277,14 @@ _STALE_QUERIES: dict[str, str] = {
 }
 
 
-def _run_scrape_stale(job_id: str, count: int, limit_per: int, headless: bool, mode: str = "stale") -> None:
+def _run_scrape_stale(job_id: str, count: int, limit_per: int, headless: bool,
+                      mode: str = "stale", targets: list[str] | None = None) -> None:
+    """Scrape une serie de commandants.
+
+    Sans `targets`, ils sont choisis par la requete du mode demande. Avec, ce
+    sont exactement ceux-la : un commandant nomme depuis l'ecran d'administration
+    passe par le meme chemin que les selections automatiques.
+    """
     try:
         flag = _STOP_FLAGS.get(job_id, threading.Event())
         from manamind.moxfield_scraper import scrape
@@ -287,11 +294,12 @@ def _run_scrape_stale(job_id: str, count: int, limit_per: int, headless: bool, m
         log_fn = _make_log_fn(job_id)
         t0 = time.monotonic()
 
-        query = _STALE_QUERIES.get(mode, _STALE_QUERIES["stale"])
-        with engine.connect() as conn:
-            rows = conn.execute(text(query), {"n": count}).fetchall()
+        if targets is None:
+            query = _STALE_QUERIES.get(mode, _STALE_QUERIES["stale"])
+            with engine.connect() as conn:
+                rows = conn.execute(text(query), {"n": count}).fetchall()
+            targets = [r[0] for r in rows]
 
-        targets = [r[0] for r in rows]
         if not targets:
             _JOBS[job_id].update(status="done", stats={
                 "commanders_processed": 0, "seen": 0, "fetched": 0,
@@ -390,6 +398,35 @@ def start_scrape_stale(
     t = threading.Thread(target=_run_scrape_stale, args=(job_id, count, limit_per, headless, mode), daemon=True)
     t.start()
     return _json_response({"job_id": job_id})
+
+
+@router.post("/api/admin/scrape/commander")
+def start_scrape_commander(
+    name: str = Query(min_length=1, max_length=200),
+    limit_per: int = Query(default=200, ge=10, le=1000),
+    headless: bool = Query(default=True),
+    _user: dict = Depends(require_admin),
+):
+    """Scrape un commandant designe par son nom.
+
+    Un nom absent de la table `commanders` est accepte : c'est ainsi qu'on
+    rattrape un commandant qui vient de paraitre, et le scrape l'y inscrit.
+    Les paires de partenaires s'ecrivent « A & B », leur forme canonique.
+    """
+    commander = name.strip()
+    if not commander:
+        return _json_response({"error": "Nom de commandant requis"}, status_code=400)
+
+    job_id = str(uuid.uuid4())
+    _JOBS[job_id] = _new_job()
+    _STOP_FLAGS[job_id] = threading.Event()
+    t = threading.Thread(
+        target=_run_scrape_stale,
+        args=(job_id, 1, limit_per, headless, "stale", [commander]),
+        daemon=True,
+    )
+    t.start()
+    return _json_response({"job_id": job_id, "commander": commander})
 
 
 # ── Statut d'un job ──────────────────────────────────────────────────────────

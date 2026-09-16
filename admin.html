@@ -388,11 +388,18 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
           <select id="staleMode">
             <option value="stale">Pas récemment scrapés</option>
             <option value="min_decks">Moins de decks en base</option>
+            <option value="named">Un commandant précis</option>
           </select>
+        </div>
+        <div class="field" id="staleNameField" style="display:none;flex:1;">
+          <label>Commandant</label>
+          <input type="text" id="staleName" list="staleNameList" autocomplete="off"
+                 placeholder="Nom exact, ou « A &amp; B » pour des partenaires" />
+          <datalist id="staleNameList"></datalist>
         </div>
       </div>
       <div class="form-row" style="margin-top:10px;">
-        <div class="field">
+        <div class="field" id="staleCountField">
           <label>Nb commandants</label>
           <input type="number" id="staleCount" min="1" max="2000" value="1" />
         </div>
@@ -718,6 +725,13 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
       const r = await fetch('/api/admin/commanders');
       if (!r.ok) throw new Error(await errorText(r));
       _cmds = (await r.json()).commanders || [];
+      // Les commandants connus se proposent dans le champ de saisie : un nom
+      // exact s'y trouve sans avoir a le recopier.
+      const list = document.getElementById('staleNameList');
+      if (list) {
+        list.innerHTML = _cmds
+          .map((c) => `<option value="${esc(c.name)}"></option>`).join('');
+      }
       renderTable();
     } catch (e) {
       document.getElementById('cmdTableBody').innerHTML =
@@ -795,7 +809,8 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
   function updateStaleEstimate() {
     const t = _timing.stale;
     if (!t?.avg_secs_per_commander) { const el = document.getElementById('staleEstimate'); if (el) el.style.display = 'none'; return; }
-    const count = parseInt(document.getElementById('staleCount').value, 10) || 1;
+    const count = document.getElementById('staleMode').value === 'named'
+      ? 1 : (parseInt(document.getElementById('staleCount').value, 10) || 1);
     const note  = t.limit_per_used ? ` · base : ${t.limit_per_used} décks/cmd` : '';
     _renderEstimate('staleEstimate', count * t.avg_secs_per_commander, 'stale', note);
   }
@@ -1014,21 +1029,44 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
   const _STALE_HINTS = {
     stale:     'Cible les commandants dont le dernier scrape est le plus ancien (jamais scrapés en priorité).',
     min_decks: 'Cible les commandants avec le moins de decks en base (jamais scrapés en priorité absolue, puis tri croissant).',
+    named:     'Scrape le seul commandant nommé. Un nom absent de la table est accepté : le scrape l’y inscrit.',
   };
-  document.getElementById('staleMode').addEventListener('change', e => {
+
+  /** Le mode « un commandant précis » demande un nom, pas un nombre. */
+  function updateStaleMode() {
+    const mode  = document.getElementById('staleMode').value;
+    const named = mode === 'named';
+    document.getElementById('staleNameField').style.display  = named ? '' : 'none';
+    document.getElementById('staleCountField').style.display = named ? 'none' : '';
     const hint = document.getElementById('staleHint');
-    if (hint) hint.textContent = _STALE_HINTS[e.target.value] || '';
-  });
+    if (hint) hint.textContent = _STALE_HINTS[mode] || '';
+    updateStaleEstimate();
+  }
+  document.getElementById('staleMode').addEventListener('change', updateStaleMode);
 
   document.getElementById('staleLaunchBtn').addEventListener('click', async () => {
     const count    = parseInt(document.getElementById('staleCount').value, 10) || 1;
     const limitPer = parseInt(document.getElementById('staleLimitPer').value, 10) || 200;
     const headless = !document.getElementById('staleShowBrowser').checked;
     const mode     = document.getElementById('staleMode').value || 'stale';
+    const name     = document.getElementById('staleName').value.trim();
+    if (mode === 'named' && !name) {
+      document.getElementById('staleName').focus();
+      document.getElementById('staleState').style.display = 'block';
+      showPanel('stale', 'Error');
+      document.getElementById('staleError').textContent =
+        'Indiquez le nom du commandant à scraper.';
+      return;
+    }
     const btn = document.getElementById('staleLaunchBtn');
     btn.disabled = true;
     try {
-      const r = await fetch(`/api/admin/scrape/stale?count=${count}&limit_per=${limitPer}&headless=${headless}&mode=${mode}`, { method: 'POST' });
+      const r = mode === 'named'
+        ? await fetch('/api/admin/scrape/commander'
+            + `?name=${encodeURIComponent(name)}&limit_per=${limitPer}&headless=${headless}`,
+            { method: 'POST' })
+        : await fetch(`/api/admin/scrape/stale?count=${count}&limit_per=${limitPer}`
+            + `&headless=${headless}&mode=${mode}`, { method: 'POST' });
       if (!r.ok) throw new Error(await errorText(r));
       pollJob((await r.json()).job_id, 'stale', reportStale);
     } catch (e) {
@@ -1106,6 +1144,7 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
 
   // ── Init ──────────────────────────────────────────────────────────────
   document.querySelector('th[data-col="last_scraped_at"]').classList.add('sort-active');
+  updateStaleMode();
   await Promise.all([loadStats(), loadCommanders(), loadTiming()]);
 
 })();
