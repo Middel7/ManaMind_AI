@@ -199,12 +199,15 @@ def main() -> None:
 
         log.info("%d commandant(s) à projeter.", len(commanders))
 
-        # Recalcul complet : on repart d'une table vide. Sans ça, un commandant
+        # Le recalcul complet repart d'une table vide : sans cela, un commandant
         # disparu de deck_cards (decks supprimés, nom normalisé autrement) n'est
         # plus dans la liste ci-dessus, donc jamais réécrit — ses stats obsolètes
-        # survivraient indéfiniment.
-        session.execute(text("TRUNCATE TABLE deck_stat_commander"))
-        session.commit()
+        # survivraient indéfiniment. Projeter un seul commandant ne vide rien :
+        # project_commander() purge déjà les siennes, et les 1 700 autres n'ont
+        # pas à disparaître pour lui.
+        if not args.commander:
+            session.execute(text("TRUNCATE TABLE deck_stat_commander"))
+            session.commit()
 
         t0 = time.time()
         total_decks = 0

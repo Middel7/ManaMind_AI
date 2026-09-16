@@ -277,6 +277,35 @@ _STALE_QUERIES: dict[str, str] = {
 }
 
 
+_SCRIPTS_DIR = pathlib.Path(__file__).resolve().parents[3] / "scripts"
+
+
+def _project_commander_stats(commander: str, log_fn) -> None:
+    """Projette deck_cards vers deck_stat_commander pour ce commandant.
+
+    Le scrape ne remplit que la couche brute : sans cette projection, les
+    decks sont bien en base mais l'analyse par popularite n'a aucune
+    statistique a lire et ne propose rien. La ligne de commande du scraper le
+    faisait deja apres chaque commandant ; l'ecran d'administration l'oubliait.
+    """
+    import subprocess
+    import sys as _sys
+
+    try:
+        result = subprocess.run(
+            [_sys.executable, str(_SCRIPTS_DIR / "mox_to_stats.py"),
+             "--commander", commander],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=600,
+        )
+        if result.returncode != 0:
+            log_fn(f"  statistiques non calculees (code {result.returncode})")
+        else:
+            log_fn("  statistiques a jour")
+    except Exception as exc:
+        log_fn(f"  statistiques non calculees : {exc}")
+
+
 def _run_scrape_stale(job_id: str, count: int, limit_per: int, headless: bool,
                       mode: str = "stale", targets: list[str] | None = None) -> None:
     """Scrape une serie de commandants.
@@ -355,6 +384,9 @@ def _run_scrape_stale(job_id: str, count: int, limit_per: int, headless: bool,
             total["updated"]    += s.updated
             mark_commander_scraped(engine, name, s.saved)
             log_fn(f"  ✓ {s.saved} decks enregistrés pour {name}")
+            # Les decks ne servent a rien tant qu'ils ne sont pas projetes en
+            # statistiques : c'est la que l'analyse par popularite lit.
+            _project_commander_stats(name, log_fn)
             commanders_done += 1
 
         elapsed = time.monotonic() - t0
