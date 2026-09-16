@@ -117,7 +117,14 @@ LEFT JOIN LATERAL (
     WHERE p.card_id = dc.card_id
       AND p.image_normal IS NOT NULL
       AND p.lang = 'en'
-    ORDER BY (p.set_code NOT ILIKE 'sl%') DESC, p.released_at DESC NULLS LAST, p.id
+    ORDER BY (
+        p.scryfall_id = (
+            SELECT pref.scryfall_id FROM user_preferred_printings pref
+            WHERE pref.user_id = :uid
+              AND pref.card_key = split_part(dc.card_lower, ' // ', 1)
+        )
+    ) DESC NULLS LAST,
+             (p.set_code NOT ILIKE 'sl%') DESC, p.released_at DESC NULLS LAST, p.id
     LIMIT 1
 ) img ON TRUE
 """
@@ -232,7 +239,14 @@ cmd_img AS (
                   REPLACE(b.commander, ' & ', ' / '), ' / ', 1)))
           AND p.image_normal IS NOT NULL
           AND p.lang = 'en'
-        ORDER BY (p.set_code NOT ILIKE 'sl%') DESC
+        ORDER BY (
+            p.scryfall_id = (
+                SELECT pref.scryfall_id FROM user_preferred_printings pref
+                WHERE pref.user_id = :uid
+                  AND pref.card_key = split_part(sc.normalized_name, ' // ', 1)
+            )
+        ) DESC NULLS LAST,
+                 (p.set_code NOT ILIKE 'sl%') DESC
         LIMIT 1
     ) img ON TRUE
 )
@@ -334,7 +348,14 @@ LEFT JOIN LATERAL (
     WHERE p.card_id = rk_.card_id
       AND p.image_normal IS NOT NULL
       AND p.lang = 'en'
-    ORDER BY (p.set_code NOT ILIKE 'sl%') DESC, p.released_at DESC NULLS LAST, p.id
+    ORDER BY (
+        p.scryfall_id = (
+            SELECT pref.scryfall_id FROM user_preferred_printings pref
+            WHERE pref.user_id = :uid
+              AND pref.card_key = split_part(rk_.display_name, ' // ', 1)
+        )
+    ) DESC NULLS LAST,
+             (p.set_code NOT ILIKE 'sl%') DESC, p.released_at DESC NULLS LAST, p.id
     LIMIT 1
 ) img ON TRUE
 WHERE rk_.rk <= :missing_top
@@ -380,12 +401,14 @@ def analyze_deck(
     session,
     cards: list[tuple[str, int]],
     staple_threshold: float,
+    user_id: int,
 ) -> list[dict]:
     """Résout chaque carte (identité couleur, prix EUR, fréquence globale)."""
     names = [_normalized(name) for name, _ in cards]
     qtys = [qty for _, qty in cards]
 
-    rows = session.execute(text(_DECK_SQL), {"names": names, "qtys": qtys}).fetchall()
+    rows = session.execute(
+        text(_DECK_SQL), {"names": names, "qtys": qtys, "uid": user_id}).fetchall()
 
     analyzed: list[dict] = []
     for row in rows:
@@ -447,7 +470,7 @@ def suggest_swaps(
         }
 
     with SessionLocal() as sess:
-        analyzed = analyze_deck(sess, cards, staple_threshold)
+        analyzed = analyze_deck(sess, cards, staple_threshold, user_id)
 
         scored = [c for c in analyzed if not c["is_staple"]]
         staples = [c for c in analyzed if c["is_staple"]]
@@ -471,6 +494,7 @@ def suggest_swaps(
                 "sort":          sort,
                 "max_colors":    max_colors,
                 "min_inclusion": min_inclusion,
+                "uid":           user_id,
             }).fetchall()
 
             for row in rows:
@@ -509,6 +533,7 @@ def suggest_swaps(
                 "deck_names":    [c["card_lower"] for c in analyzed],
                 "missing_min_inclusion": missing_min_inclusion,
                 "missing_top":           MISSING_TOP,
+                "uid":                   user_id,
             }).fetchall()
 
             for row in missing_rows:

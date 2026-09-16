@@ -70,6 +70,19 @@ _ENRICH_SQL = """
 
     LEFT JOIN scryfall_cards sc ON sc.id = uc.card_id
 
+    -- Edition retenue par l'utilisateur pour cette carte : c'est elle qu'il
+    -- veut voir, meme lorsque l'exemplaire possede en enregistre une autre.
+    -- Seule l'illustration la suit — l'extension, la rarete et le prix
+    -- continuent de decrire l'exemplaire qui est dans la boite.
+    LEFT JOIN LATERAL (
+        SELECT p.image_small, p.image_normal
+        FROM user_preferred_printings pref
+        JOIN scryfall_card_printings p ON p.scryfall_id = pref.scryfall_id
+        WHERE pref.user_id = uc.user_id
+          AND pref.card_key = split_part(
+                COALESCE(sc.normalized_name, mm_normalize_name(uc.card_name)), ' // ', 1)
+    ) pp ON TRUE
+
     -- Prix de reference du projet : le low_price Cardmarket de l'edition la
     -- moins chere, precalcule par la vue card_min_price. Il ne depend ni de
     -- l'edition possedee ni de la finition.
@@ -259,8 +272,8 @@ def list_items(
                COALESCE(pd.collector_number, pf.collector_number,
                         uc.collector_number)                       AS collector_number,
                COALESCE(pd.rarity, pf.rarity)                     AS rarity,
-               COALESCE(pd.image_small, pf.image_small)           AS image_small,
-               COALESCE(pd.image_normal, pf.image_normal)         AS image_normal,
+               COALESCE(pp.image_small, pd.image_small, pf.image_small)   AS image_small,
+               COALESCE(pp.image_normal, pd.image_normal, pf.image_normal) AS image_normal,
                COALESCE(pd.scryfall_uri, pf.scryfall_uri)         AS scryfall_uri,
                COALESCE(pd.artist, pf.artist)                     AS artist,
                st.name                                            AS set_name,
@@ -440,7 +453,7 @@ def _compute_stats(user_id: int) -> dict:
         top = session.execute(text(f"""
             SELECT uc.card_name, uc.quantity, uc.finish,
                    UPPER(COALESCE(pd.set_code, pf.set_code, uc.set_code)) AS set_code,
-                   COALESCE(pd.image_normal, pf.image_normal)      AS image_normal,
+                   COALESCE(pp.image_normal, pd.image_normal, pf.image_normal) AS image_normal,
                    COALESCE(pd.scryfall_id, pf.scryfall_id)        AS scryfall_id,
                    {_UNIT_PRICE_SQL} AS unit_price
             FROM user_collection uc
@@ -502,8 +515,8 @@ def dormant_items(user_id: int, limit: int = 24) -> list[dict]:
                COALESCE(pd.collector_number, pf.collector_number,
                         uc.collector_number)                    AS collector_number,
                COALESCE(pd.rarity, pf.rarity)                  AS rarity,
-               COALESCE(pd.image_small, pf.image_small)        AS image_small,
-               COALESCE(pd.image_normal, pf.image_normal)      AS image_normal,
+               COALESCE(pp.image_small, pd.image_small, pf.image_small)   AS image_small,
+               COALESCE(pp.image_normal, pd.image_normal, pf.image_normal) AS image_normal,
                COALESCE(pd.scryfall_uri, pf.scryfall_uri)      AS scryfall_uri,
                COALESCE(pd.artist, pf.artist)                  AS artist,
                st.name AS set_name, st.icon_svg_uri AS set_icon,

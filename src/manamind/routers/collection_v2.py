@@ -14,7 +14,13 @@ from manamind import collection_store as store
 from manamind.auth import COOKIE_NAME, get_current_user
 from manamind.db.engine import SessionLocal
 
-from ._shared import _json_response
+from ._shared import _json_response, preferred_printing_first
+
+# L'edition retenue par l'utilisateur passe avant l'heuristique, partout ou
+# une carte s'affiche. La cle de nom vient d'une colonne deja calculee.
+_CARD_KEY = "split_part(c.normalized_name, ' // ', 1)"
+_PREFERRED_BY_NAME = preferred_printing_first("p", _CARD_KEY)
+_PREFERRED_BY_NAME_PR = preferred_printing_first("pr", _CARD_KEY)
 
 router = APIRouter()
 
@@ -239,7 +245,8 @@ def api_card_suggest(
                 LEFT JOIN scryfall_mtg_sets ms ON LOWER(ms.code) = LOWER(pr.set_code)
                 WHERE pr.card_id = c.id AND pr.lang = 'en'
                 -- Une edition standard represente mieux la carte qu'un promo
-                ORDER BY (pr.image_normal IS NOT NULL) DESC,
+                ORDER BY """ + _PREFERRED_BY_NAME_PR + """,
+                         (pr.image_normal IS NOT NULL) DESC,
                          (pr.promo IS NOT TRUE) DESC,
                          (COALESCE(ms.set_type, '') NOT IN
                           ('promo', 'memorabilia', 'token', 'minigame')) DESC,
@@ -426,7 +433,8 @@ async def api_cards_resolve(request: Request) -> Response:
                 FROM scryfall_card_printings p
                 LEFT JOIN scryfall_mtg_sets ms ON LOWER(ms.code) = LOWER(p.set_code)
                 WHERE p.card_id = c.id AND p.lang = 'en'
-                ORDER BY (p.set_code NOT ILIKE 'sl%') DESC,
+                ORDER BY """ + _PREFERRED_BY_NAME + """,
+                         (p.set_code NOT ILIKE 'sl%') DESC,
                          (p.image_normal IS NOT NULL) DESC,
                          (p.promo IS NOT TRUE) DESC,
                          (COALESCE(ms.set_type, '') NOT IN ('promo', 'memorabilia')) DESC,

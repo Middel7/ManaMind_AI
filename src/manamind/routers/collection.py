@@ -684,13 +684,27 @@ def api_collection_commanders(
                 GROUP BY cp.en_name
             ),
             card_images AS (
-                SELECT LOWER(TRIM(sc.name)) AS name_lower,
-                       MIN(p.image_normal) AS image_url
+                SELECT LOWER(TRIM(sc.name)) AS name_lower, img.image_normal AS image_url
                 FROM scryfall_cards sc
-                JOIN scryfall_card_printings p ON p.card_id = sc.id
-                WHERE p.image_normal IS NOT NULL AND p.lang = 'en'
-                  AND LOWER(TRIM(sc.name)) IN (SELECT card_name_lower FROM avail)
-                GROUP BY LOWER(TRIM(sc.name))
+                -- L'edition retenue passe devant le defaut ; MIN() prenait la
+                -- premiere URL venue.
+                JOIN LATERAL (
+                    SELECT p.image_normal
+                    FROM scryfall_card_printings p
+                    WHERE p.card_id = sc.id AND p.lang = 'en'
+                      AND p.image_normal IS NOT NULL
+                    ORDER BY (
+                        p.scryfall_id = (
+                            SELECT pref.scryfall_id FROM user_preferred_printings pref
+                            WHERE pref.user_id = :uid
+                              AND pref.card_key = split_part(sc.normalized_name, ' // ', 1)
+                        )
+                    ) DESC NULLS LAST,
+                             (p.set_code NOT ILIKE 'sl%') DESC,
+                             p.released_at DESC NULLS LAST, p.id
+                    LIMIT 1
+                ) img ON TRUE
+                WHERE LOWER(TRIM(sc.name)) IN (SELECT card_name_lower FROM avail)
             ),
             scored AS (
                 SELECT cm.commander, cm.card_name, cm.qty,
@@ -721,7 +735,7 @@ def api_collection_commanders(
         """), {"names": coll_names, "qtys": coll_qtys, "top": top}).fetchall()
 
     with SessionLocal() as s:
-        images = _commander_images(s, [r.commander for r in rows])
+        images = _commander_images(s, [r.commander for r in rows], user["id"])
 
     result = []
     for r in rows:
@@ -738,7 +752,7 @@ def api_collection_commanders(
     return _json_response({"commanders": result})
 
 
-def _commander_images(session, names: list[str]) -> dict[str, list[str]]:
+def _commander_images(session, names: list[str], user_id: int) -> dict[str, list[str]]:
     """Illustrations d'un commandant : une par carte, deux pour un duo.
 
     Les paires de partenaires sont stockees « A & B » et ne correspondent a
@@ -753,17 +767,30 @@ def _commander_images(session, names: list[str]) -> dict[str, list[str]]:
     if not wanted:
         return {}
 
+    # MIN() prenait l'illustration dont l'URL arrivait la premiere, au hasard.
+    # L'edition retenue par l'utilisateur passe devant, et le defaut ecarte les
+    # Secret Lair comme partout ailleurs.
     rows = session.execute(text("""
-        SELECT n.name AS asked, img.image_url
+        SELECT n.name AS asked, img.image_normal AS image_url
         FROM unnest(CAST(:names AS TEXT[])) AS n(name)
         LEFT JOIN LATERAL (
-            SELECT MIN(p.image_normal) AS image_url
+            SELECT p.image_normal
             FROM scryfall_cards sc
             JOIN scryfall_card_printings p ON p.card_id = sc.id
             WHERE sc.normalized_name = mm_normalize_name(n.name)
               AND p.image_normal IS NOT NULL AND p.lang = 'en'
+            ORDER BY (
+                p.scryfall_id = (
+                    SELECT pref.scryfall_id FROM user_preferred_printings pref
+                    WHERE pref.user_id = :uid
+                      AND pref.card_key = split_part(sc.normalized_name, ' // ', 1)
+                )
+            ) DESC NULLS LAST,
+                     (p.set_code NOT ILIKE 'sl%') DESC,
+                     p.released_at DESC NULLS LAST, p.id
+            LIMIT 1
         ) img ON TRUE
-    """), {"names": wanted}).fetchall()
+    """), {"names": wanted, "uid": user_id}).fetchall()
     found = {r.asked: r.image_url for r in rows if r.image_url}
 
     return {name: [found[p] for p in pieces if p in found]
@@ -870,7 +897,7 @@ def api_commander_build(
                 """), {"names": names}).fetchall()
             }
 
-        cmd_images = _commander_images(s, [commander]).get(commander, [])
+        cmd_images = _commander_images(s, [commander], user["id"]).get(commander, [])
 
     if not top:
         return _json_response({"error": "Commandant inconnu"}, status_code=404)
@@ -1102,20 +1129,32 @@ def api_commander_suggest(
         rows = session.execute(_text("""
             SELECT dsc.commander, dsc.inclusion_rate, dsc.decks_with_card, dsc.total_decks,
                    (
-                     SELECT MIN(p2.image_normal)
+                     SELECT p2.image_normal
                      FROM scryfall_cards sc2
                      JOIN scryfall_card_printings p2
                        ON p2.card_id = sc2.id AND p2.lang = 'en' AND p2.image_normal IS NOT NULL
                      WHERE LOWER(TRIM(sc2.name)) = LOWER(TRIM(
                        SPLIT_PART(dsc.commander, ' & ', 1)
                      ))
+                     -- L'edition retenue passe devant ; MIN() prenait la
+                     -- premiere URL venue.
+                     ORDER BY (
+                         p2.scryfall_id = (
+                             SELECT pref.scryfall_id FROM user_preferred_printings pref
+                             WHERE pref.user_id = :uid
+                               AND pref.card_key = split_part(sc2.normalized_name, ' // ', 1)
+                         )
+                     ) DESC NULLS LAST,
+                              (p2.set_code NOT ILIKE 'sl%') DESC,
+                              p2.released_at DESC NULLS LAST, p2.id
+                     LIMIT 1
                    ) AS image_url
             FROM deck_stat_commander dsc
             WHERE dsc.card_name = :card
             GROUP BY dsc.commander, dsc.inclusion_rate, dsc.decks_with_card, dsc.total_decks
             ORDER BY dsc.inclusion_rate DESC
             LIMIT :top
-        """), {"card": card, "top": top}).fetchall()
+        """), {"card": card, "top": top, "uid": user["id"]}).fetchall()
 
     suggestions = []
     for row in rows:
