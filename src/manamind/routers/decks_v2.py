@@ -131,7 +131,58 @@ def api_decks(request: Request) -> Response:
             "image_small": row.image_small,
             "image_normal": row.image_normal,
         })
-    return _json_response({"decks": decks})
+
+    # Le dernier deck choisi, pour que les ecrans d'analyse s'ouvrent dessus.
+    # Il est relu ici plutot que par une requete a part : le selecteur charge
+    # deja cette liste, et il lui faut les deux ensemble.
+    with SessionLocal() as session:
+        last = session.execute(text("""
+            SELECT last_deck_id FROM user_profiles WHERE user_id = :uid
+        """), {"uid": user["id"]}).scalar()
+
+    known = {d["deck_id"] for d in decks}
+    return _json_response({
+        "decks": decks,
+        # Un deck supprime depuis ne vaut plus d'etre propose.
+        "last_deck_id": last if last in known else None,
+    })
+
+
+@router.post("/api/v2/decks/last")
+async def api_set_last_deck(request: Request) -> Response:
+    """Retient le deck sur lequel l'utilisateur travaille.
+
+    Les ecrans d'analyse s'ouvrent dessus a la visite suivante, quel que soit
+    celui ou le choix a ete fait — et quel que soit l'appareil, la preference
+    vivant avec le compte.
+    """
+    user = _user(request)
+    try:
+        body = await request.json()
+    except Exception:
+        return _json_response({"error": "Corps JSON invalide"}, status_code=400)
+
+    deck_id = (body.get("deck_id") or "").strip()
+    if not deck_id:
+        return _json_response({"error": "deck_id requis"}, status_code=400)
+
+    with SessionLocal() as session:
+        owned = session.execute(text("""
+            SELECT 1 FROM user_moxfield_decks
+            WHERE user_id = :uid AND deck_id = :did
+        """), {"uid": user["id"], "did": deck_id}).scalar()
+        if not owned:
+            return _json_response({"error": "Deck introuvable"}, status_code=404)
+
+        session.execute(text("""
+            INSERT INTO user_profiles (user_id, last_deck_id)
+            VALUES (:uid, :did)
+            ON CONFLICT (user_id) DO UPDATE
+              SET last_deck_id = EXCLUDED.last_deck_id, updated_at = NOW()
+        """), {"uid": user["id"], "did": deck_id})
+        session.commit()
+
+    return _json_response({"ok": True, "last_deck_id": deck_id})
 
 
 @router.post("/api/v2/decks")

@@ -1375,9 +1375,12 @@
                                   { label = 'Deck à analyser', autoSelect = true } = {}) {
     host.innerHTML = '<div class="skeleton skeleton--text" style="width:260px;height:38px"></div>';
     let decks = [];
+    let lastDeckId = null;
     try {
       const data = await MM.api.get('/api/v2/decks');
       decks = data.decks;
+      // Le deck sur lequel on travaille, retenu d'une visite a l'autre.
+      lastDeckId = data.last_deck_id || null;
     } catch (err) {
       host.innerHTML = `<p class="small" style="color:var(--danger)">${esc(err.message)}</p>`;
       return [];
@@ -1393,8 +1396,12 @@
       return [];
     }
 
+    // Le deck vise par l'URL prime ; sinon on reprend celui de la derniere
+    // fois, sur cet ecran comme sur les autres. Sans souvenir, le premier deck
+    // de la liste, quand l'ecran en demande un d'emblee.
     const requested = new URLSearchParams(location.search).get('deck');
     const current = decks.find((deck) => deck.deck_id === requested)
+      || decks.find((deck) => deck.deck_id === lastDeckId)
       || (autoSelect ? decks[0] : null);
 
     // Le menu se lit de A a Z : c'est par son nom qu'on y cherche un deck.
@@ -1415,12 +1422,21 @@
         </select>
       </div>`;
 
+    /** Retenir le deck courant : un echec ici ne doit rien interrompre. */
+    function remember(deckId) {
+      if (deckId === lastDeckId) return;
+      lastDeckId = deckId;
+      MM.api.post('/api/v2/decks/last', { deck_id: deckId })
+        .catch(() => { /* le choix vaut pour cette page, faute de mieux */ });
+    }
+
     el('#mmDeckPick', host).addEventListener('change', (event) => {
       const deck = decks.find((entry) => entry.deck_id === event.target.value);
       if (!deck) return;
       const url = new URL(location.href);
       url.searchParams.set('deck', deck.deck_id);
       history.replaceState(null, '', url);
+      remember(deck.deck_id);
       onChange(deck);
     });
 
@@ -1434,7 +1450,10 @@
       return true;
     };
 
-    if (current) onChange(current);
+    if (current) {
+      remember(current.deck_id);
+      onChange(current);
+    }
     return decks;
   };
 
