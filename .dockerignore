@@ -1,3 +1,14 @@
+# Ce fichier décide de ce qui entre dans l'image de production.
+# Principe : on n'emporte que ce qui sert à SERVIR l'application. Tout ce qui
+# sert à la FABRIQUER — scraping, entraînement, corpus, analyses — reste sur le
+# poste de travail.
+#
+# Attention aux réinclusions (« ! ») : Docker ne sait pas repêcher un fichier
+# dont un dossier parent est exclu par un motif se terminant par « / ». C'est
+# pourquoi on exclut « data/** » et « scripts/** », et non « data/ » et
+# « scripts/ ».
+
+# ── Dépôt, secrets, caches ────────────────────────────────────────────────────
 .git
 .gitignore
 .env
@@ -15,14 +26,45 @@ dist
 build
 .mypy_cache
 .ruff_cache
-data/embeddings/
-data/moxfield_cache/
-data/My\ decks/
-data/Decklists/
+
+# ── Outillage de développement ────────────────────────────────────────────────
+tests/
+pytest.ini
+deploy/
+docs/
+.pre-commit-config.yaml
+
+# ── Données de travail, journaux, bases de test ───────────────────────────────
+logs/
 outputs/
 uploads/
+!uploads/.gitkeep
+*.db
 *.csv
 *.txt
-!uploads/.gitkeep
-docs/
-tests/__pycache__
+*.avif
+scrape_metadata.json
+ml_metadata.json
+
+# ── Scripts hors ligne ────────────────────────────────────────────────────────
+# Seul deck_improver.py est embarqué : le serveur le charge dynamiquement pour
+# l'écran d'analyse de deck (voir _get_deck_engine dans server.py).
+scripts/**
+!scripts/deck_improver.py
+
+# ── Corpus et modèles ─────────────────────────────────────────────────────────
+# data/ pèse 330 Mo sur le poste de travail. On ne garde que les sept fichiers
+# que deck_improver.py ouvre réellement, soit environ 27 Mo.
+# Volontairement exclus : card2vec.model (34 Mo) et xgb_baseline.json, qui ne
+# servent qu'à l'entraînement.
+data/**
+!data/embeddings/card_embeddings.npy
+!data/embeddings/card_index.json
+!data/embeddings/commander_embeddings.npy
+!data/embeddings/commander_embeddings.json
+!data/models/xgb_card2vec.json
+!data/clustering/cluster_annotations.json
+!data/clustering/cluster_taxonomy.json
+
+# alembic/ et alembic.ini restent embarqués : le serveur crée ses tables
+# utilisateur avec « alembic upgrade head » au premier démarrage.

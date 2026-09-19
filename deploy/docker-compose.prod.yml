@@ -1,6 +1,9 @@
 services:
   db:
-    image: postgres:16-alpine
+    # Aligné sur le poste de travail, qui produit les dumps publiés par
+    # deploy/push_manamind_data.sh : un dump issu d'un pg_dump plus récent que
+    # le serveur cible peut contenir des directives qu'il ne comprend pas.
+    image: postgres:18-alpine
     environment:
       POSTGRES_USER: ${DB_USER:-manamind}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -25,8 +28,13 @@ services:
       PORT: "8080"
       CORS_ORIGINS: ${CORS_ORIGINS:-https://ton-domaine.com}
     volumes:
+      # Fichiers déposés par les utilisateurs et recommandations produites :
+      # ils doivent survivre à un redéploiement.
       - ./uploads:/app/uploads
-      - ./data:/app/data
+      - ./outputs:/app/outputs
+      # /app/data n'est PAS monté : les modèles de l'écran d'analyse sont livrés
+      # dans l'image (voir .dockerignore). Monter un dossier vide par-dessus les
+      # masquerait, et l'analyse de deck cesserait de fonctionner.
     depends_on:
       db:
         condition: service_healthy

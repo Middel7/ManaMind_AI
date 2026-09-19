@@ -82,6 +82,29 @@ _RE_CMD     = re.compile(r"^\[(\d+)/(\d+)\] (.+)$")
 _RE_VIEWMORE = re.compile(r"view-more=\s*(\d+)\s+decks=(\d+)/(\d+)")
 
 
+def _require_offline_tools() -> None:
+    """Refuse poliment les tâches d'atelier absentes de l'image de production.
+
+    Le scraping repose sur Playwright et le réentraînement sur les scripts de
+    scripts/ : ni l'un ni l'autre n'entre dans l'image servie en ligne, qui ne
+    sert qu'à consulter les données. Sans ce garde-fou, l'import différé
+    échouerait au fond d'un thread et le job resterait bloqué sur une
+    ImportError incompréhensible.
+    """
+    from importlib.util import find_spec
+
+    if find_spec("playwright") is None:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Outil indisponible sur ce serveur : le scraping et le "
+                "réentraînement s'exécutent sur le poste de travail, pas en "
+                "production. Lancez la tâche en local, puis publiez les "
+                "statistiques obtenues."
+            ),
+        )
+
+
 def _make_engine():
     from manamind.moxfield_scraper.db import make_engine
     db_url = os.environ.get("DATABASE_URL", "")
@@ -244,6 +267,7 @@ def start_scrape_recent(
     headless: bool = Query(default=True),
     _user: dict = Depends(require_admin),
 ):
+    _require_offline_tools()
     job_id = str(uuid.uuid4())
     _JOBS[job_id] = _new_job()
     _STOP_FLAGS[job_id] = threading.Event()
@@ -422,6 +446,7 @@ def start_scrape_stale(
     mode: str = Query(default="stale"),
     _user: dict = Depends(require_admin),
 ):
+    _require_offline_tools()
     if mode not in _STALE_QUERIES:
         mode = "stale"
     job_id = str(uuid.uuid4())
@@ -445,6 +470,7 @@ def start_scrape_commander(
     rattrape un commandant qui vient de paraitre, et le scrape l'y inscrit.
     Les paires de partenaires s'ecrivent « A & B », leur forme canonique.
     """
+    _require_offline_tools()
     commander = name.strip()
     if not commander:
         return _json_response({"error": "Nom de commandant requis"}, status_code=400)
@@ -710,6 +736,7 @@ def reset_scrape_timing(
 
 @router.post("/api/admin/ml/retrain")
 async def start_ml_retrain(request: Request, _user: dict = Depends(require_admin)):
+    _require_offline_tools()
     try:
         body = await request.json()
         steps = body.get("steps", _ML_ALL_STEPS)
