@@ -1,0 +1,9 @@
+# Les scripts shell sont exécutés sur le serveur Linux. Avec core.autocrlf=true
+# sous Windows, un aller-retour malencontreux suffirait à les enregistrer en
+# CRLF, et bash refuserait alors de les lancer :
+#   /usr/bin/env: « bash\r »: Aucun fichier ou dossier de ce nom
+# On force donc les fins de ligne Unix, quelle que soit la configuration locale.
+*.sh text eol=lf
+Dockerfile text eol=lf
+.dockerignore text eol=lf
+*.yml text eol=lf
