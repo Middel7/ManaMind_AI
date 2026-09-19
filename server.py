@@ -223,6 +223,7 @@ def _get_deck_engine():
 
 
 # ── Routers ───────────────────────────────────────────────────────────────────
+from manamind.routers.admin_users import router as admin_users_router
 from manamind.routers.auth import router as auth_router
 from manamind.routers.collection import router as collection_router
 from manamind.routers.collection_v2 import router as collection_v2_router
@@ -235,6 +236,7 @@ from manamind.routers.import_deck import router as import_router
 from manamind.routers.pages import router as pages_router
 from manamind.routers.scrape import router as scrape_router
 
+app.include_router(admin_users_router)
 app.include_router(auth_router)
 app.include_router(collection_router)
 app.include_router(collection_v2_router)

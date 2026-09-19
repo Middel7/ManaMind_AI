@@ -224,6 +224,31 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
 .b-stale  { color: var(--amber); background: var(--amber-faint); border: 1px solid var(--amber-border); }
 .b-recent { color: var(--green); background: var(--green-faint); border: 1px solid var(--green-border); }
 .empty-msg td { text-align: center; color: var(--parch-600); padding: 28px; font-style: italic; }
+/* ── Onglets ── */
+.tabs { display: flex; gap: 2px; margin: 24px 0 2px; border-bottom: 1px solid var(--border); }
+.tab { padding: 10px 22px; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer;
+       font-family: var(--serif-engraved); font-size: .62rem; letter-spacing: .13em; text-transform: uppercase;
+       color: var(--parch-600); transition: color .2s, border-color .2s; }
+.tab:hover { color: var(--parch-300); }
+.tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+.tab-panel[hidden] { display: none; }
+
+/* ── Utilisateurs ── */
+.usr-role { font-family: var(--mono); font-size: .62rem; border-radius: 3px; padding: 2px 8px; white-space: nowrap; }
+.usr-role.is-admin { color: var(--purple); background: var(--purple-faint); border: 1px solid var(--purple-border); }
+.usr-role.is-user  { color: var(--parch-500); background: rgba(255,255,255,.03); border: 1px solid var(--border); }
+.usr-state { font-size: .68rem; white-space: nowrap; }
+.usr-state.on  { color: var(--green); }
+.usr-state.off { color: var(--red); }
+.usr-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.usr-self { font-size: .62rem; color: var(--parch-600); font-style: italic; }
+.usr-secret { margin-top: 14px; padding: 14px 16px; border-radius: 6px;
+              background: var(--amber-faint); border: 1px solid var(--amber-border); }
+.usr-secret code { font-family: var(--mono); font-size: .95rem; color: var(--amber);
+                   user-select: all; word-break: break-all; }
+.inv-link { font-family: var(--mono); font-size: .68rem; color: var(--parch-500);
+            word-break: break-all; user-select: all; }
+
 </style>
 </head>
 <body>
@@ -240,6 +265,13 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
       Connecté : <strong id="userEmail">—</strong>
     </div>
   </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-tab="Scraping" role="tab">Scraping</button>
+    <button class="tab" data-tab="Users" role="tab">Utilisateurs</button>
+  </nav>
+
+  <div class="tab-panel" id="tabScraping">
 
   <!-- ── Bronze layer — deck_cards ── -->
   <div class="layer-header">
@@ -529,6 +561,70 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
       </tbody>
     </table>
   </div>
+
+  </div><!-- /tabScraping -->
+
+  <div class="tab-panel" id="tabUsers" hidden>
+
+    <div class="layer-header">
+      <span class="layer-label">Comptes</span>
+      <span class="layer-badge badge-purple">users</span>
+      <div class="layer-rule"></div>
+      <span id="usrCount" style="font-family:var(--serif-display);font-style:italic;font-size:.68rem;color:var(--parch-600);white-space:nowrap;"></span>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:46px;">#</th>
+            <th>Compte</th>
+            <th style="width:92px;">Role</th>
+            <th style="width:76px;">Etat</th>
+            <th class="n-num" style="width:84px;">Cartes</th>
+            <th class="n-num" style="width:70px;">Decks</th>
+            <th style="width:124px;">Derniere visite</th>
+            <th style="width:250px;"></th>
+          </tr>
+        </thead>
+        <tbody id="usrTableBody">
+          <tr class="empty-msg"><td colspan="8">Chargement&hellip;</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="error-box" id="usrError" style="display:none;margin-top:14px;"></div>
+    <div class="usr-secret" id="usrSecret" style="display:none;"></div>
+
+    <div class="layer-header" style="margin-top:26px;">
+      <span class="layer-label">Invitations</span>
+      <span class="layer-badge badge-green">invitations</span>
+      <div class="layer-rule"></div>
+      <button class="btn btn-teal btn-xs" id="invCreateBtn">Creer un lien</button>
+    </div>
+
+    <div class="panel">
+      <p class="panel-hint" style="margin-top:0;margin-bottom:14px;">
+        Un lien d'invitation vaut sept jours et ne sert qu'une fois.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Lien</th>
+              <th style="width:130px;">Cree par</th>
+              <th style="width:150px;">Etat</th>
+              <th style="width:110px;"></th>
+            </tr>
+          </thead>
+          <tbody id="invTableBody">
+            <tr class="empty-msg"><td colspan="4">Chargement&hellip;</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /tabUsers -->
 
 </div>
 
@@ -1140,6 +1236,231 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
   document.getElementById('mlResetBtn').addEventListener('click', () => {
     resetPanel('ml', 'mlRetrainBtn');
     _mlUpdateBtn();
+  });
+
+  // ── Onglets ───────────────────────────────────────────────────────────
+  // Le panneau des comptes ne se charge qu'à sa première ouverture : inutile
+  // d'interroger la base tant que l'administrateur reste sur le scraping.
+  let _usersLoaded = false;
+  document.querySelectorAll('.tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const name = btn.dataset.tab;
+      document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b === btn));
+      document.querySelectorAll('.tab-panel').forEach(p => { p.hidden = (p.id !== 'tab' + name); });
+      if (name === 'Users' && !_usersLoaded) {
+        _usersLoaded = true;
+        loadUsers();
+        loadInvitations();
+      }
+    });
+  });
+
+  // ── Utilisateurs ──────────────────────────────────────────────────────
+  let _users = [];
+
+  function usrError(msg) {
+    const box = document.getElementById('usrError');
+    if (!msg) { box.style.display = 'none'; return; }
+    box.textContent = msg;
+    box.style.display = 'block';
+  }
+
+  function usrSecret(html) {
+    const box = document.getElementById('usrSecret');
+    if (!html) { box.style.display = 'none'; return; }
+    box.innerHTML = html;
+    box.style.display = 'block';
+  }
+
+  /** Appelle l'API d'administration et remonte le message d'erreur du serveur. */
+  async function usrCall(method, url, body) {
+    const opts = { method };
+    if (body !== undefined) {
+      opts.headers = { 'Content-Type': 'application/json' };
+      opts.body = JSON.stringify(body);
+    }
+    const r = await fetch(url, opts);
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.error || `Erreur ${r.status}`);
+    return data;
+  }
+
+  function renderUsers() {
+    const body = document.getElementById('usrTableBody');
+    document.getElementById('usrCount').textContent =
+      `${_users.length} compte${_users.length > 1 ? 's' : ''}`;
+
+    if (!_users.length) {
+      body.innerHTML = '<tr class="empty-msg"><td colspan="8">Aucun compte.</td></tr>';
+      return;
+    }
+
+    body.innerHTML = _users.map(u => {
+      const self = (u.id === user.id);
+      const name = u.display_name && u.display_name !== u.email
+        ? `<div style="font-size:.68rem;color:var(--parch-600);">${esc(u.display_name)}</div>` : '';
+      const google = u.via_google
+        ? '<div style="font-size:.62rem;color:var(--parch-600);font-style:italic;">via Google</div>' : '';
+
+      // Un administrateur ne peut agir ni sur son rôle, ni sur son activation,
+      // ni sur son existence : le serveur le refuse, l'écran n'en propose pas.
+      const actions = self
+        ? '<span class="usr-self">votre compte</span>'
+        : `<button class="btn btn-purple btn-xs" data-act="role" data-id="${u.id}">
+             ${u.role === 'admin' ? 'Retirer admin' : 'Nommer admin'}</button>
+           <button class="btn btn-ghost btn-xs" data-act="active" data-id="${u.id}">
+             ${u.is_active ? 'Desactiver' : 'Reactiver'}</button>
+           <button class="btn btn-amber btn-xs" data-act="password" data-id="${u.id}">Mot de passe</button>
+           <button class="btn btn-red btn-xs" data-act="delete" data-id="${u.id}">Supprimer</button>`;
+
+      return `<tr>
+        <td style="color:var(--parch-600);font-family:var(--mono);font-size:.68rem;">${u.id}</td>
+        <td>${esc(u.email)}${name}${google}</td>
+        <td><span class="usr-role ${u.role === 'admin' ? 'is-admin' : 'is-user'}">${esc(u.role)}</span></td>
+        <td><span class="usr-state ${u.is_active ? 'on' : 'off'}">${u.is_active ? 'actif' : 'desactive'}</span></td>
+        <td class="n-num">${fmt(u.cards)}</td>
+        <td class="n-num">${fmt(u.decks)}</td>
+        <td style="font-size:.7rem;color:var(--parch-500);">${u.last_login_at ? relTime(u.last_login_at) : '—'}</td>
+        <td><div class="usr-actions">${actions}</div></td>
+      </tr>`;
+    }).join('');
+  }
+
+  async function loadUsers() {
+    try {
+      usrError('');
+      const d = await usrCall('GET', '/api/admin/users');
+      _users = d.users || [];
+      renderUsers();
+    } catch (e) {
+      document.getElementById('usrTableBody').innerHTML =
+        '<tr class="empty-msg"><td colspan="8">Chargement impossible.</td></tr>';
+      usrError(String(e.message || e));
+    }
+  }
+
+  document.getElementById('usrTableBody').addEventListener('click', async (ev) => {
+    const btn = ev.target.closest('button[data-act]');
+    if (!btn) return;
+    const id = Number(btn.dataset.id);
+    const u  = _users.find(x => x.id === id);
+    if (!u) return;
+
+    usrError('');
+    usrSecret('');
+    btn.disabled = true;
+    try {
+      if (btn.dataset.act === 'role') {
+        const next = u.role === 'admin' ? 'user' : 'admin';
+        if (!confirm(`Passer ${u.email} en « ${next} » ?`)) return;
+        await usrCall('PATCH', `/api/admin/users/${id}`, { role: next });
+
+      } else if (btn.dataset.act === 'active') {
+        const next = !u.is_active;
+        if (!confirm(`${next ? 'Reactiver' : 'Desactiver'} ${u.email} ?\n\n`
+                   + (next ? 'Ce compte pourra de nouveau se connecter.'
+                           : 'Ce compte ne pourra plus se connecter. Ses donnees sont conservees.'))) return;
+        await usrCall('PATCH', `/api/admin/users/${id}`, { is_active: next });
+
+      } else if (btn.dataset.act === 'password') {
+        if (!confirm(`Engendrer un nouveau mot de passe pour ${u.email} ?\n\n`
+                   + 'L\'ancien cessera aussitot de fonctionner. Le nouveau ne sera affiche qu\'une fois.')) return;
+        const d = await usrCall('POST', `/api/admin/users/${id}/password`);
+        usrSecret(`Nouveau mot de passe pour <strong>${esc(d.email)}</strong> :<br>`
+                + `<code>${esc(d.password)}</code><br>`
+                + '<span style="font-size:.68rem;color:var(--parch-500);">'
+                + 'Transmettez-le maintenant : il ne sera plus affiche.</span>');
+
+      } else if (btn.dataset.act === 'delete') {
+        // Confirmation par recopie de l'adresse : la suppression emporte la
+        // collection, les decks et les preferences (cascade en base).
+        const typed = prompt(
+          `Supprimer definitivement ${u.email} ?\n\n`
+          + `Sa collection (${u.cards} cartes), ses ${u.decks} deck(s) et ses preferences `
+          + 'seront effaces. Cette action est irreversible.\n\n'
+          + 'Recopiez l\'adresse e-mail pour confirmer :');
+        if (typed === null) return;
+        await usrCall('DELETE', `/api/admin/users/${id}`, { confirm_email: typed });
+      }
+      await loadUsers();
+    } catch (e) {
+      usrError(String(e.message || e));
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // ── Invitations ───────────────────────────────────────────────────────
+  function invLink(token) { return `${location.origin}/register?token=${token}`; }
+
+  function renderInvitations(invs) {
+    const body = document.getElementById('invTableBody');
+    if (!invs.length) {
+      body.innerHTML = '<tr class="empty-msg"><td colspan="4">Aucune invitation.</td></tr>';
+      return;
+    }
+    const now = Date.now();
+    body.innerHTML = invs.map(i => {
+      const expired = i.expires_at && new Date(i.expires_at).getTime() < now;
+      let state, action = '';
+      if (i.used_at) {
+        state = `<span style="color:var(--parch-500);">utilisee par ${esc(i.used_by || '—')}</span>`;
+      } else if (expired) {
+        state = '<span style="color:var(--red);">expiree</span>';
+        action = `<button class="btn btn-ghost btn-xs" data-inv="${esc(i.token)}">Supprimer</button>`;
+      } else {
+        state = `<span style="color:var(--green);">valide jusqu'au `
+              + `${new Date(i.expires_at).toLocaleDateString('fr-FR')}</span>`;
+        action = `<button class="btn btn-red btn-xs" data-inv="${esc(i.token)}">Revoquer</button>`;
+      }
+      return `<tr>
+        <td><span class="inv-link">${esc(invLink(i.token))}</span></td>
+        <td style="font-size:.7rem;color:var(--parch-500);">${esc(i.created_by || '—')}</td>
+        <td style="font-size:.7rem;">${state}</td>
+        <td style="text-align:right;">${action}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  async function loadInvitations() {
+    try {
+      const d = await usrCall('GET', '/api/admin/invitations');
+      renderInvitations(d.invitations || []);
+    } catch (e) {
+      document.getElementById('invTableBody').innerHTML =
+        '<tr class="empty-msg"><td colspan="4">Chargement impossible.</td></tr>';
+    }
+  }
+
+  document.getElementById('invCreateBtn').addEventListener('click', async (ev) => {
+    const btn = ev.currentTarget;
+    btn.disabled = true;
+    usrError('');
+    try {
+      const d = await usrCall('POST', '/api/admin/invitations');
+      usrSecret(`Lien d'invitation cree, valable sept jours :<br>`
+              + `<code>${esc(d.link)}</code>`);
+      await loadInvitations();
+    } catch (e) {
+      usrError(String(e.message || e));
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById('invTableBody').addEventListener('click', async (ev) => {
+    const btn = ev.target.closest('button[data-inv]');
+    if (!btn) return;
+    if (!confirm('Revoquer cette invitation ? Le lien cessera de fonctionner.')) return;
+    btn.disabled = true;
+    usrError('');
+    try {
+      await usrCall('DELETE', `/api/admin/invitations/${encodeURIComponent(btn.dataset.inv)}`);
+      await loadInvitations();
+    } catch (e) {
+      usrError(String(e.message || e));
+      btn.disabled = false;
+    }
   });
 
   // ── Init ──────────────────────────────────────────────────────────────
