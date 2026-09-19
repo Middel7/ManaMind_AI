@@ -25,6 +25,11 @@ services:
     image: manamind:latest
     environment:
       DATABASE_URL: postgresql://${DB_USER:-manamind}:${DB_PASSWORD}@db:5432/${DB_NAME:-manamind}
+      # La migration 20260904_deck_cards_deck_id réclame une connexion ayant les
+      # droits sur user_deck_cards. Sur le poste de travail, cette table
+      # appartient au rôle postgres et il faut un second compte ; ici, manamind
+      # possède tout ce qu'il crée, les deux URL sont donc les mêmes.
+      POSTGRES_URL: postgresql://${DB_USER:-manamind}:${DB_PASSWORD}@db:5432/${DB_NAME:-manamind}
       JWT_SECRET: ${JWT_SECRET}
       HTTPS_ENABLED: "true"
       DEBUG: "false"
