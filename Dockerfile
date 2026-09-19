@@ -13,6 +13,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Installer uv (gestionnaire de dépendances)
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
+# uv télécharge volontiers son propre CPython. Le venv pointerait alors vers un
+# interpréteur qui n'existe pas dans l'étage final, et le serveur démarrerait
+# sur « ModuleNotFoundError: No module named 'dotenv' » — le venv étant bien là,
+# mais inutilisable. On impose l'interpréteur de l'image.
+ENV UV_PYTHON_DOWNLOADS=never \
+    UV_PYTHON=/usr/local/bin/python3
+
 # Copier les fichiers de dépendances
 COPY pyproject.toml uv.lock* ./
 
