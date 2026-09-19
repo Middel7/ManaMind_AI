@@ -25,21 +25,27 @@ nano .env  # Remplir JWT_SECRET, DB_PASSWORD, CORS_ORIGINS
 # ni torch, ni le corpus. Compter environ 900 Mo.
 docker build -t manamind:latest .
 
-# 5. Démarrer
-cd /app
-docker compose -f deploy/docker-compose.prod.yml up -d
+# 5. Preparer les dossiers montes
+# Le conteneur tourne sous l'utilisateur manamind (999:999), pas root : sans ce
+# chown, le serveur s'arrete sur « PermissionError: /app/outputs/recommendations ».
+mkdir -p /app/uploads /app/outputs /app/data
+chown -R 999:999 /app/uploads /app/outputs /app/data
 
-# 6. Copier le catalogue Magic — voir « Remplir la base » plus bas.
+# 6. Démarrer
+cd /app
+docker compose --project-directory /app -f deploy/docker-compose.prod.yml up -d
+
+# 7. Copier le catalogue Magic — voir « Remplir la base » plus bas.
 #    À faire AVANT les migrations : plusieurs d'entre elles s'appuient sur le
 #    catalogue, notamment la vue card_min_price, bâtie sur
 #    scryfall_card_printings et cardmarket_price_guide_entries.
 
-# 7. Créer les tables ManaMind (comptes, collections, decks)
-docker compose -f deploy/docker-compose.prod.yml exec app alembic upgrade head
+# 8. Créer les tables ManaMind (comptes, collections, decks)
+docker compose --project-directory /app -f deploy/docker-compose.prod.yml exec app alembic upgrade head
 
-# 8. Publier les statistiques depuis le poste de travail — voir plus bas.
+# 9. Publier les statistiques depuis le poste de travail — voir plus bas.
 
-# 9. Configurer le backup automatique
+# 10. Configurer le backup automatique
 # IMPORTANT : rendre le script exécutable avant de l'enregistrer dans cron
 chmod +x /app/deploy/backup.sh
 (crontab -l 2>/dev/null; echo "0 3 * * * /app/deploy/backup.sh") | crontab -
@@ -47,6 +53,11 @@ chmod +x /app/deploy/backup.sh
 
 > **Note :** Le script `deploy/backup.sh` est livré sans bit d'exécution (limitation de l'outil de création de fichiers).
 > Exécuter `chmod +x /app/deploy/backup.sh` sur le VPS après le `git clone`.
+
+> **`--project-directory /app` n'est pas optionnel.** Sans lui, Compose
+> cherche le fichier `.env` dans `deploy/` et resout `./data` en
+> `/app/deploy/data` : la base demarre sans mot de passe et les modeles
+> ne sont pas trouves.
 
 ## Remplir la base
 
@@ -114,7 +125,7 @@ sont embarqués.
 cd /app
 git pull
 docker build -t manamind:latest .
-docker compose -f deploy/docker-compose.prod.yml up -d --no-deps app
+docker compose --project-directory /app -f deploy/docker-compose.prod.yml up -d --no-deps app
 ```
 
 ## Rollback
@@ -125,7 +136,7 @@ docker images manamind
 
 # Revenir à une image précédente
 docker tag manamind:previous manamind:latest
-docker compose -f deploy/docker-compose.prod.yml up -d --no-deps app
+docker compose --project-directory /app -f deploy/docker-compose.prod.yml up -d --no-deps app
 ```
 
 ## Restaurer un backup

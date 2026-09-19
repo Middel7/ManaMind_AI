@@ -9,9 +9,18 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME:-manamind}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # PostgreSQL 18 attend le montage sur /var/lib/postgresql, et place ses
+      # données dans un sous-dossier versionné. Monter /var/lib/postgresql/data
+      # comme avant fait échouer le démarrage sur « unused mount/volume ».
+      - postgres_data:/var/lib/postgresql
       - ./deploy/postgres-backup:/backup
     restart: unless-stopped
+    ports:
+      # Boucle locale du serveur uniquement : la base reste injoignable depuis
+      # Internet (le pare-feu Hetzner ferme d'ailleurs 5432). Ce point d'entrée
+      # sert aux transferts administratifs depuis le poste de travail, à travers
+      # un tunnel SSH — voir deploy/push_manamind_data.sh.
+      - "127.0.0.1:5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-manamind}"]
       interval: 10s
@@ -22,6 +31,11 @@ services:
     image: manamind:latest
     environment:
       DATABASE_URL: postgresql://${DB_USER:-manamind}:${DB_PASSWORD}@db:5432/${DB_NAME:-manamind}
+      # La migration 20260904_deck_cards_deck_id réclame une connexion ayant les
+      # droits sur user_deck_cards. Sur le poste de travail, cette table
+      # appartient au rôle postgres et il faut un second compte ; ici, manamind
+      # possède tout ce qu'il crée, les deux URL sont donc les mêmes.
+      POSTGRES_URL: postgresql://${DB_USER:-manamind}:${DB_PASSWORD}@db:5432/${DB_NAME:-manamind}
       JWT_SECRET: ${JWT_SECRET}
       HTTPS_ENABLED: "true"
       DEBUG: "false"
@@ -32,9 +46,10 @@ services:
       # ils doivent survivre à un redéploiement.
       - ./uploads:/app/uploads
       - ./outputs:/app/outputs
-      # /app/data n'est PAS monté : les modèles de l'écran d'analyse sont livrés
-      # dans l'image (voir .dockerignore). Monter un dossier vide par-dessus les
-      # masquerait, et l'analyse de deck cesserait de fonctionner.
+      # Modèles de l'écran d'analyse. Ils sont dans .gitignore, donc absents du
+      # dépôt et de l'image : c'est deploy/push_models.sh qui les dépose ici
+      # depuis le poste de travail, et ce montage les expose au conteneur.
+      - ./data:/app/data
     depends_on:
       db:
         condition: service_healthy

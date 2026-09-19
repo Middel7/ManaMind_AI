@@ -85,7 +85,10 @@ def validate(session) -> bool:
     _row("Lignes de prix", f"{n_prices:,}")
 
     if n_cards == 0:
-        _warn("Aucune carte en base — as-tu lancé import_scryfall_cards.py ?")
+        _warn(
+            "Aucune carte en base — le catalogue vient de MTG-DB : lance "
+            "./deploy/pull_catalogue.sh, ou le pipeline MTG-DB sur le poste."
+        )
         all_ok = False
 
     # ── 2. Légalité Commander ─────────────────────────────────────────────────

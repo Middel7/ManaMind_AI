@@ -3,7 +3,10 @@ name = "manamind-ai"
 version = "0.1.0"
 description = "manamind system recommender"
 readme = "README.md"
-requires-python = "==3.12.8"
+# Version mineure, pas un correctif precis : epingler 3.12.8 obligeait uv a
+# telecharger son propre CPython dans l'image Docker (qui fournit 3.12.14),
+# et le venv pointait alors vers un interpreteur absent de l'image finale.
+requires-python = ">=3.12,<3.13"
 dependencies = [
     # ── Serveur web ────────────────────────────────────────────────────────────
     # Tout ce qui est nécessaire pour SERVIR l'application, et rien de plus.

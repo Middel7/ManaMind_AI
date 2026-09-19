@@ -3,8 +3,22 @@ FROM python:3.12-slim AS builder
 
 WORKDIR /app
 
+# mtgdb s'installe depuis un dépôt Git : sans le client git, uv s'arrête sur
+# « Git executable not found ». L'image python:slim ne l'embarque pas, et cette
+# couche ne concerne que l'étape de construction — le runtime n'en hérite pas.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
 # Installer uv (gestionnaire de dépendances)
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+# uv télécharge volontiers son propre CPython. Le venv pointerait alors vers un
+# interpréteur qui n'existe pas dans l'étage final, et le serveur démarrerait
+# sur « ModuleNotFoundError: No module named 'dotenv' » — le venv étant bien là,
+# mais inutilisable. On impose l'interpréteur de l'image.
+ENV UV_PYTHON_DOWNLOADS=never \
+    UV_PYTHON=/usr/local/bin/python3
 
 # Copier les fichiers de dépendances
 COPY pyproject.toml uv.lock* ./

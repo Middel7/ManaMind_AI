@@ -1,12 +1,13 @@
-# Remplace ton-domaine.com par ton vrai domaine
-ton-domaine.com {
+manamind.eu, www.manamind.eu {
     # TLS automatique via Let's Encrypt
     tls {
         protocols tls1.2 tls1.3
     }
 
-    # Reverse proxy vers l'app FastAPI
-    reverse_proxy localhost:8080 {
+    # Caddy tourne dans son propre conteneur : « localhost » y designerait
+    # Caddy lui-meme. On vise le service applicatif par son nom sur le reseau
+    # Docker, et le port interne du conteneur.
+    reverse_proxy app:8080 {
         # Health check
         health_uri /health
         health_interval 30s
