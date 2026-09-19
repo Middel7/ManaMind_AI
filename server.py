@@ -7,7 +7,6 @@ import threading as _threading
 from pathlib import Path
 
 import re
-import unicodedata
 
 from contextlib import asynccontextmanager
 
@@ -27,12 +26,21 @@ logger = logging.getLogger("manamind")
 
 # Sentry — monitoring des erreurs (optionnel, activé si SENTRY_DSN est défini)
 _SENTRY_DSN = _os_server.environ.get("SENTRY_DSN", "")
+# Une suite de tests qui importe ce module n'est pas une production : ses
+# erreurs attendues n'ont rien a faire dans la supervision.
+if "pytest" in sys.modules:
+    _SENTRY_DSN = ""
 if _SENTRY_DSN:
     import sentry_sdk
     from sentry_sdk.integrations.fastapi import FastApiIntegration
+    from sentry_sdk.integrations.excepthook import ExcepthookIntegration
     sentry_sdk.init(
         dsn=_SENTRY_DSN,
         integrations=[FastApiIntegration()],
+        # Un script de verification qui importe ce module remontait ses propres
+        # plantages comme des incidents de production : seules les erreurs
+        # servies par l'application nous interessent.
+        disabled_integrations=[ExcepthookIntegration()],
         traces_sample_rate=0.1,
         environment=_os_server.environ.get("ENVIRONMENT", "production"),
     )
@@ -70,107 +78,6 @@ sys.path.insert(0, str(ROOT / "src"))
 # Le limiter est défini dans _shared.py pour être partagé avec les routers
 # (importé APRÈS sys.path.insert pour que le module manamind soit trouvable)
 from manamind.routers._shared import limiter
-
-from manamind.recommandation_populaire import (  # noqa: E402
-    DECKLISTS_ROOT as _POP_DECKLISTS_ROOT,
-    load_deck_dataset,
-    build_statistics,
-    recommend_removals,
-    normalize_name as _pop_normalize,
-    BASIC_LANDS,
-)
-
-
-def _compute_removals(deck_content: str, commander_name: str, limit: int = 20) -> list[tuple[str, int, float]]:
-    """
-    Calcule les cartes à retirer via la logique recommandation_populaire.
-    Utilisée par l'algorithme Analyse Populaire (V1).
-    """
-    import re as _re
-    # Parser les cartes du deck depuis le contenu texte
-    input_cards: set[str] = set()
-    for line in deck_content.splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or line.startswith("//"):
-            continue
-        m = _re.match(r"^\d+[xX]?\s+(.+)$", line)
-        card_name = m.group(1).strip() if m else line
-        input_cards.add(_pop_normalize(card_name))
-
-    cmd_norm = _pop_normalize(commander_name)
-    input_cards.discard(cmd_norm)
-    input_cards -= BASIC_LANDS
-
-    if not input_cards:
-        return []
-
-    try:
-        decks = load_deck_dataset(_POP_DECKLISTS_ROOT)
-        if not decks:
-            return []
-        deck_frequency, commander_decks, cooccurrence = build_statistics(decks)
-
-        removals_norm = recommend_removals(
-            input_cards=input_cards,
-            deck_frequency=deck_frequency,
-            commander=cmd_norm,
-            commander_decks=commander_decks,
-            cooccurrence=cooccurrence,
-            commander_card=cmd_norm,
-            limit=limit + 5,
-        )
-
-        # Nombre de decklists connues pour ce commandant (pour calculer le taux réel)
-        nb_cmd_decks = len(commander_decks.get(cmd_norm, []))
-
-        # Construire un reverse mapping normalisé → nom original depuis les decklists
-        norm_to_original: dict[str, str] = {}
-        import csv as _csv2
-        cmd_dir = _POP_DECKLISTS_ROOT / _normalize_filename(commander_name)
-        if not cmd_dir.exists():
-            for sub in _POP_DECKLISTS_ROOT.iterdir():
-                if sub.is_dir() and _normalize_filename(sub.name) == _normalize_filename(commander_name):
-                    cmd_dir = sub
-                    break
-        if cmd_dir.exists():
-            for csv_file in list(cmd_dir.glob("*.csv"))[:200]:
-                try:
-                    with open(csv_file, encoding="utf-8-sig", errors="replace") as f:
-                        reader = _csv2.DictReader(f, delimiter=";")
-                        for row in reader:
-                            raw = (row.get("Card Name") or "").strip()
-                            if raw:
-                                norm_to_original[_pop_normalize(raw)] = raw
-                except Exception:
-                    continue
-
-        cmd_lower = commander_name.lower()
-
-        def restore(norm: str) -> str:
-            return norm_to_original.get(norm, norm.title())
-
-        result = [
-            # support = nb decklists de CE commandant contenant la carte
-            # taux = support / nb_cmd_decks → entre 0 et 1
-            (restore(name), support, round(support / nb_cmd_decks, 4) if nb_cmd_decks > 0 else 0.0)
-            for name, support, _raw_freq in removals_norm
-            if restore(name).lower() != cmd_lower and name.lower() != cmd_lower
-        ][:limit]
-
-        return result
-    except Exception as exc:
-        print(f"[Retraits] Erreur : {exc}")
-        return []
-
-
-def _normalize_filename(name: str) -> str:
-    """Convertit un nom de commandant en slug snake_case ASCII (cohérent avec le script V2)."""
-    name = unicodedata.normalize("NFKD", name)
-    name = "".join(c for c in name if not unicodedata.combining(c))
-    name = re.sub(r"[^a-zA-Z0-9\s]", "", name)
-    name = re.sub(r"\s+", "_", name.strip())
-    return name.lower()
-
 
 def _extract_commander_from_deck(content: str) -> str | None:
     """Extrait le nom du commandant depuis le contenu texte d'une decklist."""
@@ -256,6 +163,20 @@ app = FastAPI(lifespan=lifespan)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+
+async def _bad_body_handler(request: Request, exc: Exception) -> Response:
+    """Corps de requete illisible : la faute est a l'appelant.
+
+    Un JSON tronque ou encode dans un autre jeu de caracteres levait une
+    exception non rattrapee, soit une 500 et une alerte pour une requete
+    simplement malformee.
+    """
+    return _json_response({"error": "Corps de requête illisible."}, status_code=400)
+
+
+app.add_exception_handler(UnicodeDecodeError, _bad_body_handler)
+app.add_exception_handler(_json.JSONDecodeError, _bad_body_handler)
+
 # ── CORS ─────────────────────────────────────────────────────────────────────
 _ALLOWED_ORIGINS = [o.strip() for o in _os_server.environ.get("CORS_ORIGINS", "http://localhost:8080,http://localhost:3000").split(",") if o.strip()]
 
@@ -302,17 +223,27 @@ def _get_deck_engine():
 
 
 # ── Routers ───────────────────────────────────────────────────────────────────
+from manamind.routers.admin_users import router as admin_users_router
 from manamind.routers.auth import router as auth_router
 from manamind.routers.collection import router as collection_router
+from manamind.routers.collection_v2 import router as collection_v2_router
+from manamind.routers.commander_swap import router as commander_swap_router
+from manamind.routers.dashboard import router as dashboard_router
 from manamind.routers.decks import router as decks_router
+from manamind.routers.decks_v2 import router as decks_v2_router
 from manamind.routers.engine import router as engine_router
 from manamind.routers.import_deck import router as import_router
 from manamind.routers.pages import router as pages_router
 from manamind.routers.scrape import router as scrape_router
 
+app.include_router(admin_users_router)
 app.include_router(auth_router)
 app.include_router(collection_router)
+app.include_router(collection_v2_router)
+app.include_router(commander_swap_router)
+app.include_router(dashboard_router)
 app.include_router(decks_router)
+app.include_router(decks_v2_router)
 app.include_router(engine_router)
 app.include_router(import_router)
 app.include_router(pages_router)
@@ -323,10 +254,40 @@ app.include_router(scrape_router)
 @app.get("/")
 def index() -> FileResponse:
     return FileResponse(
-        ROOT / "index.html",
+        ROOT / "dashboard.html",
         media_type="text/html",
         headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
     )
+
+
+# ── Version deployee ──────────────────────────────────────────────────────────
+# Calculee une fois : appeler git a chaque requete couterait plus cher que la
+# reponse elle-meme. Le numero est le nombre de commits, qui ne fait que croitre
+# et se compare donc d'un coup d'oeil.
+def _read_version() -> dict:
+    import subprocess
+    def _git(*args: str) -> str:
+        try:
+            return subprocess.run(["git", *args], cwd=str(ROOT), capture_output=True,
+                                  text=True, timeout=5).stdout.strip()
+        except Exception:
+            return ""
+    count = _git("rev-list", "--count", "HEAD")
+    return {
+        "build": int(count) if count.isdigit() else 0,
+        "sha": _git("rev-parse", "--short", "HEAD"),
+        "date": _git("log", "-1", "--format=%cI"),
+        "subject": _git("log", "-1", "--format=%s")[:120],
+    }
+
+
+_VERSION = _read_version()
+
+
+@app.get("/api/version")
+def api_version() -> Response:
+    """Version deployee, pour savoir d'un coup d'oeil si l'on est a jour."""
+    return _json_response(_VERSION)
 
 
 @app.get("/health")
@@ -355,6 +316,25 @@ def health_check() -> JSONResponse:
 
 
 # ── Fichiers statiques ────────────────────────────────────────────────────────
+
+class RevalidatedStaticFiles(StaticFiles):
+    """Statiques revalidées à chaque chargement.
+
+    Sans en-tête de cache explicite, le navigateur applique une heuristique et
+    peut servir un mm.js périmé pendant des heures : une modification du front
+    passe alors inaperçue, avec des erreurs incompréhensibles à la clé (une
+    page à jour appelant un script qui ne l'est pas). « no-cache » n'interdit
+    pas la mise en cache, il impose la revalidation — Starlette répond 304 tant
+    que le fichier n'a pas changé, donc le coût est une requête vide.
+    """
+
+    def file_response(self, *args, **kwargs) -> Response:
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
+app.mount("/static",  RevalidatedStaticFiles(directory=str(ROOT / "static")), name="static")
 app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 app.mount("/outputs", StaticFiles(directory=str(OUTPUTS_DIR)), name="outputs")
 app.mount("/data",    StaticFiles(directory=str(ROOT / "data")), name="data")

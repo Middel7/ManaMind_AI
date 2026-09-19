@@ -42,15 +42,22 @@ async def upload_deck(
     stem = Path(filename).stem
 
     output_path = OUTPUTS_DIR / f"recommendations_{stem}.csv"
-    script = "src/manamind/recommandation_populaire.py"
     output_key = f"/outputs/recommendations_{stem}.csv"
 
     import os as _os
     import asyncio as _asyncio
     _env = _os.environ.copy()
     _env["PYTHONIOENCODING"] = "utf-8"
+    # Le module tourne comme membre de son package, et non comme script isole :
+    # sans cela ses imports internes n'ont pas de paquet parent. Le projet
+    # n'etant pas installe, « src » doit etre sur le chemin d'import.
+    _src = str(ROOT / "src")
+    _env["PYTHONPATH"] = (
+        f"{_src}{_os.pathsep}{_env['PYTHONPATH']}" if _env.get("PYTHONPATH") else _src
+    )
     proc = await _asyncio.create_subprocess_exec(
-        sys.executable, script, "--input", str(deck_path), "--output", str(output_path),
+        sys.executable, "-m", "manamind.recommandation_populaire",
+        "--input", str(deck_path), "--output", str(output_path),
         stdout=_asyncio.subprocess.PIPE,
         stderr=_asyncio.subprocess.PIPE,
         cwd=str(ROOT),
@@ -143,7 +150,7 @@ def api_deck_txt(deck_id: str, request: Request) -> JSONResponse:
     entry = next((d for d in decks if d["deck_id"] == deck_id), None)
     if not entry:
         return _json_response({"error": "Deck introuvable"}, status_code=404)
-    content = get_deck_txt_content(user["id"], entry["commander"])
+    content = get_deck_txt_content(user["id"], entry["commander"], deck_id)
     return _json_response({"ok": True, "content": content or "", "commander": entry["commander"]})
 
 
@@ -153,12 +160,13 @@ async def api_deck_card_add(request: Request) -> JSONResponse:
     user = get_current_user(mm_token=request.cookies.get(COOKIE_NAME))
     body = await request.json()
     commander = (body.get("commander") or "").strip()
+    deck_id   = (body.get("deck_id") or "").strip() or None
     card      = (body.get("card_name") or "").strip()
-    if not commander or not card:
+    if not (commander or deck_id) or not card:
         return _json_response({"error": "Paramètres manquants"}, status_code=400)
     try:
         from manamind.user_decks import add_card_to_deck_db
-        add_card_to_deck_db(user["id"], commander, card)
+        add_card_to_deck_db(user["id"], commander, card, deck_id)
         return _json_response({"ok": True})
     except Exception as e:
         return _json_response({"error": str(e)}, status_code=500)
@@ -170,12 +178,14 @@ async def api_deck_card_remove(request: Request) -> JSONResponse:
     user = get_current_user(mm_token=request.cookies.get(COOKIE_NAME))
     body = await request.json()
     commander = (body.get("commander") or "").strip()
+    deck_id   = (body.get("deck_id") or "").strip() or None
     card      = (body.get("card_name") or "").strip()
-    if not commander or not card:
+    if not (commander or deck_id) or not card:
         return _json_response({"error": "Paramètres manquants"}, status_code=400)
     try:
         from manamind.user_decks import remove_card_from_deck_db
-        found = remove_card_from_deck_db(user["id"], commander, card)
+        found = remove_card_from_deck_db(user["id"], commander, card, deck_id,
+                                         all_copies=bool(body.get("all")))
         if not found:
             return _json_response({"ok": False, "error": f"« {card} » n'est pas dans le deck de {commander}"}, status_code=404)
         return _json_response({"ok": True})

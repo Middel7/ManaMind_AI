@@ -1,274 +1,202 @@
-"""Persistance SQL — ne connaît rien de Moxfield, juste des Deck.
+"""Persistance SQL du scraper — écrit dans deck_cards et commanders.
 
-Le schéma est déclaré en SQLAlchemy Core (pas d'ORM) : l'upsert s'adapte au
-dialecte, donc le même code tourne sur Postgres et sur SQLite (tests).
-La base porte l'état du scraping : c'est elle qui dit ce qui est déjà connu,
-ce qui remplace les "le fichier existe-t-il ?" de l'ancien pipeline.
+Le scraper n'a plus de tables propres : il alimente directement les tables
+centrales de ManaMind, gérées par Alembic.
 
-Les tables sont préfixées `mox_` et vivent dans un MetaData qui leur est propre,
-séparé de `mtgdb.db.base.Base`. C'est délibéré : le scraper reste une zone
-autonome qui ne peut pas écraser `deck_cards` (le schéma ManaMind existant, de
-forme différente). L'intégration aux tables ManaMind — si elle est souhaitée —
-se fait en réécrivant `upsert_decks()`, sans toucher au reste du package.
+Stratégie d'upsert pour un deck :
+  1. Récupérer first_scraped_at existant (pour l'immuabilité).
+  2. DELETE toutes les lignes de ce deck_id dans deck_cards.
+  3. INSERT les nouvelles cartes avec les métadonnées du deck.
 """
+
+from __future__ import annotations
 
 from collections.abc import Iterable
 from datetime import UTC, datetime
 
 from sqlalchemy import (
-    Column,
-    DateTime,
-    ForeignKey,
-    Index,
-    Integer,
-    MetaData,
-    Numeric,
-    SmallInteger,
-    String,
-    Table,
-    create_engine,
-    delete,
-    select,
+    Boolean, Column, MetaData, Numeric, SmallInteger, Table, TIMESTAMP,
+    Text, create_engine, insert as sa_insert, text,
 )
-from sqlalchemy import text
-from sqlalchemy.dialects.mysql import insert as mysql_insert
-from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.dialects.sqlite import insert as sqlite_insert
-from sqlalchemy.engine import Connection, Engine
+from sqlalchemy.engine import Engine
 
 from .models import Deck
 
-metadata = MetaData()
-
-decks = Table(
-    "mox_decks",
-    metadata,
-    Column("deck_id", String(32), primary_key=True),
-    Column("commander", String(255), index=True),
-    Column("deck_type", String(16), nullable=False, default=""),
-    Column("bracket", SmallInteger),
-    Column("price", Numeric(10, 2)),
-    Column("currency", String(4), nullable=False, default=""),
-    Column("date_created", DateTime(timezone=True)),
-    Column("date_modified", DateTime(timezone=True), index=True),
-    Column("first_scraped_at", DateTime(timezone=True), nullable=False),  # immuable
-    Column("scraped_at", DateTime(timezone=True), nullable=False),         # mis à jour à chaque scrape
-)
-
-deck_cards = Table(
-    "mox_deck_cards",
-    metadata,
-    Column(
-        "deck_id",
-        String(32),
-        ForeignKey("mox_decks.deck_id", ondelete="CASCADE"),
-        primary_key=True,
-    ),
-    Column("card_name", String(255), primary_key=True),
-    Column("quantity", Integer, nullable=False),
-    Column("is_commander", SmallInteger, nullable=False, default=0),
-    Index("ix_mox_deck_cards_card_name", "card_name"),
-)
-
-# Remplace TOPCOMMANDER.csv : même rôle (liste ordonnée + état de reprise),
-# mais transactionnel et interrogeable.
-commanders = Table(
-    "mox_commanders",
-    metadata,
-    Column("name", String(255), primary_key=True),
-    Column("rank", Integer, index=True),
-    Column("color_identity", String(16)),
-    Column("decks_extracted", Integer),
-    Column("last_scraped_at", DateTime(timezone=True)),
-)
-
 
 def make_engine(url: str, **kwargs: object) -> Engine:
-    """url : postgresql://user:pwd@host/db (le DATABASE_URL du .env) ou sqlite:///mox.db"""
     return create_engine(url, future=True, **kwargs)
 
 
-def init_schema(engine: Engine) -> None:
-    metadata.create_all(engine)
-    _backfill_dates(engine)
+# Définition minimale pour insertmanyvalues (sans la PK auto-générée `id`).
+# SQLAlchemy 2.0 + PostgreSQL batche automatiquement en N/1000 statements
+# au lieu de N×1 — gain ×10-50 sur les gros batchs.
+_deck_cards_t = Table(
+    "deck_cards",
+    MetaData(),
+    Column("deck_id", Text),
+    Column("commander", Text),
+    Column("card_name", Text),
+    Column("is_commander", Boolean),
+    Column("quantity", SmallInteger),
+    Column("bracket", Numeric),
+    Column("price", Numeric),
+    Column("currency", Text),
+    Column("deck_type", Text),
+    Column("date_created", TIMESTAMP(timezone=True)),
+    Column("date_modified", TIMESTAMP(timezone=True)),
+    Column("first_scraped_at", TIMESTAMP(timezone=True)),
+    Column("scraped_at", TIMESTAMP(timezone=True)),
+)
+
+_INSERT_COLS = (
+    "deck_id", "commander", "card_name", "is_commander", "quantity",
+    "bracket", "price", "currency", "deck_type",
+    "date_created", "date_modified", "first_scraped_at", "scraped_at",
+)
 
 
-def _backfill_dates(engine: Engine) -> None:
-    """Ajoute first_scraped_at si absent (upgrade depuis ancien schéma) et
-    remplace les NULLs sur les deux colonnes de dates par NOW()."""
-    with engine.begin() as conn:
-        dialect = conn.dialect.name
-
-        # PostgreSQL et SQLite supportent tous les deux ADD COLUMN
-        # (SQLite depuis 3.37, PostgreSQL depuis toujours).
-        if dialect == "postgresql":
-            conn.execute(text(
-                "ALTER TABLE mox_decks "
-                "ADD COLUMN IF NOT EXISTS first_scraped_at TIMESTAMPTZ"
-            ))
-        elif dialect == "sqlite":
-            # SQLite : ADD COLUMN échoue si la colonne existe déjà
-            try:
-                conn.execute(text(
-                    "ALTER TABLE mox_decks ADD COLUMN first_scraped_at DATETIME"
-                ))
-            except Exception:
-                pass  # colonne déjà présente
-
-        # Backfill NULLs avec la date du jour
-        now_expr = "NOW()" if dialect == "postgresql" else "datetime('now')"
-        conn.execute(text(
-            f"UPDATE mox_decks SET first_scraped_at = {now_expr} "
-            f"WHERE first_scraped_at IS NULL"
-        ))
-        conn.execute(text(
-            f"UPDATE mox_decks SET scraped_at = {now_expr} "
-            f"WHERE scraped_at IS NULL"
-        ))
-
-
-# ─── Upsert ─────────────────────────────────────────────────────────────────
-
-def _upsert(conn: Connection, table: Table, rows: list[dict], update_cols: list[str]) -> None:
-    """INSERT ... ON CONFLICT DO UPDATE, dans la syntaxe du dialecte courant."""
-    if not rows:
+def _bulk_insert(conn, card_rows: list[tuple]) -> None:
+    if not card_rows:
         return
+    conn.execute(
+        sa_insert(_deck_cards_t),
+        [dict(zip(_INSERT_COLS, row)) for row in card_rows],
+    )
 
-    dialect = conn.dialect.name
-    if dialect == "postgresql":
-        stmt = pg_insert(table).values(rows)
-        stmt = stmt.on_conflict_do_update(
-            index_elements=[c.name for c in table.primary_key],
-            set_={c: stmt.excluded[c] for c in update_cols},
-        )
-    elif dialect in ("mysql", "mariadb"):
-        stmt = mysql_insert(table).values(rows)
-        stmt = stmt.on_duplicate_key_update(
-            **{c: stmt.inserted[c] for c in update_cols}
-        )
-    elif dialect == "sqlite":
-        stmt = sqlite_insert(table).values(rows)
-        stmt = stmt.on_conflict_do_update(
-            index_elements=[c.name for c in table.primary_key],
-            set_={c: stmt.excluded[c] for c in update_cols},
-        )
-    else:
-        raise NotImplementedError(f"Dialecte non supporté pour l'upsert : {dialect}")
 
-    conn.execute(stmt)
-
+# ── Upsert décks ──────────────────────────────────────────────────────────────
 
 def upsert_decks(engine: Engine, batch: Iterable[Deck]) -> tuple[int, int]:
-    """Insère ou met à jour des decks avec leurs cartes, en une transaction.
+    """Insère ou remplace des decks dans deck_cards.
 
-    Les cartes sont remplacées (delete + insert) et non fusionnées : un deck
-    modifié sur Moxfield doit refléter sa nouvelle liste, pas l'union des deux.
-
-    Retourne (created, updated) : nombre de decks créés et mis à jour.
+    Retourne (created, updated).
+    `first_scraped_at` est préservé pour les decks déjà connus.
     """
     batch = list(batch)
     if not batch:
         return 0, 0
 
     deck_ids = [d.deck_id for d in batch]
-
-    # Identifier les decks déjà présents avant l'upsert
-    with engine.connect() as conn:
-        rows = conn.execute(select(decks.c.deck_id).where(decks.c.deck_id.in_(deck_ids)))
-        existing_ids = {r[0] for r in rows}
-
-    updated = len(existing_ids)
-    created = len(batch) - updated
-
     now = datetime.now(UTC)
-    deck_rows = [
-        {
-            "deck_id": d.deck_id,
-            "commander": d.commander,
-            "deck_type": d.deck_type,
-            "bracket": d.bracket,
-            "price": d.price,
-            "currency": d.currency,
-            "date_created": d.date_created,
-            "date_modified": d.date_modified,
-            "first_scraped_at": now,
-            "scraped_at": now,
-        }
-        for d in batch
-    ]
-    card_rows = [
-        {
-            "deck_id": d.deck_id,
-            "card_name": c.name,
-            "quantity": c.quantity,
-            "is_commander": int(c.is_commander),
-        }
-        for d in batch
-        for c in d.cards
-    ]
 
     with engine.begin() as conn:
-        _upsert(
-            conn,
-            decks,
-            deck_rows,
-            # first_scraped_at absent de la liste → jamais écrasé sur UPDATE
-            ["commander", "deck_type", "bracket", "price", "currency",
-             "date_created", "date_modified", "scraped_at"],
+        # Récupérer first_scraped_at et présence pour les decks déjà en base
+        rows = conn.execute(
+            text("""
+                SELECT deck_id, MIN(first_scraped_at) AS fsa
+                FROM deck_cards
+                WHERE deck_id = ANY(:ids)
+                GROUP BY deck_id
+            """),
+            {"ids": deck_ids},
+        ).fetchall()
+        existing = {r.deck_id: r.fsa for r in rows}
+
+        created = sum(1 for d in batch if d.deck_id not in existing)
+        updated = len(batch) - created
+
+        # DELETE + INSERT pour chaque deck
+        conn.execute(
+            text("DELETE FROM deck_cards WHERE deck_id = ANY(:ids)"),
+            {"ids": deck_ids},
         )
-        conn.execute(delete(deck_cards).where(deck_cards.c.deck_id.in_(deck_ids)))
+
+        card_rows: list[tuple] = []
+        for d in batch:
+            first_scraped_at = existing.get(d.deck_id) or now
+            for c in d.cards:
+                card_rows.append((
+                    d.deck_id,
+                    d.commander,
+                    c.name,
+                    c.is_commander,
+                    c.quantity,
+                    d.bracket,
+                    float(d.price) if d.price is not None else None,
+                    d.currency,
+                    d.deck_type,
+                    d.date_created,
+                    d.date_modified,
+                    first_scraped_at,
+                    now,
+                ))
+
         if card_rows:
-            conn.execute(deck_cards.insert(), card_rows)
+            _bulk_insert(conn, card_rows)
 
     return created, updated
 
 
-# ─── État du scraping ───────────────────────────────────────────────────────
+# ── État du scraping ──────────────────────────────────────────────────────────
 
 def known_deck_ids(engine: Engine, candidates: Iterable[str]) -> set[str]:
-    """Parmi `candidates`, ceux déjà en base. Sert à ne télécharger que le neuf."""
+    """Parmi `candidates`, ceux déjà présents dans deck_cards."""
     ids = list(candidates)
     if not ids:
         return set()
 
     found: set[str] = set()
-    # Découpé : certains drivers plafonnent le nombre de paramètres liés.
     for i in range(0, len(ids), 1000):
         chunk = ids[i : i + 1000]
         with engine.connect() as conn:
-            rows = conn.execute(select(decks.c.deck_id).where(decks.c.deck_id.in_(chunk)))
+            rows = conn.execute(
+                text("SELECT DISTINCT deck_id FROM deck_cards WHERE deck_id = ANY(:ids)"),
+                {"ids": chunk},
+            )
             found.update(r[0] for r in rows)
     return found
 
 
-def upsert_commanders(engine: Engine, rows: list[dict]) -> int:
-    """rows : [{"name":..., "rank":..., "color_identity":...}].
+# ── Commandants ───────────────────────────────────────────────────────────────
 
-    N'écrase pas l'état de scraping (decks_extracted, last_scraped_at).
+def upsert_commanders(engine: Engine, rows: list[dict]) -> int:
+    """Insère ou met à jour des commandants (rank, color_identity).
+
+    N'écrase pas decks_extracted, first_extracted_at, last_scraped_at.
+    rows : [{"name": str, "rank": int, "color_identity": str}]
     """
     if not rows:
         return 0
     with engine.begin() as conn:
-        _upsert(conn, commanders, rows, ["rank", "color_identity"])
+        conn.execute(
+            text("""
+                INSERT INTO commanders (name, rank, color_identity)
+                VALUES (:name, :rank, :color_identity)
+                ON CONFLICT (name) DO UPDATE
+                    SET rank           = EXCLUDED.rank,
+                        color_identity = EXCLUDED.color_identity
+            """),
+            rows,
+        )
     return len(rows)
 
 
 def pending_commanders(engine: Engine, *, start_rank: int = 1, refresh: bool = False) -> list[str]:
-    """Commandants à traiter, par rang croissant. Ceux déjà scrapés sont exclus
-    sauf si `refresh` (re-scan complet pour récupérer les nouveaux decks)."""
-    query = select(commanders.c.name).where(commanders.c.rank >= start_rank)
+    """Commandants à scraper, ordonnés par rang."""
+    where = "rank >= :r"
     if not refresh:
-        query = query.where(commanders.c.last_scraped_at.is_(None))
-    query = query.order_by(commanders.c.rank)
-
+        where += " AND last_scraped_at IS NULL"
     with engine.connect() as conn:
-        return [r[0] for r in conn.execute(query)]
+        return [
+            r[0] for r in conn.execute(
+                text(f"SELECT name FROM commanders WHERE {where} ORDER BY rank"),
+                {"r": start_rank},
+            )
+        ]
 
 
 def mark_commander_scraped(engine: Engine, name: str, deck_count: int) -> None:
+    """Met à jour le compteur et la date de dernier scrape d'un commandant."""
+    now = datetime.now(UTC)
     with engine.begin() as conn:
         conn.execute(
-            commanders.update()
-            .where(commanders.c.name == name)
-            .values(decks_extracted=deck_count, last_scraped_at=datetime.now(UTC))
+            text("""
+                INSERT INTO commanders (name, decks_extracted, first_extracted_at, last_scraped_at)
+                VALUES (:name, :n, :now, :now)
+                ON CONFLICT (name) DO UPDATE
+                    SET decks_extracted    = EXCLUDED.decks_extracted,
+                        first_extracted_at = COALESCE(commanders.first_extracted_at, EXCLUDED.first_extracted_at),
+                        last_scraped_at    = EXCLUDED.last_scraped_at
+            """),
+            {"name": name, "n": deck_count, "now": now},
         )

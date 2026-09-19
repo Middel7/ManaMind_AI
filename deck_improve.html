@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>ManaMind — Améliorer mon deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/app.css">
+<style>
+  /* Vignettes a la taille de « Ma collection » */
+
+</style>
+<style>
+  /* Encart compact, aligne sur le selecteur de deck plutot qu'en grille */
+  .stat--inline { padding: var(--sp-2) var(--sp-4); white-space: nowrap; }
+  .stat--inline .stat__value { font-size: var(--text-xl); }
+</style>
+</head>
+<body>
+
+<div id="page">
+  <div class="stack-2">
+    <h2 class="h2">Améliorer un deck avec votre collection</h2>
+    <p class="muted small">
+      Ces cartes vous appartiennent, ne sont pas déjà dans ce deck, et sont fréquemment
+      jouées par les autres decks du même commandant.
+    </p>
+  </div>
+
+  <div class="toolbar">
+    <div id="deckPicker" class="grow"></div>
+    <div id="avgRate"></div>
+  </div>
+
+  <div id="results"></div>
+  <div id="starter"></div>
+</div>
+
+<script src="/static/js/mm.js"></script>
+<script>
+(async () => {
+  const user = await MM.boot({ title: 'Améliorer mon deck avec les cartes de ma collection', nav: 'improve' });
+  if (!user) return;
+
+  const results = MM.el('#results');
+  const starter = MM.el('#starter');
+  let currentDeck = null;
+  let suggestions = [];
+  let resolved = {};
+
+  // Rien n'est suggere tant qu'un deck n'a pas ete choisi : les suggestions
+  // d'un deck pris au hasard passeraient pour celles du deck voulu. L'ecran de
+  // depart dit d'ici la ce que l'outil va chercher.
+  results.innerHTML = MM.toolIntro({
+    icon: 'sparkle',
+    title: 'Choisissez le deck à améliorer',
+    text: 'L’outil ne propose que des cartes déjà dans vos boîtes : rien à acheter '
+      + 'pour appliquer ses suggestions.',
+    steps: [
+      { title: 'Vous désignez un deck',
+        text: 'Son commandant sert de point de comparaison. Choisissez-le dans la '
+            + 'liste ci-dessus ou parmi vos decks, plus bas.' },
+      { title: 'Nous lisons les decks du même commandant',
+        text: 'Des milliers de listes publiques sont dépouillées pour établir, carte '
+            + 'par carte, la part des decks qui la jouent.' },
+      { title: 'Nous croisons avec votre collection',
+        text: 'Ne restent que les cartes fréquemment jouées, que vous possédez, et '
+            + 'qui ne sont pas déjà dans ce deck. La plus jouée ouvre la liste.' },
+    ],
+    checks: [
+      { strong: 'Vos exemplaires disponibles :',
+        text: 'une carte déjà engagée dans un autre deck est signalée comme telle.' },
+      { strong: 'La popularité dans les decks :',
+        text: 'la part des listes du même commandant qui jouent la carte.' },
+      { strong: 'La composition actuelle du deck :',
+        text: 'ce qu’il contient déjà est écarté des suggestions.' },
+    ],
+    note: 'La popularité mesure l’usage, pas la qualité. Une carte jouée par 80 % '
+        + 'des listes reste à confronter à votre plan de jeu, votre budget de mana '
+        + 'et votre table.',
+  });
+
+  const decks = await MM.deckPicker(MM.el('#deckPicker'), (deck) => {
+    currentDeck = deck;
+    MM.deckContext = deck;   // cible des reglages « dans le deck »
+    starter.innerHTML = '';  // le choix est fait : la bande n'a plus lieu d'etre
+    load();
+  }, { label: 'Deck à améliorer', autoSelect: false });
+
+  // Reconnaitre un deck a son illustration va plus vite que de le chercher
+  // dans un menu deroulant.
+  if (!currentDeck && decks.length) {
+    starter.innerHTML = MM.deckStrip(decks, {
+      text: 'Un clic suffit : les suggestions remplacent alors cet écran.' });
+    MM.bindDeckStrip(starter, (deckId) => MM.pickDeck(MM.el('#deckPicker'), deckId));
+  }
+
+  async function load() {
+    if (!currentDeck) return;
+
+    if (MM.commanderMissing(currentDeck)) {
+      MM.el('#avgRate').innerHTML = '';
+      results.innerHTML = MM.commanderPrompt(currentDeck);
+      return;
+    }
+
+    results.innerHTML = `<div class="card-grid">${MM.cardSkeletons(12)}</div>`;
+
+    try {
+      const data = await MM.api.get('/api/collection-suggest'
+        + MM.api.qs({ top: 60, commander: currentDeck.commander }));
+      suggestions = data.results || [];
+      resolved = await MM.resolveCards(suggestions.map((card) => card.card_name));
+      render();
+    } catch (err) {
+      results.innerHTML = MM.empty({
+        icon: 'warning', title: 'Analyse impossible', text: err.message });
+    }
+  }
+
+  function render() {
+    MM.el('#avgRate').innerHTML = '';
+    if (!suggestions.length) {
+      results.innerHTML = MM.empty({
+        icon: 'sparkle',
+        title: 'Aucune suggestion pour ce deck',
+        text: "Aucune carte disponible dans votre collection n'améliorerait ce deck "
+          + 'de façon significative. Ajoutez des cartes pour élargir les possibilités.',
+        action: { href: '/collection/ajout', label: 'Ajouter des cartes' },
+      });
+      return;
+    }
+
+    // Les reperes que portent les vignettes — pourcentage, exemplaires libres,
+    // reglage — restaient a deviner : la legende les nomme une fois pour toutes.
+    results.innerHTML = `
+      ${MM.legend([
+        { icon: 'chart', strong: 'x % des decks similaires :',
+          text: 'la part des listes du même commandant qui jouent cette carte.' },
+        { icon: 'collection', strong: 'n libre :',
+          text: 'exemplaires que vous possédez sans qu’aucun deck ne les utilise.' },
+        { icon: 'plus', strong: 'Le réglage :',
+          text: 'ajoute la carte au deck choisi, sans toucher à votre collection.' },
+      ])}
+      <div class="card-grid" id="grid" style="margin-top:var(--sp-4)"></div>`;
+
+    // Les suggestions arrivent triees par taux decroissant : les vingt
+    // premieres sont donc les plus pertinentes du lot.
+    const head = suggestions.slice(0, 20);
+    const avg = head.reduce((sum, card) => sum + card.inclusion_rate, 0) / head.length;
+    MM.el('#avgRate').innerHTML = `
+      <div class="stat stat--inline">
+        <span class="stat__value">${Math.round(avg)} %</span>
+        <span class="stat__label">Taux moyen des ${head.length} premières</span>
+      </div>`;
+
+    MM.el('#grid').innerHTML = suggestions.map((card) => MM.cardTile({
+      ...(resolved[card.card_name] || {}),
+      card_name: card.card_name,
+      owned: card.copies_owned,
+      used: card.copies_used,
+    }, {
+      context: 'deck',
+      deckQty: 0,   // ces cartes sont justement celles qui n'y sont pas encore
+      note: `${Math.round(card.inclusion_rate)} % des decks similaires`,
+    })).join('');
+  }
+
+  // Le reglage de la vignette ajoute au deck : la carte quitte alors la liste
+  // des suggestions, qui ne montre que ce qui n'y est pas encore.
+  document.addEventListener('mm:card-change', (event) => {
+    if (event.detail.scope !== 'deck' || event.detail.delta < 0) return;
+    suggestions = suggestions.filter((card) => card.card_name !== event.detail.card_name);
+    MM.toast.ok(`${event.detail.card_name} ajoutée à ${currentDeck.name}.`);
+    render();
+  });
+})();
+</script>
+</body>
+</html>

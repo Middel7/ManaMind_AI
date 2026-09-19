@@ -9,8 +9,10 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 # Copier les fichiers de dépendances
 COPY pyproject.toml uv.lock* ./
 
-# Installer les dépendances dans un répertoire virtuel
-RUN uv sync --frozen --no-dev --no-install-project
+# Installer UNIQUEMENT les dépendances du serveur.
+# --no-default-groups écarte dev, ml et scrape : ni torch, ni scikit-learn,
+# ni Playwright dans l'image. Ces groupes ne servent qu'au poste de travail.
+RUN uv sync --frozen --no-install-project --no-default-groups --group analyze
 
 # ── Stage 2 : runtime ─────────────────────────────────────────────────────────
 FROM python:3.12-slim AS runtime

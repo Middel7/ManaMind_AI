@@ -7,6 +7,7 @@ parsing (après un changement de markup Moxfield) sans re-scraper.
 """
 
 import asyncio
+import time as _time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -54,19 +55,27 @@ async def _consume(
     batch_size: int,
     html_cache: Path | None,
     log: Logger,
+    stop_event=None,
 ) -> None:
     buffer: list[Deck] = []
 
     async def flush() -> None:
         if not buffer:
             return
-        # to_thread : l'écriture SQL est bloquante, on ne veut pas geler les
-        # workers Playwright pendant la transaction.
-        c, u = await asyncio.to_thread(db.upsert_decks, engine, list(buffer))
+        n = len(buffer)
+        log(f"  sauvegarde de {n} decks…")
+        t0 = _time.monotonic()
+        try:
+            c, u = db.upsert_decks(engine, list(buffer))
+        except Exception as exc:
+            log(f"  ERREUR sauvegarde : {exc!s}")
+            buffer.clear()
+            return
+        elapsed = _time.monotonic() - t0
         stats.created += c
         stats.updated += u
         buffer.clear()
-        log(f"  {stats.saved}/{len(deck_ids)} decks enregistrés")
+        log(f"  {stats.saved}/{len(deck_ids)} decks enregistrés ({elapsed:.1f}s)")
 
     async for deck_id, html in stream_deck_html(
         deck_ids,
@@ -74,6 +83,7 @@ async def _consume(
         page_wait_ms=page_wait_ms,
         headless=headless,
         log=lambda m: log(f"  {m}"),
+        stop_event=stop_event,
     ):
         stats.fetched += 1
 
@@ -81,9 +91,17 @@ async def _consume(
             html_cache.mkdir(parents=True, exist_ok=True)
             (html_cache / f"{deck_id}.html").write_text(html, encoding="utf-8")
 
-        deck = parse_deck_html(html, deck_id)
-        if deck is None:
+        deck_url = f"https://moxfield.com/decks/{deck_id}"
+        incomplete_reason: list[str] = []
+        deck = parse_deck_html(
+            html,
+            deck_id,
+            log=lambda r: incomplete_reason.append(r),
+        )
+        if deck is None or deck.commander is None:
             stats.incomplete += 1
+            reason = incomplete_reason[0] if incomplete_reason else "commander absent"
+            log(f"  incomplet {deck_url} — {reason}")
             continue
 
         buffer.append(deck)
@@ -99,12 +117,13 @@ def scrape(
     limit: int,
     commander: str | None = None,
     concurrency: int = 7,
-    page_wait_ms: int = 8000,
+    page_wait_ms: int = 7000,
     headless: bool = True,
     batch_size: int = 50,
     html_cache: Path | None = None,
     skip_known: bool = True,
     log: Logger = print,
+    stop_event=None,
 ) -> ScrapeStats:
     """Scrape `limit` decks (filtrés sur `commander` si fourni) et les écrit en base.
 
@@ -145,6 +164,7 @@ def scrape(
             batch_size=batch_size,
             html_cache=html_cache,
             log=log,
+            stop_event=stop_event,
         )
     )
 
@@ -169,9 +189,11 @@ def reparse_cache(
 
     for path in files:
         stats.fetched += 1
-        deck = parse_deck_html(path.read_text(encoding="utf-8"), path.stem)
+        reason_buf: list[str] = []
+        deck = parse_deck_html(path.read_text(encoding="utf-8"), path.stem, log=lambda r: reason_buf.append(r))
         if deck is None:
             stats.incomplete += 1
+            log(f"  incomplet {path.name} — {reason_buf[0] if reason_buf else 'inconnu'}")
             continue
         buffer.append(deck)
         if len(buffer) >= batch_size:

@@ -557,6 +557,7 @@ def api_collection_commanders(
     request: Request,
     top: int = Query(default=10, ge=1, le=50),
     mode: str = Query(default="available"),  # "available" | "all"
+    staple_threshold: float = Query(default=40.0, ge=0.0, le=100.0),
 ) -> Response:
     """
     Retourne les `top` commandants pour lesquels la collection couvre
@@ -579,21 +580,58 @@ def api_collection_commanders(
     deck_usage = _load_deck_usage_for_user(user["id"]) if mode == "available" else {}
 
     with SessionLocal() as s:
-        collection_rows = s.execute(text(
-            "SELECT card_name, quantity FROM user_collection WHERE user_id = :uid"
-        ), {"uid": user["id"]}).fetchall()
+        # Agréger par nom : une même carte peut exister en plusieurs exemplaires
+        # (éditions, finitions) sur des lignes distinctes.
+        collection_rows = s.execute(text("""
+            SELECT LOWER(TRIM(card_name)) AS name, SUM(quantity) AS quantity
+            FROM user_collection WHERE user_id = :uid
+            GROUP BY 1
+        """), {"uid": user["id"]}).fetchall()
 
         # Construire la collection selon le mode
         coll: dict[str, int] = {}
         for r in collection_rows:
-            name_lower = r.card_name.strip().lower()
+            name_lower = r.name
             if mode == "available":
-                dispo = r.quantity - deck_usage.get(name_lower, 0)
-                if dispo > 0:
-                    coll[name_lower] = dispo
+                # Une carte engagee dans un deck est ecartee entierement, meme
+                # possedee en plusieurs exemplaires : l'ecran promet « les cartes
+                # qui ne sont dans aucun de vos decks », et un deuxieme
+                # exemplaire d'une carte deja jouee ne fonde pas un nouveau deck.
+                if deck_usage.get(name_lower, 0) == 0:
+                    coll[name_lower] = r.quantity
             else:
                 coll[name_lower] = r.quantity
 
+        # Les communes et peu communes des extensions cochees comme ouvertes
+        # comptent comme disponibles : elles sont a portee de main sans avoir
+        # ete saisies une par une. Zero exemplaire connu, donc elles ne
+        # priment jamais sur une carte reellement en collection.
+        from manamind.collection_advisor import load_opened_set_cards
+        for opened_name in load_opened_set_cards(user["id"]).values():
+            key = opened_name.strip().lower()
+            if key not in coll and deck_usage.get(key, 0) == 0:
+                coll[key] = 1
+
+        if not coll:
+            return _json_response({"commanders": []})
+
+        # Terrains de base et cartes trop courantes sont ecartes, comme dans
+        # « Trouver un nouveau commandant » : jouees partout, elles ne
+        # distinguent aucun commandant et gonflaient le score de tous.
+        neutral = {
+            r.name for r in s.execute(text("""
+                SELECT DISTINCT n.name
+                FROM unnest(CAST(:names AS TEXT[])) AS n(name)
+                LEFT JOIN deck_stat_global g
+                       ON LOWER(BTRIM(g.card_name)) = n.name
+                LEFT JOIN scryfall_cards sc
+                       ON sc.normalized_name = mm_normalize_name(n.name)
+                WHERE COALESCE(g.global_frequency, 0) > :threshold
+                   OR sc.type_line ILIKE 'Basic Land%'
+            """), {"names": list(coll.keys()),
+                   "threshold": staple_threshold}).fetchall()
+        }
+        coll = {name: qty for name, qty in coll.items() if name not in neutral}
         if not coll:
             return _json_response({"commanders": []})
 
@@ -607,9 +645,20 @@ def api_collection_commanders(
                        unnest(CAST(:qtys  AS INTEGER[])) AS qty
             ),
             top100 AS (
+                -- Pre-filtre sur le taux d'inclusion : classer les 3,5 M lignes
+                -- de deck_stat_commander pour n'en garder que 173 k coutait
+                -- 1,3 s. Mesure sur la base : la 100e carte d'un commandant
+                -- n'est jamais sous 6,56 % (1er centile a 18,8 %), donc le
+                -- seuil a 1 % garde une marge de six et ne peut retirer aucune
+                -- carte du classement.
                 SELECT commander, card_name,
-                       ROW_NUMBER() OVER (PARTITION BY commander ORDER BY inclusion_rate DESC) AS rk
+                       -- card_name departage les ex aequo : sans lui, deux
+                       -- executions pouvaient retenir des 100es cartes
+                       -- differentes et donner des totaux qui varient.
+                       ROW_NUMBER() OVER (PARTITION BY commander
+                                          ORDER BY inclusion_rate DESC, card_name) AS rk
                 FROM deck_stat_commander
+                WHERE inclusion_rate >= 1.0
             ),
             top100_filtered AS (
                 SELECT commander, card_name FROM top100 WHERE rk <= 100
@@ -619,21 +668,43 @@ def api_collection_commanders(
                 FROM top100_filtered t
                 JOIN avail a ON a.card_name_lower = LOWER(TRIM(t.card_name))
             ),
+            -- Prix et illustrations restreints aux cartes de la collection :
+            -- agreger la grille Cardmarket et le catalogue Scryfall en entier
+            -- pour n'en garder que quelques milliers de lignes coutait 2,4 s.
             prices AS (
-                SELECT cp.en_name AS card_name,
-                       MIN(pe.low_price) AS low_price
+                -- Un LATERAL par produit a ete essaye pour eviter le parcours
+                -- complet de la grille : le planificateur bascule alors sur un
+                -- plan a plusieurs minutes. Le filtre par sous-requete reste le
+                -- meilleur compromis mesure.
+                SELECT cp.en_name AS card_name, MIN(pe.low_price) AS low_price
                 FROM cardmarket_products cp
                 JOIN cardmarket_price_guide_entries pe ON pe.id_product = cp.id_product
                 WHERE pe.low_price IS NOT NULL AND pe.low_price > 0
+                  AND LOWER(TRIM(cp.en_name)) IN (SELECT card_name_lower FROM avail)
                 GROUP BY cp.en_name
             ),
             card_images AS (
-                SELECT LOWER(TRIM(sc.name)) AS name_lower,
-                       MIN(p.image_normal) AS image_url
+                SELECT LOWER(TRIM(sc.name)) AS name_lower, img.image_normal AS image_url
                 FROM scryfall_cards sc
-                JOIN scryfall_card_printings p ON p.card_id = sc.id
-                WHERE p.image_normal IS NOT NULL AND p.lang = 'en'
-                GROUP BY LOWER(TRIM(sc.name))
+                -- L'edition retenue passe devant le defaut ; MIN() prenait la
+                -- premiere URL venue.
+                JOIN LATERAL (
+                    SELECT p.image_normal
+                    FROM scryfall_card_printings p
+                    WHERE p.card_id = sc.id AND p.lang = 'en'
+                      AND p.image_normal IS NOT NULL
+                    ORDER BY (
+                        p.scryfall_id = (
+                            SELECT pref.scryfall_id FROM user_preferred_printings pref
+                            WHERE pref.user_id = :uid
+                              AND pref.card_key = split_part(sc.normalized_name, ' // ', 1)
+                        )
+                    ) DESC NULLS LAST,
+                             (p.set_code NOT ILIKE 'sl%') DESC,
+                             p.released_at DESC NULLS LAST, p.id
+                    LIMIT 1
+                ) img ON TRUE
+                WHERE LOWER(TRIM(sc.name)) IN (SELECT card_name_lower FROM avail)
             ),
             scored AS (
                 SELECT cm.commander, cm.card_name, cm.qty,
@@ -642,19 +713,13 @@ def api_collection_commanders(
                 FROM collection_match cm
                 LEFT JOIN prices pr ON LOWER(TRIM(pr.card_name)) = LOWER(TRIM(cm.card_name))
                 LEFT JOIN card_images ci ON ci.name_lower = LOWER(TRIM(cm.card_name))
-            ),
-            cmd_images AS (
-                SELECT LOWER(TRIM(sc.name)) AS name_lower,
-                       MIN(p.image_normal) AS image_url
-                FROM scryfall_cards sc
-                JOIN scryfall_card_printings p ON p.card_id = sc.id
-                WHERE p.image_normal IS NOT NULL AND p.lang = 'en'
-                GROUP BY LOWER(TRIM(sc.name))
             )
+            -- L'illustration du commandant est resolue par _commander_images :
+            -- le CTE qui s'en chargeait ici rescannait tout Scryfall une
+            -- seconde fois, et laissait les duos « A & B » sans image.
             SELECT s.commander,
                    SUM(s.low_price) AS total_value,
                    COUNT(*) AS card_count,
-                   ci2.image_url AS commander_image,
                    JSON_AGG(
                        JSON_BUILD_OBJECT(
                            'card_name', s.card_name,
@@ -664,23 +729,203 @@ def api_collection_commanders(
                        ) ORDER BY s.low_price DESC
                    ) AS cards
             FROM scored s
-            LEFT JOIN cmd_images ci2 ON ci2.name_lower = LOWER(TRIM(s.commander))
-            GROUP BY s.commander, ci2.image_url
+            GROUP BY s.commander
             ORDER BY total_value DESC
             LIMIT :top
         """), {"names": coll_names, "qtys": coll_qtys, "top": top}).fetchall()
 
+    with SessionLocal() as s:
+        images = _commander_images(s, [r.commander for r in rows], user["id"])
+
     result = []
     for r in rows:
         cards = r.cards if isinstance(r.cards, list) else _j.loads(r.cards)
+        shots = images.get(r.commander) or []
         result.append({
             "commander": r.commander,
-            "commander_image": r.commander_image,
+            "commander_image": shots[0] if shots else None,
+            "commander_images": shots,
             "total_value": round(float(r.total_value or 0), 2),
             "card_count": r.card_count,
             "cards": cards,
         })
     return _json_response({"commanders": result})
+
+
+def _commander_images(session, names: list[str], user_id: int) -> dict[str, list[str]]:
+    """Illustrations d'un commandant : une par carte, deux pour un duo.
+
+    Les paires de partenaires sont stockees « A & B » et ne correspondent a
+    aucune carte de ce nom : sans decoupage, la moitie des suggestions
+    s'affichait sans illustration.
+    """
+    from sqlalchemy import text
+
+    parts: dict[str, list[str]] = {n: [p.strip() for p in n.split(" & ") if p.strip()]
+                                   for n in names}
+    wanted = sorted({p for pieces in parts.values() for p in pieces})
+    if not wanted:
+        return {}
+
+    # MIN() prenait l'illustration dont l'URL arrivait la premiere, au hasard.
+    # L'edition retenue par l'utilisateur passe devant, et le defaut ecarte les
+    # Secret Lair comme partout ailleurs.
+    rows = session.execute(text("""
+        SELECT n.name AS asked, img.image_normal AS image_url
+        FROM unnest(CAST(:names AS TEXT[])) AS n(name)
+        LEFT JOIN LATERAL (
+            SELECT p.image_normal
+            FROM scryfall_cards sc
+            JOIN scryfall_card_printings p ON p.card_id = sc.id
+            WHERE sc.normalized_name = mm_normalize_name(n.name)
+              AND p.image_normal IS NOT NULL AND p.lang = 'en'
+            ORDER BY (
+                p.scryfall_id = (
+                    SELECT pref.scryfall_id FROM user_preferred_printings pref
+                    WHERE pref.user_id = :uid
+                      AND pref.card_key = split_part(sc.normalized_name, ' // ', 1)
+                )
+            ) DESC NULLS LAST,
+                     (p.set_code NOT ILIKE 'sl%') DESC,
+                     p.released_at DESC NULLS LAST, p.id
+            LIMIT 1
+        ) img ON TRUE
+    """), {"names": wanted, "uid": user_id}).fetchall()
+    found = {r.asked: r.image_url for r in rows if r.image_url}
+
+    return {name: [found[p] for p in pieces if p in found]
+            for name, pieces in parts.items()}
+
+
+@router.get("/api/v2/commander-build/{commander}")
+def api_commander_build(
+    commander: str,
+    request: Request,
+    staple_threshold: float = Query(default=40.0, ge=0.0, le=100.0),
+) -> Response:
+    """Detail d'un commandant a construire : cartes possedees et a acheter.
+
+    Ecarte les memes cartes que la liste dont cette page est le detail :
+    terrains de base et cartes jouees dans plus de staple_threshold % des
+    decks, qui ne distinguent aucun commandant.
+
+    Les cartes possedees reprennent le calcul de /api/collection-commanders ;
+    les manquantes sont les plus jouees du commandant qui n'y figurent pas,
+    classees par taux d'inclusion — ce sont celles qui completent le deck.
+    """
+    from manamind.auth import get_current_user, COOKIE_NAME
+    user = get_current_user(mm_token=request.cookies.get(COOKIE_NAME))
+    from sqlalchemy import text
+    from manamind.db.engine import SessionLocal
+
+    with SessionLocal() as s:
+        collection = {
+            r.name: int(r.quantity)
+            for r in s.execute(text("""
+                SELECT LOWER(TRIM(card_name)) AS name, SUM(quantity) AS quantity
+                FROM user_collection WHERE user_id = :uid
+                GROUP BY 1
+            """), {"uid": user["id"]}).fetchall()
+        }
+
+        # deck_stat_commander fait 3,5 M lignes : la comparaison doit rester
+        # nue pour que ix_deck_stat_commander_commander serve. Le nom vient de
+        # nos propres donnees, donc l'egalite exacte suffit presque toujours ;
+        # le repli couvre une URL saisie a la main.
+        top = s.execute(text("""
+            SELECT dsc.card_name, dsc.inclusion_rate
+            FROM deck_stat_commander dsc
+            WHERE dsc.commander = :cmd
+              AND COALESCE((
+                    SELECT g.global_frequency FROM deck_stat_global g
+                    WHERE LOWER(BTRIM(g.card_name)) = LOWER(BTRIM(dsc.card_name))
+                    LIMIT 1
+                  ), 0) <= :threshold
+              AND NOT EXISTS (
+                    SELECT 1 FROM scryfall_cards sc
+                    WHERE sc.normalized_name = mm_normalize_name(dsc.card_name)
+                      AND sc.type_line ILIKE 'Basic Land%'
+                  )
+            ORDER BY dsc.inclusion_rate DESC, dsc.card_name
+            LIMIT 100
+        """), {"cmd": commander, "threshold": staple_threshold}).fetchall()
+        if not top:
+            top = s.execute(text("""
+                SELECT dsc.card_name, dsc.inclusion_rate
+                FROM deck_stat_commander dsc
+                WHERE LOWER(TRIM(dsc.commander)) = LOWER(TRIM(:cmd))
+              AND COALESCE((
+                    SELECT g.global_frequency FROM deck_stat_global g
+                    WHERE LOWER(BTRIM(g.card_name)) = LOWER(BTRIM(dsc.card_name))
+                    LIMIT 1
+                  ), 0) <= :threshold
+              AND NOT EXISTS (
+                    SELECT 1 FROM scryfall_cards sc
+                    WHERE sc.normalized_name = mm_normalize_name(dsc.card_name)
+                      AND sc.type_line ILIKE 'Basic Land%'
+                  )
+                ORDER BY dsc.inclusion_rate DESC, dsc.card_name
+                LIMIT 100
+            """), {"cmd": commander, "threshold": staple_threshold}).fetchall()
+
+        names = [r.card_name for r in top]
+        # Prix et illustration en une passe, sur les 100 noms exacts : les deux
+        # tables sont indexees sur ces colonnes, a condition de ne pas les
+        # envelopper dans une fonction.
+        extra = {}
+        if names:
+            extra = {
+                r.card_name: r for r in s.execute(text("""
+                    SELECT n.card_name,
+                           ROUND(pr.low_price::numeric, 2) AS low_price,
+                           img.image_url
+                    FROM unnest(CAST(:names AS TEXT[])) AS n(card_name)
+                    LEFT JOIN LATERAL (
+                        SELECT MIN(pe.low_price) AS low_price
+                        FROM cardmarket_products cp
+                        JOIN cardmarket_price_guide_entries pe ON pe.id_product = cp.id_product
+                        WHERE cp.en_name = n.card_name
+                          AND pe.low_price IS NOT NULL AND pe.low_price > 0
+                    ) pr ON TRUE
+                    LEFT JOIN LATERAL (
+                        SELECT MIN(p.image_normal) AS image_url
+                        FROM scryfall_cards sc
+                        JOIN scryfall_card_printings p ON p.card_id = sc.id
+                        WHERE sc.normalized_name = mm_normalize_name(n.card_name)
+                          AND p.image_normal IS NOT NULL AND p.lang = 'en'
+                    ) img ON TRUE
+                """), {"names": names}).fetchall()
+            }
+
+        cmd_images = _commander_images(s, [commander], user["id"]).get(commander, [])
+
+    if not top:
+        return _json_response({"error": "Commandant inconnu"}, status_code=404)
+
+    owned, missing = [], []
+    for r in top:
+        info = extra.get(r.card_name)
+        entry = {
+            "card_name": r.card_name,
+            "inclusion_rate": round(float(r.inclusion_rate or 0), 1),
+            "low_price": float(info.low_price or 0) if info and info.low_price else 0.0,
+            "image_url": info.image_url if info else None,
+        }
+        qty = collection.get((r.card_name or "").strip().lower(), 0)
+        if qty:
+            owned.append({**entry, "qty": qty})
+        else:
+            missing.append(entry)
+
+    return _json_response({
+        "commander": commander,
+        "commander_image": cmd_images[0] if cmd_images else None,
+        "commander_images": cmd_images,
+        "owned": owned,
+        "owned_value": round(sum(c["low_price"] for c in owned), 2),
+        "missing": missing[:20],
+        "missing_value": round(sum(c["low_price"] for c in missing[:20]), 2),
+    })
 
 
 @router.get("/api/collection")
@@ -817,19 +1062,30 @@ def api_card_inclusion(
     card: str = Query(...),
     commander: str = Query(...),
 ) -> JSONResponse:
-    """Taux d'inclusion d'une carte pour un commandant donné."""
-    from manamind.card_commander_matcher import _normalize, _load_frequency_index
-    idx = _load_frequency_index()
-    cmd_norm  = _normalize(commander)
-    card_norm = _normalize(card)
-    cmd_data  = idx.get(cmd_norm, {})
-    entry     = cmd_data.get(card_norm)
-    if entry is None:
+    """Taux d'inclusion d'une carte pour un commandant donné.
+
+    La statistique se lit dans deck_stat_commander : l'index en memoire dont
+    cette route dependait a disparu avec une refonte, et l'appel echouait
+    depuis sur un ImportError.
+    """
+    from sqlalchemy import text as _text
+    from manamind.db.engine import SessionLocal
+
+    with SessionLocal() as session:
+        row = session.execute(_text("""
+            SELECT decks_with_card, total_decks, inclusion_rate
+            FROM deck_stat_commander
+            WHERE LOWER(TRIM(commander)) = LOWER(TRIM(:cmd))
+              AND LOWER(TRIM(card_name)) = LOWER(TRIM(:card))
+            LIMIT 1
+        """), {"cmd": commander, "card": card}).fetchone()
+
+    if row is None:
         return _json_response({"inclusion_rate": None})
     return _json_response({
-        "inclusion_rate": round(entry["inclusion_rate"], 1),
-        "decks_with_card": entry["decks_with_card"],
-        "total_decks": entry["total_decks"],
+        "inclusion_rate": round(float(row.inclusion_rate or 0), 1),
+        "decks_with_card": int(row.decks_with_card or 0),
+        "total_decks": int(row.total_decks or 0),
     })
 
 
@@ -873,20 +1129,32 @@ def api_commander_suggest(
         rows = session.execute(_text("""
             SELECT dsc.commander, dsc.inclusion_rate, dsc.decks_with_card, dsc.total_decks,
                    (
-                     SELECT MIN(p2.image_normal)
+                     SELECT p2.image_normal
                      FROM scryfall_cards sc2
                      JOIN scryfall_card_printings p2
                        ON p2.card_id = sc2.id AND p2.lang = 'en' AND p2.image_normal IS NOT NULL
                      WHERE LOWER(TRIM(sc2.name)) = LOWER(TRIM(
                        SPLIT_PART(dsc.commander, ' & ', 1)
                      ))
+                     -- L'edition retenue passe devant ; MIN() prenait la
+                     -- premiere URL venue.
+                     ORDER BY (
+                         p2.scryfall_id = (
+                             SELECT pref.scryfall_id FROM user_preferred_printings pref
+                             WHERE pref.user_id = :uid
+                               AND pref.card_key = split_part(sc2.normalized_name, ' // ', 1)
+                         )
+                     ) DESC NULLS LAST,
+                              (p2.set_code NOT ILIKE 'sl%') DESC,
+                              p2.released_at DESC NULLS LAST, p2.id
+                     LIMIT 1
                    ) AS image_url
             FROM deck_stat_commander dsc
             WHERE dsc.card_name = :card
             GROUP BY dsc.commander, dsc.inclusion_rate, dsc.decks_with_card, dsc.total_decks
             ORDER BY dsc.inclusion_rate DESC
             LIMIT :top
-        """), {"card": card, "top": top}).fetchall()
+        """), {"card": card, "top": top, "uid": user["id"]}).fetchall()
 
     suggestions = []
     for row in rows:

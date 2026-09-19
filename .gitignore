@@ -217,3 +217,10 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# ManaMind — artefacts d'execution (generes, propres a chaque installation)
+outputs/
+uploads/
+*.db
+ml_metadata.json
+scrape_metadata.json

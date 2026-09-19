@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>ManaMind — Changer de commandant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/app.css">
+<style>
+  /* Meme boite que « Decks a construire » : la carte du commandant en entier,
+     un titre, un bouton. */
+  .cmd-card {
+    position: relative;
+    display: flex; flex-direction: column;
+    border-radius: var(--r-lg);
+    border: 1px solid var(--line);
+    background: var(--bg-raised);
+    overflow: hidden;
+    isolation: isolate;
+    transition: border-color var(--dur) var(--ease);
+  }
+  .cmd-card:hover { border-color: var(--line-accent); }
+
+  .cmd-card__head { position: relative; display: flex; align-items: flex-end; padding: var(--sp-3) var(--sp-4); }
+  .cmd-card__art { position: absolute; inset: 0; z-index: -2; background-size: cover; background-position: center 22%; opacity: 0.5; }
+  .cmd-card__head::after {
+    content: ""; position: absolute; inset: 0; z-index: -1;
+    background: linear-gradient(0deg, var(--bg-raised) 8%, rgba(14,14,21,0.35) 100%);
+  }
+  .cmd-card__body { padding: var(--sp-3) var(--sp-4) var(--sp-4);
+                    display: flex; flex-direction: column; gap: var(--sp-3); }
+  .cmd-card__split {
+    display: flex; gap: var(--sp-2);
+    align-items: center; justify-content: center;
+    height: 300px;
+  }
+  .cmd-card__portrait {
+    max-width: 100%; max-height: 100%;
+    width: auto;
+    border-radius: 4.7% / 3.5%;
+    box-shadow: var(--shadow-card);
+  }
+</style>
+</head>
+<body>
+
+<div id="page">
+  <div class="stack-2">
+    <h2 class="h2">Un autre commandant pour ce deck ?</h2>
+    <p class="muted small">
+      Ces commandants conserveraient le plus de valeur parmi les cartes déjà présentes
+      dans votre deck. Les cartes trop courantes (jouées partout) sont neutralisées
+      pour ne pas fausser la comparaison.
+    </p>
+  </div>
+
+  <div class="toolbar">
+    <div id="deckPicker"></div>
+    <div class="field" style="width:auto">
+      <label class="label" for="sortMode">Classement</label>
+      <select class="select" id="sortMode">
+        <option value="value">Valeur conservée</option>
+        <option value="affinity">Affinité réelle</option>
+      </select>
+    </div>
+    <div class="field" style="width:auto">
+      <label class="label" for="maxColors">Couleurs max</label>
+      <select class="select" id="maxColors">
+        <option value="5">Sans limite</option>
+        <option value="4">4 couleurs</option>
+        <option value="3">3 couleurs</option>
+        <option value="2">2 couleurs</option>
+        <option value="1">Mono-couleur</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="summary"></div>
+  <div id="results"></div>
+  <div id="starter"></div>
+</div>
+
+<script src="/static/js/mm.js"></script>
+<script>
+(async () => {
+  const user = await MM.boot({
+    title: 'Trouver un nouveau commandant pour mon deck', nav: 'swap' });
+  if (!user) return;
+
+  const results = MM.el('#results');
+  const starter = MM.el('#starter');
+  const state = { deck: null, sort: 'value', maxColors: 5, data: null };
+
+  // Rien n'est analyse tant qu'un deck n'a pas ete choisi : l'analyse est
+  // couteuse et n'a aucun sens sur un deck pris au hasard. L'ecran de depart
+  // explique d'ici la ce que « conserver de la valeur » veut dire.
+  results.innerHTML = MM.toolIntro({
+    icon: 'swap',
+    title: 'Choisissez le deck à repiloter',
+    text: 'Changer de commandant sans racheter un deck : la question est de savoir '
+      + 'combien de vos cartes actuelles survivraient au changement.',
+    steps: [
+      { title: 'Vous désignez un deck',
+        text: 'Ses cartes forment la base de la comparaison — le commandant actuel, lui, '
+            + 'est mis de côté.' },
+      { title: 'Nous testons d’autres commandants',
+        text: 'Pour chacun, nous regardons quelles cartes de votre liste resteraient '
+            + 'jouables : identité de couleur respectée et carte effectivement jouée '
+            + 'dans ses decks.' },
+      { title: 'Nous classons les candidats',
+        text: 'Par valeur conservée, ou par affinité réelle. Chaque fiche ouvre le '
+            + 'détail : ce qui reste, ce qui saute, ce qu’il faudrait acquérir.' },
+    ],
+    checks: [
+      { strong: 'La valeur conservée :',
+        text: 'le prix des cartes de votre deck que le nouveau commandant garderait.' },
+      { strong: 'L’identité de couleur :',
+        text: 'une carte hors des couleurs du candidat est perdue d’office. Le filtre '
+            + '« couleurs max » resserre la recherche.' },
+      { strong: 'Les cartes neutres :',
+        text: 'celles jouées dans presque tous les decks sont retirées du score — '
+            + 'elles survivraient à n’importe quel changement.' },
+    ],
+    note: 'Le classement porte sur la valeur et l’usage, pas sur le plaisir de jeu. '
+        + 'Un commandant qui garde 90 % de vos cartes peut demander un tout autre '
+        + 'plan de partie.',
+  });
+
+  const decks = await MM.deckPicker(MM.el('#deckPicker'), (deck) => {
+    state.deck = deck;
+    starter.innerHTML = '';
+    load();
+  }, { label: 'Deck de départ', autoSelect: false });
+
+  if (!state.deck && decks.length) {
+    starter.innerHTML = MM.deckStrip(decks, {
+      text: 'Un clic lance la recherche de commandants pour ce deck.' });
+    MM.bindDeckStrip(starter, (deckId) => MM.pickDeck(MM.el('#deckPicker'), deckId));
+  }
+
+  MM.el('#sortMode').addEventListener('change', (event) => {
+    state.sort = event.target.value; load();
+  });
+  MM.el('#maxColors').addEventListener('change', (event) => {
+    state.maxColors = Number(event.target.value); load();
+  });
+
+  async function load() {
+    if (!state.deck) return;
+    results.innerHTML = `<div class="stack">${Array.from({ length: 4 }, () =>
+      '<div class="skeleton" style="height:190px"></div>').join('')}</div>`;
+
+    try {
+      const data = await MM.api.get('/api/commander-swap' + MM.api.qs({
+        commander: state.deck.commander,
+        top: 12,
+        sort: state.sort,
+        max_colors: state.maxColors,
+      }));
+      state.data = data;
+      render(data);
+    } catch (err) {
+      results.innerHTML = MM.empty({
+        icon: 'warning', title: 'Analyse impossible', text: err.message });
+      MM.el('#summary').innerHTML = '';
+    }
+  }
+
+  function render(data) {
+    MM.el('#summary').innerHTML = `
+      <div class="stats">
+        <div class="stat">
+          <span class="stat__value">${MM.fmt.int(data.deck_card_count)}</span>
+          <span class="stat__label">Cartes analysées</span>
+          <span class="stat__note">${MM.fmt.int(data.scored_count)} entrent dans le score</span>
+        </div>
+        <div class="stat">
+          <span class="stat__value">${MM.fmt.eur(data.deck_value, { compact: true })}</span>
+          <span class="stat__label">Valeur du deck</span>
+          <span class="stat__note">hors cartes trop courantes</span>
+        </div>
+        <div class="stat">
+          <span class="stat__value">${MM.fmt.int((data.staples || []).length)}</span>
+          <span class="stat__label">Cartes neutres</span>
+          <span class="stat__note">jouées dans plus de ${data.staple_threshold} % des decks</span>
+        </div>
+        <div class="stat">
+          <span class="stat__value">${MM.fmt.int((data.candidates || []).length)}</span>
+          <span class="stat__label">Commandants proposés</span>
+          <span class="stat__note">compatibles avec vos couleurs</span>
+        </div>
+      </div>`;
+
+    const candidates = data.candidates || [];
+    if (!candidates.length) {
+      results.innerHTML = MM.empty({
+        icon: 'swap',
+        title: 'Aucun commandant alternatif',
+        text: 'Aucun commandant ne conserverait suffisamment de cartes de ce deck '
+          + 'avec les critères actuels. Élargissez la limite de couleurs.',
+      });
+      return;
+    }
+
+    results.innerHTML = `<div class="grid-2">${candidates.map((cand) => {
+      const art = cand.commander_image
+        ? cand.commander_image.replace('/normal/', '/art_crop/') : null;
+      return `
+        <article class="cmd-card">
+          <div class="cmd-card__head">
+            ${art ? `<div class="cmd-card__art"
+              style="background-image:url('${MM.esc(art)}')"></div>` : ''}
+            <div style="min-width:0">
+              <p class="h3">${MM.esc(cand.commander)}</p>
+              <p class="xs muted">${MM.img.pips(cand.color_identity)}
+                ${MM.fmt.int(cand.kept_count)} cartes gardées ·
+                ${MM.fmt.eur(cand.kept_value, { compact: true })} · ${cand.kept_pct} %</p>
+            </div>
+          </div>
+          <div class="cmd-card__body">
+            <div class="cmd-card__split">
+              ${cand.commander_image ? `
+                <img class="cmd-card__portrait" src="${MM.esc(cand.commander_image)}"
+                     alt="${MM.esc(cand.commander)}" loading="lazy">` : ''}
+            </div>
+            <div class="cluster-2">
+              <a class="btn btn--sm" href="/decks/commandant/detail${MM.api.qs({
+                from: state.deck.commander, commander: cand.commander,
+                sort: state.sort, max_colors: state.maxColors })}">Voir le détail</a>
+              ${cand.missing_value ? `<span class="badge badge--warn">
+                ${MM.fmt.eur(cand.missing_value)} à acquérir</span>` : ''}
+            </div>
+          </div>
+        </article>`;
+    }).join('')}</div>`;
+
+  }
+
+})();
+</script>
+</body>
+</html>

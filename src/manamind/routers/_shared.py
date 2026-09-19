@@ -27,3 +27,27 @@ def _json_response(data: dict, status_code: int = 200) -> Response:
         status_code=status_code,
         media_type="application/json; charset=utf-8",
     )
+
+
+def preferred_printing_first(printing_alias: str, card_key_expr: str) -> str:
+    """Fragment ORDER BY qui place l'edition retenue par l'utilisateur en tete.
+
+    Une carte a plusieurs impressions, et chaque ecran en choisissait une par
+    heuristique — la plus recente, hors Secret Lair et promotions. Quand
+    l'utilisateur en a designe une, c'est elle qu'il veut voir, partout : ce
+    fragment se glisse au debut du ORDER BY qui departageait les impressions,
+    et le reste ne sert plus que de defaut.
+
+    La requete hote doit lier :uid. `card_key_expr` donne le nom normalise de
+    la carte, replie sur sa face avant — de preference une colonne deja
+    calculee (c.normalized_name) plutot qu'un appel a mm_normalize_name, qui
+    ferait de la jointure une boucle imbriquee.
+    """
+    return f"""(
+        {printing_alias}.scryfall_id = (
+            SELECT pref.scryfall_id
+            FROM user_preferred_printings pref
+            WHERE pref.user_id = :uid
+              AND pref.card_key = {card_key_expr}
+        )
+    ) DESC NULLS LAST"""

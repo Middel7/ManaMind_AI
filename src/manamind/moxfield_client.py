@@ -5,6 +5,8 @@ import time
 import unicodedata
 from pathlib import Path
 
+from .commanders import join_commanders, split_commanders
+
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG_FILE  = ROOT / "data" / "moxfield_decks.json"
 CACHE_DIR    = ROOT / "data" / "moxfield_cache"
@@ -84,9 +86,9 @@ def _local_txt_path(commander_name: str) -> Path:
 
 def _write_local_txt(commander_name: str, cards: list[tuple[str, int]]) -> None:
     """Écrit la decklist au format Moxfield dans le .txt local.
-    Pour les decks Partner ("Cmd1 + Cmd2"), écrit une ligne par commandant."""
+    Pour les decks Partner ("Cmd1 & Cmd2"), écrit une ligne par commandant."""
     lines = [f"{qty} {name}" for name, qty in sorted(cards, key=lambda x: x[0])]
-    cmd_lines = "\n".join(f"1 {n.strip()}" for n in commander_name.split("+"))
+    cmd_lines = "\n".join(f"1 {n}" for n in split_commanders(commander_name))
     lines.append(f"\n{cmd_lines}")
     _local_txt_path(commander_name).write_text("\n".join(lines), encoding="utf-8")
 
@@ -96,8 +98,8 @@ def _read_local_txt(commander_name: str) -> list[tuple[str, int]]:
     path = _local_txt_path(commander_name)
     if not path.exists():
         return []
-    # Exclure chaque partie du nom (gère "Cmd1 + Cmd2")
-    cmd_norms = {_normalize(n.strip()) for n in commander_name.split("+")}
+    # Exclure chaque partie du nom (gère "Cmd1 & Cmd2")
+    cmd_norms = {_normalize(n) for n in split_commanders(commander_name)}
     result = []
     for line in path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
@@ -112,50 +114,20 @@ def _read_local_txt(commander_name: str) -> list[tuple[str, int]]:
 
 
 def add_card_to_deck(commander_name: str, card_name: str, user_id: int = 1) -> None:
-    """Ajoute une carte (qty 1) dans user_deck_cards (DB) pour le commandant."""
-    from sqlalchemy import text as _text
-    from manamind.db.engine import SessionLocal as _SessionLocal
-    with _SessionLocal() as s:
-        s.execute(_text("""
-            INSERT INTO user_deck_cards (user_id, commander, card_name, quantity)
-            VALUES (:uid, :cmd, :name, 1)
-            ON CONFLICT (user_id, commander, card_name) DO UPDATE
-              SET quantity = user_deck_cards.quantity + 1
-        """), {"uid": user_id, "cmd": commander_name, "name": card_name})
-        s.commit()
+    """Ajoute un exemplaire au deck de ce commandant.
+
+    Delegue a user_decks, qui rattache la carte au deck par son identifiant :
+    depuis que plusieurs decks peuvent partager un commandant, ecrire ici une
+    ligne sans deck_id violerait la contrainte de la table.
+    """
+    from manamind.user_decks import add_card_to_deck_db
+    add_card_to_deck_db(user_id, commander_name, card_name)
 
 
 def remove_card_from_deck(commander_name: str, card_name: str, user_id: int = 1) -> bool:
-    """Retire une carte de user_deck_cards (DB) pour le commandant.
-    Retourne False si la carte est absente.
-    """
-    from sqlalchemy import text as _text
-    from manamind.db.engine import SessionLocal as _SessionLocal
-    with _SessionLocal() as s:
-        row = s.execute(_text("""
-            SELECT quantity FROM user_deck_cards
-            WHERE user_id = :uid
-              AND LOWER(TRIM(commander)) = LOWER(TRIM(:cmd))
-              AND LOWER(TRIM(card_name)) = LOWER(TRIM(:name))
-        """), {"uid": user_id, "cmd": commander_name, "name": card_name}).fetchone()
-        if row is None:
-            return False
-        if row.quantity <= 1:
-            s.execute(_text("""
-                DELETE FROM user_deck_cards
-                WHERE user_id = :uid
-                  AND LOWER(TRIM(commander)) = LOWER(TRIM(:cmd))
-                  AND LOWER(TRIM(card_name)) = LOWER(TRIM(:name))
-            """), {"uid": user_id, "cmd": commander_name, "name": card_name})
-        else:
-            s.execute(_text("""
-                UPDATE user_deck_cards SET quantity = quantity - 1
-                WHERE user_id = :uid
-                  AND LOWER(TRIM(commander)) = LOWER(TRIM(:cmd))
-                  AND LOWER(TRIM(card_name)) = LOWER(TRIM(:name))
-            """), {"uid": user_id, "cmd": commander_name, "name": card_name})
-        s.commit()
-    return True
+    """Retire un exemplaire. False si la carte est absente."""
+    from manamind.user_decks import remove_card_from_deck_db
+    return remove_card_from_deck_db(user_id, commander_name, card_name)
 
 
 def get_local_txt_content(commander_name: str, user_id: int = 1) -> str | None:
@@ -244,19 +216,19 @@ def _load_cache(deck_id: str) -> dict | None:
 
 def _extract_commander(data: dict) -> str:
     """Extrait le(s) nom(s) du/des commandant(s) depuis la réponse JSON Moxfield.
-    Pour les decks Partner, retourne "Cmd1 + Cmd2" (trié alphabétiquement)."""
+    Pour les decks Partner, retourne "Cmd1 & Cmd2" (trié alphabétiquement)."""
     commanders = (
         data.get("boards", {})
             .get("commanders", {})
             .get("cards", {})
     )
-    names = sorted(
+    names = [
         card_data.get("card", {}).get("name", "")
         for card_data in commanders.values()
         if card_data.get("card", {}).get("name", "")
-    )
+    ]
     if names:
-        return " + ".join(names)
+        return join_commanders(names)
     return data.get("name", "Commandant inconnu")
 
 

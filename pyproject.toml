@@ -5,50 +5,28 @@ description = "manamind system recommender"
 readme = "README.md"
 requires-python = "==3.12.8"
 dependencies = [
-    # Web
+    # ── Serveur web ────────────────────────────────────────────────────────────
+    # Tout ce qui est nécessaire pour SERVIR l'application, et rien de plus.
+    # Le scraping et l'apprentissage vivent dans les groupes « scrape » et « ml »
+    # ci-dessous : ils tournent sur le poste de travail, jamais en production.
     "fastapi>=0.111.0",
     "uvicorn[standard]>=0.29.0",
     "python-multipart>=0.0.9",
-    # Data science
-    "numpy>=1.26",
-    "scikit-learn>=1.7.2",
-    # Embeddings vectoriels — Phase V3
-    "sentence-transformers>=2.7",
-    "torch>=2.0",
-    # Quality
-    "pre-commit>=1.11.2",
     "pydantic>=2.12.4",
-    "ruff>=0.0.17",
-    # Base de données partagée MTG-DB
+    # ── Base de données ────────────────────────────────────────────────────────
     "mtgdb @ git+https://github.com/Middel7/MTG-DB.git",
-    # Database — conservé pour les outils Alembic locaux
     "sqlalchemy>=2.0",
     "alembic>=1.13",
     "psycopg2-binary>=2.9",
     "python-dotenv>=1.0",
-    # Scraping Moxfield — src/manamind/moxfield_scraper
-    # (playwright nécessite aussi : playwright install chromium)
-    "playwright>=1.40",
-    "beautifulsoup4>=4.12",
-    # Import Scryfall — géré par MTG-DB, conservé pour compatibilité
-    "httpx>=0.27",
-    "ijson>=3.3",
-    "tqdm>=4.66",
-    "pandas>=3.0.3",
-    "gensim>=4.4.0",
-    "xgboost>=3.3.0",
-    "shap>=0.52.0",
-    "matplotlib>=3.11.0",
-    "tabulate>=0.10.0",
-    "umap-learn>=0.5.12",
-    "hdbscan>=0.8.44",
-    "plotly>=6.8.0",
-    "anthropic>=0.111.0",
+    # ── Authentification, quotas, supervision ──────────────────────────────────
     "python-jose[cryptography]>=3.3",
     "cryptography>=42,<43",
     "passlib[bcrypt]>=1.7",
     "slowapi>=0.1.9",
     "sentry-sdk[fastapi]>=2.0",
+    # ── Appels sortants (résolution d'une carte inconnue à l'import) ───────────
+    "httpx>=0.27",
 ]
 
 [dependency-groups]
@@ -56,7 +34,55 @@ dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
     "httpx>=0.27",
+    "pre-commit>=1.11.2",
+    "ruff>=0.0.17",
 ]
+
+# Apprentissage, agrégation statistique, analyses hors ligne — scripts/ uniquement.
+# Absent de l'image de production : le serveur n'importe ni torch, ni numpy,
+# ni pandas, ni scikit-learn.
+# Moteur d'analyse de deck — scripts/deck_improver.py, chargé dynamiquement par
+# le serveur (_get_deck_engine). Ce groupe EST installé en production : c'est le
+# seul calcul que la mise en ligne conserve.
+analyze = [
+    "numpy>=1.26",
+    "pandas>=3.0.3",
+    "scikit-learn>=1.7.2",
+    # Sur Linux, « xgboost » tire nvidia-nccl-cu12 (~200 Mo) pour le multi-GPU,
+    # inutile sur un VPS sans carte graphique. xgboost-cpu expose le même module
+    # « xgboost » sans ces dépendances. Windows n'est pas concerné.
+    "xgboost>=3.3.0 ; sys_platform != 'linux'",
+    "xgboost-cpu>=3.3.0 ; sys_platform == 'linux'",
+]
+
+ml = [
+    { include-group = "analyze" },
+    "sentence-transformers>=2.7",
+    "torch>=2.0",
+    "gensim>=4.4.0",
+    "shap>=0.52.0",
+    "umap-learn>=0.5.12",
+    "hdbscan>=0.8.44",
+    "matplotlib>=3.11.0",
+    "plotly>=6.8.0",
+    "tabulate>=0.10.0",
+    "ijson>=3.3",
+    "tqdm>=4.66",
+    "anthropic>=0.111.0",
+]
+
+# Collecte Moxfield — src/manamind/moxfield_scraper.
+# Nécessite aussi : playwright install chromium (~450 Mo de navigateur).
+scrape = [
+    "playwright>=1.40",
+    "beautifulsoup4>=4.12",
+]
+
+[tool.uv]
+# Le poste de travail installe tout par défaut : « uv sync » ne change pas de
+# comportement en local. L'image Docker passe --no-default-groups pour n'installer
+# que les dépendances du serveur.
+default-groups = ["dev", "analyze", "ml", "scrape"]
 
 [[tool.uv.index]]
 name = "pytorch-cu126"

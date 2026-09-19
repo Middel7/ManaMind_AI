@@ -242,28 +242,36 @@ class DeckImprovementEngine:
         self.global_freq: dict[str, float] = {}
         self.card_mana_value: dict[str, float] = {}
         self.card_color_compat: dict[tuple[str, str], int] = {}
+        # Les deux sources sont chargées séparément : groupées dans un seul try,
+        # l'échec de la seconde faisait perdre la première, pourtant valide.
         try:
             with SessionLocal() as _s:
-                # global_frequency depuis deck_stat_global
                 _gf_rows = _s.execute(text(
                     "SELECT card_name, global_frequency FROM deck_stat_global"
                 )).fetchall()
-                # mana_value et color_identity depuis cards
-                _card_rows = _s.execute(text(
-                    "SELECT name, mana_value, color_identity FROM cards WHERE mana_value IS NOT NULL"
-                )).fetchall()
             self.global_freq = {_r.card_name: float(_r.global_frequency or 0.0) for _r in _gf_rows}
+        except Exception as _e_gf:
+            log.warning("  deck_stat_global indisponible (%s) — frequences vides", _e_gf)
+
+        try:
+            with SessionLocal() as _s:
+                # La table s'appelle scryfall_cards ; « cards » n'existe pas et
+                # levait une exception a chaque demarrage.
+                _card_rows = _s.execute(text(
+                    "SELECT name, mana_value, color_identity FROM scryfall_cards"
+                    " WHERE mana_value IS NOT NULL"
+                )).fetchall()
             self.card_mana_value = {_r.name: float(_r.mana_value) for _r in _card_rows}
-            # color_identity depuis cards sert de proxy à color_identity_compat
-            # (1 si la couleur est dans l'identité de couleur, stocké comme liste JSON)
+            # color_identity sert de proxy à color_identity_compat
             self.card_color_compat = {_r.name: _r.color_identity for _r in _card_rows}
         except Exception as _e_meta:
-            log.warning("  Métadonnées DB indisponibles (%s) — dicts vides", _e_meta)
+            log.warning("  Métadonnées cartes indisponibles (%s) — dicts vides", _e_meta)
         # Métadonnées depuis DB (color_identity Scryfall)
         self.cmd_colors: dict[str, frozenset]  = {}
         self.card_colors: dict[str, frozenset] = {}
         self._load_db_metadata()
-        log.info("  Metadata : %d cartes connues", len(self.global_freq))
+        log.info("  Metadata : %d frequences, %d cartes avec cout de mana",
+                 len(self.global_freq), len(self.card_mana_value))
 
         # ── Clusters ──────────────────────────────────────────────────────────
         ann_list = json.loads((CLUST_DIR / "cluster_annotations.json").read_text("utf-8"))

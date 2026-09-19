@@ -1,0 +1,117 @@
+/* ManaMind — jetons de design
+   Interface sombre : l'illustration des cartes porte la couleur, le chrome
+   reste neutre pour ne pas entrer en concurrence avec elle. */
+
+:root {
+  /* ── Fonds ─────────────────────────────────────────────────────────────── */
+  --bg:            #08080C;
+  --bg-raised:     #0E0E15;
+  --bg-sunken:     #050508;
+  --surface:       rgba(255, 255, 255, 0.038);
+  --surface-2:     rgba(255, 255, 255, 0.065);
+  --surface-3:     rgba(255, 255, 255, 0.095);
+  --overlay:       rgba(4, 4, 8, 0.86);
+
+  /* ── Bordures ──────────────────────────────────────────────────────────── */
+  --line:          rgba(255, 255, 255, 0.085);
+  --line-strong:   rgba(255, 255, 255, 0.17);
+  --line-accent:   rgba(224, 169, 74, 0.38);
+
+  /* ── Texte ─────────────────────────────────────────────────────────────── */
+  --text:          #F3F0EA;
+  --text-2:        #A5A099;
+  --text-3:        #6B6862;
+  --text-inverse:  #0A0A0F;
+
+  /* ── Accent ────────────────────────────────────────────────────────────── */
+  --accent:        #E0A94A;
+  --accent-bright: #F2C475;
+  --accent-deep:   #A97A2C;
+  --accent-wash:   rgba(224, 169, 74, 0.13);
+  --accent-glow:   rgba(224, 169, 74, 0.28);
+
+  /* ── Identite de couleur MTG ───────────────────────────────────────────── */
+  --mtg-w: #F0E3C2;
+  --mtg-u: #7BB0E8;
+  --mtg-b: #A98FD0;
+  --mtg-r: #E8836B;
+  --mtg-g: #78C29A;
+  --mtg-c: #B0AAA0;
+
+  /* ── Etats ─────────────────────────────────────────────────────────────── */
+  --ok:      #6BC98A;
+  --ok-wash: rgba(107, 201, 138, 0.13);
+  --warn:      #E0A94A;
+  --warn-wash: rgba(224, 169, 74, 0.13);
+  --danger:      #E5695E;
+  --danger-wash: rgba(229, 105, 94, 0.13);
+  --info:      #7BB0E8;
+  --info-wash: rgba(123, 176, 232, 0.13);
+
+  /* ── Raretes ───────────────────────────────────────────────────────────── */
+  --rarity-common:   #B0AAA0;
+  --rarity-uncommon: #A8B8C4;
+  --rarity-rare:     #D9BE72;
+  --rarity-mythic:   #E08A4C;
+
+  /* ── Typographie ───────────────────────────────────────────────────────── */
+  --font-display: "Marcellus", Georgia, "Times New Roman", serif;
+  --font-ui: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+             Helvetica, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Code", Consolas, "SF Mono", monospace;
+
+  --text-xs:   0.6875rem;  /* 11px — meta, etiquettes */
+  --text-sm:   0.8125rem;  /* 13px — texte secondaire */
+  --text-base: 0.9375rem;  /* 15px — corps */
+  --text-lg:   1.0625rem;
+  --text-xl:   1.375rem;
+  --text-2xl:  1.75rem;
+  --text-3xl:  2.25rem;
+  --text-4xl:  3rem;
+
+  --leading-tight: 1.2;
+  --leading-normal: 1.55;
+
+  /* ── Espacement ────────────────────────────────────────────────────────── */
+  --sp-1: 4px;   --sp-2: 8px;   --sp-3: 12px;  --sp-4: 16px;
+  --sp-5: 20px;  --sp-6: 24px;  --sp-8: 32px;  --sp-10: 40px;
+  --sp-12: 48px; --sp-16: 64px; --sp-20: 80px;
+
+  /* ── Rayons ────────────────────────────────────────────────────────────── */
+  --r-sm: 6px;  --r-md: 10px;  --r-lg: 14px;  --r-xl: 20px;  --r-full: 999px;
+  /* Ratio d'une carte Magic : 63 x 88 mm */
+  --card-ratio: 63 / 88;
+
+  /* ── Ombres ────────────────────────────────────────────────────────────── */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.55);
+  --shadow-card: 0 6px 24px rgba(0, 0, 0, 0.5);
+  --shadow-accent: 0 0 0 1px var(--line-accent), 0 8px 28px rgba(224, 169, 74, 0.15);
+
+  /* ── Structure ─────────────────────────────────────────────────────────── */
+  --sidebar-w: 232px;
+  --sidebar-w-collapsed: 68px;
+  --bottombar-h: 62px;
+  --topbar-h: 60px;
+  --content-max: 1560px;
+
+  /* ── Mouvement ─────────────────────────────────────────────────────────── */
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 0.14s;
+  --dur: 0.22s;
+  --dur-slow: 0.4s;
+
+  --z-sticky: 100;
+  --z-nav: 200;
+  --z-drawer: 300;
+  --z-modal: 400;
+  --z-toast: 500;
+
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-fast: 0.01ms; --dur: 0.01ms; --dur-slow: 0.01ms; }
+}

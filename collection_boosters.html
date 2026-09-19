@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>ManaMind — Extensions ouvertes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/app.css">
+<style>
+  .set-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--sp-3); }
+
+  .set-card {
+    position: relative;
+    display: flex; align-items: center; gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-4);
+    border-radius: var(--r-lg);
+    border: 1px solid var(--line);
+    background: var(--surface);
+    text-align: left;
+    transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+  }
+  .set-card:hover { border-color: var(--line-accent); background: var(--surface-2); }
+  /* Les icones d'extension sont des SVG noirs : il faut les eclaircir */
+  .set-card__icon {
+    width: 30px; height: 30px; flex-shrink: 0;
+    filter: invert(1) brightness(1.6);
+    opacity: 0.82;
+  }
+
+  /* Extension retenue comme ouverte */
+  .set-card[aria-pressed="true"] {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  }
+  .set-card[aria-pressed="true"] .set-card__icon { opacity: 1; }
+  .set-card__check {
+    flex-shrink: 0;
+    width: 20px; height: 20px;
+    display: grid; place-items: center;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    color: var(--text-inverse);
+  }
+  .set-card__check svg { width: 13px; height: 13px; opacity: 0; }
+  .set-card[aria-pressed="true"] .set-card__check {
+    background: var(--accent); border-color: var(--accent);
+  }
+  .set-card[aria-pressed="true"] .set-card__check svg { opacity: 1; }
+  .set-card.is-busy { opacity: 0.55; pointer-events: none; }
+</style>
+</head>
+<body>
+
+<div id="page">
+  <section class="stack-6">
+    <div class="stack-2">
+      <h2 class="h2">Quelles extensions avez-vous ouvertes ?</h2>
+      <p class="muted small">Cochez les extensions dont vous avez ouvert des boosters. Leurs
+        communes et peu communes seront considérées comme disponibles dans les suggestions
+        de decks, même si vous ne les avez pas saisies une par une dans votre collection.</p>
+    </div>
+
+    <div class="toolbar">
+      <div class="search toolbar__search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+             stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+        <input class="input" id="setSearch" type="search" placeholder="Nom ou code d'extension…">
+      </div>
+      <div class="chips" id="scopeFilter">
+        <button class="chip" data-scope="all" aria-pressed="true">Toutes</button>
+        <button class="chip" data-scope="opened" aria-pressed="false">Cochées</button>
+      </div>
+      <div class="toolbar__spacer"></div>
+      <span class="badge badge--ok" id="openedCount" hidden></span>
+    </div>
+
+    <div class="set-grid" id="setGrid"></div>
+  </section>
+</div>
+
+<script src="/static/js/mm.js"></script>
+<script>
+(async () => {
+  // Les deux requetes sont independantes : on les lance ensemble.
+  const setsReq = MM.api.get('/api/v2/sets?limit=1000')
+    .then((value) => ({ value }), (error) => ({ error }));
+  const openedReq = MM.api.get('/api/opened-sets')
+    .then((value) => ({ value }), (error) => ({ error }));
+
+  const user = await MM.boot({
+    title: "Sélectionner les extensions que j'ai ouvertes",
+    nav: 'boosters',
+  });
+  if (!user) return;
+
+  // La liste complete (~420 extensions) tient en memoire : la recherche filtre
+  // localement plutot que de rappeler l'API a chaque frappe.
+  const state = { sets: [], opened: new Set(), search: '', scope: 'all' };
+
+  const grid = MM.el('#setGrid');
+  grid.innerHTML = Array.from({ length: 12 }, () =>
+    '<div class="skeleton" style="height:60px"></div>').join('');
+
+  const setsRes = await setsReq;
+  if (setsRes.error) {
+    grid.innerHTML = MM.empty({
+      icon: 'warning', title: 'Chargement impossible', text: setsRes.error.message });
+    return;
+  }
+  state.sets = setsRes.value.sets || [];
+
+  // Une selection illisible vaut mieux qu'une page en erreur : si la liste des
+  // extensions deja cochees ne revient pas, on affiche la grille vierge.
+  const openedRes = await openedReq;
+  if (!openedRes.error) {
+    // D'anciennes saisies ont laisse en base des codes sans extension
+    // correspondante (KMH, DKT...). Les compter afficherait un total que la
+    // grille est incapable de montrer, et donc de decocher.
+    const known = new Set(state.sets.map((set) => set.code));
+    state.opened = new Set((openedRes.value.sets || []).filter((code) => known.has(code)));
+  }
+
+  const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"'
+    + ' stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L19 7"/></svg>';
+
+  function renderCount() {
+    const badge = MM.el('#openedCount');
+    const n = state.opened.size;
+    badge.hidden = n === 0;
+    badge.textContent = `${MM.fmt.int(n)} extension${n > 1 ? 's' : ''} cochée${n > 1 ? 's' : ''}`;
+  }
+
+  function render() {
+    const term = state.search.toLowerCase();
+    const sets = state.sets.filter((set) =>
+      (state.scope === 'all' || state.opened.has(set.code))
+      && (!term || set.name.toLowerCase().includes(term)
+          || set.code.toLowerCase().includes(term)));
+
+    if (!sets.length) {
+      grid.innerHTML = MM.empty({
+        icon: state.scope === 'opened' ? 'booster' : 'search',
+        title: state.scope === 'opened' && !state.search
+          ? 'Aucune extension cochée'
+          : 'Aucune extension trouvée',
+        text: state.scope === 'opened' && !state.search
+          ? 'Cochez les extensions dont vous avez ouvert des boosters depuis l’onglet « Toutes ».'
+          : `Aucune extension ne correspond à « ${state.search} ».`,
+      });
+      return;
+    }
+
+    grid.innerHTML = sets.map((set) => `
+      <button class="set-card" data-code="${MM.esc(set.code)}"
+              aria-pressed="${state.opened.has(set.code)}">
+        ${set.icon
+          ? `<img class="set-card__icon" src="${MM.esc(set.icon)}" alt="" loading="lazy">`
+          : '<span class="set-card__icon"></span>'}
+        <span class="grow" style="min-width:0">
+          <span class="small strong truncate" style="display:block">${MM.esc(set.name)}</span>
+          <span class="xs dim">${MM.esc(set.code)} · ${MM.fmt.int(set.card_count)} cartes
+            · ${set.released_at ? MM.esc(set.released_at.slice(0, 4)) : ''}</span>
+        </span>
+        <span class="set-card__check">${CHECK}</span>
+      </button>`).join('');
+  }
+
+  async function toggle(node) {
+    const code = node.dataset.code;
+    const wasOpened = state.opened.has(code);
+    const action = wasOpened ? 'remove' : 'add';
+
+    node.classList.add('is-busy');
+    try {
+      await MM.api.post('/api/opened-sets', { action, set_code: code });
+      if (wasOpened) state.opened.delete(code); else state.opened.add(code);
+      node.setAttribute('aria-pressed', String(!wasOpened));
+      renderCount();
+      // Sous l'onglet « Cochées », la tuile decochee n'a plus sa place.
+      if (state.scope === 'opened' && wasOpened) render();
+    } catch (err) {
+      MM.toast.error(err.message);
+    } finally {
+      node.classList.remove('is-busy');
+    }
+  }
+
+  grid.addEventListener('click', (event) => {
+    const node = event.target.closest('.set-card');
+    if (node) toggle(node);
+  });
+
+  MM.el('#setSearch').addEventListener('input', MM.debounce((event) => {
+    state.search = event.target.value.trim();
+    render();
+  }, 200));
+
+  MM.el('#scopeFilter').addEventListener('click', (event) => {
+    const chip = event.target.closest('.chip');
+    if (!chip) return;
+    state.scope = chip.dataset.scope;
+    MM.els('#scopeFilter .chip').forEach((other) =>
+      other.setAttribute('aria-pressed', String(other === chip)));
+    render();
+  });
+
+  renderCount();
+  render();
+})();
+</script>
+</body>
+</html>

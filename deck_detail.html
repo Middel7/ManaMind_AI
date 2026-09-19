@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>ManaMind — Deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/app.css">
+<style>
+
+  .type-group { margin-bottom: var(--sp-6); }
+  .type-group__head {
+    display: flex; align-items: baseline; gap: var(--sp-3);
+    padding-bottom: var(--sp-2); margin-bottom: var(--sp-3);
+    border-bottom: 1px solid var(--line);
+  }
+
+
+  /* La courbe de mana tient dans le bandeau, sous les chiffres du deck */
+
+
+  /* Badge cliquable : « a acquerir » mene a l'offre Cardmarket de la carte */
+  .badge--link { text-decoration: none; cursor: pointer; }
+  .badge--link:hover { filter: brightness(1.25); }
+</style>
+</head>
+<body>
+
+<div id="page">
+  <section class="hero" id="hero">
+    <div class="hero__body">
+      <div class="skeleton skeleton--text" style="width:320px;height:36px"></div>
+      <div class="skeleton skeleton--text" style="width:220px;margin-top:12px"></div>
+    </div>
+  </section>
+
+  <div id="content"></div>
+</div>
+
+<img class="peek" id="peek" alt="">
+
+<script src="/static/js/mm.js"></script>
+<script>
+(async () => {
+  const deckId = decodeURIComponent(location.pathname.split('/').filter(Boolean).pop());
+
+  const user = await MM.boot({ title: 'Deck', nav: 'decks' });
+  if (!user) return;
+
+  let data;
+  try {
+    data = await MM.api.get(`/api/v2/decks/${encodeURIComponent(deckId)}`);
+  } catch (err) {
+    MM.el('#hero').innerHTML = `<div class="hero__body">
+      <h2 class="hero__title">Deck introuvable</h2>
+      <p class="muted">${MM.esc(err.message)}</p>
+      <div class="hero__actions"><a class="btn" href="/decks">Retour à mes decks</a></div>
+    </div>`;
+    return;
+  }
+
+  const deck = data.deck;
+  let cards = data.cards;
+  document.title = `ManaMind — ${deck.name}`;
+
+  /* ── Hero ─────────────────────────────────────────────────────────────── */
+
+  function renderHero() {
+    // Un deck peut avoir deux commandants : l'illustration vient du premier
+    // d'entre eux qui en porte une.
+    const commanderCard = cards.find((card) =>
+      MM.isCommander(deck.commander, card.card_name) && card.scryfall_id)
+      || cards.find((card) => card.scryfall_id);
+    const art = commanderCard && commanderCard.scryfall_id
+      ? MM.scryfallArt(commanderCard.scryfall_id) : null;
+    const missing = deck.card_count - deck.owned_count;
+
+    MM.el('#hero').innerHTML = `
+      ${art ? `<div class="hero__art" style="background-image:url('${MM.esc(art)}')"></div>` : ''}
+      <div class="hero__body">
+        <div class="hero__cols">
+        <div class="grow">
+        <p class="eyebrow">${MM.esc(deck.commander || 'Deck')}</p>
+        <h2 class="hero__title">${MM.esc(deck.name)}</h2>
+        <div class="hero__stats">
+          <span class="hero__stat"><b>${MM.fmt.int(deck.card_count)}</b>
+            <span class="muted small">cartes</span></span>
+          <span class="hero__stat"><b>${Math.round(deck.owned_ratio * 100)} %</b>
+            <span class="muted small">en collection</span></span>
+          ${missing ? `<span class="hero__stat"><b class="accent">${MM.fmt.int(missing)}</b>
+            <span class="muted small">manquantes</span></span>` : ''}
+          <span class="hero__stat"><b>${MM.fmt.int(MM.mana.lands(cards).front)}</b>
+            <span class="muted small">terrains</span></span>
+          <span class="hero__stat"><b>${MM.fmt.eur(deck.value_eur, { compact: true })}</b>
+            <span class="muted small">de valeur</span></span>
+        </div>
+        <div class="hero__actions">
+          <a class="btn btn--primary" href="/decks/ameliorer?deck=${encodeURIComponent(deckId)}"
+             title="Cartes de votre collection qui amélioreraient ce deck">
+            ${MM.icons.sparkle} Améliorer avec ma collection</a>
+          <a class="btn" href="/decks/analyse?deck=${encodeURIComponent(deckId)}"
+             title="Analyser le deck : ajouts et retraits suggérés, sans se limiter à
+                    votre collection">
+            ${MM.icons.chart} Améliorer avec l'analyse</a>
+        </div>
+        </div>
+        <div class="hero__curve">${MM.mana.curve(cards, 112)}</div>
+        <div>${MM.mana.rows(cards)}</div>
+      </div>
+      </div>`;
+  }
+
+  /* ── Regroupement par type ────────────────────────────────────────────── */
+
+  const TYPE_ORDER = [
+    ['Commandant', (card) => MM.isCommander(deck.commander, card.card_name)],
+    ['Créatures', (card) => /Creature/i.test(card.type_line)],
+    ['Éphémères', (card) => /Instant/i.test(card.type_line)],
+    ['Rituels', (card) => /Sorcery/i.test(card.type_line)],
+    ['Artefacts', (card) => /Artifact/i.test(card.type_line)],
+    ['Enchantements', (card) => /Enchantment/i.test(card.type_line)],
+    ['Planeswalkers', (card) => /Planeswalker/i.test(card.type_line)],
+    ['Terrains', (card) => /Land/i.test(card.type_line)],
+    ['Autres', () => true],
+  ];
+
+  function group(list) {
+    const groups = [];
+    const remaining = list.slice();
+    TYPE_ORDER.forEach(([label, test]) => {
+      const matched = [];
+      for (let i = remaining.length - 1; i >= 0; i -= 1) {
+        if (test(remaining[i])) matched.unshift(remaining.splice(i, 1)[0]);
+      }
+      if (matched.length) {
+        if (label === 'Commandant' && matched.length > 1) label = 'Commandants';
+        // Dans chaque categorie, du moins cher en mana au plus cher : c'est
+        // ainsi qu'on lit une liste de deck, et que se voit sa courbe. Une
+        // carte dont le cout n'est pas connu ferme la marche.
+        groups.push([label, matched.sort((a, b) =>
+          (a.mana_value ?? Infinity) - (b.mana_value ?? Infinity)
+          || a.card_name.localeCompare(b.card_name, 'fr'))]);
+      }
+    });
+    return groups;
+  }
+
+
+  function render() {
+    renderHero();
+    const missing = cards.filter((card) => card.owned < card.quantity);
+
+    MM.el('#content').innerHTML = `
+      <div class="stack-6">
+        <div class="panel">
+          <div class="panel__head">
+            <h2 class="h3">Liste du deck</h2>
+            <div class="cluster-2">
+              <button class="btn btn--sm" id="addCard">Ajouter une carte</button>
+              ${missing.length ? `<button class="btn btn--sm" id="exportMissing">
+                Exporter les ${MM.fmt.int(missing.length)} cartes à acquérir</button>` : ''}
+              <button class="btn btn--sm btn--ghost" id="exportDeck">Exporter le deck</button>
+            </div>
+          </div>
+          <div class="panel__body" id="cardList"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel__head"><h2 class="h3">Réglages</h2></div>
+          <div class="panel__body stack">
+            <div class="field" style="max-width:420px">
+              <label class="label" for="deckName">Nom du deck</label>
+              <input class="input" id="deckName" type="text"
+                     value="${MM.esc(deck.name)}" maxlength="120">
+            </div>
+            <div class="cluster-2">
+              <button class="btn btn--sm" id="renameDeck">Renommer</button>
+              ${deck.url ? `<a class="btn btn--sm btn--ghost" href="${MM.esc(deck.url)}"
+                target="_blank" rel="noopener">Voir la source ${MM.icons.external}</a>` : ''}
+              <button class="btn btn--sm btn--danger" id="deleteDeck">Supprimer ce deck</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+
+    renderCards();
+    bind();
+  }
+
+  /** Boutons de commandement d'une vignette : une legendaire peut le devenir
+   *  — seule ou en second — et l'un des deux commandants peut cesser de l'etre.
+   *  Retirer le dernier laisserait le deck sans analyse possible : le bouton
+   *  n'apparait alors pas. */
+  function commanderActions(card) {
+    const current = MM.commanders(deck.commander);
+    if (MM.isCommander(deck.commander, card.card_name)) {
+      return current.length > 1
+        ? [{ label: 'Retirer des commandants', act: 'uncmd', variant: 'ghost',
+             title: `« ${MM.esc(card.card_name)} » redeviendrait une carte ordinaire` }]
+        : [];
+    }
+    if (!/Legendary/i.test(card.type_line || '')) return [];
+    return [{
+      label: 'Commandant', act: 'setcmd', variant: 'ghost',
+      title: current.length
+        ? `Faire de « ${MM.esc(card.card_name)} » un commandant de ce deck`
+        : `Définir « ${MM.esc(card.card_name)} » comme commandant`,
+    }];
+  }
+
+  function renderCards() {
+    MM.el('#cardList').innerHTML = group(cards).map(([label, list]) => {
+      const copies = list.reduce((sum, card) => sum + card.quantity, 0);
+      return `
+        <div class="type-group">
+          <div class="type-group__head">
+            <h3 class="h4">${MM.esc(label)}</h3>
+            <span class="xs dim">${copies}</span>
+          </div>
+          <div class="card-grid">
+            ${list.map((card) => MM.cardTile(card, {
+              context: 'deck',
+              deckQty: card.quantity,
+              actions: [
+                ...commanderActions(card),
+                { label: 'Retirer', act: 'drop', variant: 'ghost',
+                  title: `Retirer ${MM.esc(card.card_name)} du deck` },
+              ],
+            })).join('')}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+
+  async function reload() {
+    const fresh = await MM.api.get(`/api/v2/decks/${encodeURIComponent(deckId)}`);
+    cards = fresh.cards;
+    Object.assign(deck, fresh.deck);
+    // Les cartes ajoutees portent le nom du commandant : s'il vient de
+    // changer, le contexte des reglages doit suivre.
+    if (MM.deckContext) MM.deckContext.commander = deck.commander;
+    render();
+  }
+
+  /**
+   * Un deck qui a deja un commandant laisse le choix : la carte le rejoint —
+   * Partner, Background, Doctor's companion en donnent deux — ou prend sa
+   * place. Deux boutons valent mieux qu'une question fermee.
+   *
+   * @returns {Promise<'add'|'replace'|null>} null si l'on renonce
+   */
+  function askCommanderMode(name, current) {
+    return new Promise((resolve) => {
+      let settled = false;
+      const done = (value) => { if (!settled) { settled = true; resolve(value); } };
+      const dialog = MM.modal({
+        title: 'Commandant du deck',
+        body: `<p class="muted">${MM.esc(deck.name)} a pour commandant
+                 « ${MM.esc(current[0])} ». « ${MM.esc(name)} » peut le rejoindre
+                 — un deck en accepte deux — ou prendre sa place.</p>`,
+        footer: `<button class="btn" data-cancel>Annuler</button>
+                 <button class="btn" data-mode="replace">Remplacer</button>
+                 <button class="btn btn--primary" data-mode="add">Ajouter en second</button>`,
+        onClose: () => done(null),
+      });
+      dialog.root.addEventListener('click', (event) => {
+        const choice = event.target.closest('[data-mode]');
+        if (choice) { done(choice.dataset.mode); dialog.close(); return; }
+        if (event.target.closest('[data-cancel]')) { done(null); dialog.close(); }
+      });
+    });
+  }
+
+  /** Designe une carte comme commandant : seule, en second, ou a la place des
+   *  deux commandants en poste. */
+  async function setCommander(name, button) {
+    const current = MM.commanders(deck.commander);
+    let mode = 'replace';
+
+    if (current.length === 1) {
+      mode = await askCommanderMode(name, current);
+      if (!mode) return;
+    } else {
+      const ok = await MM.confirm({
+        title: current.length > 1
+          ? 'Remplacer les deux commandants ?' : 'Définir comme commandant ?',
+        text: current.length > 1
+          ? `${deck.name} a deux commandants, « ${current.join(' » et « ')} ». `
+            + `« ${name} » prendra leur place.`
+          : `« ${name} » deviendra le commandant de ${deck.name}.`,
+        confirmLabel: current.length > 1 ? 'Remplacer' : 'Définir',
+      });
+      if (!ok) return;
+    }
+
+    button.disabled = true;
+    try {
+      const result = await MM.api.post(
+        `/api/v2/decks/${encodeURIComponent(deckId)}/commander`,
+        { card_name: name, mode });
+      MM.toast.ok(result.commanders && result.commanders.length > 1
+        ? `Ce deck est désormais commandé par « ${result.commanders.join(' » et « ')} ».`
+        : `${name} est désormais le commandant de ce deck.`);
+      await reload();
+    } catch (err) {
+      MM.toast.error(err.message);
+      button.disabled = false;
+    }
+  }
+
+  /** Retire l'un des deux commandants : la carte reste dans le deck. */
+  async function dropCommander(name, button) {
+    const ok = await MM.confirm({
+      title: 'Retirer des commandants ?',
+      text: `« ${name} » redeviendra une carte ordinaire de ${deck.name}, `
+        + `qui sera analysé sous son seul autre commandant. La carte reste `
+        + `dans la liste.`,
+      confirmLabel: 'Retirer',
+    });
+    if (!ok) return;
+
+    button.disabled = true;
+    try {
+      await MM.api.post(`/api/v2/decks/${encodeURIComponent(deckId)}/commander`,
+        { card_name: name, mode: 'remove' });
+      MM.toast.ok(`${name} n'est plus un commandant de ce deck.`);
+      await reload();
+    } catch (err) {
+      MM.toast.error(err.message);
+      button.disabled = false;
+    }
+  }
+
+  // Les reglages « dans le deck » des vignettes visent ce deck.
+  MM.deckContext = { deck_id: deckId, commander: deck.commander };
+  document.addEventListener('mm:card-change', (event) => {
+    if (event.detail.scope !== 'deck') return;
+    MM.toast.ok(`${event.detail.card_name} ${event.detail.delta > 0
+      ? `ajoutée à ${deck.name}` : `retirée de ${deck.name}`}.`);
+    reload();
+  });
+
+  function bind() {
+    MM.el('#cardList').addEventListener('click', async (event) => {
+      const crown = event.target.closest('[data-act="setcmd"]');
+      if (crown) return setCommander(crown.dataset.card, crown);
+
+      const uncrown = event.target.closest('[data-act="uncmd"]');
+      if (uncrown) return dropCommander(uncrown.dataset.card, uncrown);
+
+      const button = event.target.closest('[data-act="drop"]');
+      if (!button) return;
+      const name = button.dataset.card;
+      const line = cards.find((card) => card.card_name === name);
+      const copies = line ? line.quantity : 1;
+      const ok = await MM.confirm({
+        title: 'Retirer cette carte ?',
+        text: `${copies > 1 ? `Les ${copies} exemplaires de « ${name} » seront retirés` : `« ${name} » sera retirée`}`
+          + ` de ${deck.name}. Votre collection n'est pas modifiée.`,
+        confirmLabel: 'Retirer', danger: true,
+      });
+      if (!ok) return;
+      try {
+        await MM.api.post('/api/deck-card/remove',
+          { deck_id: deckId, commander: deck.commander, card_name: name, all: true });
+        MM.toast('Carte retirée du deck.');
+        await reload();
+      } catch (err) { MM.toast.error(err.message); }
+    });
+
+    MM.el('#addCard').addEventListener('click', () => {
+      // Fenetre commune a tous les ecrans qui ajoutent des cartes : elle reste
+      // ouverte pour en enchainer plusieurs.
+      MM.addCardDialog({
+        deckQty: (name) => {
+          const line = cards.find((entry) =>
+            entry.card_name.toLowerCase() === name.toLowerCase());
+          return line ? line.quantity : 0;
+        },
+      });
+    });
+
+    MM.el('#renameDeck').addEventListener('click', async (event) => {
+      const name = MM.el('#deckName').value.trim();
+      if (!name) return MM.toast.error('Le nom ne peut pas être vide.');
+      event.target.disabled = true;
+      try {
+        await MM.api.post(`/api/deck-rename/${encodeURIComponent(deckId)}`, { name });
+        deck.name = name;
+        document.title = `ManaMind — ${name}`;
+        renderHero();
+        MM.toast.ok('Deck renommé.');
+      } catch (err) { MM.toast.error(err.message); }
+      finally { event.target.disabled = false; }
+    });
+
+    MM.el('#deleteDeck').addEventListener('click', async () => {
+      const ok = await MM.confirm({
+        title: 'Supprimer ce deck ?',
+        text: `${deck.name} et sa liste seront supprimés. Votre collection est conservée.`,
+        confirmLabel: 'Supprimer', danger: true,
+      });
+      if (!ok) return;
+      try {
+        await MM.api.del(`/api/moxfield-decks/${encodeURIComponent(deckId)}`);
+        MM.toast.ok('Deck supprimé.');
+        setTimeout(() => { location.href = '/decks'; }, 700);
+      } catch (err) { MM.toast.error(err.message); }
+    });
+
+    const exportMissing = MM.el('#exportMissing');
+    if (exportMissing) {
+      exportMissing.addEventListener('click', () => {
+        const list = cards.filter((card) => card.owned < card.quantity);
+        // Une ligne « quantite nom » : ce que Cardmarket et les want lists
+        // attendent. La quantite est celle qu'il reste a acheter.
+        const content = list
+          .map((card) => `${card.quantity - card.owned} ${card.card_name}`)
+          .join('\n');
+        const total = list.reduce((sum, card) =>
+          sum + (card.unit_price || 0) * (card.quantity - card.owned), 0);
+        const modal = MM.modal({
+          title: `${list.length} cartes à acquérir · ${MM.fmt.eur(total)}`,
+          body: `<textarea class="textarea" readonly style="min-height:320px"
+                   id="missingArea">${MM.esc(content)}</textarea>`,
+          footer: '<button class="btn btn--primary" data-copy>Copier</button>',
+        });
+        MM.el('[data-copy]', modal.root).addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(content);
+            MM.toast.ok('Liste copiée.');
+          } catch {
+            MM.el('#missingArea', modal.root).select();
+            MM.toast('Sélectionnez puis copiez le texte.');
+          }
+        });
+      });
+    }
+
+    MM.el('#exportDeck').addEventListener('click', async () => {
+      try {
+        const result = await MM.api.get(`/api/deck-txt/${encodeURIComponent(deckId)}`);
+        const content = result.content
+          || cards.map((card) => `${card.quantity} ${card.card_name}`).join('\n');
+        const modal = MM.modal({
+          title: 'Exporter la liste',
+          body: `<textarea class="textarea" readonly style="min-height:320px"
+                   id="exportArea">${MM.esc(content)}</textarea>`,
+          footer: '<button class="btn btn--primary" data-copy>Copier</button>',
+        });
+        MM.el('[data-copy]', modal.root).addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(content);
+            MM.toast.ok('Liste copiée.');
+          } catch {
+            MM.el('#exportArea', modal.root).select();
+            MM.toast('Sélectionnez puis copiez le texte.');
+          }
+        });
+      } catch (err) { MM.toast.error(err.message); }
+    });
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>

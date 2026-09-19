@@ -5,6 +5,8 @@ import re
 import unicodedata
 from pathlib import Path
 
+from .commanders import split_commanders
+
 ROOT = Path(__file__).resolve().parents[2]
 # TODO: supprimer après migration complète — MY_DECKS_DIR et COMMANDERS_FILE sont des fallbacks legacy
 MY_DECKS_DIR    = ROOT / "data" / "My decks"
@@ -23,21 +25,21 @@ def _normalize(name: str) -> str:
 
 
 def _cmd_norms(commander_name: str) -> set[str]:
-    """Retourne l'ensemble des noms normalisés pour un commandant (gère Partner 'A + B')."""
-    return {_normalize(n.strip()) for n in commander_name.split("+") if n.strip()}
+    """Retourne l'ensemble des noms normalisés pour un commandant (gère Partner 'A & B')."""
+    return {_normalize(n) for n in split_commanders(commander_name)}
 
 
 def _cmd_freq_db(commander_name: str) -> dict[str, dict]:
     """
     Retourne { card_norm: {card_name, inclusion_rate, decks_with_card, total_decks} }
     depuis PostgreSQL pour un commandant.
-    Pour les Partner ("A + B"), essaie le nom complet puis chaque partie,
+    Pour les Partner ("A & B"), essaie le nom complet puis chaque partie,
     et retourne les données du jeu de decks le plus fourni.
     """
     from sqlalchemy import text as _text
     from manamind.db.engine import SessionLocal as _SessionLocal
 
-    parts = [n.strip() for n in commander_name.split("+")]
+    parts = split_commanders(commander_name)
     candidates_to_try = [commander_name] + (parts if len(parts) > 1 else [])
 
     best_total = -1
@@ -970,14 +972,13 @@ def suggest_from_collection_for_user(user_id: int, top_n: int = 40, commander_fi
         """), {"uid": user_id}).fetchall()
     collection = {_normalize(r.card_name): r.qty for r in coll_rows}
 
-    # Decks de l'utilisateur
-    decks_cfg = load_config_for_user(user_id)
-    if commander_filter:
-        decks_cfg = [d for d in decks_cfg if _normalize(d.get("commander", "")) == _normalize(commander_filter)]
+    # Tous les decks servent a mesurer ce qui est deja engage : filtrer avant
+    # ce calcul faisait passer pour libre une carte jouee dans un autre deck.
+    all_decks = load_config_for_user(user_id)
 
     deck_usage: dict[str, int] = {}
     deck_cards_index: dict[str, set[str]] = {}
-    for deck in decks_cfg:
+    for deck in all_decks:
         commander = deck.get("commander", "")
         if not commander:
             continue
@@ -988,10 +989,27 @@ def suggest_from_collection_for_user(user_id: int, top_n: int = 40, commander_fi
             norm = _normalize(card_name)
             deck_usage[norm] = deck_usage.get(norm, 0) + 1
 
-    available: dict[str, int] = {
-        norm: qty for norm, qty in collection.items()
+    # Le filtre ne joue qu'apres : il choisit les commandants a analyser.
+    decks_cfg = all_decks
+    if commander_filter:
+        decks_cfg = [d for d in all_decks
+                     if _normalize(d.get("commander", "")) == _normalize(commander_filter)]
+
+    # Cartes disponibles : celles de la collection non deja engagees dans un deck...
+    available_collection: dict[str, tuple[int, str]] = {
+        norm: (qty, "collection") for norm, qty in collection.items()
         if qty > deck_usage.get(norm, 0)
     }
+    # ...plus les communes et peu communes des extensions ouvertes, qu'on
+    # considere possedees sans avoir a les saisir une par une. Zero exemplaire
+    # connu : elles ne priment jamais sur une carte reellement en collection.
+    opened_set_cards = load_opened_set_cards(user_id)
+    available_opened: dict[str, tuple[int, str]] = {
+        norm: (0, "opened_sets")
+        for norm in opened_set_cards
+        if norm not in available_collection and deck_usage.get(norm, 0) == 0
+    }
+    available: dict[str, tuple[int, str]] = {**available_opened, **available_collection}
 
     best_per_card: dict[str, dict] = {}
     for deck in decks_cfg:
@@ -1004,7 +1022,7 @@ def suggest_from_collection_for_user(user_id: int, top_n: int = 40, commander_fi
             continue
         this_deck = deck_cards_index.get(cmd_norm, set())
         this_cmd_norms = _cmd_norms(commander)
-        for card_norm, qty in available.items():
+        for card_norm, (qty, card_source) in available.items():
             if card_norm in this_cmd_norms or card_norm in this_deck:
                 continue
             if card_norm not in cmd_cards:
@@ -1021,7 +1039,7 @@ def suggest_from_collection_for_user(user_id: int, top_n: int = 40, commander_fi
                     "total_decks":     data["total_decks"],
                     "copies_owned":    qty,
                     "copies_used":     deck_usage.get(card_norm, 0),
-                    "source":          "collection",
+                    "source":          card_source,
                 }
 
     ranked = sorted(best_per_card.values(), key=lambda r: (-r["inclusion_rate"], r["card_name"]))
@@ -1030,10 +1048,26 @@ def suggest_from_collection_for_user(user_id: int, top_n: int = 40, commander_fi
         "stats": {
             "collection_size":    len(collection),
             "available_cards":    len(available),
-            "opened_sets_cards":  0,
+            "opened_sets_cards":  len(available_opened),
             "commanders_checked": len(decks_cfg),
         },
     }
+
+
+def load_hidden_moves(user_id: int) -> set[tuple[str, str, str]]:
+    """Deplacements que l'utilisateur a refuses, normalises pour comparaison."""
+    from sqlalchemy import text as _t
+    from manamind.db.engine import SessionLocal as _SL
+    try:
+        with _SL() as sess:
+            rows = sess.execute(_t("""
+                SELECT card_name, from_commander, to_commander
+                FROM user_hidden_moves WHERE user_id = :uid
+            """), {"uid": user_id}).fetchall()
+    except Exception:
+        return set()
+    return {(_normalize(r.card_name), _normalize(r.from_commander),
+             _normalize(r.to_commander)) for r in rows}
 
 
 def suggest_moves_for_user(user_id: int, top_n: int = 30) -> dict:
@@ -1122,7 +1156,18 @@ def suggest_moves_for_user(user_id: int, top_n: int = 30) -> dict:
                     "total_decks":     best_other_data["total_decks"],
                 }
 
-    ranked = sorted(best_move.values(), key=lambda r: (-r["gain"], r["card_name"]))
+    # Suggestions deja refusees : elles ne reviennent pas. Le trio carte /
+    # origine / destination identifie le deplacement, la meme carte pouvant
+    # valoir un deplacement ailleurs.
+    hidden = load_hidden_moves(user_id)
+    kept = [
+        move for move in best_move.values()
+        if (_normalize(move["card_name"]),
+            _normalize(move["from_commander"]),
+            _normalize(move["to_commander"])) not in hidden
+    ]
+
+    ranked = sorted(kept, key=lambda r: (-r["gain"], r["card_name"]))
     return {
         "results": [{"rank": i + 1, **r} for i, r in enumerate(ranked[:top_n])],
         "missing_data": [],

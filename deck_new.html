@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>ManaMind — Créer un deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/app.css">
+<style>
+  #build .card-grid { --card-min: 168px; }
+
+  /* Bandeau du commandant retenu, une fois le deck cree */
+  .cmd-bar { display: flex; gap: var(--sp-4); align-items: center; flex-wrap: wrap; }
+  .cmd-bar__art { width: 76px; border-radius: 4.7% / 3.5%; box-shadow: var(--shadow-card); }
+
+  /* Liste du deck en cours, a droite */
+  .deck-side {
+    position: sticky; top: var(--sp-4);
+    display: flex; flex-direction: column; gap: var(--sp-4);
+  }
+  .deck-line {
+    display: flex; align-items: center; gap: var(--sp-2);
+    padding: 3px var(--sp-2); border-radius: var(--r-sm);
+  }
+  .deck-line:hover { background: var(--surface); }
+  .deck-line__name { flex: 1; min-width: 0; font-size: var(--text-sm); }
+  /* Quantite reglable : plusieurs exemplaires d'un meme terrain de base. */
+  .deck-line__qty { display: inline-flex; align-items: center; gap: 2px; }
+  .deck-line__qty output {
+    min-width: 16px; text-align: right;
+    font-variant-numeric: tabular-nums; color: var(--text-3); font-size: var(--text-sm);
+  }
+  .deck-line__qty button {
+    width: 18px; height: 18px; display: grid; place-items: center;
+    border-radius: var(--r-sm); border: 1px solid var(--line-strong);
+    color: var(--text-2); font-size: 12px; line-height: 1;
+    opacity: 0; transition: opacity var(--dur-fast) var(--ease);
+  }
+  .deck-line:hover .deck-line__qty button,
+  .deck-line__qty button:focus-visible { opacity: 1; }
+  .deck-line__qty button:hover { background: var(--surface-2); color: var(--text); }
+  .deck-line__drop { opacity: 0.4; }
+  .deck-line:hover .deck-line__drop { opacity: 1; }
+
+  /* Courbe et repartition du mana, dans le bandeau du deck */
+
+  /* Carte que les regles interdisent : grisee, non cliquable */
+  .illegal-why {
+    display: block; font-size: var(--text-xs); color: var(--warn);
+    margin-top: 2px;
+  }
+</style>
+</head>
+<body>
+
+<div id="page">
+  <div class="stack-2" id="intro">
+    <h2 class="h2">Créer un deck</h2>
+    <p class="muted small">Choisissez d’abord un commandant : il fixe l’identité de couleur
+      du deck. Vous ajoutez ensuite les cartes une par une, à partir de vos suggestions ou
+      par leur nom.</p>
+  </div>
+
+  <div id="step-commander" class="stack-6" style="margin-top:var(--sp-6)">
+    <div class="field" style="max-width:520px">
+      <label class="label" for="cmdInput">Commandant</label>
+      <input class="input" id="cmdInput" type="text" autocomplete="off"
+             placeholder="Tapez un nom puis appuyez sur Entrée">
+    </div>
+    <div id="cmdResults"></div>
+    <div id="cmdStart"></div>
+  </div>
+
+  <div id="build" hidden style="margin-top:var(--sp-4)"></div>
+</div>
+
+<script src="/static/js/mm.js"></script>
+<script>
+(async () => {
+  // ?deck= reprend un deck existant : l'ecran sert alors a le completer.
+  const resumeId = new URLSearchParams(location.search).get('deck');
+  const user = await MM.boot({
+    title: resumeId ? 'Terminer le deck' : 'Créer un deck', nav: 'decks' });
+  if (!user) return;
+
+  const state = {
+    deck: null,          // { deck_id, commander, name, color_identity }
+    commanderCards: [],  // la ou les cartes du commandant, pour le calcul de mana
+    cards: [],           // cartes du deck : { card_name, quantity }
+    suggestions: [],
+    search: [],
+  };
+
+  const BASIC_LANDS = new Set([
+    'plains', 'island', 'swamp', 'mountain', 'forest', 'wastes',
+    'snow-covered plains', 'snow-covered island', 'snow-covered swamp',
+    'snow-covered mountain', 'snow-covered forest',
+  ]);
+
+  /* ── Étape 1 : le commandant ──────────────────────────────────────────── */
+
+  const cmdInput = MM.el('#cmdInput');
+  const cmdResults = MM.el('#cmdResults');
+  if (!resumeId) cmdInput.focus();
+
+  async function searchCommander() {
+    const term = cmdInput.value.trim();
+    if (term.length < 2) {
+      cmdResults.innerHTML = '<p class="muted small">Saisissez au moins deux caractères.</p>';
+      cmdStart.hidden = false;
+      return;
+    }
+    cmdStart.hidden = true;
+    cmdResults.innerHTML = `<div class="card-grid">${MM.cardSkeletons(6)}</div>`;
+    try {
+      const data = await MM.api.get(
+        `/api/v2/cards/suggest?q=${encodeURIComponent(term)}&limit=20`);
+      const cards = data.cards || [];
+      if (!cards.length) {
+        cmdResults.innerHTML = MM.empty({
+          icon: 'search', title: 'Aucune carte trouvée',
+          text: `Rien ne correspond à « ${term} ».` });
+        return;
+      }
+      cmdResults.innerHTML = `<div class="card-grid">${cards.map((card) => MM.cardTile(card, {
+        context: null,   // le deck n'existe pas encore
+        market: false,   // on choisit un commandant, on n'achete pas
+        actions: [{ label: 'Créer le deck', act: 'cmd', variant: 'primary',
+                    title: `Créer un deck avec ${MM.esc(card.name)} comme commandant` }],
+      })).join('')}</div>`;
+
+      cmdResults.onclick = (event) => {
+        const node = event.target.closest('[data-act="cmd"]');
+        if (!node) return;
+        const card = cards.find((item) => item.name === node.dataset.card);
+        if (card) createDeck(card, node);
+      };
+    } catch (err) {
+      cmdResults.innerHTML = MM.empty({
+        icon: 'warning', title: 'Recherche impossible', text: err.message });
+    }
+  }
+
+  cmdInput.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    searchCommander();
+  });
+
+  /* ── Ecran de depart ──────────────────────────────────────────────────── */
+  /* Un champ de recherche seul sur une page blanche ne dit ni ce qui va se
+     passer ensuite, ni par quel nom commencer. */
+
+  const cmdStart = MM.el('#cmdStart');
+
+  function showStart() {
+    cmdStart.innerHTML = MM.toolIntro({
+      icon: 'crown',
+      title: 'Tout commence par le commandant',
+      text: 'Il fixe les couleurs autorisées et sert de fil conducteur au reste '
+        + 'de la liste.',
+      steps: [
+        { title: 'Vous choisissez un commandant',
+          text: 'Cherchez-le par son nom, ou partez de l’une des propositions '
+              + 'ci-dessous, tirées de votre collection.' },
+        { title: 'Le deck est créé aussitôt',
+          text: 'Il apparaît dans « Mes decks » et vous pouvez le reprendre à tout '
+              + 'moment : rien ne se perd entre deux visites.' },
+        { title: 'Vous composez les 99 cartes',
+          text: 'À chaque ajout, l’écran propose les cartes les plus jouées avec ce '
+              + 'commandant et signale celles que vous possédez déjà.' },
+      ],
+      checks: [
+        { strong: 'Identité de couleur :',
+          text: 'une carte hors des couleurs du commandant est refusée par les règles '
+              + '— l’écran l’affiche grisée, avec la raison.' },
+        { strong: 'Un seul exemplaire par carte :',
+          text: 'sauf les terrains de base, dont la quantité se règle librement.' },
+        { strong: 'Cent cartes commandant compris :',
+          text: 'le compteur du deck suit votre progression pendant la composition.' },
+      ],
+      checksTitle: 'Les règles du format',
+      note: 'Créer le deck n’engage à rien : un deck laissé à dix cartes reste '
+          + 'modifiable, et se supprime depuis sa fiche.',
+    });
+  }
+
+  /** Propositions tirees de la collection : de quoi partir sans idee precise. */
+  async function loadStartCommanders() {
+    try {
+      const data = await MM.api.get('/api/collection-commanders?top=8&mode=available');
+      const commanders = data.commanders || [];
+      if (!commanders.length) return;
+
+      cmdStart.insertAdjacentHTML('beforeend', `
+        <section class="section" style="margin-top:var(--sp-6)">
+          <div class="section-head">
+            <div class="section-head__title">
+              <h3 class="h3">Ce que votre collection permet déjà</h3>
+            </div>
+            <a class="btn btn--sm" href="/collection/commandants">Voir le classement</a>
+          </div>
+          <p class="muted small" style="margin-top:-8px">
+            Ces commandants sont ceux qui tirent le plus de valeur des cartes qui ne
+            sont dans aucun de vos decks. Cliquez pour partir de l’un d’eux.
+          </p>
+          <div class="deck-strip">
+            ${commanders.map((entry) => {
+              const art = entry.commander_image
+                ? entry.commander_image.replace('/normal/', '/art_crop/') : null;
+              return `
+                <button class="deck-chip" type="button"
+                        data-cmd="${MM.esc(entry.commander)}">
+                  ${art ? `<span class="deck-chip__art"
+                                 style="background-image:url('${MM.esc(art)}')"></span>` : ''}
+                  <span class="deck-chip__name truncate">${MM.esc(entry.commander)}</span>
+                  <span class="deck-chip__meta truncate">
+                    ${MM.fmt.int(entry.card_count)} de vos cartes ·
+                    ${MM.fmt.eur(entry.total_value, { compact: true })}
+                  </span>
+                </button>`;
+            }).join('')}
+          </div>
+        </section>`);
+
+      cmdStart.addEventListener('click', (event) => {
+        const chip = event.target.closest('[data-cmd]');
+        if (!chip) return;
+        cmdInput.value = chip.dataset.cmd;
+        searchCommander();
+      });
+    } catch { /* les propositions sont un confort, pas une condition */ }
+  }
+
+  async function createDeck(card, node) {
+    node.style.opacity = '0.5';
+    try {
+      const deck = await MM.api.post('/api/v2/decks', {
+        commander: card.name,
+        name: card.name,
+      });
+      state.deck = { ...deck, image: card.image_normal || card.image_small };
+      state.commanderCards = [{
+        card_name: card.name, quantity: 1,
+        mana_cost: card.mana_cost, mana_value: card.mana_value,
+        type_line: card.type_line, oracle_text: card.oracle_text,
+      }];
+      MM.deckContext = state.deck;
+      enterBuild();
+      MM.toast.ok(`Deck « ${deck.name} » créé.`);
+      await Promise.all([loadCards(), loadSuggestions()]);
+      render();
+    } catch (err) {
+      MM.toast.error(err.message);
+      node.style.opacity = '';
+    }
+  }
+
+  /** L'entete a fait son office : le bandeau du deck le remplace. */
+  function enterBuild() {
+    MM.el('#intro').hidden = true;
+    MM.el('#step-commander').hidden = true;
+    MM.el('#build').hidden = false;
+  }
+
+  /** Reprend un deck deja commence : meme ecran, sans l'etape du commandant.
+   *
+   *  Le detail du deck ne porte ni l'illustration ni l'identite de couleur de
+   *  son commandant, que les regles d'ajout exigent : on les resout a part.
+   */
+  async function resumeDeck(deckId) {
+    try {
+      const data = await MM.api.get(`/api/v2/decks/${encodeURIComponent(deckId)}`);
+      // Un deck peut avoir deux commandants : son identite de couleur est
+      // l'union des leurs, sans quoi la moitie de ses cartes passerait pour
+      // hors identite.
+      const names = MM.commanders(data.deck.commander);
+      const resolved = await MM.resolveCards(names);
+      const cmds = names.map((name) => ({ name, ...(resolved[name] || {}) }));
+      const illustrated = cmds.find((cmd) => cmd.image_normal || cmd.image_small);
+      state.deck = {
+        ...data.deck,
+        color_identity: [...new Set(cmds.flatMap((cmd) => cmd.color_identity || []))],
+        image: illustrated
+          ? (illustrated.image_normal || illustrated.image_small) : null,
+      };
+      state.commanderCards = cmds.map((cmd) => ({
+        card_name: cmd.name, quantity: 1,
+        mana_cost: cmd.mana_cost, mana_value: cmd.mana_value,
+        type_line: cmd.type_line, oracle_text: '',
+      }));
+      state.cards = data.cards || [];
+      MM.deckContext = state.deck;
+      enterBuild();
+      await loadSuggestions();
+      render();
+    } catch (err) {
+      MM.el('#intro').innerHTML = MM.empty({
+        icon: 'warning', title: 'Deck introuvable', text: err.message });
+    }
+  }
+
+  /* ── Étape 2 : composer le deck ───────────────────────────────────────── */
+
+  async function loadCards() {
+    const data = await MM.api.get(`/api/v2/decks/${encodeURIComponent(state.deck.deck_id)}`);
+    state.cards = data.cards || [];
+  }
+
+  async function loadSuggestions() {
+    try {
+      const data = await MM.api.get('/api/collection-suggest' + MM.api.qs({
+        top: 30, commander: state.deck.commander,
+      }));
+      const results = data.results || [];
+      // Les suggestions ne portent que des noms : sans cette resolution, les
+      // vignettes restaient vides.
+      const resolved = await MM.resolveCards(results.map((c) => c.card_name));
+      state.suggestions = results.map((c) => ({ ...(resolved[c.card_name] || {}), ...c }));
+    } catch { state.suggestions = []; }
+  }
+
+  /** Ce que les règles interdisent : hors identité de couleur, ou déjà là.
+   *  Retourne la raison, ou null si la carte peut entrer. */
+  /** Cartes qu'un deck peut compter en plusieurs exemplaires. */
+  function unlimited(card) {
+    const lower = (card.card_name || card.name || '').trim().toLowerCase();
+    return BASIC_LANDS.has(lower)
+      || /any number of cards named/i.test(card.oracle_text || '');
+  }
+
+  function illegalReason(card) {
+    const name = (card.card_name || card.name || '').trim();
+    const lower = name.toLowerCase();
+    if (state.cards.some((c) => c.card_name.toLowerCase() === lower) && !unlimited(card)) {
+      return 'déjà dans le deck';
+    }
+    if (BASIC_LANDS.has(lower)) return null;   // seuls terrains sans limite
+    const identity = state.deck.color_identity || [];
+    const colors = card.color_identity || [];
+    const hors = colors.filter((c) => !identity.includes(c));
+    if (hors.length) return `hors identité (${hors.join('')})`;
+    return null;
+  }
+
+  function cardTile(card) {
+    const name = card.card_name || card.name;
+    const why = illegalReason(card);
+    // Le reglage « dans le deck » fait office d'ajout ; une carte que les
+    // regles refusent garde sa vignette, grisee, avec le motif.
+    return MM.cardTile({ ...card, card_name: name }, {
+      context: why ? null : 'deck',
+      deckQty: 0,
+      muted: Boolean(why),
+      note: [
+        card.inclusion_rate != null ? `${Math.round(card.inclusion_rate)} % des decks` : '',
+        why ? `<span class="warn">${MM.esc(why)}</span>` : '',
+      ].filter(Boolean).join(' · '),
+    });
+  }
+
+  function render() {
+    const deck = state.deck;
+    const count = state.cards.reduce((sum, c) => sum + (c.quantity || 1), 0);
+    const total = count + 1;  // le commandant n'est pas dans la liste
+    const remaining = Math.max(0, 100 - total);
+    // Le champ de recherche est recree a chaque rendu : sa saisie survit.
+    const term = MM.el('#cardSearch') ? MM.el('#cardSearch').value : '';
+
+    MM.el('#build').innerHTML = `
+      <div class="panel" style="margin-bottom:var(--sp-4)">
+        <div class="panel__body cmd-bar">
+          ${deck.image ? `<img class="cmd-bar__art" src="${MM.esc(deck.image)}" alt="">` : ''}
+          <div class="grow" style="min-width:0">
+            <p class="h3">${MM.esc(deck.name)}</p>
+            <p class="xs dim">${MM.img.pips(deck.color_identity)}
+              Commandant : ${MM.esc(deck.commander)}</p>
+          </div>
+          <div class="stat" style="padding:var(--sp-2) var(--sp-4)">
+            <span class="stat__value">${MM.fmt.int(total)}</span>
+            <span class="stat__label">${remaining
+              ? `cartes · encore ${MM.fmt.int(remaining)} pour arriver à 100`
+              : 'cartes : le deck est complet'}</span>
+          </div>
+          <div id="manaBlock"></div>
+          <a class="btn btn--primary" href="/decks/${encodeURIComponent(deck.deck_id)}">
+            Ouvrir la fiche du deck</a>
+        </div>
+      </div>
+
+      <div class="grid-2" style="align-items:start;grid-template-columns:minmax(300px,1fr) minmax(0,2fr)">
+        <div class="deck-side">
+          <div class="field">
+            <label class="label" for="cardSearch">Ajouter une autre carte</label>
+            <input class="input" id="cardSearch" type="text" autocomplete="off"
+                   placeholder="Tapez un nom puis appuyez sur Entrée">
+          </div>
+
+          <div class="panel">
+            <div class="panel__head">
+              <h3 class="h3">Liste du deck</h3>
+              <span class="badge">${MM.fmt.int(count)}</span>
+            </div>
+            <div class="panel__body" id="deckList"></div>
+          </div>
+        </div>
+
+        <div class="stack-6">
+          <div class="stack-2" id="searchBlock" hidden>
+            <h3 class="h3">Résultats de la recherche</h3>
+            <div id="searchResults"></div>
+          </div>
+
+          <div class="stack-2">
+            <h3 class="h3">Suggéré par la popularité, dans votre collection</h3>
+            <p class="muted small">Les cartes que vous possédez et que jouent le plus les
+              autres decks de ${MM.esc(deck.commander)}.</p>
+            <div id="suggested"></div>
+          </div>
+        </div>
+      </div>`;
+
+    if (term) MM.el('#cardSearch').value = term;
+    renderSuggested();
+    renderSearch();
+    renderDeck();
+    renderMana();
+    bind();
+  }
+
+  /** Courbe et repartition du mana, calculees sur les cartes du deck plus son
+   *  commandant : c'est lui qui fixe l'identite de couleur. */
+  function renderMana() {
+    const host = MM.el('#manaBlock');
+    if (!host) return;
+    // Le commandant compte dans la courbe, mais une seule fois : selon la
+    // facon dont le deck a ete cree, il figure deja parmi ses cartes.
+    const present = new Set(state.cards.map((card) => card.card_name.toLowerCase()));
+    const list = state.cards.concat(
+      state.commanderCards.filter((card) => !present.has(card.card_name.toLowerCase())));
+    host.innerHTML = list.length ? MM.mana.block(list, 68) : '';
+  }
+
+  function renderSuggested() {
+    const host = MM.el('#suggested');
+    const list = state.suggestions;
+    host.innerHTML = list.length
+      ? `<div class="card-grid">${list.map((c) => cardTile(c)).join('')}</div>`
+      : `<p class="muted small">Aucune carte de votre collection ne ressort pour ce
+         commandant. Utilisez la recherche ci-dessous.</p>`;
+  }
+
+  function renderSearch() {
+    const host = MM.el('#searchResults');
+    if (!host) return;
+    const block = MM.el('#searchBlock');
+    if (block) block.hidden = !state.search.length;
+    host.innerHTML = state.search.length
+      ? `<div class="card-grid">${state.search.map((c) => cardTile(c)).join('')}</div>`
+      : '';
+  }
+
+  function renderDeck() {
+    const host = MM.el('#deckList');
+    if (!state.cards.length) {
+      host.innerHTML = '<p class="muted small">Aucune carte pour le moment.</p>';
+      return;
+    }
+    const sorted = state.cards.slice()
+      .sort((a, b) => a.card_name.localeCompare(b.card_name, 'fr'));
+    host.innerHTML = sorted.map((card) => `
+      <div class="deck-line">
+        <span class="deck-line__qty">
+          <button data-dq="dec" data-name="${MM.esc(card.card_name)}"
+                  aria-label="Retirer un exemplaire de ${MM.esc(card.card_name)}">−</button>
+          <output>${card.quantity || 1}</output>
+          <button data-dq="inc" data-name="${MM.esc(card.card_name)}"
+                  aria-label="Ajouter un exemplaire de ${MM.esc(card.card_name)}">+</button>
+        </span>
+        <span class="deck-line__name truncate" title="${MM.esc(card.card_name)}">
+          ${MM.esc(card.card_name)}</span>
+        <button class="btn btn--ghost btn--icon btn--sm deck-line__drop"
+                data-drop="${MM.esc(card.card_name)}"
+                aria-label="Retirer ${MM.esc(card.card_name)}">${MM.icons.close}</button>
+      </div>`).join('');
+  }
+
+
+
+  async function dropCard(name, all = false) {
+    try {
+      await MM.api.post('/api/deck-card/remove', {
+        deck_id: state.deck.deck_id, commander: state.deck.commander,
+        card_name: name, all,
+      });
+      await loadCards();
+      MM.toast(`${name} retirée.`);
+      render();
+    } catch (err) { MM.toast.error(err.message); }
+  }
+
+  /** Ajoute ou retire un exemplaire d'une carte deja dans le deck. */
+  async function changeQuantity(name, delta, button) {
+    button.disabled = true;
+    try {
+      await MM.api.post(delta > 0 ? '/api/deck-card/add' : '/api/deck-card/remove',
+        { deck_id: state.deck.deck_id, commander: state.deck.commander, card_name: name });
+      await loadCards();
+      render();
+    } catch (err) {
+      MM.toast.error(err.message);
+      button.disabled = false;
+    }
+  }
+
+  let bound = false;
+
+  function bind() {
+    if (bound) return;  // #build survit aux rendus : une seule ecoute suffit
+    bound = true;
+
+    MM.el('#build').addEventListener('click', (event) => {
+      const drop = event.target.closest('[data-drop]');
+      if (drop) return dropCard(drop.dataset.drop, true);
+
+      const step = event.target.closest('[data-dq]');
+      if (step) return changeQuantity(step.dataset.name, step.dataset.dq === 'inc' ? 1 : -1, step);
+    });
+
+    // La recherche renait a chaque rendu : l'ecoute se delegue au conteneur.
+    MM.el('#build').addEventListener('keydown', async (event) => {
+      if (event.key !== 'Enter') return;
+      const search = event.target.closest('#cardSearch');
+      if (!search) return;
+      event.preventDefault();
+      const term = search.value.trim();
+      if (term.length < 2) return;
+      MM.el('#searchBlock').hidden = false;
+      MM.el('#searchResults').innerHTML =
+        `<div class="card-grid">${MM.cardSkeletons(6)}</div>`;
+      try {
+        const data = await MM.api.get(
+          `/api/v2/cards/suggest?q=${encodeURIComponent(term)}&limit=20`);
+        state.search = data.cards || [];
+        renderSearch();
+      } catch (err) {
+        MM.el('#searchResults').innerHTML = MM.empty({
+          icon: 'warning', title: 'Recherche impossible', text: err.message });
+      }
+    });
+  }
+
+  // Les reglages des vignettes touchent le deck : la liste se relit.
+  document.addEventListener('mm:card-change', async (event) => {
+    if (event.detail.scope !== 'deck' || !state.deck) return;
+    await loadCards();
+    render();
+  });
+
+  if (resumeId) {
+    await resumeDeck(resumeId);
+  } else {
+    showStart();
+    loadStartCommanders();
+  }
+})();
+</script>
+</body>
+</html>

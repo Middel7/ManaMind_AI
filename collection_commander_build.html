@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>ManaMind — Deck à construire</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/app.css">
+<style>
+  .build-hero { display: flex; gap: var(--sp-6); flex-wrap: wrap; align-items: flex-start; }
+  .build-hero__card { width: 220px; flex-shrink: 0; }
+  .build-hero__card img { width: 100%; border-radius: 4.7% / 3.5%; display: block; }
+  .build-hero__info { flex: 1; min-width: 260px; }
+</style>
+</head>
+<body>
+
+<div id="page">
+  <div id="results"></div>
+</div>
+
+<script src="/static/js/mm.js"></script>
+<script>
+(async () => {
+  // Le nom du commandant est porté par l'URL : /collection/commandants/<nom>
+  const commander = decodeURIComponent(
+    location.pathname.replace(/^\/collection\/commandants\/?/, ''));
+
+  const dataReq = commander
+    ? MM.api.get(`/api/v2/commander-build/${encodeURIComponent(commander)}`)
+        .then((value) => ({ value }), (error) => ({ error }))
+    : Promise.resolve({ error: new Error('Aucun commandant indiqué.') });
+
+  const user = await MM.boot({
+    title: commander || 'Deck à construire',
+    nav: 'build',
+  });
+  if (!user) return;
+
+  const results = MM.el('#results');
+  results.innerHTML = `<div class="center" style="padding:60px">
+    <span class="spinner spinner--lg"></span></div>`;
+
+  const res = await dataReq;
+  if (res.error) {
+    results.innerHTML = MM.empty({
+      icon: 'warning', title: 'Commandant introuvable', text: res.error.message,
+      action: { href: '/collection/commandants', label: 'Retour aux suggestions' } });
+    return;
+  }
+  const data = res.value;
+
+  /** Vignette de carte : la meme que partout ailleurs. */
+  function tile(card, { owned }) {
+    return MM.cardTile({
+      card_name: card.card_name,
+      image_normal: card.image_url,
+      owned: owned ? (card.qty || 1) : 0,
+      unit_price: card.low_price,
+    }, {
+      context: 'collection',
+      note: `${card.inclusion_rate} % des decks`,
+    });
+  }
+
+  const owned = data.owned || [];
+  const missing = data.missing || [];
+
+  results.innerHTML = `
+    <section class="stack-6">
+      <div class="build-hero">
+        ${(data.commander_images || []).map((url) => `
+          <div class="build-hero__card">
+            <img src="${MM.esc(url)}" alt="${MM.esc(data.commander)}" loading="eager">
+          </div>`).join('')}
+        <div class="build-hero__info stack">
+          <div class="stack-2">
+            <h2 class="h2">${MM.esc(data.commander)}</h2>
+            <p class="muted small">Parmi les 100 cartes les plus jouées avec ce commandant,
+              voici celles que vous possédez déjà et celles qu'il vous manque.</p>
+          </div>
+          <div class="stats">
+            <div class="stat">
+              <span class="stat__value">${MM.fmt.int(owned.length)}</span>
+              <span class="stat__label">Cartes possédées</span>
+              <span class="stat__note">${MM.fmt.eur(data.owned_value)} de valeur</span>
+            </div>
+            <div class="stat">
+              <span class="stat__value">${MM.fmt.int(missing.length)}</span>
+              <span class="stat__label">À acheter</span>
+              <span class="stat__note">${MM.fmt.eur(data.missing_value)} au total</span>
+            </div>
+          </div>
+          <div class="cluster-2">
+            <a class="btn btn--sm btn--ghost"
+               href="/cartes/commandant?card=${encodeURIComponent(data.commander)}">
+               Voir dans quels decks ce commandant est joué</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="stack-2">
+        <div class="chips" id="tabs" role="tablist">
+          <button class="chip" data-tab="owned" aria-pressed="true">
+            Vos cartes <span class="chip__count">${MM.fmt.int(owned.length)}</span></button>
+          <button class="chip" data-tab="missing" aria-pressed="false">
+            À acheter en priorité <span class="chip__count">${MM.fmt.int(missing.length)}</span></button>
+        </div>
+
+        <div id="panel-owned">
+          ${owned.length
+            ? `<div class="card-grid">
+                ${owned.map((card) => tile(card, { owned: true })).join('')}</div>`
+            : '<p class="muted small">Aucune carte de votre collection ne figure parmi les '
+              + '100 cartes les plus jouées avec ce commandant.</p>'}
+        </div>
+
+        <div id="panel-missing" hidden>
+          <p class="muted small" style="margin-bottom:var(--sp-3)">Les cartes les plus jouées
+            avec ce commandant qui manquent à votre collection, de la plus fréquente à la
+            moins fréquente.</p>
+          ${missing.length
+            ? `<div class="card-grid">
+                ${missing.map((card) => tile(card, { owned: false })).join('')}</div>`
+            : '<p class="muted small">Vous possédez déjà toutes les cartes les plus jouées '
+              + 'avec ce commandant.</p>'}
+        </div>
+      </div>
+    </section>`;
+
+  MM.el('#tabs').addEventListener('click', (event) => {
+    const chip = event.target.closest('.chip');
+    if (!chip) return;
+    MM.els('#tabs .chip').forEach((other) =>
+      other.setAttribute('aria-pressed', String(other === chip)));
+    MM.el('#panel-owned').hidden = chip.dataset.tab !== 'owned';
+    MM.el('#panel-missing').hidden = chip.dataset.tab !== 'missing';
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>ManaMind — Améliorer mon deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/app.css">
+<style>
+  .modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--sp-4); }
+
+  .mode {
+    display: flex; flex-direction: column; gap: var(--sp-3);
+    padding: var(--sp-5);
+    border-radius: var(--r-lg);
+    border: 1px solid var(--line);
+    background: var(--bg-raised);
+    text-align: left;
+    transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+  }
+  .mode:hover:not(:disabled) { border-color: var(--line-accent); background: var(--surface); }
+  .mode:disabled { opacity: 0.55; cursor: not-allowed; }
+  .mode__mark {
+    width: 38px; height: 38px; display: grid; place-items: center;
+    border-radius: var(--r-md);
+    background: var(--accent-wash); color: var(--accent);
+  }
+  .mode__mark svg { width: 20px; height: 20px; }
+</style>
+</head>
+<body>
+
+<div id="page">
+  <div class="stack-2">
+    <h2 class="h2">Améliorer mon deck grâce à des analyses IA</h2>
+    <p class="muted small">
+      Deux lectures de la même liste : l'une compare votre deck à ceux des autres
+      joueurs, l'autre en étudie la mécanique interne. Choisissez un deck, puis
+      l'analyse à lancer.
+    </p>
+  </div>
+
+  <div class="toolbar">
+    <div id="deckPicker" class="grow"></div>
+  </div>
+
+  <div id="noCommander" hidden></div>
+
+  <div class="modes" id="modes">
+    <button class="mode" data-analysis="popular">
+      <span class="mode__mark" data-icon="chart"></span>
+      <span>
+        <span class="h3" style="display:block">Amélioration utilisant la popularité
+          des cartes</span>
+        <span class="small muted">Compare votre liste à ce que jouent réellement les
+          autres decks du même commandant.</span>
+      </span>
+      <span class="checks">
+        <span class="checks__item" data-check>
+          <span>Vous obtenez <b>les cartes absentes de votre liste</b> que jouent la
+            plupart des decks du même commandant, classées par fréquence.</span></span>
+        <span class="checks__item" data-check>
+          <span>S'appuie sur le <b>dépouillement de listes publiques</b> — aucune
+            appréciation du texte des cartes.</span></span>
+        <span class="checks__item" data-check>
+          <span>Résultat <b>en quelques secondes</b>.</span></span>
+      </span>
+      <span class="badge badge--ok" style="align-self:flex-start">Disponible</span>
+    </button>
+
+    <button class="mode" data-analysis="ia">
+      <span class="mode__mark" data-icon="sparkle"></span>
+      <span>
+        <span class="h3" style="display:block">Amélioration grâce à l'intelligence
+          artificielle</span>
+        <span class="small muted">Étudie la cohérence du deck, sa courbe, ses familles
+          de cartes, et propose des remplacements argumentés.</span>
+      </span>
+      <span class="checks">
+        <span class="checks__item" data-check>
+          <span>Vous obtenez <b>des échanges carte pour carte</b> : ce qui sort, ce qui
+            entre, et la raison du remplacement.</span></span>
+        <span class="checks__item" data-check>
+          <span>S'appuie sur un <b>modèle entraîné</b> sur les proximités entre cartes,
+            la courbe de mana et l'identité de couleur.</span></span>
+        <span class="checks__item" data-check>
+          <span>Compter <b>environ une minute</b> de calcul.</span></span>
+      </span>
+      <span class="badge" id="engineBadge" style="align-self:flex-start">
+        Vérification du moteur…</span>
+    </button>
+  </div>
+
+  <div id="progress"></div>
+
+  <div class="intro">
+    <div class="intro__panel">
+      <div class="intro__head">
+        <span class="intro__mark" data-icon="layers"></span>
+        <div class="stack-2" style="gap:4px">
+          <p class="intro__title">Laquelle choisir ?</p>
+          <p class="small muted">Les deux analyses ne répondent pas à la même
+            question.</p>
+        </div>
+      </div>
+      <div class="walk">
+        <div class="walk__step">
+          <span class="walk__index">1</span>
+          <div class="stack-2" style="gap:2px">
+            <p class="walk__title">« Qu'est-ce que tout le monde joue et que je n'ai
+              pas ? »</p>
+            <p class="walk__text">C'est l'analyse par popularité. Elle situe votre deck
+              par rapport aux autres et repère les oublis manifestes. Elle ne connaît
+              rien de votre plan de jeu : elle compte.</p>
+          </div>
+        </div>
+        <div class="walk__step">
+          <span class="walk__index">2</span>
+          <div class="stack-2" style="gap:2px">
+            <p class="walk__title">« Ma liste tient-elle debout ? »</p>
+            <p class="walk__text">C'est l'analyse par le moteur. Elle regarde la courbe
+              de mana, l'équilibre entre familles de cartes et la proximité de chaque
+              carte avec le reste du deck, puis propose des échanges argumentés.</p>
+          </div>
+        </div>
+        <div class="walk__step">
+          <span class="walk__index">3</span>
+          <div class="stack-2" style="gap:2px">
+            <p class="walk__title">Les deux, dans cet ordre</p>
+            <p class="walk__text">La popularité comble les trous, le moteur resserre
+              l'ensemble. Relancer l'analyse après avoir modifié le deck donne un
+              résultat différent.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="intro__panel intro__panel--soft">
+      <div class="stack-2" style="gap:var(--sp-4)">
+        <p class="h4">Avant de lancer</p>
+        <div class="checks">
+          <span class="checks__item" data-check>
+            <span><b>Le commandant doit être identifié.</b> Toutes les comparaisons
+              partent de lui ; un deck importé sans commandant est refusé.</span></span>
+          <span class="checks__item" data-check>
+            <span><b>Rien n'est modifié automatiquement.</b> Les suggestions
+              s'affichent sur une page de résultats : vous décidez carte par
+              carte.</span></span>
+          <span class="checks__item" data-check>
+            <span><b>Votre collection n'est pas un filtre ici.</b> Les deux analyses
+              peuvent proposer des cartes que vous ne possédez pas. Pour rester dans
+              vos boîtes, passez par
+              <a href="/decks/ameliorer" style="color:var(--accent)">Améliorer mon deck
+              avec les cartes de ma collection</a>.</span></span>
+        </div>
+      </div>
+      <p class="note"><b>Bon à savoir.</b> Un deck se juge aussi à la table où il est
+        joué. Ces analyses ignorent la puissance de vos adversaires, votre budget et
+        les cartes auxquelles vous tenez.</p>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/mm.js"></script>
+<script>
+(async () => {
+  const user = await MM.boot({ title: 'Améliorer mon deck grâce à des analyses IA', nav: 'analyze' });
+  if (!user) return;
+
+  MM.els('[data-icon]').forEach((holder) => {
+    holder.innerHTML = MM.icons[holder.dataset.icon];
+  });
+  // Les puces de la page portent toutes la meme coche : elle est posee ici
+  // plutot que recopiee dans le balisage.
+  MM.els('[data-check]').forEach((item) => {
+    item.insertAdjacentHTML('afterbegin', MM.icons.check);
+  });
+
+  let currentDeck = null;
+  await MM.deckPicker(MM.el('#deckPicker'), (deck) => {
+    currentDeck = deck;
+    // Sans commandant, les deux analyses n'ont aucun point de comparaison :
+    // on renvoie l'utilisateur la ou il peut en designer un.
+    const choices = MM.el('#modes');
+    const prompt = MM.el('#noCommander');
+    const missing = MM.commanderMissing(deck);
+    if (choices) choices.hidden = missing;
+    if (prompt) {
+      prompt.hidden = !missing;
+      prompt.innerHTML = missing ? MM.commanderPrompt(deck) : '';
+    }
+  });
+
+  /* ── Disponibilité du moteur ──────────────────────────────────────────── */
+
+  const iaButton = MM.el('[data-analysis="ia"]');
+  const badge = MM.el('#engineBadge');
+
+  async function checkEngine() {
+    try {
+      const { ready } = await MM.api.get('/api/engine/status');
+      if (ready) {
+        badge.className = 'badge badge--ok';
+        badge.textContent = 'Moteur prêt';
+        iaButton.disabled = false;
+      } else {
+        badge.className = 'badge badge--warn';
+        badge.textContent = 'Moteur en cours de chargement…';
+        iaButton.disabled = true;
+        setTimeout(checkEngine, 8000);
+      }
+    } catch {
+      badge.className = 'badge badge--danger';
+      badge.textContent = 'Moteur indisponible';
+      iaButton.disabled = true;
+    }
+  }
+  iaButton.disabled = true;
+  checkEngine();
+
+  /* ── Lancement ────────────────────────────────────────────────────────── */
+
+  const progress = MM.el('#progress');
+
+  function showProgress(title, detail) {
+    progress.innerHTML = `
+      <div class="panel">
+        <div class="panel__body center" style="padding:var(--sp-10)">
+          <div class="stack-2" style="align-items:center">
+            <span class="spinner spinner--lg"></span>
+            <p class="strong">${MM.esc(title)}</p>
+            <p class="small muted">${MM.esc(detail)}</p>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function showError(message) {
+    progress.innerHTML = `
+      <div class="panel">
+        <div class="panel__body cluster">
+          <span style="color:var(--danger)">${MM.icons.warning}</span>
+          <p class="grow small">${MM.esc(message)}</p>
+          <button class="btn btn--sm" onclick="location.reload()">Réessayer</button>
+        </div>
+      </div>`;
+  }
+
+  /** Remet l'ecran en etat d'accueil : boutons actifs, message d'attente
+   *  efface. Le navigateur restaure la page telle qu'elle etait au moment de
+   *  la navigation — donc figee sur « analyse en cours » — quand on revient
+   *  par le bouton retour. */
+  function resetAnalysis() {
+    MM.els('[data-analysis]').forEach((button) => { button.disabled = false; });
+    if (progress) progress.innerHTML = '';
+  }
+
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) resetAnalysis();
+  });
+  // Safari et Firefox restaurent parfois sans passer par pageshow persisted :
+  // le retour depuis l'historique passe alors par popstate.
+  window.addEventListener('popstate', resetAnalysis);
+
+  MM.els('[data-analysis]').forEach((button) => {
+    button.addEventListener('click', () => {
+      if (!currentDeck) return MM.toast.error('Choisissez un deck à analyser.');
+      MM.els('[data-analysis]').forEach((other) => { other.disabled = true; });
+      if (button.dataset.analysis === 'popular') runPopular();
+      else runIa();
+    });
+  });
+
+  /** Analyse par popularité : le script serveur produit un CSV de recommandations. */
+  async function runPopular() {
+    showProgress('Analyse en cours', 'Comparaison avec les decks du même commandant.');
+    try {
+      const txt = await MM.api.get(
+        `/api/deck-txt/${encodeURIComponent(currentDeck.deck_id)}`);
+      const content = txt.content
+        || `1 ${currentDeck.commander}\n`;
+
+      const form = new FormData();
+      form.append('deckfile',
+        new File([content], `${currentDeck.deck_id}.txt`, { type: 'text/plain' }));
+      form.append('algo', 'v1');
+
+      const response = await fetch('/upload-deck', { method: 'POST', body: form });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Analyse impossible');
+
+      sessionStorage.setItem('mm_analysis_deck', JSON.stringify({
+        deck_id: currentDeck.deck_id,
+        name: currentDeck.name,
+        commander: currentDeck.commander,
+        scryfall_id: currentDeck.scryfall_id,
+      }));
+      location.href = `/analyse?csv=${encodeURIComponent(data.recommendationsFile)}&algo=v1`;
+    } catch (err) {
+      showError(err.message);
+      MM.els('[data-analysis]').forEach((other) => { other.disabled = false; });
+    }
+  }
+
+  /** Analyse IA : le moteur évalue la liste complète et propose des remplacements. */
+  async function runIa() {
+    showProgress('Analyse par le moteur',
+      'Évaluation de la cohérence et des familles de cartes — cela prend une minute.');
+    try {
+      const detail = await MM.api.get(
+        `/api/v2/decks/${encodeURIComponent(currentDeck.deck_id)}`);
+      // Le corps du deck, commandants exclus : ils sont envoyes a part, et un
+      // deck peut en avoir deux.
+      const decklist = detail.cards
+        .filter((card) => !MM.isCommander(currentDeck.commander, card.card_name))
+        .flatMap((card) => Array(card.quantity).fill(card.card_name));
+
+      const result = await MM.api.post('/api/deck/analyze', {
+        commander: currentDeck.commander,
+        decklist,
+      });
+
+      sessionStorage.setItem('deckMentorResult', JSON.stringify(result));
+      sessionStorage.setItem('mm_analysis_deck', JSON.stringify({
+        deck_id: currentDeck.deck_id,
+        name: currentDeck.name,
+        commander: currentDeck.commander,
+        scryfall_id: currentDeck.scryfall_id,
+      }));
+      location.href = '/analyse?algo=hybrid';
+    } catch (err) {
+      showError(err.message);
+      MM.els('[data-analysis]').forEach((other) => { other.disabled = false; });
+    }
+  }
+})();
+</script>
+</body>
+</html>
