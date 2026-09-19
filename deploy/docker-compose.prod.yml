@@ -9,7 +9,10 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME:-manamind}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # PostgreSQL 18 attend le montage sur /var/lib/postgresql, et place ses
+      # données dans un sous-dossier versionné. Monter /var/lib/postgresql/data
+      # comme avant fait échouer le démarrage sur « unused mount/volume ».
+      - postgres_data:/var/lib/postgresql
       - ./deploy/postgres-backup:/backup
     restart: unless-stopped
     healthcheck:

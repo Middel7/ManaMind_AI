@@ -27,7 +27,7 @@ docker build -t manamind:latest .
 
 # 5. Démarrer
 cd /app
-docker compose -f deploy/docker-compose.prod.yml up -d
+docker compose --project-directory /app -f deploy/docker-compose.prod.yml up -d
 
 # 6. Copier le catalogue Magic — voir « Remplir la base » plus bas.
 #    À faire AVANT les migrations : plusieurs d'entre elles s'appuient sur le
@@ -35,7 +35,7 @@ docker compose -f deploy/docker-compose.prod.yml up -d
 #    scryfall_card_printings et cardmarket_price_guide_entries.
 
 # 7. Créer les tables ManaMind (comptes, collections, decks)
-docker compose -f deploy/docker-compose.prod.yml exec app alembic upgrade head
+docker compose --project-directory /app -f deploy/docker-compose.prod.yml exec app alembic upgrade head
 
 # 8. Publier les statistiques depuis le poste de travail — voir plus bas.
 
@@ -47,6 +47,11 @@ chmod +x /app/deploy/backup.sh
 
 > **Note :** Le script `deploy/backup.sh` est livré sans bit d'exécution (limitation de l'outil de création de fichiers).
 > Exécuter `chmod +x /app/deploy/backup.sh` sur le VPS après le `git clone`.
+
+> **`--project-directory /app` n'est pas optionnel.** Sans lui, Compose
+> cherche le fichier `.env` dans `deploy/` et resout `./data` en
+> `/app/deploy/data` : la base demarre sans mot de passe et les modeles
+> ne sont pas trouves.
 
 ## Remplir la base
 
@@ -114,7 +119,7 @@ sont embarqués.
 cd /app
 git pull
 docker build -t manamind:latest .
-docker compose -f deploy/docker-compose.prod.yml up -d --no-deps app
+docker compose --project-directory /app -f deploy/docker-compose.prod.yml up -d --no-deps app
 ```
 
 ## Rollback
@@ -125,7 +130,7 @@ docker images manamind
 
 # Revenir à une image précédente
 docker tag manamind:previous manamind:latest
-docker compose -f deploy/docker-compose.prod.yml up -d --no-deps app
+docker compose --project-directory /app -f deploy/docker-compose.prod.yml up -d --no-deps app
 ```
 
 ## Restaurer un backup
