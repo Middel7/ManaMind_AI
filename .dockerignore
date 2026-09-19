@@ -3,10 +3,11 @@
 # sert à la FABRIQUER — scraping, entraînement, corpus, analyses — reste sur le
 # poste de travail.
 #
-# Attention aux réinclusions (« ! ») : Docker ne sait pas repêcher un fichier
-# dont un dossier parent est exclu par un motif se terminant par « / ». C'est
-# pourquoi on exclut « data/** » et « scripts/** », et non « data/ » et
-# « scripts/ ».
+# Attention aux réinclusions (« ! ») : Docker ne repêche pas un fichier dont un
+# dossier parent est exclu. « data/** » excluait aussi data/embeddings, si bien
+# que « !data/embeddings/card_embeddings.npy » restait sans effet et que l'image
+# partait sans ses modèles. Il faut donc exclure niveau par niveau et réinclure
+# chaque dossier traversé, comme plus bas.
 
 # ── Dépôt, secrets, caches ────────────────────────────────────────────────────
 .git
@@ -57,14 +58,20 @@ scripts/**
 # que deck_improver.py ouvre réellement, soit environ 27 Mo.
 # Volontairement exclus : card2vec.model (34 Mo) et xgb_baseline.json, qui ne
 # servent qu'à l'entraînement.
-data/**
-!data/embeddings/card_embeddings.npy
-!data/embeddings/card_index.json
-!data/embeddings/commander_embeddings.npy
-!data/embeddings/commander_embeddings.json
-!data/models/xgb_card2vec.json
-!data/clustering/cluster_annotations.json
-!data/clustering/cluster_taxonomy.json
+/data/*
+!/data/embeddings
+!/data/models
+!/data/clustering
+/data/embeddings/*
+!/data/embeddings/card_embeddings.npy
+!/data/embeddings/card_index.json
+!/data/embeddings/commander_embeddings.npy
+!/data/embeddings/commander_embeddings.json
+/data/models/*
+!/data/models/xgb_card2vec.json
+/data/clustering/*
+!/data/clustering/cluster_annotations.json
+!/data/clustering/cluster_taxonomy.json
 
 # alembic/ et alembic.ini restent embarqués : le serveur crée ses tables
 # utilisateur avec « alembic upgrade head » au premier démarrage.
