@@ -15,6 +15,12 @@ services:
       - postgres_data:/var/lib/postgresql
       - ./deploy/postgres-backup:/backup
     restart: unless-stopped
+    ports:
+      # Boucle locale du serveur uniquement : la base reste injoignable depuis
+      # Internet (le pare-feu Hetzner ferme d'ailleurs 5432). Ce point d'entrée
+      # sert aux transferts administratifs depuis le poste de travail, à travers
+      # un tunnel SSH — voir deploy/push_manamind_data.sh.
+      - "127.0.0.1:5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-manamind}"]
       interval: 10s
