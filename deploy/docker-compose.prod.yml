@@ -32,9 +32,10 @@ services:
       # ils doivent survivre à un redéploiement.
       - ./uploads:/app/uploads
       - ./outputs:/app/outputs
-      # /app/data n'est PAS monté : les modèles de l'écran d'analyse sont livrés
-      # dans l'image (voir .dockerignore). Monter un dossier vide par-dessus les
-      # masquerait, et l'analyse de deck cesserait de fonctionner.
+      # Modèles de l'écran d'analyse. Ils sont dans .gitignore, donc absents du
+      # dépôt et de l'image : c'est deploy/push_models.sh qui les dépose ici
+      # depuis le poste de travail, et ce montage les expose au conteneur.
+      - ./data:/app/data
     depends_on:
       db:
         condition: service_healthy

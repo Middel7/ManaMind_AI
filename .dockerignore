@@ -4,10 +4,8 @@
 # poste de travail.
 #
 # Attention aux réinclusions (« ! ») : Docker ne repêche pas un fichier dont un
-# dossier parent est exclu. « data/** » excluait aussi data/embeddings, si bien
-# que « !data/embeddings/card_embeddings.npy » restait sans effet et que l'image
-# partait sans ses modèles. Il faut donc exclure niveau par niveau et réinclure
-# chaque dossier traversé, comme plus bas.
+# dossier parent est exclu. C'est pourquoi scripts/ est écrit « scripts/** »,
+# pour que « !scripts/deck_improver.py » puisse s'appliquer.
 
 # ── Dépôt, secrets, caches ────────────────────────────────────────────────────
 .git
@@ -54,24 +52,15 @@ scripts/**
 !scripts/deck_improver.py
 
 # ── Corpus et modèles ─────────────────────────────────────────────────────────
-# data/ pèse 330 Mo sur le poste de travail. On ne garde que les sept fichiers
-# que deck_improver.py ouvre réellement, soit environ 27 Mo.
-# Volontairement exclus : card2vec.model (34 Mo) et xgb_baseline.json, qui ne
-# servent qu'à l'entraînement.
-/data/*
-!/data/embeddings
-!/data/models
-!/data/clustering
-/data/embeddings/*
-!/data/embeddings/card_embeddings.npy
-!/data/embeddings/card_index.json
-!/data/embeddings/commander_embeddings.npy
-!/data/embeddings/commander_embeddings.json
-/data/models/*
-!/data/models/xgb_card2vec.json
-/data/clustering/*
-!/data/clustering/cluster_annotations.json
-!/data/clustering/cluster_taxonomy.json
+# data/ est dans .gitignore : ces fichiers ne voyagent pas par le dépôt, et le
+# serveur ne les reçoit donc jamais par « git clone ». Inutile de chercher à les
+# embarquer dans l'image — ils y seraient absents de toute façon.
+#
+# Les modèles de l'écran d'analyse sont déposés sur le serveur par
+# deploy/push_models.sh, puis montés dans le conteneur (voir le compose de
+# production). C'est cohérent avec le reste : ce que l'atelier fabrique est
+# publié vers le service, il n'est pas figé dans l'image.
+data/
 
 # alembic/ et alembic.ini restent embarqués : le serveur crée ses tables
 # utilisateur avec « alembic upgrade head » au premier démarrage.
