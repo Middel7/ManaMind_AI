@@ -83,20 +83,14 @@ deck_cards AS (
     LEFT JOIN scryfall_cards sc ON sc.id = r.card_id
 ),
 prices AS (
-    -- Prix EUR non-foil le plus bas parmi les éditions, à la date la plus récente
-    SELECT dc.card_lower, MIN(lp.price) AS eur_price
+    -- Cote la plus basse parmi les éditions, au dernier relevé Cardmarket.
+    -- La vue encapsule déjà le MAX(captured_at) par impression : inutile de
+    -- refaire le tri par date ici.
+    SELECT dc.card_lower, MIN(v.low_price) AS eur_price
     FROM deck_cards dc
     JOIN scryfall_card_printings pr ON pr.card_id = dc.card_id
-    JOIN LATERAL (
-        SELECT p.price
-        FROM scryfall_card_prices p
-        WHERE p.printing_id = pr.id
-          AND p.currency = 'eur'
-          AND p.price_type = 'regular'
-          AND p.price > 0
-        ORDER BY p.date DESC
-        LIMIT 1
-    ) lp ON TRUE
+    JOIN v_cardmarket_latest_prices_by_printing v ON v.printing_id = pr.id
+    WHERE v.low_price > 0
     GROUP BY dc.card_lower
 )
 SELECT dc.card_lower,
@@ -314,19 +308,13 @@ resolved AS (
     JOIN scryfall_cards sc ON sc.normalized_name = m.card_lower
     ORDER BY m.commander, m.card_lower, sc.id
 ),
-last_date AS (
-    SELECT MAX(date) AS d
-    FROM scryfall_card_prices
-    WHERE currency = 'eur' AND price_type = 'regular'
-),
 prices AS (
-    -- Agrégat sur la seule dernière date de relevé (index ix_scryfall_card_prices_date) :
-    -- plus rapide qu'un lookup par carte quand le pool dépasse quelques centaines d'entrées
-    SELECT pr.card_id, MIN(p.price) AS eur_price
+    -- Cote la plus basse par carte, au dernier relevé Cardmarket. La vue porte
+    -- déjà le MAX(captured_at) : l'ancien CTE last_date n'a plus d'objet.
+    SELECT pr.card_id, MIN(v.low_price) AS eur_price
     FROM scryfall_card_printings pr
-    JOIN scryfall_card_prices p ON p.printing_id = pr.id
-    WHERE p.currency = 'eur' AND p.price_type = 'regular' AND p.price > 0
-      AND p.date = (SELECT d FROM last_date)
+    JOIN v_cardmarket_latest_prices_by_printing v ON v.printing_id = pr.id
+    WHERE v.low_price > 0
     GROUP BY pr.card_id
 ),
 ranked AS (
