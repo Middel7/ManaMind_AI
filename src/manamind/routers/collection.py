@@ -39,8 +39,9 @@ def search_cards(
             {
                 "error": (
                     "Base de données non configurée. "
-                    "Crée un fichier .env avec DATABASE_URL puis lance "
-                    "python scripts/import_scryfall_cards.py"
+                    "Crée un fichier .env avec DATABASE_URL, puis copie le "
+                    "catalogue Magic avec ./deploy/pull_catalogue.sh "
+                    "(il appartient au dépôt MTG-DB, pas à ManaMind)."
                 )
             },
             status_code=503,

@@ -27,9 +27,9 @@ from typing import Any
 
 import httpx
 import ijson
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import InstrumentedAttribute, Session
 from sqlalchemy.sql import func
 from tqdm import tqdm
 
@@ -151,20 +151,31 @@ def import_sets(client: httpx.Client, session: Session) -> int:
     if not rows:
         return 0
 
-    stmt = pg_insert(MtgSet).values(rows)
-    stmt = stmt.on_conflict_do_update(
-        index_elements=["code"],
-        set_={
-            "name": stmt.excluded.name,
-            "set_type": stmt.excluded.set_type,
-            "released_at": stmt.excluded.released_at,
-            "block": stmt.excluded.block,
-            "parent_set_code": stmt.excluded.parent_set_code,
-            "card_count": stmt.excluded.card_count,
-            "icon_svg_uri": stmt.excluded.icon_svg_uri,
-        },
-    )
-    session.execute(stmt)
+    colonnes = [
+        "name", "set_type", "released_at", "block",
+        "parent_set_code", "card_count", "icon_svg_uri",
+    ]
+    connus = _ids_existants(session, MtgSet, MtgSet.code, [r["code"] for r in rows])
+    nouvelles = [r for r in rows if r["code"] not in connus]
+    existantes = [r for r in rows if r["code"] in connus]
+
+    if nouvelles:
+        stmt = pg_insert(MtgSet).values(nouvelles)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["code"],
+            set_={col: getattr(stmt.excluded, col) for col in colonnes},
+        )
+        session.execute(stmt)
+
+    if existantes:
+        session.execute(
+            update(MtgSet),
+            [
+                {"id": connus[r["code"]], **{col: r.get(col) for col in colonnes}}
+                for r in existantes
+            ],
+        )
+
     session.commit()
     return len(rows)
 
@@ -325,42 +336,88 @@ def _parse_price_rows(
 # 4. UPSERTS EN BASE (fonctions de bas niveau)
 # ══════════════════════════════════════════════════════════════════════════════
 
+# Colonnes rafraîchies à chaque import. `id`, `oracle_id`, `created_at` et
+# `game_changer` en sont volontairement absents : les trois premiers sont
+# immuables, le dernier est renseigné par un autre script.
+_COLONNES_CARTE = [
+    "name", "normalized_name", "mana_cost", "mana_value", "type_line",
+    "oracle_text", "power", "toughness", "loyalty", "defense",
+    "colors", "color_identity", "keywords", "legal_commander", "edhrec_rank",
+]
+
+
+def _ids_existants(
+    session: Session,
+    modele: type,
+    colonne_cle: InstrumentedAttribute,
+    valeurs: list[str],
+) -> dict[str, int]:
+    """
+    Retourne {valeur_de_cle: id} pour les lignes déjà présentes en base.
+
+    C'est la première moitié du remède à la consommation de séquence : savoir
+    AVANT d'écrire quelles lignes existent déjà, pour ne proposer à l'INSERT
+    que celles qui manquent.
+    """
+    if not valeurs:
+        return {}
+    resultat = session.execute(
+        select(modele.id, colonne_cle).where(colonne_cle.in_(valeurs))
+    )
+    return {cle: ident for ident, cle in resultat}
+
+
 def _upsert_cards(session: Session, rows: list[dict]) -> dict[str, int]:
     """
-    INSERT ... ON CONFLICT (oracle_id) DO UPDATE.
+    Sépare l'existant du nouveau : INSERT des seules cartes absentes, UPDATE
+    par clé primaire pour les autres.
     Retourne {oracle_id: card.id} — indispensable pour résoudre les FK faces/printings.
-    updated_at est mis à jour explicitement (onupdate= ne fonctionne pas sur les bulk inserts).
-    """
-    stmt = pg_insert(Card).values(rows)
-    stmt = stmt.on_conflict_do_update(
-        index_elements=["oracle_id"],
-        set_={
-            "name":             stmt.excluded.name,
-            "normalized_name":  stmt.excluded.normalized_name,
-            "mana_cost":        stmt.excluded.mana_cost,
-            "mana_value":       stmt.excluded.mana_value,
-            "type_line":        stmt.excluded.type_line,
-            "oracle_text":      stmt.excluded.oracle_text,
-            "power":            stmt.excluded.power,
-            "toughness":        stmt.excluded.toughness,
-            "loyalty":          stmt.excluded.loyalty,
-            "defense":          stmt.excluded.defense,
-            "colors":           stmt.excluded.colors,
-            "color_identity":   stmt.excluded.color_identity,
-            "keywords":         stmt.excluded.keywords,
-            "legal_commander":  stmt.excluded.legal_commander,
-            "edhrec_rank":      stmt.excluded.edhrec_rank,
-            "updated_at":       func.now(),
-        },
-    )
-    session.execute(stmt)
 
-    # Récupère les IDs des cartes qu'on vient d'insérer/mettre à jour
-    oracle_ids = [r["oracle_id"] for r in rows]
-    result = session.execute(
-        select(Card.id, Card.oracle_id).where(Card.oracle_id.in_(oracle_ids))
-    )
-    return {row.oracle_id: row.id for row in result}
+    Un INSERT ... ON CONFLICT (oracle_id) DO UPDATE évalue le DEFAULT
+    nextval() de scryfall_cards.id pour CHAQUE ligne proposée, avant même la
+    détection du conflit. Comme l'import propose l'intégralité du catalogue à
+    chaque passage, il brûlait ~520 000 valeurs de séquence par exécution pour
+    une poignée d'insertions réelles — de quoi épuiser un int4 en quelques
+    années. Ne pas proposer la ligne du tout est le seul remède : un filtre
+    dans l'INSERT ne suffit pas.
+    """
+    if not rows:
+        return {}
+
+    connus = _ids_existants(session, Card, Card.oracle_id, [r["oracle_id"] for r in rows])
+    nouvelles = [r for r in rows if r["oracle_id"] not in connus]
+    existantes = [r for r in rows if r["oracle_id"] in connus]
+
+    if nouvelles:
+        # ON CONFLICT est conservé pour ce seul lot : il ne coûte qu'une valeur
+        # de séquence par carte réellement absente, et protège d'un import
+        # concurrent qui aurait inséré la même carte entre le SELECT et l'INSERT.
+        stmt = pg_insert(Card).values(nouvelles)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["oracle_id"],
+            set_={
+                **{col: getattr(stmt.excluded, col) for col in _COLONNES_CARTE},
+                "updated_at": func.now(),
+            },
+        )
+        session.execute(stmt)
+        connus.update(
+            _ids_existants(session, Card, Card.oracle_id, [r["oracle_id"] for r in nouvelles])
+        )
+
+    if existantes:
+        # UPDATE par clé primaire, en executemany : aucune séquence touchée.
+        # `updated_at` est porté par onupdate= du modèle, qui s'applique bien
+        # ici — contrairement au cas d'un INSERT en masse.
+        session.execute(
+            update(Card),
+            [
+                {"id": connus[r["oracle_id"]], **{col: r.get(col) for col in _COLONNES_CARTE}}
+                for r in existantes
+            ],
+        )
+
+    return connus
 
 
 def _replace_faces(
@@ -377,40 +434,88 @@ def _replace_faces(
 
 def _upsert_printings(session: Session, rows: list[dict]) -> dict[str, int]:
     """
-    INSERT ... ON CONFLICT (scryfall_id) DO UPDATE.
+    Même séparation que pour les cartes, sur la clé métier scryfall_id.
     Retourne {scryfall_id: printing.id} pour l'insertion des prix.
     """
-    update_cols = [
+    colonnes = [
         "oracle_id", "card_id", "set_code", "collector_number", "lang",
         "rarity", "released_at", "artist", "border_color", "frame",
         "full_art", "promo", "reprint", "digital",
         "image_small", "image_normal", "image_large", "scryfall_uri",
     ]
-    stmt = pg_insert(CardPrinting).values(rows)
-    stmt = stmt.on_conflict_do_update(
-        index_elements=["scryfall_id"],
-        set_={col: getattr(stmt.excluded, col) for col in update_cols},
-    )
-    session.execute(stmt)
+    if not rows:
+        return {}
 
-    scryfall_ids = [r["scryfall_id"] for r in rows]
-    result = session.execute(
-        select(CardPrinting.id, CardPrinting.scryfall_id)
-        .where(CardPrinting.scryfall_id.in_(scryfall_ids))
+    connus = _ids_existants(
+        session, CardPrinting, CardPrinting.scryfall_id, [r["scryfall_id"] for r in rows]
     )
-    return {row.scryfall_id: row.id for row in result}
+    nouvelles = [r for r in rows if r["scryfall_id"] not in connus]
+    existantes = [r for r in rows if r["scryfall_id"] in connus]
+
+    if nouvelles:
+        stmt = pg_insert(CardPrinting).values(nouvelles)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["scryfall_id"],
+            set_={col: getattr(stmt.excluded, col) for col in colonnes},
+        )
+        session.execute(stmt)
+        connus.update(
+            _ids_existants(
+                session, CardPrinting, CardPrinting.scryfall_id,
+                [r["scryfall_id"] for r in nouvelles],
+            )
+        )
+
+    if existantes:
+        session.execute(
+            update(CardPrinting),
+            [
+                {"id": connus[r["scryfall_id"]], **{col: r.get(col) for col in colonnes}}
+                for r in existantes
+            ],
+        )
+
+    return connus
 
 
 def _insert_prices(session: Session, rows: list[dict]) -> None:
     """
-    INSERT ... ON CONFLICT DO NOTHING (idempotent grâce à uq_card_prices_printing_date_type).
-    Permet de relancer l'import le même jour sans créer de doublons de prix.
+    N'insère que les relevés absents, après lecture de la clé métier
+    (printing_id, date, source, currency, price_type).
+
+    Le ON CONFLICT DO NOTHING précédent était le plus discret des quatre :
+    il ne laisse aucune trace dans pg_stat_user_tables — ni n_tup_ins ni
+    n_tup_upd — alors qu'il consommait deux valeurs de séquence par relevé
+    réellement inséré, une par exécution quotidienne repassant sur la même
+    journée. Seuls les identifiants le trahissaient.
     """
     if not rows:
         return
-    stmt = pg_insert(CardPrice).values(rows)
-    stmt = stmt.on_conflict_do_nothing()
-    session.execute(stmt)
+
+    def cle(r: dict) -> tuple:
+        return (r["printing_id"], r["date"], r["source"], r["currency"], r["price_type"])
+
+    # Filtre par printing_id + date : bien plus sélectif qu'un IN sur le
+    # quintuplet, et servi par uq_card_prices_printing_date_type.
+    deja = {
+        tuple(ligne)
+        for ligne in session.execute(
+            select(
+                CardPrice.printing_id, CardPrice.date, CardPrice.source,
+                CardPrice.currency, CardPrice.price_type,
+            ).where(
+                CardPrice.printing_id.in_({r["printing_id"] for r in rows}),
+                CardPrice.date.in_({r["date"] for r in rows}),
+            )
+        )
+    }
+
+    nouveaux = [r for r in rows if cle(r) not in deja]
+    if nouveaux:
+        # ON CONFLICT conservé par sécurité : sur ce lot il ne coûte qu'une
+        # valeur par relevé effectivement inséré, soit le minimum incompressible.
+        stmt = pg_insert(CardPrice).values(nouveaux)
+        session.execute(stmt.on_conflict_do_nothing())
 
 
 # ══════════════════════════════════════════════════════════════════════════════
