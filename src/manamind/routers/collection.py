@@ -53,6 +53,20 @@ def search_cards(
 
     try:
         with SessionLocal() as session:
+            # scryfall_card_prices est un historique : une ligne par impression
+            # ET PAR JOUR, jamais purgée. Sans filtre de date, les deux
+            # sous-requêtes ci-dessous balayaient tout l'historique et
+            # renvoyaient un minimum et un maximum HISTORIQUES — le prix affiché
+            # était le plus bas jamais relevé, et « la plus belle carte » celle
+            # qui avait été la plus chère un jour, l'écart avec la cote réelle
+            # se creusant à chaque import quotidien.
+            #
+            # Ne retenir que le dernier relevé ne coûte rien en couverture :
+            # 92 501 impressions y figurent, contre 92 509 sur tout
+            # l'historique, soit huit de moins. Et le balayage passe de
+            # 4 042 204 lignes à 92 501 (mesuré le 20/09/2026).
+            dernier_releve = select(func.max(CardPrice.date)).scalar_subquery()
+
             # Sous-requête 1a : rang de chaque impression par prix EUR décroissant
             # row_number() = 1 → impression la plus chère de la carte
             expensive_rank_subq = (
@@ -71,6 +85,7 @@ def search_cards(
                     CardPrice.currency == "eur",
                     CardPrice.price_type == "regular",
                     CardPrice.price > 0,
+                    CardPrice.date == dernier_releve,
                 )
                 .subquery()
             )
@@ -106,6 +121,7 @@ def search_cards(
                     CardPrice.currency == "eur",
                     CardPrice.price_type == "regular",
                     CardPrice.price > 0,
+                    CardPrice.date == dernier_releve,
                 )
                 .group_by(CardPrinting.card_id)
                 .subquery()
