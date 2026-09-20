@@ -8,16 +8,20 @@ Crée le compte admin et migre toutes les données existantes vers ce compte :
   - data/My decks/*.txt → user_deck_cards
 
 Usage :
-    uv run python scripts/migrate_to_admin.py --email admin@manamind.app --password MonMotDePasse
+    .venv\\Scripts\\python.exe scripts/migrate_to_admin.py --email admin@manamind.app
 
 Options :
     --email      Email du compte admin
-    --password   Mot de passe (min 8 caractères)
+    --password   Mot de passe (min 8 caractères). À OMETTRE : sans lui, le
+                 script le demande sans l'afficher. Passé en argument, il
+                 reste dans l'historique du terminal et se lit dans la liste
+                 des processus le temps de l'exécution.
     --reset      Supprime le compte admin existant avant de recréer (DANGER)
 """
 from __future__ import annotations
 
 import argparse
+import getpass
 import json
 import re
 import sys
@@ -40,11 +44,21 @@ def get_conn():
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--email", required=True)
-    parser.add_argument("--password", required=True)
+    parser.add_argument("--password")
     parser.add_argument("--reset", action="store_true")
     args = parser.parse_args()
 
-    if len(args.password) < 8:
+    # Demandé plutôt que passé en argument : un mot de passe sur la ligne de
+    # commande survit dans l'historique du terminal et s'affiche dans la liste
+    # des processus. La saisie est confirmée, car elle n'est pas visible.
+    password = args.password
+    if not password:
+        password = getpass.getpass("Nouveau mot de passe (invisible) : ")
+        if password != getpass.getpass("Confirmer                     : "):
+            print("ERREUR : les deux saisies diffèrent")
+            sys.exit(1)
+
+    if len(password) < 8:
         print("ERREUR : mot de passe trop court (min 8 caractères)")
         sys.exit(1)
 
@@ -67,10 +81,10 @@ def main():
         if existing:
             admin_id = existing[0]
             print(f"  Compte admin existant trouvé (id={admin_id}), mise à jour du mot de passe.")
-            pw_hash = _hash(args.password)
+            pw_hash = _hash(password)
             cur.execute("UPDATE users SET password_hash = %s, role = 'admin' WHERE id = %s", (pw_hash, admin_id))
         else:
-            pw_hash = _hash(args.password)
+            pw_hash = _hash(password)
             cur.execute("""
                 INSERT INTO users (email, password_hash, display_name, role)
                 VALUES (%s, %s, %s, 'admin')
