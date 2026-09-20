@@ -162,7 +162,19 @@ table { border-collapse: collapse; width: 100%; }
   color: var(--text);
 }
 
-.nav { display: flex; flex-direction: column; gap: 2px; }
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  /* La barre est haute de 100vh : sans min-height nulle, un element flex ne
+     descend jamais sous la hauteur de son contenu. Une liste longue poussait
+     donc le pied de barre — profil et deconnexion — sous le bord de l'ecran,
+     hors d'atteinte puisque la barre est sticky. C'est la navigation qui
+     defile, le pied reste visible. */
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
 
 .nav__group { margin-top: var(--sp-5); }
 .nav__group:first-child { margin-top: 0; }
@@ -198,6 +210,11 @@ table { border-collapse: collapse; width: 100%; }
 }
 
 .nav__item svg { width: 17px; height: 17px; flex-shrink: 0; opacity: 0.85; }
+
+/* La deconnexion est un bouton, pas un lien : contrairement a un <a>, il ne
+   s'etire pas sur la largeur, et son fond survole serait plus etroit que
+   celui des autres entrees. */
+button.nav__item { width: 100%; }
 
 .nav__count {
   margin-left: auto;

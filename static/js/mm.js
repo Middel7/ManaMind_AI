@@ -471,7 +471,7 @@
             <span class="xs dim">Voir mon profil</span>
           </span>
         </a>
-        <button class="nav__item" id="mmLogout" style="width:100%">
+        <button class="nav__item" id="mmLogout" type="button">
           ${MM.icons.logout}<span>Déconnexion</span>
         </button>
       </div>`;
