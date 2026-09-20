@@ -108,6 +108,47 @@ done
 # gin_trgm_ops does not exist ».
 "$PSQL" "$TARGET_DATABASE_URL" --quiet --set ON_ERROR_STOP=on   -c "CREATE EXTENSION IF NOT EXISTS pg_trgm"
 
+# ── 0. Objets ManaMind batis sur le catalogue ────────────────────────────────
+# Une vue materialisee de ce depot — card_min_price — s'appuie sur les tables du
+# catalogue. PostgreSQL refuse alors de les remplacer :
+#
+#   ERROR: cannot drop table public.cardmarket_price_guide_entries because other
+#   objects depend on it
+#
+# Le dump ne peut pas regler cela : ces objets appartiennent a ManaMind et
+# n'existent pas a la source. On releve donc leur definition AVANT de les
+# supprimer, pour les recreer a l'identique une fois les donnees copiees. Rien
+# n'est ecrit en dur ici : la source de verite reste la base, ce qui vaut aussi
+# pour les vues materialisees qui viendront apres celle-ci.
+echo "→ 0/4  mise de cote des vues materialisees de ManaMind"
+MATVIEW_DEFS=$("$PSQL" "$TARGET_DATABASE_URL" -tAc "
+  SELECT COALESCE(string_agg(
+           'CREATE MATERIALIZED VIEW ' || quote_ident(matviewname) || ' AS ' || definition,
+           E'\n'), '')
+  FROM pg_matviews WHERE schemaname = 'public'")
+
+# Les index sont releves a part : ils ne figurent pas dans la definition, et
+# card_min_price en a un UNIQUE sans lequel REFRESH CONCURRENTLY est refuse.
+MATVIEW_INDEXES=$("$PSQL" "$TARGET_DATABASE_URL" -tAc "
+  SELECT COALESCE(string_agg(indexdef || ';', E'\n'), '')
+  FROM pg_indexes
+  WHERE schemaname = 'public'
+    AND tablename IN (SELECT matviewname FROM pg_matviews WHERE schemaname = 'public')")
+
+if [ -n "$MATVIEW_DEFS" ]; then
+  echo "   $(printf '%s' "$MATVIEW_DEFS" | grep -c 'CREATE MATERIALIZED VIEW') vue(s) a recreer apres la copie"
+fi
+
+"$PSQL" "$TARGET_DATABASE_URL" --quiet --set ON_ERROR_STOP=on -c "
+  DO \$\$
+  DECLARE r record;
+  BEGIN
+    FOR r IN SELECT matviewname FROM pg_matviews WHERE schemaname = 'public' LOOP
+      EXECUTE 'DROP MATERIALIZED VIEW IF EXISTS ' || quote_ident(r.matviewname) || ' CASCADE';
+    END LOOP;
+  END
+  \$\$;"
+
 echo "→ 1/4  structure des tables et de la vue"
 "$PGDUMP" "$CATALOGUE_DATABASE_URL" \
   --schema-only --no-owner --no-privileges --clean --if-exists \
@@ -155,6 +196,21 @@ copy_in=$(printf '\\copy %s (%s) FROM STDIN' "$PRICES_TABLE" "$price_columns")
 
 "$PSQL" "$CATALOGUE_DATABASE_URL" --quiet --set ON_ERROR_STOP=on -c "$copy_out" \
   | "$PSQL" "$TARGET_DATABASE_URL" --quiet --set ON_ERROR_STOP=on -c "$copy_in"
+
+# ── 3b. Vues materialisees remises en place ──────────────────────────────────
+# Apres les donnees, jamais avant : une vue materialisee est peuplee a sa
+# creation, et la batir sur des tables vides la laisserait vide jusqu'au
+# prochain REFRESH — sans que rien ne le signale, sinon des prix absents partout
+# dans l'application.
+if [ -n "$MATVIEW_DEFS" ]; then
+  echo "→ 3b/4  recreation des vues materialisees"
+  printf '%s\n' "$MATVIEW_DEFS" \
+    | "$PSQL" "$TARGET_DATABASE_URL" --quiet --set ON_ERROR_STOP=on
+  if [ -n "$MATVIEW_INDEXES" ]; then
+    printf '%s\n' "$MATVIEW_INDEXES" \
+      | "$PSQL" "$TARGET_DATABASE_URL" --quiet --set ON_ERROR_STOP=on
+  fi
+fi
 
 # ── 4. Vérification ───────────────────────────────────────────────────────────
 echo "→ 4/4  vérification"
