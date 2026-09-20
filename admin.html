@@ -1420,6 +1420,10 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
     // bouton qui repond « deja en cours » est un bouton qui n'aurait pas du
     // etre cliquable.
     document.querySelectorAll('[data-cat-run]').forEach((b) => { b.disabled = true; });
+    // Remet ce qu'un echec precedent avait retire du panneau.
+    const tourne = document.querySelector('#catRunning .spinner');
+    if (tourne) tourne.style.display = '';
+    document.getElementById('catError').style.display = 'none';
     document.getElementById('catPhase').textContent = job.label;
     const logEl = document.getElementById('catLog');
     logEl.innerHTML = '';
@@ -1477,10 +1481,18 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
   function renderCatalogueEnd(job) {
     if (job.status === 'running') return;
     if (job.status === 'error') {
+      // Le journal reste affiche, sous le message d'erreur. Le masquer laissait
+      // « Code de sortie 3 » pour seule explication d'un tirage arrete sur une
+      // dependance de vue, ligne parfaitement lisible juste au-dessus.
       document.getElementById('catState').style.display = 'block';
-      showPanel('cat', 'Error');
-      document.getElementById('catError').textContent =
-        `${job.label} \u2014 ${job.error || '\u00e9chec'}`;
+      document.getElementById('catRunning').style.display = 'block';
+      document.getElementById('catDone').style.display = 'none';
+      document.getElementById('catError').style.display = 'block';
+      document.getElementById('catStopBtn').style.display = 'none';
+      const fini = document.querySelector('#catRunning .spinner');
+      if (fini) fini.style.display = 'none';
+      document.getElementById('catPhase').textContent = `${job.label} \u2014 \u00e9chec`;
+      document.getElementById('catError').textContent = job.error || '\u00e9chec';
       return;
     }
     showPanel('cat', 'Done');
