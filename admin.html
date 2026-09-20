@@ -49,6 +49,24 @@ body { font-family: var(--serif-body); background: var(--ink-900); color: var(--
 .badge-green  { color: var(--green);  background: var(--green-faint);  border: 1px solid var(--green-border); }
 .layer-rule { flex: 1; height: 1px; background: var(--border); }
 
+/* ── Actions du catalogue ── */
+/* Une action par ligne, et non des boutons alignes : chacune porte une phrase
+   qui dit sa duree et ce qu'elle ecrit. Trois libelles seuls ne suffiraient pas
+   a choisir entre une minute et deux heures. */
+.cat-actions { display: flex; flex-direction: column; gap: 10px; }
+.cat-action { display: flex; align-items: flex-start; gap: 14px; padding: 12px 0; border-top: 1px solid var(--border); }
+.cat-action:first-child { border-top: none; padding-top: 0; }
+.cat-action__main { flex: 1; min-width: 0; }
+.cat-action__title { font-size: .8rem; color: var(--parch-100); }
+.cat-action__desc { font-size: .68rem; color: var(--parch-500); margin-top: 3px; }
+/* Le motif d'indisponibilite se lit comme une panne : en rouge, il ferait
+   croire a une erreur alors que la machine fait simplement autre chose. */
+.cat-action__why { font-size: .64rem; color: var(--amber); margin-top: 4px; font-family: var(--mono); }
+.cat-action.is-off .cat-action__title { color: var(--parch-500); }
+@media (max-width: 640px) {
+  .cat-action { flex-direction: column; gap: 8px; }
+}
+
 /* ── Stats grid ── */
 .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 4px; }
 @media (max-width: 900px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
@@ -268,6 +286,7 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
 
   <nav class="tabs" role="tablist">
     <button class="tab active" data-tab="Scraping" role="tab">Scraping</button>
+    <button class="tab" data-tab="Catalogue" role="tab">Catalogue</button>
     <button class="tab" data-tab="Users" role="tab">Utilisateurs</button>
   </nav>
 
@@ -563,6 +582,77 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
   </div>
 
   </div><!-- /tabScraping -->
+
+  <div class="tab-panel" id="tabCatalogue" hidden>
+
+    <div class="layer-header">
+      <span class="layer-label">Catalogue Magic</span>
+      <span class="layer-badge badge-blue">scryfall_*</span>
+      <div class="layer-rule"></div>
+      <span id="catFresh" style="font-family:var(--serif-display);font-style:italic;font-size:.68rem;color:var(--parch-600);white-space:nowrap;"></span>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card accent-blue">
+        <div class="stat-label">Cartes</div>
+        <div class="stat-val c-blue loading" id="catCards">&mdash;</div>
+        <div class="stat-sub">oracle distincts</div>
+      </div>
+      <div class="stat-card accent-teal">
+        <div class="stat-label">Éditions</div>
+        <div class="stat-val c-teal loading" id="catPrintings">&mdash;</div>
+        <div class="stat-sub">impressions, toutes langues</div>
+      </div>
+      <div class="stat-card accent-green">
+        <div class="stat-label">Liaisons de jetons</div>
+        <div class="stat-val c-green loading" id="catTokens">&mdash;</div>
+        <div class="stat-sub">carte &rarr; jeton engendré</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Extensions</div>
+        <div class="stat-val loading" id="catSets">&mdash;</div>
+        <div class="stat-sub">éditions Magic connues</div>
+      </div>
+    </div>
+
+    <div class="layer-header">
+      <span class="layer-label">Mettre à jour</span>
+      <div class="layer-rule"></div>
+    </div>
+
+    <div class="panel">
+      <p class="panel-hint" style="margin-top:0;margin-bottom:16px;">
+        ManaMind ne fabrique pas le catalogue, il le reçoit. Les actions offertes
+        dépendent donc de la machine : en ligne, le catalogue se tire de la base
+        partagée ; sur le poste de travail, c'est le pipeline MTG-DB qui l'écrit.
+      </p>
+
+      <div id="catActions" class="cat-actions">
+        <div class="empty-msg" style="padding:8px 0;">Chargement&hellip;</div>
+      </div>
+
+      <div class="panel-state" id="catState" style="display:none;">
+        <div id="catRunning" style="display:none; margin-top:14px;">
+          <div class="running-box">
+            <div class="spinner"></div>
+            <span id="catPhase">Initialisation&hellip;</span>
+            <button class="btn btn-red btn-xs" id="catStopBtn" style="margin-left:auto;">Arrêter</button>
+            <span class="run-elapsed" id="catElapsed">00:00</span>
+          </div>
+          <div class="run-log" id="catLog"></div>
+        </div>
+        <div id="catDone" style="display:none; margin-top:14px;">
+          <div class="done-badge">Terminé</div>
+          <div id="catReport"></div>
+          <div style="margin-top:12px;">
+            <button class="btn btn-ghost btn-xs" id="catResetBtn">Revenir aux actions</button>
+          </div>
+        </div>
+        <div id="catError" style="display:none;" class="error-box"></div>
+      </div>
+    </div>
+
+  </div>
 
   <div class="tab-panel" id="tabUsers" hidden>
 
@@ -1238,15 +1328,190 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
     _mlUpdateBtn();
   });
 
+  // -- Catalogue Magic ---------------------------------------------------
+  //
+  // Trois actions, dont la disponibilite depend de la machine : c'est le
+  // serveur qui le dit, pas le navigateur. Une action indisponible reste
+  // affichee, avec son motif -- savoir qu'elle existe ailleurs vaut mieux que
+  // de la voir disparaitre sans explication.
+
+  let _catTimer = null;    // horloge du temps ecoule
+  let _catPoll = null;     // interrogation de l'avancement
+  let _catSeenLog = 0;
+
+  function _catNum(value) {
+    return value == null ? '\u2014' : Number(value).toLocaleString('fr-FR');
+  }
+
+  async function loadCatalogue() {
+    try {
+      const r = await fetch('/api/admin/catalogue');
+      if (!r.ok) throw new Error(await errorText(r));
+      const d = await r.json();
+      const c = d.catalogue || {};
+
+      [['catCards', c.cards], ['catPrintings', c.printings],
+       ['catTokens', c.token_links], ['catSets', c.sets]].forEach(([id, value]) => {
+        const el = document.getElementById(id);
+        el.textContent = _catNum(value);
+        el.classList.remove('loading');
+      });
+
+      // La date de derniere ecriture du catalogue : c'est elle qui dit si une
+      // mise a jour est utile.
+      const fresh = document.getElementById('catFresh');
+      fresh.textContent = c.updated_at
+        ? `derni\u00e8re \u00e9criture ${new Date(c.updated_at).toLocaleString('fr-FR')}`
+        : (c.error ? 'catalogue illisible' : '');
+
+      renderCatalogueActions(d.actions || []);
+
+      // Un travail lance depuis un autre onglet, ou avant un rechargement de
+      // page, continue de tourner : on le reprend au vol.
+      if (d.job && d.job.status === 'running') {
+        watchCatalogueJob(d.job);
+      } else if (d.job) {
+        renderCatalogueEnd(d.job);
+      }
+    } catch (e) {
+      document.getElementById('catActions').innerHTML =
+        `<div class="error-box">${esc(String(e))}</div>`;
+    }
+  }
+
+  function renderCatalogueActions(actions) {
+    document.getElementById('catActions').innerHTML = actions.map((action) => `
+      <div class="cat-action${action.available ? '' : ' is-off'}">
+        <div class="cat-action__main">
+          <div class="cat-action__title">${esc(action.label)}</div>
+          <div class="cat-action__desc">${esc(action.description)}</div>
+          ${action.available ? '' :
+            `<div class="cat-action__why">Indisponible ici : ${esc(action.reason)}</div>`}
+        </div>
+        <button class="btn btn-blue btn-xs" data-cat-run="${esc(action.key)}"
+                ${action.available ? '' : 'disabled'}>Lancer</button>
+      </div>`).join('');
+  }
+
+  document.getElementById('catActions').addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-cat-run]');
+    if (!button || button.disabled) return;
+    button.disabled = true;
+    try {
+      const r = await fetch('/api/admin/catalogue/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: button.dataset.catRun }),
+      });
+      if (!r.ok) throw new Error(await errorText(r));
+      watchCatalogueJob((await r.json()).job);
+    } catch (e) {
+      button.disabled = false;
+      document.getElementById('catState').style.display = 'block';
+      showPanel('cat', 'Error');
+      document.getElementById('catError').textContent = String(e);
+    }
+  });
+
+  function watchCatalogueJob(job) {
+    showPanel('cat', 'Running');
+    // Les trois actions ecrivent dans les memes tables : tant que l'une tourne,
+    // les autres sont hors de portee. Le serveur les refuse deja, mais un
+    // bouton qui repond « deja en cours » est un bouton qui n'aurait pas du
+    // etre cliquable.
+    document.querySelectorAll('[data-cat-run]').forEach((b) => { b.disabled = true; });
+    document.getElementById('catPhase').textContent = job.label;
+    const logEl = document.getElementById('catLog');
+    logEl.innerHTML = '';
+    _catSeenLog = 0;
+
+    const stopBtn = document.getElementById('catStopBtn');
+    stopBtn.style.display = '';
+    stopBtn.disabled = false;
+    stopBtn.textContent = 'Arr\u00eater';
+    stopBtn.onclick = async () => {
+      stopBtn.disabled = true;
+      stopBtn.textContent = 'Arr\u00eat en cours\u2026';
+      try { await fetch('/api/admin/catalogue/stop', { method: 'POST' }); } catch {}
+    };
+
+    // Le depart se compte depuis l'heure annoncee par le serveur, et non depuis
+    // l'ouverture de l'ecran : un travail repris au vol afficherait sinon 00:00.
+    const startMs = job.started_at ? new Date(job.started_at).getTime() : Date.now();
+    clearInterval(_catTimer);
+    _catTimer = setInterval(() => {
+      const s = Math.max(0, Math.floor((Date.now() - startMs) / 1000));
+      document.getElementById('catElapsed').textContent =
+        `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+    }, 1000);
+
+    clearInterval(_catPoll);
+    _catPoll = setInterval(async () => {
+      try {
+        const r = await fetch('/api/admin/catalogue/job');
+        const d = (await r.json()).job;
+        if (!d) return;
+
+        const logs = d.log || [];
+        for (let i = _catSeenLog; i < logs.length; i++) {
+          const line = document.createElement('div');
+          line.className = 'log-entry ' + _logClass(logs[i].msg || '');
+          line.innerHTML = `<span class="log-ts">${esc(logs[i].ts || '')}</span>${esc(logs[i].msg || '')}`;
+          logEl.appendChild(line);
+        }
+        if (logs.length > _catSeenLog) {
+          _catSeenLog = logs.length;
+          logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        if (d.status !== 'running') {
+          clearInterval(_catPoll); _catPoll = null;
+          clearInterval(_catTimer); _catTimer = null;
+          renderCatalogueEnd(d);
+          loadCatalogue();
+        }
+      } catch { /* une interrogation perdue n'interrompt pas la suivante */ }
+    }, 1500);
+  }
+
+  function renderCatalogueEnd(job) {
+    if (job.status === 'running') return;
+    if (job.status === 'error') {
+      document.getElementById('catState').style.display = 'block';
+      showPanel('cat', 'Error');
+      document.getElementById('catError').textContent =
+        `${job.label} \u2014 ${job.error || '\u00e9chec'}`;
+      return;
+    }
+    showPanel('cat', 'Done');
+    const badge = document.querySelector('#catDone .done-badge');
+    badge.textContent = job.status === 'stopped' ? 'Arr\u00eat\u00e9' : 'Termin\u00e9';
+    badge.className = 'done-badge' + (job.status === 'stopped' ? ' stopped' : '');
+    document.getElementById('catReport').innerHTML =
+      `<div class="report-row"><span class="report-label">${esc(job.label)}</span>
+         <span class="report-val">${job.finished_at
+           ? new Date(job.finished_at).toLocaleTimeString('fr-FR') : ''}</span></div>`;
+  }
+
+  document.getElementById('catResetBtn').addEventListener('click', () => {
+    document.getElementById('catState').style.display = 'none';
+    loadCatalogue();
+  });
+
   // ── Onglets ───────────────────────────────────────────────────────────
   // Le panneau des comptes ne se charge qu'à sa première ouverture : inutile
   // d'interroger la base tant que l'administrateur reste sur le scraping.
   let _usersLoaded = false;
+  let _catalogueLoaded = false;
   document.querySelectorAll('.tab').forEach(btn => {
     btn.addEventListener('click', () => {
       const name = btn.dataset.tab;
       document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b === btn));
       document.querySelectorAll('.tab-panel').forEach(p => { p.hidden = (p.id !== 'tab' + name); });
+      if (name === 'Catalogue' && !_catalogueLoaded) {
+        _catalogueLoaded = true;
+        loadCatalogue();
+      }
       if (name === 'Users' && !_usersLoaded) {
         _usersLoaded = true;
         loadUsers();

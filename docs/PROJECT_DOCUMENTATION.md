@@ -169,6 +169,21 @@ Deux chemins d'alimentation, selon la machine :
 Conséquence pratique : **un catalogue vide ou périmé ne se répare pas depuis ce dépôt.**
 Il faut lancer `pull_catalogue.sh` (serveur) ou le pipeline MTG-DB (poste).
 
+L'onglet **Catalogue** de `/admin` met ces deux gestes derrière un bouton, et
+n'offre que ce que la machine sait faire — le tirage en ligne, l'import sur le
+poste. Une action indisponible reste affichée avec son motif : savoir qu'elle
+existe ailleurs vaut mieux que de la voir disparaître. Trois actions :
+
+| Action | Où | Ce qu'elle fait |
+|---|---|---|
+| Tirer le catalogue partagé | serveur | `deploy/pull_catalogue.sh --yes`, quelques minutes |
+| Compléter les jetons | poste | `MTG-DB/scripts/backfill_card_parts.py` : relit le dernier fichier Scryfall téléchargé et n'écrit que les liaisons carte → jeton manquantes, ~20 s |
+| Import complet | poste | `MTG-DB/scripts/import_scryfall.py`, environ deux heures |
+
+Une seule à la fois — elles écrivent dans les mêmes tables — et le journal du
+sous-processus défile à l'écran. La tâche survit à la fermeture de l'onglet :
+elle est reprise au vol à la réouverture.
+
 **Les jetons viennent de la même source.** `scryfall_card_parts` traduit le champ
 `all_parts` du bulk Scryfall : pour chaque carte, les jetons, emblèmes et moitiés
 de fusion qu'elle met en jeu, désignés par l'impression exacte. C'est ce qui permet
@@ -284,6 +299,10 @@ sa collection et ses decks — plutôt que par outil (refonte du 2026-09-02).
 | GET | `/api/v2/decks/{id}/tokens` | Jetons que le deck met en jeu, séparés en « déjà ajoutés » et « manquants » |
 | POST | `/api/v2/decks/{id}/tokens` | Met un jeton de côté pour ce deck (`{ key, name, type_line, quantity }`) |
 | DELETE | `/api/v2/decks/{id}/tokens/{key}` | Retire un jeton mis de côté |
+| GET | `/api/admin/catalogue` | État du catalogue, actions possibles sur cette machine, tâche en cours |
+| POST | `/api/admin/catalogue/run` | Lance une action (`pull`, `tokens`, `import`) — une seule à la fois |
+| GET | `/api/admin/catalogue/job` | Avancement et journal de la tâche courante |
+| POST | `/api/admin/catalogue/stop` | Interrompt la tâche en cours |
 | GET | `/api/v2/stats/mana-curve?commander=` | Courbe de mana et coût moyen des decks publics jouant ce commandant, pour comparer un deck à sa référence (`{ reference: null }` si le commandant est inconnu de la base) |
 
 #### API historique
