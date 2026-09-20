@@ -164,15 +164,27 @@
       <div class="stack-6">
         <div class="panel">
           <div class="panel__head panel__head--filters">
-            <h2 class="h3">Liste du deck</h2>
+            <!-- Deux onglets a la place du titre : les jetons sont une autre
+                 lecture du meme deck, pas un second panneau. Des chips plutot
+                 qu'un composant d'onglets, que le socle n'a pas. -->
+            <div class="chips" id="viewTabs">
+              <button class="chip" data-view="cards" aria-pressed="${view === 'cards'}"
+                      title="Les cartes du deck">Liste du deck</button>
+              <button class="chip" data-view="tokens" aria-pressed="${view === 'tokens'}"
+                      title="Les jetons que ce deck met en jeu">Jetons${tokenCount()}</button>
+            </div>
             <!-- Le filtre tient sur la ligne du titre : la liste commence
                  aussitot dessous, sans bandeau intermediaire. -->
             <div id="manaFilterHost" class="grow"></div>
+            <!-- Ajouter une carte, exporter la liste : trois gestes qui ne
+                 visent que les cartes. En vue jetons ils designeraient autre
+                 chose que ce que le panneau montre. -->
             <div class="cluster-2">
+              ${view !== 'cards' ? '' : `
               <button class="btn btn--sm" id="addCard">Ajouter une carte</button>
               ${missing.length ? `<button class="btn btn--sm" id="exportMissing">
                 Exporter les ${MM.fmt.int(missing.length)} cartes à acquérir</button>` : ''}
-              <button class="btn btn--sm btn--ghost" id="exportDeck">Exporter le deck</button>
+              <button class="btn btn--sm btn--ghost" id="exportDeck">Exporter le deck</button>`}
             </div>
           </div>
           <div class="panel__body" id="cardList"></div>
@@ -196,7 +208,7 @@
         </div>
       </div>`;
 
-    renderCards();
+    renderPanel();
     bind();
   }
 
@@ -219,6 +231,151 @@
         ? `Faire de « ${MM.esc(card.card_name)} » un commandant de ce deck`
         : `Définir « ${MM.esc(card.card_name)} » comme commandant`,
     }];
+  }
+
+  /* ── Jetons du deck ───────────────────────────────────────────────────── */
+
+  // Quel onglet le panneau montre. La bascule ne touche pas au deck : elle
+  // choisit ce qui s'affiche, comme le filtre de cout.
+  let view = 'cards';
+  // null tant que l'appel n'a pas repondu : la vue n'est demandee qu'a la
+  // premiere ouverture de l'onglet, une liste de cent cartes n'ayant aucune
+  // raison d'attendre une requete dont on ne se servira peut-etre jamais.
+  let tokens = null;
+
+  const TOKEN_COLORS = { W: 'blanc', U: 'bleu', B: 'noir', R: 'rouge', G: 'vert' };
+
+  /** Compte affiche sur l'onglet : ce qui manque, la seule chose a faire. */
+  function tokenCount() {
+    if (tokens === null) return '';
+    const manquants = tokens.missing_count;
+    return `<span class="chip__count">${MM.fmt.int(manquants)}</span>`;
+  }
+
+  /**
+   * Ce qui distingue un jeton de ses homonymes.
+   *
+   * Trois jetons Soldat 1/1 blancs coexistent dans le catalogue : le nom seul
+   * ne suffit pas a savoir lequel sortir de la boite. Force et endurance,
+   * couleur et type les separent.
+   */
+  function tokenDesc(token) {
+    const bits = [];
+    if (token.power !== null && token.power !== undefined && token.toughness) {
+      bits.push(`${token.power}/${token.toughness}`);
+    }
+    const couleurs = (token.colors || []).map((code) => TOKEN_COLORS[code]).filter(Boolean);
+    if (couleurs.length) bits.push(couleurs.join(' et '));
+    // « Token Creature — Soldier » : le mot « Token » revient sur chaque ligne
+    // d'une liste qui ne contient que des jetons.
+    const type = (token.type_line || '').replace(/^Token\s*/i, '');
+    if (type) bits.push(type);
+    return bits.join(' · ');
+  }
+
+  /** Les cartes qui reclament ce jeton, en clair et sans liste a rallonge. */
+  function tokenSources(token) {
+    const sources = token.sources || [];
+    if (!sources.length) return 'Ajouté à la main';
+    const tete = sources.slice(0, 3).map((name) => MM.esc(name)).join(', ');
+    const reste = sources.length - 3;
+    return reste > 0
+      ? `Demandé par ${tete} et ${MM.fmt.int(reste)} autre${reste > 1 ? 's' : ''}`
+      : `Demandé par ${tete}`;
+  }
+
+  function tokenRow(token) {
+    return `
+      <div class="row">
+        <div class="row__main">
+          <div class="row__title">${MM.esc(token.name)}
+            <span class="dim xs">${MM.esc(tokenDesc(token))}</span></div>
+          <div class="row__sub">${tokenSources(token)}</div>
+        </div>
+        <div class="row__aside">
+          <button class="btn btn--sm ${token.added ? 'btn--ghost' : ''}"
+                  data-token="${MM.esc(token.key)}"
+                  data-act="${token.added ? 'token-drop' : 'token-add'}">
+            ${token.added ? 'Retirer' : 'Ajouter'}</button>
+        </div>
+      </div>`;
+  }
+
+  function tokenSection(title, list, vide) {
+    return `
+      <div class="type-group">
+        <div class="type-group__head">
+          <h3 class="h4">${MM.esc(title)}</h3>
+          <span class="xs dim">${MM.fmt.int(list.length)}</span>
+        </div>
+        ${list.length
+          ? list.map(tokenRow).join('')
+          : `<p class="muted small">${MM.esc(vide)}</p>`}
+      </div>`;
+  }
+
+  function renderTokens() {
+    const host = MM.el('#cardList');
+    if (tokens === null) {
+      host.innerHTML = `<p class="muted small">Recherche des jetons…</p>`;
+      return;
+    }
+    // Un jeton mis de cote puis devenu inutile — la carte qui l'appelait a
+    // quitte le deck — reste montre parmi les ajoutes : sinon la ligne
+    // disparaitrait sans que rien ne permette de la retirer.
+    const ajoutes = tokens.tokens.filter((token) => token.added).concat(tokens.extras);
+    const manquants = tokens.tokens.filter((token) => !token.added);
+
+    if (!ajoutes.length && !manquants.length) {
+      host.innerHTML = MM.empty({
+        icon: 'layers',
+        title: 'Aucun jeton',
+        text: `Aucune carte de ${deck.name} ne met de jeton en jeu.`,
+      });
+      return;
+    }
+
+    host.innerHTML = tokenSection('Déjà ajoutés', ajoutes,
+        'Aucun jeton mis de côté pour ce deck.')
+      + tokenSection('Manquants', manquants,
+        'Tous les jetons nécessaires sont là.');
+  }
+
+  /** Charge les jetons a la premiere ouverture de l'onglet, puis a chaque
+   *  changement : ajouter ou retirer une carte change ce que le deck reclame. */
+  async function loadTokens({ force = false } = {}) {
+    if (tokens !== null && !force) return;
+    try {
+      tokens = await MM.api.get(`/api/v2/decks/${encodeURIComponent(deckId)}/tokens`);
+    } catch (err) {
+      tokens = { tokens: [], extras: [], added_count: 0, missing_count: 0 };
+      MM.toast.error(err.message);
+    }
+    // L'onglet porte le nombre de jetons manquants : il change avec la liste.
+    MM.el('#viewTabs [data-view="tokens"]').innerHTML = `Jetons${tokenCount()}`;
+    if (view === 'tokens') renderTokens();
+  }
+
+  async function setToken(key, add, button) {
+    const token = tokens.tokens.concat(tokens.extras).find((item) => item.key === key);
+    if (!token) return;
+    button.disabled = true;
+    try {
+      if (add) {
+        await MM.api.post(`/api/v2/decks/${encodeURIComponent(deckId)}/tokens`, {
+          key: token.key, name: token.name, type_line: token.type_line, quantity: 1,
+        });
+        MM.toast.ok(`${token.name} ajouté aux jetons de ce deck.`);
+      } else {
+        await MM.api.del(
+          `/api/v2/decks/${encodeURIComponent(deckId)}/tokens/${encodeURIComponent(key)}`);
+        MM.toast.ok(`${token.name} retiré des jetons de ce deck.`);
+      }
+      await loadTokens({ force: true });
+    } catch (err) {
+      MM.toast.error(err.message);
+      button.disabled = false;
+    }
   }
 
   /* ── Filtre par coût de mana ──────────────────────────────────────────── */
@@ -262,6 +419,18 @@
           copies(cards.filter((card) => atStep(card, step))),
         )).join('')}
       </div>`;
+  }
+
+  /** Aiguille le corps du panneau vers l'onglet ouvert. Le filtre de cout ne
+   *  vaut que pour les cartes : en vue jetons, il ne filtrerait rien. */
+  function renderPanel() {
+    if (view === 'tokens') {
+      MM.el('#manaFilterHost').innerHTML = '';
+      renderTokens();
+      loadTokens();
+      return;
+    }
+    renderCards();
   }
 
   function renderCards() {
@@ -308,6 +477,9 @@
     const fresh = await MM.api.get(`/api/v2/decks/${encodeURIComponent(deckId)}`);
     cards = fresh.cards;
     Object.assign(deck, fresh.deck);
+    // La liste a change : les jetons qu'elle reclame aussi. Ne recharger que
+    // ceux deja demandes une fois — l'onglet jamais ouvert peut attendre.
+    if (tokens !== null) await loadTokens({ force: true });
     // Les cartes ajoutees portent le nom du commandant : s'il vient de
     // changer, le contexte des reglages doit suivre.
     if (MM.deckContext) MM.deckContext.commander = deck.commander;
@@ -413,6 +585,21 @@
   });
 
   function bind() {
+    MM.el('#viewTabs').addEventListener('click', (event) => {
+      const tab = event.target.closest('[data-view]');
+      if (!tab || tab.dataset.view === view) return;
+      view = tab.dataset.view;
+      // Redessiner tout le panneau, et pas seulement son corps : l'en-tete
+      // change avec l'onglet — les boutons d'export ne visent que les cartes.
+      render();
+    });
+
+    MM.el('#cardList').addEventListener('click', (event) => {
+      const button = event.target.closest('[data-act="token-add"], [data-act="token-drop"]');
+      if (!button) return;
+      setToken(button.dataset.token, button.dataset.act === 'token-add', button);
+    });
+
     // Le filtre ne touche pas au deck : il ne fait que choisir ce qui
     // s'affiche, et se redessine avec la liste.
     MM.el('#manaFilterHost').addEventListener('click', (event) => {
@@ -449,7 +636,7 @@
       } catch (err) { MM.toast.error(err.message); }
     });
 
-    MM.el('#addCard').addEventListener('click', () => {
+    if (MM.el('#addCard')) MM.el('#addCard').addEventListener('click', () => {
       // Fenetre commune a tous les ecrans qui ajoutent des cartes : elle reste
       // ouverte pour en enchainer plusieurs.
       MM.addCardDialog({
@@ -518,7 +705,7 @@
       });
     }
 
-    MM.el('#exportDeck').addEventListener('click', async () => {
+    if (MM.el('#exportDeck')) MM.el('#exportDeck').addEventListener('click', async () => {
       try {
         const result = await MM.api.get(`/api/deck-txt/${encodeURIComponent(deckId)}`);
         const content = result.content

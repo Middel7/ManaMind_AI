@@ -169,6 +169,15 @@ Deux chemins d'alimentation, selon la machine :
 Conséquence pratique : **un catalogue vide ou périmé ne se répare pas depuis ce dépôt.**
 Il faut lancer `pull_catalogue.sh` (serveur) ou le pipeline MTG-DB (poste).
 
+**Les jetons viennent de la même source.** `scryfall_card_parts` traduit le champ
+`all_parts` du bulk Scryfall : pour chaque carte, les jetons, emblèmes et moitiés
+de fusion qu'elle met en jeu, désignés par l'impression exacte. C'est ce qui permet
+de répondre « de quels jetons ai-je besoin pour jouer ce deck ? » sans deviner —
+le texte d'oracle dit « create a 1/1 white Soldier creature token », il ne dit pas
+lequel des trois jetons Soldat 1/1 blancs du catalogue est le bon. La table se
+remplit au prochain import complet MTG-DB ; tant qu'elle est vide, l'onglet Jetons
+d'un deck n'affiche rien.
+
 Deux pièges à connaître :
 
 - `pull_catalogue.sh` fait un `pg_dump --schema-only --clean --if-exists` : il **supprime
@@ -272,6 +281,9 @@ sa collection et ses decks — plutôt que par outil (refonte du 2026-09-02).
 | GET | `/api/v2/decks` | Decks avec illustration, valeur et taux de possession |
 | GET | `/api/v2/decks/{id}` | Cartes d'un deck enrichies |
 | GET | `/api/v2/decks/{id}/missing` | Cartes manquantes et coût pour compléter |
+| GET | `/api/v2/decks/{id}/tokens` | Jetons que le deck met en jeu, séparés en « déjà ajoutés » et « manquants » |
+| POST | `/api/v2/decks/{id}/tokens` | Met un jeton de côté pour ce deck (`{ key, name, type_line, quantity }`) |
+| DELETE | `/api/v2/decks/{id}/tokens/{key}` | Retire un jeton mis de côté |
 | GET | `/api/v2/stats/mana-curve?commander=` | Courbe de mana et coût moyen des decks publics jouant ce commandant, pour comparer un deck à sa référence (`{ reference: null }` si le commandant est inconnu de la base) |
 
 #### API historique
@@ -397,6 +409,12 @@ d'ambiance utilisent le cadrage `art_crop` de Scryfall, dérivé de l'URL
 d'image en remplaçant `/normal/` par `/art_crop/`.
 
 ### Parcours
+
+La page d'un deck se lit sous deux onglets : la liste des cartes, et les jetons
+que ces cartes mettent en jeu. Les jetons ne sont pas des cartes du deck — ils
+vivent dans `user_deck_tokens`, n'entrent ni dans le compte de cartes, ni dans la
+courbe de mana, ni dans la valeur — et se répartissent entre ceux déjà mis de côté
+et ceux qui manquent.
 
 Le tableau de bord affiche l'état de la collection, une progression en trois
 jalons (importer sa collection, ajouter un deck, compléter son profil) et une

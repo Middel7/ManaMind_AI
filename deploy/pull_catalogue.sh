@@ -6,8 +6,9 @@
 # n'écrit JAMAIS dessus. Ce script ne touche donc à la source qu'en lecture.
 #
 # Ce qui est copié :
-#   scryfall_cards, scryfall_card_faces, scryfall_card_printings,
-#   scryfall_card_tags, scryfall_mtg_sets, cardmarket_products,
+#   scryfall_cards, scryfall_card_faces, scryfall_card_parts,
+#   scryfall_card_printings, scryfall_card_tags, scryfall_mtg_sets,
+#   cardmarket_products,
 #   cardmarket_price_guide_entries (dernier relevé seulement, sans raw_json)
 #   + la vue v_cardmarket_latest_prices_by_printing
 #
@@ -36,6 +37,9 @@ ASSUME_YES=0
 FULL_TABLES=(
   scryfall_cards
   scryfall_card_faces
+  # Les jetons qu'une carte met en jeu. Placee apres scryfall_cards, dont elle
+  # depend par une cle etrangere : pg_dump ordonne les donnees selon ces liens.
+  scryfall_card_parts
   scryfall_card_printings
   scryfall_card_tags
   scryfall_mtg_sets
@@ -160,6 +164,7 @@ echo "→ 4/4  vérification"
 "$PSQL" "$TARGET_DATABASE_URL" -tA -F'  ' -c "
   SELECT 'cartes',        count(*)::text FROM scryfall_cards
   UNION ALL SELECT 'editions',  count(*)::text FROM scryfall_card_printings
+  UNION ALL SELECT 'jetons',    count(*)::text FROM scryfall_card_parts
   UNION ALL SELECT 'prix',      count(*)::text FROM $PRICES_TABLE
   UNION ALL SELECT 'vue prix',  count(*)::text FROM $PRICES_VIEW
   UNION ALL SELECT 'releve du', COALESCE(max(captured_at)::text, 'aucun') FROM $PRICES_TABLE"
