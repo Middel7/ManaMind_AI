@@ -9,10 +9,14 @@
 cd /d C:\Users\fabie\Documents\GitHub\ManaMind_AI
 
 .venv\Scripts\python.exe start.py
-http://127.0.0.1:8080
+# → http://127.0.0.1:8080
 
-# → http://localhost:8080
-# Email : admin@manamind.app / Mot de passe : admin123
+# Le compte administrateur est admin@manamind.app. Son mot de passe ne figure
+# pas ici : un identifiant en clair dans un fichier versionné n'est pas
+# documenté, il est publié. Pour le définir ou le changer :
+#   .venv\Scripts\python.exe scripts\migrate_to_admin.py --email admin@manamind.app
+# Le script le demande alors sans l'afficher ni le laisser dans l'historique
+# du terminal.
 
 # ⚠ Ne PAS utiliser `uv run` : numba 0.53.1 (dépendance de umap-learn) est
 # incompatible Python 3.12 et fait échouer la résolution de l'environnement uv.
