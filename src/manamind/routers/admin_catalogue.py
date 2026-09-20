@@ -261,21 +261,34 @@ def _etat_catalogue() -> dict:
     `scryfall_cards.updated_at`, qui bouge a chaque ecriture du pipeline et
     survit a la copie.
     """
-    with SessionLocal() as session:
-        row = session.execute(text("""
-            SELECT (SELECT count(*) FROM scryfall_cards)            AS cartes,
-                   (SELECT count(*) FROM scryfall_card_printings)   AS editions,
-                   (SELECT count(*) FROM scryfall_card_parts)       AS jetons,
-                   (SELECT count(*) FROM scryfall_mtg_sets)         AS extensions,
-                   (SELECT max(updated_at) FROM scryfall_cards)     AS maj
-        """)).fetchone()
-    return {
-        "cards": int(row.cartes or 0),
-        "printings": int(row.editions or 0),
-        "token_links": int(row.jetons or 0),
-        "sets": int(row.extensions or 0),
-        "updated_at": row.maj.isoformat() if row.maj else None,
+    # Une table absente ne doit pas emporter les autres. Avant le premier
+    # tirage, le serveur n'a aucune table du catalogue ; apres un tirage fait
+    # avant que MTG-DB ne publie scryfall_card_parts, il en manque une seule. Un
+    # unique SELECT sur les quatre affichait alors « catalogue illisible » et
+    # quatre tuiles vides, alors que trois chiffres etaient disponibles.
+    tables = {
+        "cards": "scryfall_cards",
+        "printings": "scryfall_card_printings",
+        "token_links": "scryfall_card_parts",
+        "sets": "scryfall_mtg_sets",
     }
+    etat: dict = {}
+    with SessionLocal() as session:
+        for cle, table in tables.items():
+            # to_regclass rend NULL au lieu de lever : une seule requete suffit
+            # a savoir si la table existe et, si oui, a la compter.
+            existe = session.execute(
+                text("SELECT to_regclass(:t)"), {"t": f"public.{table}"}
+            ).scalar()
+            etat[cle] = (
+                session.scalar(text(f"SELECT count(*) FROM {table}"))  # noqa: S608
+                if existe else None
+            )
+        maj = None
+        if etat["cards"] is not None:
+            maj = session.scalar(text("SELECT max(updated_at) FROM scryfall_cards"))
+    etat["updated_at"] = maj.isoformat() if maj else None
+    return etat
 
 
 def _job_public(job: dict | None) -> dict | None:

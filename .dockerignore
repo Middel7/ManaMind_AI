@@ -29,7 +29,13 @@ build
 # ── Outillage de développement ────────────────────────────────────────────────
 tests/
 pytest.ini
-deploy/
+# deploy/** et non deploy/ : Docker ne repeche pas un fichier dont un dossier
+# parent est exclu, et le bouton « Tirer le catalogue » de l'ecran
+# d'administration execute ce script DEPUIS le conteneur. Sans la reinclusion,
+# l'action s'affichait indisponible en ligne, motif « deploy/pull_catalogue.sh
+# est absent » — ce qui etait exact.
+deploy/**
+!deploy/pull_catalogue.sh
 docs/
 .pre-commit-config.yaml
 
