@@ -52,6 +52,7 @@ MANAMIND_TABLES = frozenset({
     "user_profiles",
     "user_collection",
     "user_deck_cards",
+    "user_deck_tokens",
     "user_preferred_printings",
     "user_hidden_moves",
     "user_moxfield_decks",
@@ -156,6 +157,14 @@ def run_migrations_online() -> None:
     connectable = create_engine(url, poolclass=pool.NullPool)
     with connectable.connect() as connection:
         assert_not_shared_database(connection)
+        # Le garde-fou interroge information_schema, et ce SELECT ouvre une
+        # transaction implicite. Alembic, voyant la connexion deja engagee,
+        # renonce alors a ouvrir la sienne — et ne la valide donc jamais : la
+        # migration s'executait, `alembic upgrade head` sortait en code 0, puis
+        # SQLAlchemy annulait tout en fermant la connexion. Ni la table creee ni
+        # la ligne d'alembic_version ne survivaient, sans le moindre message.
+        # Ce rollback ferme la transaction de lecture et rend la main a Alembic.
+        connection.rollback()
         context.configure(
             connection=connection,
             target_metadata=target_metadata,

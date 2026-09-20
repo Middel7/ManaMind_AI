@@ -94,6 +94,29 @@ aucune requête ne la lit.
 0 4 * * 1 cd /app && ./deploy/pull_catalogue.sh --yes >> /var/log/manamind-catalogue.log 2>&1
 ```
 
+#### Depuis l'écran d'administration
+
+Le même tirage se lance d'un clic, onglet **Catalogue** de `/admin`, sans session
+SSH. C'est la voie à prendre entre deux passages du cron — après un ajout au
+catalogue par MTG-DB, typiquement.
+
+Deux conditions, toutes deux remplies par le déploiement décrit ici :
+
+- `CATALOGUE_DATABASE_URL` dans le `.env` de `/app` ; `docker-compose.prod.yml`
+  la passe au conteneur. Sans elle, le bouton s'affiche mais se dit
+  indisponible, et dit pourquoi ;
+- `postgresql-client-18`, embarqué dans l'image depuis qu'elle sait tirer le
+  catalogue elle-même.
+
+Le bouton exécute `pull_catalogue.sh` **depuis le conteneur**, et non
+`pull_catalogue_docker.sh` : ce dernier passe par un conteneur jetable, ce qui
+supposerait de monter le socket Docker dans l'application — un accès root à la
+machine hôte pour un service exposé sur Internet.
+
+Pendant l'opération, les tables du catalogue sont supprimées puis recréées : les
+écrans qui les lisent restent vides quelques minutes. Le journal défile à
+l'écran, et la tâche survit à la fermeture de l'onglet.
+
 ### Les statistiques ManaMind — depuis le poste de travail
 
 À lancer **depuis le PC**, après un scraping ou un recalcul :

@@ -22,7 +22,14 @@
     background: var(--bg-raised);
     transition: border-color var(--dur) var(--ease);
   }
-  .cmd-row:hover { border-color: var(--line-accent); }
+  /* Seules les lignes menant a un deck reagissent au survol : un liseret qui
+     s'allume sur une ligne inerte promet un clic qui n'arrive jamais. */
+  a.cmd-row:hover { border-color: var(--line-accent); }
+  a.cmd-row:hover .cmd-row__go { opacity: 1; }
+  /* La fleche ne se montre qu'au survol : affichee en permanence, elle
+     alourdissait une liste ou la donnee compte plus que l'action. */
+  .cmd-row__go { opacity: 0; flex-shrink: 0; color: var(--accent);
+    transition: opacity var(--dur) var(--ease); }
   .cmd-row__thumb { width: 48px; aspect-ratio: var(--card-ratio); object-fit: cover;
     border-radius: 4px; background: var(--surface-2); flex-shrink: 0; }
   .cmd-row__bar { width: 120px; flex-shrink: 0; }
@@ -83,6 +90,64 @@
   // Au moins 8 decks : en deçà, un taux de 100 % ne veut rien dire.
   const MIN_DECKS = 8;
 
+  /** Vos decks, indexés par nom de commandant, pour rendre une suggestion
+   *  cliquable. Chargés une fois : la liste ne bouge pas pendant la visite. */
+  const decksByCommander = new Map();
+
+  /** Clé de comparaison d'un nom de commandant : sans casse, et repli sur la
+   *  face avant, un commandant recto-verso s'écrivant « A // B » ici et « A »
+   *  là selon le deckbuilder d'origine. Même règle que MM.isCommander. */
+  function commanderKey(name) {
+    return String(name || '').trim().toLowerCase();
+  }
+
+  function frontFace(key) {
+    return key.split(' // ')[0].trim();
+  }
+
+  async function loadDecks() {
+    try {
+      const data = await MM.api.get('/api/v2/decks');
+      (data.decks || []).forEach((deck) => {
+        const key = commanderKey(deck.commander);
+        if (!key) return;
+        // Les deux écritures pointent vers le même deck : on indexe les deux
+        // plutôt que de normaliser à la lecture, plus court et plus sûr.
+        decksByCommander.set(key, deck.deck_id);
+        if (!decksByCommander.has(frontFace(key))) {
+          decksByCommander.set(frontFace(key), deck.deck_id);
+        }
+      });
+    } catch {
+      // Sans la liste, les lignes restent inertes : la page garde son sens.
+    }
+  }
+
+  // Lancé sans être attendu : la liste ne sert qu'au rendu des suggestions,
+  // elle n'a pas à retarder le premier affichage de la page.
+  const decksReady = loadDecks();
+
+  /** L'identifiant du deck où vous jouez ce commandant, ou null. */
+  function deckFor(commander) {
+    const key = commanderKey(commander);
+    return decksByCommander.get(key) || decksByCommander.get(frontFace(key)) || null;
+  }
+
+  /** Le prix de la carte cherchée. L'autocomplétion ne le renvoie pas : on le
+   *  résout par le même chemin que le reste du projet — la plus petite cote
+   *  de la carte, toutes éditions confondues. */
+  async function ensurePrice() {
+    if (!state.card || state.card.unit_price !== undefined) return;
+    try {
+      const resolved = await MM.resolveCards([state.card.name]);
+      const info = resolved[state.card.name];
+      state.card.unit_price = info ? (info.unit_price ?? null) : null;
+    } catch {
+      // Le prix est un complément : son absence n'empêche pas d'afficher la carte.
+      state.card.unit_price = null;
+    }
+  }
+
   MM.autocomplete(MM.el('#cardInput'), (card) => {
     MM.el('#cardInput').value = card.name;
     state.card = card;
@@ -110,9 +175,15 @@
       '<div class="skeleton" style="height:74px"></div>').join('')}</div>`;
 
     try {
-      const data = await MM.api.get('/api/commander-suggest' + MM.api.qs({
-        card: state.card.name, top: 10, mode: state.mode,
-      }));
+      // Les trois chargements sont indépendants : le prix de la carte et la
+      // liste de vos decks n'ont pas à attendre la suggestion, ni l'inverse.
+      const [data] = await Promise.all([
+        MM.api.get('/api/commander-suggest' + MM.api.qs({
+          card: state.card.name, top: 10, mode: state.mode,
+        })),
+        ensurePrice(),
+        decksReady,
+      ]);
       render(data.suggestions || []);
     } catch (err) {
       results.innerHTML = MM.empty({
@@ -161,8 +232,18 @@
           ${hidden ? `<p class="xs dim">${hidden} résultat${hidden > 1 ? 's' : ''}
             écarté${hidden > 1 ? 's' : ''} faute de decks suffisants
             (moins de ${MIN_DECKS}).</p>` : ''}
-          ${filtered.map((entry) => `
-            <article class="cmd-row">
+          ${filtered.map((entry) => {
+            // La suggestion ne porte qu'un nom de commandant. La ligne ne
+            // devient un lien que si ce commandant correspond a l'un de vos
+            // decks : sans deck, la page d'analyse n'aurait rien a analyser.
+            const deckId = deckFor(entry.commander);
+            const balise = deckId ? 'a' : 'article';
+            const lien = deckId
+              ? ` href="/decks/analyse?deck=${encodeURIComponent(deckId)}"
+                  title="Analyser votre deck ${MM.esc(entry.commander)}"`
+              : ' title="Vous ne jouez pas ce commandant : aucun deck à analyser"';
+            return `
+            <${balise} class="cmd-row"${lien}>
               ${entry.image_url
                 ? `<img class="cmd-row__thumb" src="${MM.esc(entry.image_url)}"
                      alt="" loading="lazy">`
@@ -182,7 +263,9 @@
               </div>
               <span class="strong num" style="width:64px;text-align:right">
                 ${MM.fmt.pct(entry.inclusion_rate)}</span>
-            </article>`).join('')}
+              ${deckId ? `<span class="cmd-row__go">${MM.icons.chevron}</span>` : ''}
+            </${balise}>`;
+          }).join('')}
         </div>
       </div>`;
   }

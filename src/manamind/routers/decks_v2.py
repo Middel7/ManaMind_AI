@@ -543,6 +543,175 @@ def api_deck_missing(
     return _json_response({"missing": missing, "total_eur": round(total, 2)})
 
 
+# Jetons qu'une liste met en jeu. La reponse vient du catalogue, pas du texte
+# d'oracle : « create a 1/1 white Soldier creature token » ne dit pas lequel des
+# trois jetons Soldier 1/1 blancs de Scryfall est le bon, alors que le champ
+# all_parts le nomme. scryfall_card_parts porte cette liaison.
+#
+# La cle d'un jeton est l'oracle_id du jeton, et non l'impression citee : un
+# meme Tresor est reference par autant d'impressions qu'il a d'editions, et il
+# ne doit paraitre qu'une fois. Repli sur le nom en minuscules quand
+# l'impression citee manque du catalogue.
+_DECK_TOKENS_SQL = """
+    WITH deck AS (
+        SELECT DISTINCT dc.card_name, mm_normalize_name(dc.card_name) AS nname
+        FROM user_deck_cards dc
+        WHERE dc.user_id = :uid AND dc.deck_id = :did
+    ),
+    -- Un LATERAL par carte, et non une jointure large : un nom normalise peut
+    -- designer a la fois une carte et un jeton du meme nom (Clue, Treasure),
+    -- et c'est la carte qu'il faut retenir. Le meme depart que le detail du deck.
+    cartes AS (
+        SELECT d.card_name, sc.id AS card_id
+        FROM deck d
+        JOIN LATERAL (
+            SELECT c.id FROM scryfall_cards c
+            WHERE c.normalized_name = d.nname
+            ORDER BY (c.type_line NOT ILIKE '%%Token%%') DESC, c.id
+            LIMIT 1
+        ) sc ON TRUE
+    ),
+    liaisons AS (
+        SELECT ca.card_name, p.part_scryfall_id, p.part_name, p.part_type_line
+        FROM cartes ca
+        JOIN scryfall_card_parts p
+          ON p.card_id = ca.card_id AND p.component = 'token'
+    )
+    SELECT COALESCE(tc.oracle_id, LOWER(l.part_name)) AS token_key,
+           COALESCE(tc.name, l.part_name) AS name,
+           COALESCE(tc.type_line, l.part_type_line) AS type_line,
+           tc.power, tc.toughness, tc.colors,
+           array_agg(DISTINCT l.card_name) AS sources
+    FROM liaisons l
+    LEFT JOIN scryfall_card_printings pp ON pp.scryfall_id = l.part_scryfall_id
+    LEFT JOIN scryfall_cards tc ON tc.id = pp.card_id
+    GROUP BY 1, 2, 3, tc.power, tc.toughness, tc.colors
+    ORDER BY 2
+"""
+
+
+def _deck_existe(session, user_id: int, deck_id: str) -> bool:
+    return session.execute(text("""
+        SELECT 1 FROM user_moxfield_decks WHERE user_id = :uid AND deck_id = :did
+    """), {"uid": user_id, "did": deck_id}).first() is not None
+
+
+@router.get("/api/v2/decks/{deck_id}/tokens")
+def api_deck_tokens(deck_id: str, request: Request) -> Response:
+    """Jetons que le deck met en jeu, et ceux deja mis de cote."""
+    user = _user(request)
+
+    with SessionLocal() as session:
+        if not _deck_existe(session, user["id"], deck_id):
+            return _json_response({"error": "Deck introuvable"}, status_code=404)
+
+        requis = session.execute(
+            text(_DECK_TOKENS_SQL), {"uid": user["id"], "did": deck_id}).fetchall()
+        possedes = session.execute(text("""
+            SELECT token_key, token_name, token_type_line, quantity
+            FROM user_deck_tokens
+            WHERE user_id = :uid AND deck_id = :did
+        """), {"uid": user["id"], "did": deck_id}).fetchall()
+
+    ajoutes = {row.token_key: row for row in possedes}
+    tokens = []
+    for row in requis:
+        possede = ajoutes.pop(row.token_key, None)
+        tokens.append({
+            "key": row.token_key,
+            "name": row.name,
+            "type_line": row.type_line or "",
+            "power": row.power,
+            "toughness": row.toughness,
+            "colors": list(row.colors or []),
+            "sources": list(row.sources or []),
+            "added": possede is not None,
+            "quantity": int(possede.quantity) if possede else 0,
+        })
+
+    # Ce qui reste dans `ajoutes` a ete mis de cote puis n'est plus reclame par
+    # aucune carte — un jeton ajoute a la main, ou la carte qui l'appelait a
+    # quitte le deck. Le taire ferait disparaitre une ligne que l'utilisateur a
+    # creee, sans qu'il puisse la retirer.
+    extras = [
+        {
+            "key": row.token_key,
+            "name": row.token_name,
+            "type_line": row.token_type_line or "",
+            "power": None,
+            "toughness": None,
+            "colors": [],
+            "sources": [],
+            "added": True,
+            "quantity": int(row.quantity),
+        }
+        for row in sorted(ajoutes.values(), key=lambda r: r.token_name.lower())
+    ]
+
+    return _json_response({
+        "tokens": tokens,
+        "extras": extras,
+        "added_count": sum(1 for t in tokens if t["added"]) + len(extras),
+        "missing_count": sum(1 for t in tokens if not t["added"]),
+    })
+
+
+@router.post("/api/v2/decks/{deck_id}/tokens")
+async def api_add_deck_token(deck_id: str, request: Request) -> Response:
+    """Met un jeton de cote pour ce deck."""
+    user = _user(request)
+    try:
+        body = await request.json()
+    except Exception:
+        return _json_response({"error": "Corps JSON invalide"}, status_code=400)
+
+    key = (body.get("key") or "").strip()
+    name = (body.get("name") or "").strip()
+    type_line = (body.get("type_line") or "").strip() or None
+    if not (key and name):
+        return _json_response({"error": "key et name sont requis"}, status_code=400)
+
+    try:
+        quantity = int(body.get("quantity") or 1)
+    except (TypeError, ValueError):
+        return _json_response({"error": "quantity doit être un entier"}, status_code=400)
+    # Bornee : la colonne est un smallint, et aucune partie ne demande mille
+    # exemplaires du meme jeton.
+    quantity = max(1, min(quantity, 99))
+
+    with SessionLocal() as session:
+        if not _deck_existe(session, user["id"], deck_id):
+            return _json_response({"error": "Deck introuvable"}, status_code=404)
+        session.execute(text("""
+            INSERT INTO user_deck_tokens
+                (user_id, deck_id, token_key, token_name, token_type_line, quantity)
+            VALUES (:uid, :did, :key, :name, :type_line, :qty)
+            ON CONFLICT (user_id, deck_id, token_key) DO UPDATE
+               SET quantity = :qty,
+                   token_name = EXCLUDED.token_name,
+                   token_type_line = EXCLUDED.token_type_line
+        """), {"uid": user["id"], "did": deck_id, "key": key, "name": name,
+               "type_line": type_line, "qty": quantity})
+        session.commit()
+
+    return _json_response({"ok": True, "quantity": quantity})
+
+
+@router.delete("/api/v2/decks/{deck_id}/tokens/{token_key:path}")
+def api_drop_deck_token(deck_id: str, token_key: str, request: Request) -> Response:
+    """Retire un jeton mis de cote."""
+    user = _user(request)
+    with SessionLocal() as session:
+        result = session.execute(text("""
+            DELETE FROM user_deck_tokens
+            WHERE user_id = :uid AND deck_id = :did AND token_key = :key
+        """), {"uid": user["id"], "did": deck_id, "key": token_key})
+        session.commit()
+    if not result.rowcount:
+        return _json_response({"error": "Jeton introuvable"}, status_code=404)
+    return _json_response({"ok": True})
+
+
 @router.get("/api/v2/stats/mana-curve")
 def api_commander_mana_curve(
     request: Request,

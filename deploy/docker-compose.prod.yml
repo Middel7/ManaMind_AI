@@ -37,6 +37,10 @@ services:
       # possède tout ce qu'il crée, les deux URL sont donc les mêmes.
       POSTGRES_URL: postgresql://${DB_USER:-manamind}:${DB_PASSWORD}@db:5432/${DB_NAME:-manamind}
       JWT_SECRET: ${JWT_SECRET}
+      # URL externe de la base partagée Render, lue par le bouton « Tirer le
+      # catalogue » de l'écran d'administration. Absente, le bouton se dit
+      # simplement indisponible et dit pourquoi : rien d'autre ne s'en sert.
+      CATALOGUE_DATABASE_URL: ${CATALOGUE_DATABASE_URL:-}
       HTTPS_ENABLED: "true"
       DEBUG: "false"
       PORT: "8080"
