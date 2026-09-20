@@ -6,8 +6,10 @@
 
 ```powershell
 # Activer le venv, puis lancer le serveur
-.venv\Scripts\python.exe server.py
-python server.py
+cd /d C:\Users\fabie\Documents\GitHub\ManaMind_AI
+
+.venv\Scripts\python.exe start.py
+
 # → http://localhost:8080
 # Email : admin@manamind.app / Mot de passe : admin123
 
@@ -70,18 +72,19 @@ ManaMind_AI/
 │   ├── recommandation_populaire.py  ← Algo V1 (Analyse Populaire)
 │   ├── card_commander_matcher.py    ← Index d'inclusion EDHREC, suggest_commanders()
 │   ├── collection_advisor.py        ← suggest_from_collection(), suggest_moves()
+│   ├── commander_curve.py           ← Courbe de mana de référence par commandant
 │   ├── moxfield_client.py           ← Client Moxfield + gestion locale .txt
 │   └── db/                          ← Re-exports depuis mtgdb (ne pas modifier)
 │       ├── base.py / engine.py
 │       └── models/  (card, card_face, card_price, card_printing, import_run, mtg_set)
 │
 ├── scripts/
-│   ├── compute_deck_stats.py        ← Calcul stats brutes → PostgreSQL
+│   ├── mox_to_stats.py              ← deck_cards → deck_stat_commander / _global
 │   ├── compute_commander_tfidf.py   ← Profils TF-IDF par commandant (lit la DB)
 │   ├── build_card2vec.py            ← Pipeline Card2Vec (Word2Vec sur decklists)
 │   ├── build_ml_dataset.py          ← Dataset ML : train.csv + test.csv pour XGBoost
 │   ├── evaluate_models.py           ← Évaluation XGBoost baseline vs Card2Vec
-│   ├── import_scryfall_cards.py     ← Import Scryfall → PostgreSQL
+│   ├── import_scryfall_cards.py     ← OBSOLÈTE : le catalogue vient de MTG-DB (§4)
 │   ├── import_game_changers.py      ← Import des cartes "game changer"
 │   └── validate_mtg_cards_db.py     ← Vérification intégrité DB
 │
@@ -144,6 +147,31 @@ uv sync
 
 **Règle absolue** : ne jamais utiliser `pip install` / `pip uninstall` dans ce projet.  
 Toujours committer `pyproject.toml` ET `uv.lock` ensemble.
+
+### D'où vient le catalogue Magic
+
+**ManaMind ne fabrique pas le catalogue, il le reçoit.** Les tables `scryfall_*` et
+`cardmarket_*` appartiennent au dépôt **MTG-DB**, qui en est le seul écrivain. Elles
+sont d'ailleurs la propriété du rôle `postgres` en base, quand tout le reste appartient
+à `manamind` : ce projet n'a tout simplement pas le droit d'y toucher.
+
+Deux chemins d'alimentation, selon la machine :
+
+| Machine | Comment le catalogue arrive |
+|---|---|
+| Serveur (Hetzner) | `./deploy/pull_catalogue.sh`, en lecture seule depuis la base partagée Render (`relictrade`). Cron hebdomadaire, voir `deploy/README-HETZNER.md`. |
+| Poste de travail | Le pipeline MTG-DB écrit directement dans la base locale : tâche planifiée `MTG-DB Update` (`MTG-DB\update.ps1`), deux fois par jour. |
+
+Conséquence pratique : **un catalogue vide ou périmé ne se répare pas depuis ce dépôt.**
+Il faut lancer `pull_catalogue.sh` (serveur) ou le pipeline MTG-DB (poste).
+
+Deux pièges à connaître :
+
+- `pull_catalogue.sh` fait un `pg_dump --schema-only --clean --if-exists` : il **supprime
+  et recrée** les tables du catalogue, séquences comprises. Tout ce qu'un script local
+  aurait écrit entre deux tirages est perdu — c'est voulu, la source fait autorité.
+- `mtgdb` est installé ici en copie, pas en éditable : un correctif poussé dans MTG-DB
+  n'arrive qu'après `uv lock --upgrade-package mtgdb && uv sync`.
 
 ---
 
@@ -240,6 +268,7 @@ sa collection et ses decks — plutôt que par outil (refonte du 2026-09-02).
 | GET | `/api/v2/decks` | Decks avec illustration, valeur et taux de possession |
 | GET | `/api/v2/decks/{id}` | Cartes d'un deck enrichies |
 | GET | `/api/v2/decks/{id}/missing` | Cartes manquantes et coût pour compléter |
+| GET | `/api/v2/stats/mana-curve?commander=` | Courbe de mana et coût moyen des decks publics jouant ce commandant, pour comparer un deck à sa référence (`{ reference: null }` si le commandant est inconnu de la base) |
 
 #### API historique
 
@@ -678,6 +707,7 @@ scryfall_cards ◄────────────── scryfall_card_print
 import_runs         (standalone — audit des imports Scryfall)
 deck_stat_global    (standalone — fréquence globale des cartes)
 deck_stat_commander (standalone — taux d'inclusion par commandant)
+deck_stat_commander_curve (standalone — courbe de mana moyenne par commandant)
 ```
 
 ### `deck_stat_global`
@@ -704,6 +734,28 @@ deck_stat_commander (standalone — taux d'inclusion par commandant)
 | `computed_at` | TIMESTAMPTZ | Date du dernier calcul |
 
 Contrainte unique : `(commander, card_name)`.
+
+### `deck_stat_commander_curve`
+
+Courbe de mana de référence, servie par `GET /api/v2/stats/mana-curve` aux écrans
+qui affichent un deck (fiche du deck, résultats d'analyse, création de deck) pour
+situer son coût moyen face aux autres decks du même commandant.
+
+| Colonne | Type | Description |
+|---|---|---|
+| `commander` | TEXT (PK) | Nom canonique du commandant |
+| `decks` | INTEGER | Nb de decks publics pris en compte |
+| `avg_mana_value` | NUMERIC(6,3) | Coût de mana moyen des sorts, moyenné deck par deck |
+| `curve` | NUMERIC(6,3)[] | Huit parts (coûts 0 à 6, puis 7 et plus), en % des sorts |
+| `computed_at` | TIMESTAMPTZ | Date du dernier calcul |
+
+Terrains et commandant exclus du calcul : les premiers valent zéro et tireraient
+toutes les moyennes vers le bas, le second est imposé et non choisi. Chaque deck
+compte pour un, quelle que soit la longueur de sa liste.
+
+La table se remplit à la première demande — un commandant absent est calculé puis
+enregistré (~0,1 s) — et `scripts/mox_to_stats.py` la réécrit après chaque scrape,
+en même temps que `deck_stat_commander`.
 
 ### Requêtes types (SQLAlchemy)
 

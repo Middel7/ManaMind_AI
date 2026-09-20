@@ -127,11 +127,15 @@
   /* ── Mana du deck : courbe, besoins en symboles, sources ───────────────── */
 
   let deckCards = null;
+  // Courbe moyenne des decks du meme commandant, quand elle est connue : elle
+  // vient completer la courbe du deck, jamais la retarder.
+  let manaReference = null;
 
   function renderMana() {
     const courbe = MM.el('#manaCurve');
     if (!courbe || !deckCards) return;
-    courbe.innerHTML = MM.mana.curve(deckCards, 112);
+    courbe.innerHTML = MM.mana.curve(deckCards, 112, {
+      commander: deckInfo.commander, reference: manaReference });
     MM.el('#manaRows').innerHTML = MM.mana.rows(deckCards);
   }
 
@@ -142,6 +146,12 @@
       .then((data) => { deckCards = data.cards || []; renderMana(); })
       .catch(() => {});
   }
+
+  MM.mana.reference(deckInfo.commander).then((reference) => {
+    if (!reference) return;
+    manaReference = reference;
+    renderMana();
+  });
 
   /* Cette page n'affiche que le resultat de la derniere analyse : arriver ici
      par un signet ou un rechargement ne montre rien. Plutot qu'un vide, on dit

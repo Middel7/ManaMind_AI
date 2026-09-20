@@ -93,6 +93,7 @@
     cards: [],           // cartes du deck : { card_name, quantity }
     suggestions: [],
     search: [],
+    manaReference: null, // courbe moyenne des decks du meme commandant
   };
 
   const BASIC_LANDS = new Set([
@@ -437,12 +438,25 @@
   function renderMana() {
     const host = MM.el('#manaBlock');
     if (!host) return;
-    // Le commandant compte dans la courbe, mais une seule fois : selon la
-    // facon dont le deck a ete cree, il figure deja parmi ses cartes.
+    // Le commandant rejoint la liste, mais une seule fois : selon la facon
+    // dont le deck a ete cree, il figure deja parmi ses cartes. Il y sert aux
+    // couleurs et aux sources ; la courbe, elle, l'ecarte.
     const present = new Set(state.cards.map((card) => card.card_name.toLowerCase()));
     const list = state.cards.concat(
       state.commanderCards.filter((card) => !present.has(card.card_name.toLowerCase())));
-    host.innerHTML = list.length ? MM.mana.block(list, 68) : '';
+    const commander = state.deck && state.deck.commander;
+    host.innerHTML = list.length ? MM.mana.block(list, 68, {
+      commander, reference: state.manaReference }) : '';
+
+    // Le commandant n'est connu qu'une fois le deck cree : la comparaison se
+    // demande a ce moment-la, puis la courbe se redessine avec elle.
+    if (commander && !state.manaReference) {
+      MM.mana.reference(commander).then((reference) => {
+        if (!reference || state.manaReference) return;
+        state.manaReference = reference;
+        renderMana();
+      });
+    }
   }
 
   function renderSuggested() {

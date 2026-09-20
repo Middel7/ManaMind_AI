@@ -164,6 +164,15 @@
   MM.fmt = {
     int: (value) => nfInt.format(Math.round(Number(value) || 0)),
 
+    /** Un nombre a virgule, ecrit a la francaise. */
+    dec(value, digits = 2) {
+      const amount = Number(value);
+      if (!isFinite(amount)) return '—';
+      return amount.toLocaleString('fr-FR', {
+        minimumFractionDigits: digits, maximumFractionDigits: digits,
+      });
+    },
+
     eur(value, { compact = false } = {}) {
       if (value === null || value === undefined) return '—';
       const amount = Number(value);
@@ -1212,6 +1221,14 @@
    */
   /* ══ Mana d'un deck ════════════════════════════════════════════════════ */
 
+  /** Barres de la courbe : les couts 0 a 6, puis 7 et plus. La reference
+   *  servie par l'API suit le meme decoupage. */
+  const BUCKETS = 8;
+
+  /** Une reference par commandant et par page : elle ne bouge pas d'un
+   *  affichage a l'autre, et plusieurs courbes peuvent la partager. */
+  const referenceCache = new Map();
+
   MM.mana = {
     COLORS: ['W', 'U', 'B', 'R', 'G'],
 
@@ -1277,26 +1294,123 @@
       return { front, back };
     },
 
-    /** Courbe de mana, terrains exclus. Chaque barre porte sa part du deck,
-     *  et la plus haute occupe toute la hauteur donnee. */
-    curve(list, height = 40) {
-      const buckets = [0, 0, 0, 0, 0, 0, 0, 0];
-      list.forEach((card) => {
-        if (/Land/i.test(card.type_line || '')) return;
-        buckets[Math.min(7, Math.floor(card.mana_value ?? 0))] += card.quantity || 1;
+    /** Sorts du deck : ni terrains, ni commandant. Le commandant est une
+     *  donnee du deck et non un choix de construction ; le compter fausserait
+     *  la comparaison avec des decks qui le portent tous. Une carte dont le
+     *  cout est inconnu sort du calcul plutot que de passer pour un sort a
+     *  zero mana. */
+    spells(list, commander = null) {
+      return (list || []).filter((card) => {
+        if (/Land/i.test(card.type_line || '')) return false;
+        if (card.mana_value === null || card.mana_value === undefined) return false;
+        return !(commander && MM.isCommander(commander, card.card_name));
       });
-      const max = Math.max(...buckets, 1);
-      const total = buckets.reduce((sum, count) => sum + count, 0) || 1;
-      return `<div class="curve" style="--curve-h:${height}px">${buckets.map((count, index) => `
-        <span class="curve__bar"
-              title="${count} carte${count > 1 ? 's' : ''} à ${index}${index === 7 ? '+' : ''}
-                     — ${Math.round((count / total) * 100)} % des sorts">
-          <span class="curve__pct">${count ? `${Math.round((count / total) * 100)} %` : ''}</span>
+    },
+
+    /** Cout de mana moyen des sorts, chaque exemplaire comptant pour un.
+     *  null quand le deck n'a aucun sort au cout connu. */
+    average(list, commander = null) {
+      let sum = 0;
+      let copies = 0;
+      MM.mana.spells(list, commander).forEach((card) => {
+        const quantity = card.quantity || 1;
+        sum += Number(card.mana_value) * quantity;
+        copies += quantity;
+      });
+      return copies ? sum / copies : null;
+    },
+
+    /** Part de chaque cout dans les sorts du deck, en pourcentage. */
+    shares(list, commander = null) {
+      const buckets = new Array(BUCKETS).fill(0);
+      MM.mana.spells(list, commander).forEach((card) => {
+        buckets[Math.min(BUCKETS - 1, Math.floor(card.mana_value))] += card.quantity || 1;
+      });
+      const total = buckets.reduce((sum, count) => sum + count, 0);
+      return { buckets, total, shares: buckets.map((c) => (total ? (c / total) * 100 : 0)) };
+    },
+
+    /** Courbe de mana, terrains et commandant exclus. Chaque barre porte sa
+     *  part du deck, et la plus haute occupe toute la hauteur donnee.
+     *
+     *  `commander` et `reference` sont facultatifs : donnes, ils ajoutent la
+     *  courbe moyenne des decks qui jouent le meme commandant, en repere par
+     *  dessus les barres, et la comparaison des couts moyens sous la courbe.
+     *  Sans reference, le cout moyen du deck s'affiche seul. */
+    curve(list, height = 40, { commander = null, reference = null } = {}) {
+      const { buckets, total, shares } = MM.mana.shares(list, commander);
+      const refShares = (reference && reference.curve && reference.curve.length === BUCKETS)
+        ? reference.curve : null;
+      // Une echelle commune aux deux courbes, sans quoi le repere se lirait
+      // dans une autre unite que la barre qu'il surplombe.
+      const scale = Math.max(...shares, ...(refShares || []), 1);
+
+      const bars = shares.map((share, index) => {
+        const label = index === BUCKETS - 1 ? `${index}+` : `${index}`;
+        const count = buckets[index];
+        const refShare = refShares ? refShares[index] : null;
+        const title = `${count} carte${count > 1 ? 's' : ''} à ${label}`
+          + ` — ${Math.round(share)} % des sorts`
+          + (refShare === null ? '' : `, contre ${Math.round(refShare)} % pour ce commandant`);
+        return `
+        <span class="curve__bar" title="${esc(title)}">
+          <span class="curve__pct">${count ? `${Math.round(share)} %` : ''}</span>
           <span class="curve__track">
-            <span class="curve__fill" style="height:${(count / max) * 100}%"></span>
+            <span class="curve__fill" style="height:${(share / scale) * 100}%"></span>
+            ${refShare === null ? '' : `<span class="curve__ref"
+              style="bottom:${(refShare / scale) * 100}%"></span>`}
           </span>
-          <span class="curve__label">${index === 7 ? '7+' : index}</span>
-        </span>`).join('')}</div>`;
+          <span class="curve__label">${label}</span>
+        </span>`;
+      }).join('');
+
+      return `<div class="curve-block">
+        <div class="curve" style="--curve-h:${height}px">${bars}</div>
+        ${total ? MM.mana.averageLine(list, commander, reference) : ''}
+      </div>`;
+    },
+
+    /** Le cout moyen du deck, compare a celui des decks du meme commandant. */
+    averageLine(list, commander = null, reference = null) {
+      const average = MM.mana.average(list, commander);
+      if (average === null) return '';
+
+      const ref = reference && reference.avg_mana_value ? reference : null;
+      const delta = ref ? average - ref.avg_mana_value : null;
+      // Un deck plus cher n'est ni meilleur ni pire : l'ecart se donne sans
+      // jugement, d'ou l'absence de couleur.
+      const gap = delta === null ? ''
+        : `<span class="curve-avg__delta">(${delta >= 0 ? '+' : '−'}${MM.fmt.dec(Math.abs(delta))})</span>`;
+      const title = ref
+        ? `Coût de mana moyen des sorts du deck, hors terrains et commandant, `
+          + `comparé à ${MM.fmt.dec(ref.avg_mana_value)} pour ${MM.fmt.int(ref.decks)} `
+          + `deck${ref.decks > 1 ? 's' : ''} jouant ${ref.commander}`
+        : 'Coût de mana moyen des sorts du deck, hors terrains et commandant';
+
+      return `<div class="curve-avg" title="${esc(title)}">
+        <span class="curve-avg__label">Coût moyen</span>
+        <b class="curve-avg__value">${MM.fmt.dec(average)}</b>
+        ${ref ? `<span class="curve-avg__ref">
+          <i class="curve-avg__key" aria-hidden="true"></i>
+          vs <b>${MM.fmt.dec(ref.avg_mana_value)}</b>
+          <span class="dim">des decks ${esc(ref.commander)}</span></span> ${gap}` : ''}
+      </div>`;
+    },
+
+    /** Courbe moyenne des decks publics jouant ce commandant, ou null.
+     *  Les pages l'attendent avant de dessiner leur courbe ; une meme page en
+     *  demandant plusieurs fois ne declenche qu'un appel. */
+    reference(commander) {
+      const name = String(commander || '').trim();
+      if (!name) return Promise.resolve(null);
+      if (!referenceCache.has(name)) {
+        referenceCache.set(name, MM.api
+          .get('/api/v2/stats/mana-curve' + MM.api.qs({ commander: name }))
+          .then((data) => (data && data.reference) || null)
+          // La comparaison est un supplement : son echec laisse la courbe.
+          .catch(() => null));
+      }
+      return referenceCache.get(name);
     },
 
     /** Une ligne de comptes colores, avec la part de chacun. */
@@ -1339,9 +1453,9 @@
 
     /** Courbe et repartition cote a cote, pour les ecrans qui n'ont qu'une
      *  place a leur donner. */
-    block(list, height = 40) {
+    block(list, height = 40, options = {}) {
       return `<div class="mana-block">
-        ${MM.mana.curve(list, height)}
+        ${MM.mana.curve(list, height, options)}
         ${MM.mana.rows(list)}
       </div>`;
     },
@@ -1480,11 +1594,24 @@
       .filter((name) => name && name.toLowerCase() !== 'unknown');
   };
 
-  /** Cette carte est-elle l'un des commandants du deck ? */
+  /** Cette carte est-elle l'un des commandants du deck ?
+   *
+   *  Un commandant recto-verso s'ecrit « A // B » ou « A » selon le
+   *  deckbuilder d'origine : les deux ecritures designent la meme carte, et
+   *  n'en reconnaitre qu'une la laissait passer pour une carte ordinaire du
+   *  deck — comptee dans la courbe, envoyee a l'analyse, proposee au retrait.
+   */
   MM.isCommander = function (raw, cardName) {
+    const front = (name) => name.split(' // ')[0].trim();
     const target = String(cardName || '').trim().toLowerCase();
-    return Boolean(target)
-      && MM.commanders(raw).some((name) => name.toLowerCase() === target);
+    if (!target) return false;
+    const keys = new Set();
+    MM.commanders(raw).forEach((name) => {
+      const key = name.toLowerCase();
+      keys.add(key);
+      keys.add(front(key));
+    });
+    return keys.has(target) || keys.has(front(target));
   };
 
   /**

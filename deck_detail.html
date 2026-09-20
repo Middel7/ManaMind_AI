@@ -69,6 +69,11 @@
 
   /* ── Hero ─────────────────────────────────────────────────────────────── */
 
+  // Courbe moyenne des decks jouant le meme commandant. Elle arrive apres le
+  // bandeau : la comparaison est un supplement, et le deck s'affiche sans
+  // attendre les statistiques.
+  let manaReference = null;
+
   function renderHero() {
     // Un deck peut avoir deux commandants : l'illustration vient du premier
     // d'entre eux qui en porte une.
@@ -108,7 +113,8 @@
             ${MM.icons.chart} Améliorer avec l'analyse</a>
         </div>
         </div>
-        <div class="hero__curve">${MM.mana.curve(cards, 112)}</div>
+        <div class="hero__curve">${MM.mana.curve(cards, 112, {
+          commander: deck.commander, reference: manaReference })}</div>
         <div>${MM.mana.rows(cards)}</div>
       </div>
       </div>`;
@@ -157,8 +163,11 @@
     MM.el('#content').innerHTML = `
       <div class="stack-6">
         <div class="panel">
-          <div class="panel__head">
+          <div class="panel__head panel__head--filters">
             <h2 class="h3">Liste du deck</h2>
+            <!-- Le filtre tient sur la ligne du titre : la liste commence
+                 aussitot dessous, sans bandeau intermediaire. -->
+            <div id="manaFilterHost" class="grow"></div>
             <div class="cluster-2">
               <button class="btn btn--sm" id="addCard">Ajouter une carte</button>
               ${missing.length ? `<button class="btn btn--sm" id="exportMissing">
@@ -212,8 +221,66 @@
     }];
   }
 
+  /* ── Filtre par coût de mana ──────────────────────────────────────────── */
+
+  // Sept familles : les coûts 0 à 5, puis 6 et plus. Les terrains, qui ne
+  // coûtent rien, se retrouvent donc avec les sorts à zéro.
+  const MANA_STEPS = [0, 1, 2, 3, 4, 5, 6];
+  const LAST_STEP = MANA_STEPS[MANA_STEPS.length - 1];
+  let manaFilter = null;   // null : tous les coûts
+
+  // Une carte dont le coût n'a pas pu être résolu n'appartient à aucune
+  // famille : elle reste visible tant qu'aucun filtre n'est posé, plutôt que
+  // de passer pour une carte à zéro mana.
+  const manaStep = (card) => (card.mana_value === null || card.mana_value === undefined
+    ? null : Math.min(LAST_STEP, Math.floor(card.mana_value)));
+
+  const atStep = (card, step) => manaStep(card) === step;
+
+  function filteredCards() {
+    return manaFilter === null ? cards : cards.filter((card) => atStep(card, manaFilter));
+  }
+
+  function manaFilterBar() {
+    const copies = (list) => list.reduce((sum, card) => sum + card.quantity, 0);
+    const chip = (step, label, title, count) => `
+      <button class="chip" data-mana="${step === null ? '' : step}"
+              aria-pressed="${manaFilter === step}"
+              ${count ? '' : 'disabled'} title="${MM.esc(title)}">
+        ${label} <span class="chip__count">${MM.fmt.int(count)}</span></button>`;
+
+    return `
+      <span class="filter-label">Coût en mana</span>
+      <div class="chips" id="manaFilter">
+        ${chip(null, 'Tous', 'Toutes les cartes du deck', copies(cards))}
+        ${MANA_STEPS.map((step) => chip(
+          step,
+          step === LAST_STEP ? `${step}+` : `${step}`,
+          step === LAST_STEP
+            ? `Cartes à ${step} manas et plus`
+            : `Cartes à ${step} mana${step > 1 ? 's' : ''}`,
+          copies(cards.filter((card) => atStep(card, step))),
+        )).join('')}
+      </div>`;
+  }
+
   function renderCards() {
-    MM.el('#cardList').innerHTML = group(cards).map(([label, list]) => {
+    // Retirer la dernière carte d'un coût vide sa famille : y rester
+    // n'afficherait plus rien.
+    if (manaFilter !== null && !cards.some((card) => atStep(card, manaFilter))) {
+      manaFilter = null;
+    }
+
+    MM.el('#manaFilterHost').innerHTML = manaFilterBar();
+
+    const shown = filteredCards();
+    MM.el('#cardList').innerHTML = shown.length
+      ? renderGroups(shown)
+      : `<p class="muted small">Aucune carte à ce coût.</p>`;
+  }
+
+  function renderGroups(shown) {
+    return group(shown).map(([label, list]) => {
       const copies = list.reduce((sum, card) => sum + card.quantity, 0);
       return `
         <div class="type-group">
@@ -346,6 +413,15 @@
   });
 
   function bind() {
+    // Le filtre ne touche pas au deck : il ne fait que choisir ce qui
+    // s'affiche, et se redessine avec la liste.
+    MM.el('#manaFilterHost').addEventListener('click', (event) => {
+      const step = event.target.closest('.chip');
+      if (!step || step.disabled) return;
+      manaFilter = step.dataset.mana === '' ? null : Number(step.dataset.mana);
+      renderCards();
+    });
+
     MM.el('#cardList').addEventListener('click', async (event) => {
       const crown = event.target.closest('[data-act="setcmd"]');
       if (crown) return setCommander(crown.dataset.card, crown);
@@ -467,6 +543,12 @@
   }
 
   render();
+
+  MM.mana.reference(deck.commander).then((reference) => {
+    if (!reference) return;
+    manaReference = reference;
+    renderHero();
+  });
 })();
 </script>
 </body>
