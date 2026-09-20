@@ -915,7 +915,7 @@ wheels = [
 [[package]]
 name = "mtgdb"
 version = "0.1.0"
-source = { git = "https://github.com/Middel7/MTG-DB.git#5ea931b8f56a2e5234cf21561203a802c44417c9" }
+source = { git = "https://github.com/Middel7/MTG-DB.git#f2cdac36f3b00b627588c321295ad33b7812c453" }
 dependencies = [
     { name = "alembic" },
     { name = "httpx" },
@@ -2163,8 +2163,8 @@ name = "xgboost-cpu"
 version = "3.4.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "numpy" },
-    { name = "scipy" },
+    { name = "numpy", marker = "(platform_machine != 'x86_64' and sys_platform == 'darwin') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'win32')" },
+    { name = "scipy", marker = "(platform_machine != 'x86_64' and sys_platform == 'darwin') or (sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'win32')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/99/98/c35e165aff81e43b43411662219764abbd246adae2547d360b23194cf75f/xgboost_cpu-3.4.1.tar.gz", hash = "sha256:ee0b249eaa962837cdc4e67adfec54567bfe7386337f3c3a3ce5d68909492e81", size = 1232193, upload-time = "2026-08-15T08:38:40.845Z" }
 wheels = [
