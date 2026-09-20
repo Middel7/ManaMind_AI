@@ -45,7 +45,10 @@ async def upload_deck(
     output_key = f"/outputs/recommendations_{stem}.csv"
 
     import os as _os
-    import asyncio as _asyncio
+    import functools as _functools
+    import subprocess as _subprocess
+
+    import anyio
     _env = _os.environ.copy()
     _env["PYTHONIOENCODING"] = "utf-8"
     # Le module tourne comme membre de son package, et non comme script isole :
@@ -55,17 +58,23 @@ async def upload_deck(
     _env["PYTHONPATH"] = (
         f"{_src}{_os.pathsep}{_env['PYTHONPATH']}" if _env.get("PYTHONPATH") else _src
     )
-    proc = await _asyncio.create_subprocess_exec(
-        sys.executable, "-m", "manamind.recommandation_populaire",
-        "--input", str(deck_path), "--output", str(output_path),
-        stdout=_asyncio.subprocess.PIPE,
-        stderr=_asyncio.subprocess.PIPE,
+    # Le sous-processus tourne dans un thread plutot qu'avec asyncio : sous
+    # Windows, la boucle selectionnee par Uvicorn en mode rechargement ne sait
+    # pas lancer de processus enfant.
+    _run = _functools.partial(
+        _subprocess.run,
+        [
+            sys.executable, "-m", "manamind.recommandation_populaire",
+            "--input", str(deck_path), "--output", str(output_path),
+        ],
+        stdout=_subprocess.PIPE,
+        stderr=_subprocess.PIPE,
         cwd=str(ROOT),
         env=_env,
     )
-    _stdout, _stderr = await proc.communicate()
-    result_returncode = proc.returncode
-    result_stderr = _stderr.decode("utf-8", errors="replace")
+    _completed = await anyio.to_thread.run_sync(_run)
+    result_returncode = _completed.returncode
+    result_stderr = _completed.stderr.decode("utf-8", errors="replace")
 
     if result_returncode != 0:
         return JSONResponse({"error": result_stderr or "Erreur lors de la génération."}, status_code=500)

@@ -17,7 +17,7 @@ import os
 import re
 from pathlib import Path
 
-from .commanders import join_commanders
+from .commanders import is_commander, join_commanders
 
 LINE_PATTERN = re.compile(r"^(\d+)\s+(.*)$")
 BASIC_LANDS = {"Island", "Plains", "Swamp", "Mountain", "Forest", "Wastes"}
@@ -163,6 +163,13 @@ def recommend_from_db(
     for row in rows:
         card = row.card_name
         if card in BASIC_LANDS:
+            continue
+        # Le commandant n'est pas une carte que l'on choisit : le proposer au
+        # retrait n'a pas de sens. Il arrive pourtant dans les statistiques,
+        # quelques decks publics le listant avec les autres cartes plutot que
+        # dans la zone de commandement — d'ou un taux d'inclusion minuscule
+        # qui le portait en tete des cartes a retirer.
+        if is_commander(commander, card):
             continue
         cnt = row.decks_with_card or 0
         rate = float(row.inclusion_rate or 0.0)

@@ -257,7 +257,11 @@ def api_card_suggest(
                 SELECT SUM(uc.quantity) AS qty
                 FROM user_collection uc
                 WHERE uc.user_id = :uid
-                  AND mm_normalize_name(uc.card_name) = c.normalized_name
+                  -- Repli sur la face avant, comme partout ailleurs : une carte
+                  -- recto-verso saisie « A » ne se reconnaissait pas dans
+                  -- « A // B » et passait pour absente de la collection.
+                  AND split_part(mm_normalize_name(uc.card_name), ' // ', 1)
+                    = split_part(c.normalized_name, ' // ', 1)
             ) owned ON TRUE
             WHERE c.type_line NOT ILIKE '%Token%'
             -- Correspondance exacte d'abord, puis les noms qui commencent par
@@ -383,6 +387,13 @@ async def api_cards_resolve(request: Request) -> Response:
                        count(DISTINCT dc.deck_id) AS decks
                 FROM user_deck_cards dc
                 WHERE dc.user_id = :uid
+                  -- Les cartes d'un deck supprime restent en table : comptees,
+                  -- elles retenaient des exemplaires pour un deck qui n'est
+                  -- plus, et la carte passait pour entierement engagee.
+                  AND EXISTS (
+                      SELECT 1 FROM user_moxfield_decks d
+                      WHERE d.user_id = dc.user_id AND d.deck_id = dc.deck_id
+                  )
                 GROUP BY 1
             )
             SELECT n.raw,
@@ -447,7 +458,11 @@ async def api_cards_resolve(request: Request) -> Response:
                 SELECT SUM(uc.quantity) AS qty
                 FROM user_collection uc
                 WHERE uc.user_id = :uid
-                  AND mm_normalize_name(uc.card_name) = c.normalized_name
+                  -- Repli sur la face avant, comme partout ailleurs : une carte
+                  -- recto-verso saisie « A » ne se reconnaissait pas dans
+                  -- « A // B » et passait pour absente de la collection.
+                  AND split_part(mm_normalize_name(uc.card_name), ' // ', 1)
+                    = split_part(c.normalized_name, ' // ', 1)
             ) owned ON TRUE
             LEFT JOIN deck_use du
               ON du.key = split_part(c.normalized_name, ' // ', 1)
@@ -749,7 +764,11 @@ def api_set_cards(
                 SELECT SUM(uc.quantity) AS qty
                 FROM user_collection uc
                 WHERE uc.user_id = :uid
-                  AND mm_normalize_name(uc.card_name) = c.normalized_name
+                  -- Repli sur la face avant, comme partout ailleurs : une carte
+                  -- recto-verso saisie « A » ne se reconnaissait pas dans
+                  -- « A // B » et passait pour absente de la collection.
+                  AND split_part(mm_normalize_name(uc.card_name), ' // ', 1)
+                    = split_part(c.normalized_name, ' // ', 1)
             ) owned ON TRUE
             WHERE {' AND '.join(where)}
             ORDER BY p.collector_number,

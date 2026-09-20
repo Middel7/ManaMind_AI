@@ -75,3 +75,18 @@ class TestIsCommander:
     def test_deck_sans_commandant(self):
         assert not is_commander(None, KRARK)
         assert not is_commander("", KRARK)
+
+    def test_carte_recto_verso_sous_l_une_ou_l_autre_ecriture(self):
+        """Les deux faces ou la seule face avant designent la meme carte.
+
+        Selon le deckbuilder d'origine, un commandant recto-verso est ecrit
+        « A // B » ou « A » : ne reconnaitre que l'une des deux ecritures le
+        laissait passer pour une carte ordinaire du deck, donc proposable au
+        retrait.
+        """
+        dfc = "Cosima, God of the Voyage // The Omenkeel"
+        front = "Cosima, God of the Voyage"
+        assert is_commander(dfc, front)
+        assert is_commander(dfc, dfc)
+        assert is_commander(front, dfc)
+        assert not is_commander(dfc, "The Omenkeel")

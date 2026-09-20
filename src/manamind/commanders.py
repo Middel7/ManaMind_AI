@@ -57,9 +57,32 @@ def join_commanders(names: Iterable[str]) -> str:
     return SEPARATOR.join(sorted(unique, key=str.lower))
 
 
+def _front_face(name: str) -> str:
+    """La face avant d'un nom, ou le nom lui-meme s'il n'en a qu'une."""
+    return name.split(" // ")[0].strip()
+
+
+def commander_keys(raw: str | None) -> set[str]:
+    """Les ecritures sous lesquelles ce commandant peut figurer dans une liste.
+
+    Une carte recto-verso s'ecrit tantot sous son nom complet, « A // B »,
+    tantot sous sa seule face avant, selon le deckbuilder d'origine : les deux
+    designent la meme carte, et n'en comparer qu'une la laisse passer.
+    """
+    keys: set[str] = set()
+    for name in split_commanders(raw):
+        cleaned = name.strip().lower()
+        if not cleaned:
+            continue
+        keys.add(cleaned)
+        keys.add(_front_face(cleaned))
+    return keys
+
+
 def is_commander(raw: str | None, card_name: str) -> bool:
     """Cette carte est-elle l'un des commandants du deck ?"""
     target = (card_name or "").strip().lower()
     if not target:
         return False
-    return any(name.lower() == target for name in split_commanders(raw))
+    keys = commander_keys(raw)
+    return target in keys or _front_face(target) in keys

@@ -162,7 +162,19 @@ table { border-collapse: collapse; width: 100%; }
   color: var(--text);
 }
 
-.nav { display: flex; flex-direction: column; gap: 2px; }
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  /* La barre est haute de 100vh : sans min-height nulle, un element flex ne
+     descend jamais sous la hauteur de son contenu. Une liste longue poussait
+     donc le pied de barre — profil et deconnexion — sous le bord de l'ecran,
+     hors d'atteinte puisque la barre est sticky. C'est la navigation qui
+     defile, le pied reste visible. */
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
 
 .nav__group { margin-top: var(--sp-5); }
 .nav__group:first-child { margin-top: 0; }
@@ -198,6 +210,11 @@ table { border-collapse: collapse; width: 100%; }
 }
 
 .nav__item svg { width: 17px; height: 17px; flex-shrink: 0; opacity: 0.85; }
+
+/* La deconnexion est un bouton, pas un lien : contrairement a un <a>, il ne
+   s'etire pas sur la largeur, et son fond survole serait plus etroit que
+   celui des autres entrees. */
+button.nav__item { width: 100%; }
 
 .nav__count {
   margin-left: auto;
@@ -998,12 +1015,19 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
 /* Cout de mana, en jetons */
 /* ── Courbe et repartition du mana, communes a tous les ecrans ───────────── */
 
+/* La courbe et le cout moyen qui la commente ne se separent pas : c'est le
+   bloc qui porte desormais la largeur, la courbe remplissant sa premiere
+   ligne. */
+.curve-block {
+  display: flex; flex-direction: column; gap: 6px;
+  /* Il prend la largeur qu'on lui laisse : dans un bandeau, une courbe de
+     190 px se lisait mal a cote des chiffres. */
+  flex: 1 1 260px; min-width: 240px; max-width: 460px;
+}
 .curve {
   display: flex; align-items: stretch; gap: 6px;
   height: var(--curve-h, 40px);
-  /* Elle prend la largeur qu'on lui laisse : dans un bandeau, une courbe de
-     190 px se lisait mal a cote des chiffres. */
-  flex: 1 1 260px; min-width: 240px; max-width: 460px;
+  width: 100%; min-width: 0;
 }
 .curve__bar {
   flex: 1; height: 100%;
@@ -1019,12 +1043,42 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
   min-height: 2px; border-radius: 3px 3px 0 0;
   background: linear-gradient(180deg, var(--accent), var(--accent-deep));
 }
+/* Le repere de la courbe moyenne des decks du meme commandant : un trait pose
+   a la hauteur de leur part, que la barre depasse ou non. Il flotte au-dessus
+   du remplissage sans jamais le masquer. */
+.curve__ref {
+  position: absolute; left: -1px; right: -1px; height: 0;
+  border-top: 2px dashed var(--text-3);
+  opacity: 0.75; pointer-events: none;
+}
 /* La part et le cout se centrent sur leur barre : la colonne est etiree, sans
    quoi les deux se collaient a gauche. */
 .curve__pct, .curve__label {
   font-size: 10px; color: var(--text-3); line-height: 1.1; text-align: center;
 }
 .curve__pct { min-height: 11px; }
+
+/* Le cout moyen, sous la courbe : un chiffre, puis sa comparaison. */
+.curve-avg {
+  display: flex; align-items: baseline; gap: var(--sp-2, 8px);
+  flex-wrap: wrap; font-size: var(--text-xs); color: var(--text-3);
+  min-width: 0;
+}
+.curve-avg__label { text-transform: uppercase; letter-spacing: 0.06em; }
+.curve-avg__value { font-size: var(--text-sm); color: var(--text-1); }
+.curve-avg__ref {
+  /* Le nom d'un commandant — deux noms, pour une paire — ne doit pas pousser
+     la courbe a s'elargir. */
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.curve-avg__ref b { color: var(--text-2); font-weight: 600; }
+/* Le meme trait que sur les barres, en tete de la comparaison : il dit de quoi
+   sont faits les pointilles de la courbe, sans legende a part. */
+.curve-avg__key {
+  display: inline-block; width: 14px; vertical-align: middle;
+  border-top: 2px dashed var(--text-3); opacity: 0.75;
+}
+.curve-avg__delta { white-space: nowrap; }
 
 .mana-block { display: flex; gap: var(--sp-4); align-items: center; flex-wrap: wrap; }
 
@@ -1148,12 +1202,43 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
               color var(--dur-fast) var(--ease);
 }
 
-.chip:hover { background: var(--surface-2); color: var(--text); }
+.chip:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
+/* Un filtre sans aucune carte reste visible plutot que de disparaitre : la
+   liste des familles ne bouge pas d'un ecran a l'autre, et l'infobulle dit
+   pourquoi celle-ci est vide. */
+.chip:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .chip[aria-pressed="true"] {
   background: var(--accent-wash);
   border-color: var(--line-accent);
   color: var(--accent-bright);
+}
+
+/* Une barre de filtres nommee : l'intitule dit sur quoi portent les chips,
+   que des chiffres seuls laisseraient deviner. */
+.toolbar--filter { align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-4); }
+.filter-label {
+  font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text-3); white-space: nowrap;
+}
+
+/* Filtres poses sur la ligne du titre : ils suivent le titre et laissent les
+   actions a droite. Faute de largeur, ils passent a la ligne en bloc plutot
+   que de comprimer les boutons. */
+.panel__head--filters { flex-wrap: wrap; }
+.panel__head--filters > .grow {
+  display: flex; gap: var(--sp-3);
+  /* Au plus haut : sur une ligne, l'alignement ne se voit pas ; des que les
+     chips passent sur plusieurs lignes, l'intitule se retrouverait sinon
+     centre au milieu d'elles. */
+  align-items: flex-start;
+  flex: 1 1 auto; min-width: 0;
+}
+.panel__head--filters .filter-label { line-height: 29px; }   /* hauteur d'un chip */
+/* Faute de largeur, l'intitule prend sa propre ligne au-dessus des chips. */
+@media (max-width: 720px) {
+  .panel__head--filters > .grow { flex-direction: column; align-items: stretch; gap: var(--sp-2); }
+  .panel__head--filters .filter-label { line-height: 1.2; }
 }
 
 .chip__count { font-size: var(--text-xs); color: var(--text-3); font-variant-numeric: tabular-nums; }

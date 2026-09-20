@@ -52,6 +52,34 @@
   let suggestions = [];
   let resolved = {};
 
+  /* ── Filtres : d'ou vient la carte suggeree ───────────────────────────── */
+
+  const free = (card) => (card.copies_owned || 0) - (card.copies_used || 0);
+
+  // Une suggestion vient soit de la collection, soit d'une extension ouverte
+  // dont les communes et peu communes sont tenues pour acquises. Les deux ne
+  // se valent pas au moment de monter le deck : l'une est dans la boite,
+  // l'autre reste a retrouver.
+  const FILTERS = [
+    { key: 'all', label: 'Toutes',
+      title: 'Toutes les suggestions',
+      test: () => true },
+    { key: 'free', label: 'Libres',
+      title: 'Cartes que vous possédez et qu’aucun deck n’utilise',
+      test: (card) => (card.copies_owned || 0) > 0 && free(card) > 0 },
+    { key: 'taken', label: 'Non libres',
+      title: 'Cartes que vous possédez, mais dont tous les exemplaires sont '
+           + 'déjà engagés dans un deck',
+      empty: 'Aucune : une carte dont tous les exemplaires servent ailleurs '
+           + 'n’est pas proposée sur cet écran.',
+      test: (card) => (card.copies_owned || 0) > 0 && free(card) <= 0 },
+    { key: 'opened', label: 'Édition ouverte',
+      title: 'Communes et peu communes des extensions que vous avez déclaré '
+           + 'avoir ouvertes, tenues pour acquises sans être saisies',
+      test: (card) => card.source === 'opened_sets' },
+  ];
+  let filter = 'all';
+
   // Rien n'est suggere tant qu'un deck n'a pas ete choisi : les suggestions
   // d'un deck pris au hasard passeraient pour celles du deck voulu. L'ecran de
   // depart dit d'ici la ce que l'outil va chercher.
@@ -137,6 +165,12 @@
 
     // Les reperes que portent les vignettes — pourcentage, exemplaires libres,
     // reglage — restaient a deviner : la legende les nomme une fois pour toutes.
+    const counts = Object.fromEntries(FILTERS.map((entry) =>
+      [entry.key, suggestions.filter(entry.test).length]));
+    // Ajouter au deck la derniere carte d'une famille la vide : rester dessus
+    // afficherait une grille vide sans rien dire.
+    if (!counts[filter]) filter = 'all';
+
     results.innerHTML = `
       ${MM.legend([
         { icon: 'chart', strong: 'x % des decks similaires :',
@@ -146,29 +180,56 @@
         { icon: 'plus', strong: 'Le réglage :',
           text: 'ajoute la carte au deck choisi, sans toucher à votre collection.' },
       ])}
+      <div class="toolbar" style="margin-top:var(--sp-4)">
+        <div class="chips" id="sourceFilter">
+          ${FILTERS.map((entry) => `
+            <button class="chip" data-filter="${entry.key}"
+                    aria-pressed="${entry.key === filter}"
+                    ${counts[entry.key] ? '' : 'disabled'}
+                    title="${MM.esc(counts[entry.key] || !entry.empty
+                      ? entry.title : entry.empty)}">
+              ${MM.esc(entry.label)}
+              <span class="chip__count">${counts[entry.key]}</span></button>`).join('')}
+        </div>
+      </div>
       <div class="card-grid" id="grid" style="margin-top:var(--sp-4)"></div>`;
 
-    // Les suggestions arrivent triees par taux decroissant : les vingt
-    // premieres sont donc les plus pertinentes du lot.
-    const head = suggestions.slice(0, 20);
-    const avg = head.reduce((sum, card) => sum + card.inclusion_rate, 0) / head.length;
-    MM.el('#avgRate').innerHTML = `
-      <div class="stat stat--inline">
-        <span class="stat__value">${Math.round(avg)} %</span>
-        <span class="stat__label">Taux moyen des ${head.length} premières</span>
-      </div>`;
+    const shown = suggestions.filter(
+      (FILTERS.find((entry) => entry.key === filter) || FILTERS[0]).test);
 
-    MM.el('#grid').innerHTML = suggestions.map((card) => MM.cardTile({
-      ...(resolved[card.card_name] || {}),
-      card_name: card.card_name,
-      owned: card.copies_owned,
-      used: card.copies_used,
-    }, {
-      context: 'deck',
-      deckQty: 0,   // ces cartes sont justement celles qui n'y sont pas encore
-      note: `${Math.round(card.inclusion_rate)} % des decks similaires`,
-    })).join('');
+    // Les suggestions arrivent triees par taux decroissant : les vingt
+    // premieres sont donc les plus pertinentes du lot retenu.
+    const head = shown.slice(0, 20);
+    MM.el('#avgRate').innerHTML = head.length
+      ? `<div class="stat stat--inline">
+          <span class="stat__value">${Math.round(
+            head.reduce((sum, card) => sum + card.inclusion_rate, 0) / head.length)} %</span>
+          <span class="stat__label">Taux moyen des ${head.length} premières</span>
+        </div>`
+      : '';
+
+    MM.el('#grid').innerHTML = shown.length
+      ? shown.map((card) => MM.cardTile({
+          ...(resolved[card.card_name] || {}),
+          card_name: card.card_name,
+          owned: card.copies_owned,
+          used: card.copies_used,
+        }, {
+          context: 'deck',
+          deckQty: 0,   // ces cartes sont justement celles qui n'y sont pas encore
+          note: `${Math.round(card.inclusion_rate)} % des decks similaires`,
+        })).join('')
+      : '';
   }
+
+  // Le filtre ne rappelle pas l'API : les suggestions sont deja toutes la, il
+  // ne fait que choisir celles a montrer.
+  results.addEventListener('click', (event) => {
+    const chip = event.target.closest('#sourceFilter .chip');
+    if (!chip || chip.disabled) return;
+    filter = chip.dataset.filter;
+    render();
+  });
 
   // Le reglage de la vignette ajoute au deck : la carte quitte alors la liste
   // des suggestions, qui ne montre que ce qui n'y est pas encore.

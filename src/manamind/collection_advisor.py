@@ -20,8 +20,20 @@ CARD_TYPES = ["Land", "Creature", "Instant", "Sorcery", "Enchantment", "Artifact
 # ── Normalisation ─────────────────────────────────────────────────────────────
 
 def _normalize(name: str) -> str:
+    """Clé de comparaison d'un nom de carte : sans accents, sans casse, face avant.
+
+    Une carte recto-verso s'écrit « A // B » dans une decklist et « A » dans
+    les statistiques d'inclusion : comparer les deux écritures telles quelles
+    les tenait pour deux cartes différentes. L'écran « Améliorer » proposait
+    ainsi d'ajouter des cartes déjà présentes dans le deck, et leurs
+    exemplaires passaient pour libres alors qu'ils étaient engagés.
+
+    C'est la règle déjà appliquée côté SQL partout dans le projet :
+    `split_part(mm_normalize_name(...), ' // ', 1)`.
+    """
     name = unicodedata.normalize("NFKD", name)
-    return "".join(c for c in name if not unicodedata.combining(c)).lower().strip()
+    stripped = "".join(c for c in name if not unicodedata.combining(c)).lower().strip()
+    return stripped.split(" // ")[0].strip()
 
 
 def _cmd_norms(commander_name: str) -> set[str]:

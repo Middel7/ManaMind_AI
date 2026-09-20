@@ -14,6 +14,7 @@ from fastapi.responses import Response
 from sqlalchemy import text
 
 from manamind.auth import COOKIE_NAME, get_current_user
+from manamind.commander_curve import reference_for
 from manamind.commanders import MAX_COMMANDERS, join_commanders, split_commanders
 from manamind.db.engine import SessionLocal
 
@@ -252,6 +253,13 @@ def api_deck_detail(deck_id: str, request: Request) -> Response:
                        count(DISTINCT dc.deck_id) AS decks
                 FROM user_deck_cards dc
                 WHERE dc.user_id = :uid
+                  -- Les cartes d'un deck supprime restent en table : comptees,
+                  -- elles retenaient des exemplaires pour un deck qui n'est
+                  -- plus, et la carte passait pour entierement engagee.
+                  AND EXISTS (
+                      SELECT 1 FROM user_moxfield_decks d
+                      WHERE d.user_id = dc.user_id AND d.deck_id = dc.deck_id
+                  )
                 GROUP BY 1
             )
             SELECT dc.card_name, dc.quantity,
@@ -533,3 +541,26 @@ def api_deck_missing(
     total = sum(item["unit_price"] * item["quantity"]
                 for item in missing if item["unit_price"])
     return _json_response({"missing": missing, "total_eur": round(total, 2)})
+
+
+@router.get("/api/v2/stats/mana-curve")
+def api_commander_mana_curve(
+    request: Request,
+    commander: str = Query(..., min_length=1, max_length=200),
+) -> Response:
+    """Courbe et cout moyen des decks publics jouant ce commandant.
+
+    Sert de point de comparaison aux ecrans qui montrent la courbe d'un deck.
+    Un commandant absent de la base publique n'est pas une erreur : la page
+    s'en passe et n'affiche que le cout du deck.
+    """
+    _user(request)
+
+    # La forme canonique — les deux noms d'une paire, ranges dans l'ordre — est
+    # celle sous laquelle les decks publics sont indexes.
+    name = join_commanders(split_commanders(commander))
+    reference = reference_for(name)
+    if reference is None:
+        return _json_response({"reference": None})
+
+    return _json_response({"reference": reference})

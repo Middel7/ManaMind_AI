@@ -33,6 +33,9 @@ import os  # noqa: E402
 from sqlalchemy import create_engine, text  # noqa: E402
 from sqlalchemy.orm import sessionmaker, Session  # noqa: E402
 
+from manamind import commander_curve  # noqa: E402
+from manamind.commanders import commander_keys  # noqa: E402
+
 
 def _make_session(db_url: str) -> Session:
     engine = create_engine(db_url)
@@ -69,6 +72,10 @@ def project_commander(commander: str, session: object) -> dict:
         {"cmd": commander},
     )
 
+    # La courbe de reference suit le meme sort que les taux d'inclusion : elle
+    # est reecrite depuis les decks du moment, ou effacee s'il n'en reste aucun.
+    commander_curve.refresh(session, commander)
+
     if total_decks == 0:
         session.commit()
         return {"decks": 0, "cards": 0}
@@ -86,6 +93,15 @@ def project_commander(commander: str, session: object) -> dict:
         """),
         {"cmd": commander},
     ).fetchall()
+
+    # Quelques decks publics listent leur commandant avec les autres cartes au
+    # lieu de la zone de commandement : `is_commander` y est faux et il devient
+    # une carte du deck, jouee par une poignee de listes. Le taux d'inclusion
+    # derisoire qui en resultait le faisait passer pour la premiere carte a
+    # retirer. Un commandant n'est pas une carte que l'on choisit : il n'a rien
+    # a faire dans ses propres statistiques.
+    cmd_keys = commander_keys(commander)
+    rows = [r for r in rows if r.card_name.strip().lower() not in cmd_keys]
 
     if not rows:
         session.commit()
@@ -207,6 +223,7 @@ def main() -> None:
         # pas à disparaître pour lui.
         if not args.commander:
             session.execute(text("TRUNCATE TABLE deck_stat_commander"))
+            session.execute(text("TRUNCATE TABLE deck_stat_commander_curve"))
             session.commit()
 
         t0 = time.time()
