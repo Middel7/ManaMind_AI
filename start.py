@@ -7,7 +7,7 @@ Usage :
     python start.py --no-browser   # ne pas ouvrir le navigateur
 """
 import argparse
-import subprocess
+import os
 import sys
 import threading
 import time
@@ -15,13 +15,20 @@ import webbrowser
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-URL = "http://localhost:8080"
+# 127.0.0.1 plutôt que localhost : ce dernier coûte une pénalité de résolution
+# IPv6 à chaque connexion sous Windows.
+HOST = "127.0.0.1"
 
 
-def open_browser(delay: float = 1.5) -> None:
+def url_for(port: int) -> str:
+    return f"http://{HOST}:{port}"
+
+
+def open_browser(port: int, delay: float = 1.5) -> None:
     time.sleep(delay)
-    webbrowser.open(URL)
-    print(f"[Start] Navigateur ouvert sur {URL}")
+    url = url_for(port)
+    webbrowser.open(url)
+    print(f"[Start] Navigateur ouvert sur {url}")
 
 
 def main() -> None:
@@ -32,26 +39,31 @@ def main() -> None:
 
     print("=" * 50)
     print("  ManaMind — démarrage du serveur")
-    print(f"  URL : http://localhost:{args.port}")
+    print(f"  URL : {url_for(args.port)}")
     print("  Ctrl+C pour arrêter")
     print("=" * 50)
 
     if not args.no_browser:
-        threading.Thread(target=open_browser, args=(1.5,), daemon=True).start()
+        threading.Thread(target=open_browser, args=(args.port, 1.5), daemon=True).start()
 
-    cmd = [
-        sys.executable, "-m", "uvicorn",
-        "server:app",
-        "--host", "0.0.0.0",
-        "--port", str(args.port),
-        "--reload",
-        # Surveiller aussi les fichiers HTML et JSON
-        "--reload-include", "*.html",
-        "--reload-include", "*.json",
-    ]
+    # Uvicorn est appelé en direct plutôt qu'en ligne de commande : sous Windows,
+    # son CLI développe lui-même les jokers (« *.html » devient la liste des
+    # fichiers) et refuse alors de démarrer.
+    import uvicorn
+
+    os.chdir(ROOT)
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
 
     try:
-        subprocess.run(cmd, cwd=ROOT)
+        uvicorn.run(
+            "server:app",
+            host="0.0.0.0",
+            port=args.port,
+            reload=True,
+            # Surveiller aussi les fichiers HTML et JSON
+            reload_includes=["*.html", "*.json"],
+        )
     except KeyboardInterrupt:
         print("\n[Start] Serveur arrêté.")
 
