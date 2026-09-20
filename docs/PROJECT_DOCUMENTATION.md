@@ -9,6 +9,7 @@
 cd /d C:\Users\fabie\Documents\GitHub\ManaMind_AI
 
 .venv\Scripts\python.exe start.py
+http://127.0.0.1:8080
 
 # → http://localhost:8080
 # Email : admin@manamind.app / Mot de passe : admin123
@@ -84,7 +85,6 @@ ManaMind_AI/
 │   ├── build_card2vec.py            ← Pipeline Card2Vec (Word2Vec sur decklists)
 │   ├── build_ml_dataset.py          ← Dataset ML : train.csv + test.csv pour XGBoost
 │   ├── evaluate_models.py           ← Évaluation XGBoost baseline vs Card2Vec
-│   ├── import_scryfall_cards.py     ← OBSOLÈTE : le catalogue vient de MTG-DB (§4)
 │   ├── import_game_changers.py      ← Import des cartes "game changer"
 │   └── validate_mtg_cards_db.py     ← Vérification intégrité DB
 │
