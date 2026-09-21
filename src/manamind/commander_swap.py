@@ -118,7 +118,7 @@ LEFT JOIN LATERAL (
               AND pref.card_key = split_part(dc.card_lower, ' // ', 1)
         )
     ) DESC NULLS LAST,
-             (p.set_code NOT ILIKE 'sl%') DESC, p.released_at DESC NULLS LAST, p.id
+             (p.set_code NOT ILIKE 'sl%' AND LOWER(p.set_code) NOT IN ('mar', 'lmar')) DESC, p.released_at DESC NULLS LAST, p.id
     LIMIT 1
 ) img ON TRUE
 """
@@ -240,7 +240,7 @@ cmd_img AS (
                   AND pref.card_key = split_part(sc.normalized_name, ' // ', 1)
             )
         ) DESC NULLS LAST,
-                 (p.set_code NOT ILIKE 'sl%') DESC
+                 (p.set_code NOT ILIKE 'sl%' AND LOWER(p.set_code) NOT IN ('mar', 'lmar')) DESC
         LIMIT 1
     ) img ON TRUE
 )
@@ -343,7 +343,7 @@ LEFT JOIN LATERAL (
               AND pref.card_key = split_part(rk_.display_name, ' // ', 1)
         )
     ) DESC NULLS LAST,
-             (p.set_code NOT ILIKE 'sl%') DESC, p.released_at DESC NULLS LAST, p.id
+             (p.set_code NOT ILIKE 'sl%' AND LOWER(p.set_code) NOT IN ('mar', 'lmar')) DESC, p.released_at DESC NULLS LAST, p.id
     LIMIT 1
 ) img ON TRUE
 WHERE rk_.rk <= :missing_top

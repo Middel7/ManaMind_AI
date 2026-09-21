@@ -34,8 +34,8 @@ _ART_SQL = """
           AND p.lang = 'en'
         -- L'edition que l'utilisateur a choisie pour cette carte passe avant
         -- tout : le reste n'est qu'un defaut, applique faute de choix.
-        -- Les visuels Secret Lair passent en dernier : ils ne representent pas
-        -- la carte, mais quelques-unes n'existent que la.
+        -- Les visuels Secret Lair et Marvel Universe passent en dernier : ils
+        -- ne representent pas la carte, mais quelques-unes n'existent que la.
         ORDER BY (p.scryfall_id = (
                      SELECT pref.scryfall_id
                      FROM user_preferred_printings pref
@@ -43,7 +43,7 @@ _ART_SQL = """
                        AND pref.card_key = split_part(
                              mm_normalize_name({name_expr}), ' // ', 1)
                  )) DESC NULLS LAST,
-                 (p.set_code NOT ILIKE 'sl%%') DESC,
+                 (p.set_code NOT ILIKE 'sl%%' AND LOWER(p.set_code) NOT IN ('mar', 'lmar')) DESC,
                  (p.image_normal IS NOT NULL) DESC,
                  (p.promo IS NOT TRUE) DESC,
                  (COALESCE(ms.set_type, '') NOT IN ('promo', 'memorabilia')) DESC,

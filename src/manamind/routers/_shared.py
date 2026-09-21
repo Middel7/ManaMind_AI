@@ -33,7 +33,8 @@ def preferred_printing_first(printing_alias: str, card_key_expr: str) -> str:
     """Fragment ORDER BY qui place l'edition retenue par l'utilisateur en tete.
 
     Une carte a plusieurs impressions, et chaque ecran en choisissait une par
-    heuristique — la plus recente, hors Secret Lair et promotions. Quand
+    heuristique — la plus recente, hors Secret Lair, Marvel Universe et
+    promotions. Quand
     l'utilisateur en a designe une, c'est elle qu'il veut voir, partout : ce
     fragment se glisse au debut du ORDER BY qui departageait les impressions,
     et le reste ne sert plus que de defaut.

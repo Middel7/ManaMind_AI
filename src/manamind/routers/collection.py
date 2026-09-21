@@ -730,7 +730,7 @@ def api_collection_commanders(
                               AND pref.card_key = split_part(sc.normalized_name, ' // ', 1)
                         )
                     ) DESC NULLS LAST,
-                             (p.set_code NOT ILIKE 'sl%') DESC,
+                             (p.set_code NOT ILIKE 'sl%' AND LOWER(p.set_code) NOT IN ('mar', 'lmar')) DESC,
                              p.released_at DESC NULLS LAST, p.id
                     LIMIT 1
                 ) img ON TRUE
@@ -822,7 +822,7 @@ def _commander_images(session, names: list[str], user_id: int) -> dict[str, list
                       AND pref.card_key = split_part(sc.normalized_name, ' // ', 1)
                 )
             ) DESC NULLS LAST,
-                     (p.set_code NOT ILIKE 'sl%') DESC,
+                     (p.set_code NOT ILIKE 'sl%' AND LOWER(p.set_code) NOT IN ('mar', 'lmar')) DESC,
                      p.released_at DESC NULLS LAST, p.id
             LIMIT 1
         ) img ON TRUE
@@ -1204,7 +1204,7 @@ def api_commander_suggest(
                                AND pref.card_key = split_part(sc2.normalized_name, ' // ', 1)
                          )
                      ) DESC NULLS LAST,
-                              (p2.set_code NOT ILIKE 'sl%') DESC,
+                              (p2.set_code NOT ILIKE 'sl%' AND LOWER(p2.set_code) NOT IN ('mar', 'lmar')) DESC,
                               p2.released_at DESC NULLS LAST, p2.id
                      LIMIT 1
                    ) AS image_url

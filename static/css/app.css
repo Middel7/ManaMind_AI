@@ -338,21 +338,23 @@ button.nav__item { width: 100%; }
 }
 .support-tag svg { width: 16px; height: 16px; }
 
-/* Sous 860 px, ces deux pastilles cessent de flotter. Posees sur une grille de
+/* Sous 860 px, ces deux pastilles cessent de flotter : posees sur une grille de
    cartes, elles masquaient la derniere vignette et les onglets d'une fiche de
-   deck ; l'ecran est trop etroit pour qu'on puisse les contourner du pouce, et
-   remonter au-dessus de la barre d'onglets ne fait que deplacer le probleme.
-   Elles rejoignent le fil de la page, lues une fois le contenu parcouru. */
+   deck, et l'ecran est trop etroit pour qu'on puisse les contourner du pouce.
+   Elles montent dans la barre du haut, a droite du burger — MM.boot les y
+   deplace reellement, une barre d'en-tete ne se simule pas en position fixe. */
 @media (max-width: 860px) {
-  .dock {
+  .topbar .dock {
     position: static;
-    flex-wrap: wrap;
-    justify-content: center;
-    padding: var(--sp-6) var(--sp-4) calc(var(--bottombar-h) + var(--sp-6));
+    margin-left: auto;
+    /* Le numero de version flotte dans ce coin, au-dessus de tout : sans cette
+       reserve, la pastille de soutien passait dessous. */
+    margin-right: 52px;
   }
-  /* Dans le fil, la ligne entiere leur revient : le libelle peut donc revenir,
-     et se couper s'il le faut plutot que de pousser la page. */
-  .support-tag { white-space: normal; text-align: center; }
+  /* L'icone seule : la barre doit loger le burger, deux pastilles et le numero
+     de version dans 320 px. Les noms restent portes par aria-label et title. */
+  .topbar .support-tag span { display: none; }
+  .topbar .support-tag { padding-inline: 0; width: var(--tap); justify-content: center; }
 }
 
 /* La barre du haut ne porte plus que le burger : sur grand ecran, ou la sidebar
@@ -1763,9 +1765,9 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
   .tab svg { width: 20px; height: 20px; }
   .tab[aria-current="page"] { color: var(--accent); }
 
-  .tab--add { position: relative; }
+  .tab--primary { position: relative; }
 
-  .tab--add span {
+  .tab--primary span {
     position: absolute;
     top: -18px;
     width: 48px; height: 48px;
@@ -1777,8 +1779,8 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
     border: 3px solid var(--bg);
   }
 
-  .tab--add span svg { width: 22px; height: 22px; }
-  .tab--add em { margin-top: 30px; font-style: normal; }
+  .tab--primary span svg { width: 22px; height: 22px; }
+  .tab--primary em { margin-top: 30px; font-style: normal; }
 
   .hero__title { font-size: var(--text-2xl); }
   .hero__body { padding: var(--sp-6) var(--sp-5) var(--sp-5); }
