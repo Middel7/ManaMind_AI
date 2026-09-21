@@ -69,9 +69,16 @@ ROOT = Path(__file__).resolve().parent
 UPLOADS_DIR = ROOT / "uploads"
 OUTPUTS_DIR = ROOT / "outputs"
 OUTPUTS_RECO_DIR = ROOT / "outputs" / "recommendations"
+# `data` rejoint les deux autres : il est monte en statique plus bas, et
+# StaticFiles leve des le montage si le dossier manque — le serveur ne demarre
+# alors pas du tout. Ces trois dossiers etant ignores par git, un clone neuf
+# n'en a aucun : c'est ce qui a fait echouer les tests sur le runner
+# d'integration continue, ou seul `data` manquait encore.
+DATA_DIR = ROOT / "data"
 UPLOADS_DIR.mkdir(exist_ok=True)
 OUTPUTS_DIR.mkdir(exist_ok=True)
 OUTPUTS_RECO_DIR.mkdir(parents=True, exist_ok=True)
+DATA_DIR.mkdir(exist_ok=True)
 
 sys.path.insert(0, str(ROOT / "src"))
 
@@ -339,7 +346,7 @@ class RevalidatedStaticFiles(StaticFiles):
 app.mount("/static",  RevalidatedStaticFiles(directory=str(ROOT / "static")), name="static")
 app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 app.mount("/outputs", StaticFiles(directory=str(OUTPUTS_DIR)), name="outputs")
-app.mount("/data",    StaticFiles(directory=str(ROOT / "data")), name="data")
+app.mount("/data",    StaticFiles(directory=str(DATA_DIR)), name="data")
 
 
 # ── Wildcard statique — DOIT RESTER EN DERNIER ───────────────────────────────
