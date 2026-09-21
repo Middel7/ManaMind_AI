@@ -413,7 +413,11 @@
         throw new Error(data.error || data.detail || 'Création impossible.');
       }
       sessionStorage.removeItem('_mm_user');
-      location.href = '/collection/import';
+      // L'accueil, et non l'import : il porte deja le parcours d'installation
+      // en trois etapes, dont l'import est la premiere. Y conduire directement
+      // sautait la vue d'ensemble, et un nouveau venu se retrouvait devant un
+      // formulaire de televersement sans avoir vu ce que l'application fait.
+      location.href = '/';
     } catch (err) {
       fail(err.message);
       button.disabled = false;
