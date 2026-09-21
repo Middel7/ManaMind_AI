@@ -44,6 +44,12 @@
   a.hero__stat:hover .muted { color: var(--text-2); }
 
   /* Une carte qui dort mène au choix d'un commandant qui la jouerait */
+
+  /* Le conteneur des relances ne mesure rien quand il est vide, mais il compte
+     pour un enfant : la colonne lui laissait un ecart avant ET apres, soit deux
+     fois trente-deux pixels de vide entre le bandeau et la premiere section.
+     Le meme traitement que .page-head:empty, ailleurs dans le socle. */
+  #alerts:empty { display: none; }
 </style>
 </head>
 <body>
