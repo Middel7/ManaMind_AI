@@ -91,7 +91,9 @@
     deck: null,          // { deck_id, commander, name, color_identity }
     commanderCards: [],  // la ou les cartes du commandant, pour le calcul de mana
     cards: [],           // cartes du deck : { card_name, quantity }
-    suggestions: [],
+    suggestions: [],      // les plus jouees que l'on possede deja
+    missing: [],          // les plus jouees qui manquent a la collection
+    suggestTab: 'owned',  // onglet ouvert : ce qu'on a, ou ce qu'il faut
     search: [],
     manaReference: null, // courbe moyenne des decks du meme commandant
   };
@@ -312,6 +314,31 @@
     state.cards = data.cards || [];
   }
 
+  // Deux listes, deux sources. « Dans ma collection » vient du conseiller, qui
+  // connait les extensions ouvertes et les cartes deja engagees ailleurs. « A
+  // acquerir » vient du detail du commandant, qui sait dire ce qui manque —
+  // c'est la meme source que l'ecran « Quels decks pouvez-vous construire ? »,
+  // et les deux ecrans s'accordent donc carte pour carte.
+  async function loadMissing() {
+    try {
+      const data = await MM.api.get(
+        `/api/v2/commander-build/${encodeURIComponent(state.deck.commander)}?mode=available`);
+      const possedees = new Set(
+        state.suggestions.map((c) => (c.card_name || '').trim().toLowerCase()));
+      // Une carte d'extension ouverte peut figurer dans les deux sources : elle
+      // n'est pas dans user_collection, mais le conseiller la tient pour
+      // disponible. On la laisse au premier onglet, qui l'annonce comme acquise.
+      const manquantes = (data.missing || [])
+        .filter((c) => !possedees.has((c.card_name || '').trim().toLowerCase()));
+      state.missing = manquantes.map((c) => ({
+        card_name: c.card_name,
+        image_normal: c.image_url,
+        unit_price: c.low_price,
+        inclusion_rate: c.inclusion_rate,
+      }));
+    } catch { state.missing = []; }
+  }
+
   async function loadSuggestions() {
     try {
       const data = await MM.api.get('/api/collection-suggest' + MM.api.qs({
@@ -323,6 +350,7 @@
       const resolved = await MM.resolveCards(results.map((c) => c.card_name));
       state.suggestions = results.map((c) => ({ ...(resolved[c.card_name] || {}), ...c }));
     } catch { state.suggestions = []; }
+    await loadMissing();
   }
 
   /** Ce que les règles interdisent : hors identité de couleur, ou déjà là.
@@ -417,9 +445,22 @@
           </div>
 
           <div class="stack-2">
-            <h3 class="h3">Suggéré par la popularité, dans votre collection</h3>
-            <p class="muted small">Les cartes que vous possédez et que jouent le plus les
-              autres decks de ${MM.esc(deck.commander)}.</p>
+            <h3 class="h3">Suggéré par la popularité</h3>
+            <div class="chips" id="suggestTabs" role="tablist">
+              <button class="chip" data-suggest="owned"
+                      aria-pressed="${state.suggestTab === 'owned'}">
+                Dans ma collection
+                <span class="chip__count">${MM.fmt.int(state.suggestions.length)}</span></button>
+              <button class="chip" data-suggest="missing"
+                      aria-pressed="${state.suggestTab === 'missing'}">
+                À acquérir
+                <span class="chip__count">${MM.fmt.int(state.missing.length)}</span></button>
+            </div>
+            <p class="muted small">${state.suggestTab === 'owned'
+              ? `Les cartes que vous possédez et que jouent le plus les autres decks de
+                 ${MM.esc(deck.commander)}.`
+              : `Les cartes les plus jouées avec ${MM.esc(deck.commander)} qui manquent à
+                 votre collection.`}</p>
             <div id="suggested"></div>
           </div>
         </div>
@@ -461,11 +502,15 @@
 
   function renderSuggested() {
     const host = MM.el('#suggested');
-    const list = state.suggestions;
+    const possede = state.suggestTab === 'owned';
+    const list = possede ? state.suggestions : state.missing;
     host.innerHTML = list.length
       ? `<div class="card-grid">${list.map((c) => cardTile(c)).join('')}</div>`
-      : `<p class="muted small">Aucune carte de votre collection ne ressort pour ce
-         commandant. Utilisez la recherche ci-dessous.</p>`;
+      : `<p class="muted small">${possede
+          ? `Aucune carte de votre collection ne ressort pour ce commandant.
+             Voyez l'onglet « À acquérir », ou utilisez la recherche.`
+          : `Rien à acquérir : les cartes les plus jouées avec ce commandant sont
+             déjà dans votre collection ou dans ce deck.`}</p>`;
   }
 
   function renderSearch() {
@@ -543,6 +588,14 @@
 
       const step = event.target.closest('[data-dq]');
       if (step) return changeQuantity(step.dataset.name, step.dataset.dq === 'inc' ? 1 : -1, step);
+
+      // Les deux onglets de suggestions ne touchent pas au deck : ils
+      // choisissent la liste montree, et le rendu suit.
+      const onglet = event.target.closest('[data-suggest]');
+      if (onglet && onglet.dataset.suggest !== state.suggestTab) {
+        state.suggestTab = onglet.dataset.suggest;
+        return render();
+      }
     });
 
     // La recherche renait a chaque rendu : l'ecoute se delegue au conteneur.
