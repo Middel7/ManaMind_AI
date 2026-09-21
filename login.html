@@ -20,7 +20,11 @@
   .auth {
     position: relative;
     isolation: isolate;
+    /* 100dvh plutot que 100vh : sur telephone, la barre d'adresse du navigateur
+       est comptee dans 100vh, et le bas de la carte de connexion passait
+       dessous. La ligne 100vh reste pour les navigateurs sans dvh. */
     min-height: 100vh;
+    min-height: 100dvh;
     display: grid;
     place-items: center;
     padding: var(--sp-8) var(--sp-6);
@@ -281,6 +285,14 @@
   .auth__eye svg { width: 17px; height: 17px; }
   /* Mot de passe visible : l'oeil prend l'or, comme tout ce qui est actif. */
   .auth__eye[aria-pressed="true"] { color: var(--accent); }
+
+  /* Au doigt, l'oeil occupe la hauteur entiere du champ : a 30 px il fallait
+     viser, et une saisie manquee dans un mot de passe ne se voit pas. Le champ
+     lui laisse d'autant plus de place a droite. */
+  @media (pointer: coarse) {
+    .auth__secret .input { padding-right: 52px; }
+    .auth__eye { right: 2px; bottom: 1px; width: 46px; height: 46px; }
+  }
 </style>
 </head>
 <body>

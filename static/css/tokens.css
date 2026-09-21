@@ -89,6 +89,12 @@
   --shadow-card: 0 6px 24px rgba(0, 0, 0, 0.5);
   --shadow-accent: 0 0 0 1px var(--line-accent), 0 8px 28px rgba(224, 169, 74, 0.15);
 
+  /* ── Toucher ───────────────────────────────────────────────────────────── */
+  /* La plus petite cible qu'un doigt atteint sans viser. Les composants la
+     reprennent sous (pointer: coarse) : a la souris, ces memes boutons peuvent
+     rester denses, c'est le doigt qui reclame de la place. */
+  --tap: 44px;
+
   /* ── Structure ─────────────────────────────────────────────────────────── */
   --sidebar-w: 232px;
   --sidebar-w-collapsed: 68px;

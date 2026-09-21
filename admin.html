@@ -37,8 +37,18 @@ body { font-family: var(--serif-body); background: var(--ink-900); color: var(--
 .adm-back:hover { border-color: var(--gold); color: var(--gold-soft); }
 .adm-title { font-family: var(--serif-engraved); font-size: 1rem; font-weight: 600; color: var(--gold-soft); letter-spacing: .07em; }
 .adm-sub { font-family: var(--serif-display); font-size: .9rem; font-style: italic; color: var(--parch-500); margin-left: 4px; }
-.adm-user { margin-left: auto; font-size: .7rem; color: var(--parch-500); display: flex; align-items: center; gap: 8px; }
+.adm-user { margin-left: auto; font-size: .7rem; color: var(--parch-500); display: flex; align-items: center; gap: 8px; min-width: 0; }
 .adm-user strong { color: var(--blue); font-family: var(--serif-engraved); font-weight: 500; }
+/* Une adresse de courriel ne se coupe pas toute seule : elle poussait l'entete
+   au-dela du bord droit sur telephone, et la page entiere avec elle. */
+.adm-user strong { overflow-wrap: anywhere; }
+
+/* Sous 720 px, l'entete se lit sur trois lignes plutot que de deborder : le
+   retour, le titre, puis le compte connecte. */
+@media (max-width: 720px) {
+  .adm-header { flex-wrap: wrap; gap: 10px; padding-top: 14px; }
+  .adm-user { margin-left: 0; flex-basis: 100%; }
+}
 
 /* ── Layer header ── */
 .layer-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; margin-top: 22px; }
@@ -48,6 +58,15 @@ body { font-family: var(--serif-body); background: var(--ink-900); color: var(--
 .badge-purple { color: var(--purple); background: var(--purple-faint); border: 1px solid var(--purple-border); }
 .badge-green  { color: var(--green);  background: var(--green-faint);  border: 1px solid var(--green-border); }
 .layer-rule { flex: 1; height: 1px; background: var(--border); }
+/* La date du dernier entrainement, en bout de ligne de couche. Elle etait
+   posee en style en ligne, ou aucune regle d'ecran ne pouvait la reprendre :
+   son « nowrap » poussait la page 67 px hors de l'ecran a 320. */
+.layer-when { font-family: var(--serif-display); font-style: italic; font-size: .68rem;
+              color: var(--parch-600); white-space: nowrap; flex-shrink: 0; }
+@media (max-width: 720px) {
+  .layer-header { flex-wrap: wrap; }
+  .layer-when { white-space: normal; flex-basis: 100%; }
+}
 
 /* ── Actions du catalogue ── */
 /* Une action par ligne, et non des boutons alignes : chacune porte une phrase
@@ -89,7 +108,10 @@ body { font-family: var(--serif-body); background: var(--ink-900); color: var(--
 .stat-card.accent-red    { --accent: var(--red); }
 
 .stat-label { font-family: var(--serif-engraved); font-size: .55rem; letter-spacing: .12em; text-transform: uppercase; color: var(--parch-600); margin-bottom: 8px; }
-.stat-val { font-size: 1.85rem; font-weight: 300; font-variant-numeric: tabular-nums; color: var(--parch-100); line-height: 1; }
+/* Certaines valeurs ne sont pas des nombres mais des phrases — « jamais
+   entraine », une date complete : sans point de coupure, elles debordaient la
+   tuile et poussaient la page au-dela du bord droit sur telephone. */
+.stat-val { font-size: 1.85rem; font-weight: 300; font-variant-numeric: tabular-nums; color: var(--parch-100); line-height: 1.1; overflow-wrap: anywhere; }
 .stat-val.loading { color: var(--parch-600); }
 .stat-val.c-blue   { color: var(--blue); }
 .stat-val.c-teal   { color: var(--teal); }
@@ -203,7 +225,9 @@ body { font-family: var(--serif-body); background: var(--ink-900); color: var(--
 
 /* ── Filter ── */
 .filter-bar { margin-bottom: 12px; }
-.filter-bar input { padding: 7px 12px; border-radius: 5px; border: 1px solid var(--border); background: rgba(0,0,0,.25); color: var(--parch-100); font-family: var(--serif-body); font-size: .82rem; outline: none; width: 280px; transition: border-color .2s; }
+/* Largeur souhaitee, pas imposee : a 320 px, les 280 px fixes debordaient de
+   la colonne une fois les marges de page retirees. */
+.filter-bar input { padding: 7px 12px; border-radius: 5px; border: 1px solid var(--border); background: rgba(0,0,0,.25); color: var(--parch-100); font-family: var(--serif-body); font-size: .82rem; outline: none; width: 100%; max-width: 280px; transition: border-color .2s; }
 .filter-bar input:focus { border-color: var(--blue-border); }
 .filter-bar input::placeholder { color: var(--parch-600); }
 
@@ -243,7 +267,10 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
 .b-recent { color: var(--green); background: var(--green-faint); border: 1px solid var(--green-border); }
 .empty-msg td { text-align: center; color: var(--parch-600); padding: 28px; font-style: italic; }
 /* ── Onglets ── */
-.tabs { display: flex; gap: 2px; margin: 24px 0 2px; border-bottom: 1px solid var(--border); }
+/* Les quatre onglets ne tiennent pas sur une ligne de telephone : le quatrieme
+   sortait de l'ecran, et rien ne disait qu'il existait. Ils passent a la ligne
+   plutot que de defiler — quatre libelles courts y tiennent en deux rangees. */
+.tabs { display: flex; flex-wrap: wrap; gap: 2px; margin: 24px 0 2px; border-bottom: 1px solid var(--border); }
 .tab { padding: 10px 22px; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer;
        font-family: var(--serif-engraved); font-size: .62rem; letter-spacing: .13em; text-transform: uppercase;
        color: var(--parch-600); transition: color .2s, border-color .2s; }
@@ -284,6 +311,53 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
                    user-select: all; word-break: break-all; }
 .inv-link { font-family: var(--mono); font-size: .68rem; color: var(--parch-500);
             word-break: break-all; user-select: all; }
+
+/* ── Ecrans etroits ── */
+/* Cet ecran ne suit pas le socle : il a sa propre feuille, donc ses propres
+   reglages d'espace et de cible. */
+@media (max-width: 720px) {
+  /* 24 px de chaque cote, c'etait 48 px preleves sur 320 : les tuiles de
+     chiffres s'en trouvaient a 112 px de large. */
+  .page { padding: 0 14px 48px; }
+  .panel { padding: 16px 14px; }
+  /* Chaque commande de lancement prend sa ligne, avec son menu : serrees, elles
+     se chevauchaient des que le libelle d'une extension s'allongeait. */
+  .form-row { gap: 12px; }
+  .form-row .field { flex: 1 1 100%; }
+  .field input[type=number], .field select { width: 100%; }
+  /* Une action de maintenance se declenche pour de bon : un bouton trop petit
+     se touche de travers, et certaines de ces commandes tournent deux heures. */
+  .btn { min-height: 40px; }
+  .usr-actions { justify-content: flex-start; }
+}
+
+/* Au doigt, les memes minimums que le reste du projet. Le tableau garde ses
+   lignes denses : il se lit, il ne s'actionne pas. */
+@media (pointer: coarse) {
+  .btn, .btn-xs { min-height: 44px; padding-inline: 20px; }
+  /* Les libelles sont en petites capitales de 9 px : le remplissage seul
+     n'amenait l'onglet qu'a 41 px. */
+  .tab { min-height: 44px; }
+  /* 16 px : en dessous, Safari sur iOS zoome sur le champ au premier appui. */
+  .field input[type=number], .field select, .filter-bar input { font-size: 16px; min-height: 44px; }
+  .adm-back { min-height: 44px; display: inline-flex; align-items: center; }
+
+  /* Les cases a cocher sont dessinees a la main et volontairement petites :
+     c'est la ligne entiere qui recoit l'appui, elle leur sert d'etiquette. */
+  .step-item, .headless-toggle { min-height: 44px; }
+  .step-item input[type=checkbox] { width: 20px; height: 20px; min-width: 20px; }
+  .step-item input[type=checkbox]:checked::after { left: 6px; top: 2px; width: 5px; height: 10px; }
+  .headless-toggle input[type=checkbox] { width: 44px; height: 26px; border-radius: 13px; }
+  .headless-toggle input[type=checkbox]::after { top: 3px; left: 3px; width: 18px; height: 18px; }
+  .headless-toggle input[type=checkbox]:checked::after { transform: translateX(18px); }
+
+  /* Deux commandes secondaires ecrites en texte souligne : elles gardent leur
+     discretion mais cessent de se limiter a la hauteur de leurs lettres. */
+  /* « tout » et « aucun » ne font que quatre lettres : la largeur minimale leur
+     donne une cible carree sans changer leur aspect de lien. */
+  .timing-reset, .btn-link { min-height: 44px; min-width: 44px; padding-inline: 4px; }
+  .step-list-header { gap: 10px; }
+}
 
 </style>
 </head>
@@ -375,7 +449,7 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
     <span class="layer-badge badge-purple">deck_stat_commander</span>
     <span class="layer-badge badge-purple">deck_stat_global</span>
     <div class="layer-rule"></div>
-    <span id="statMlLastTrained" style="font-family:var(--serif-display);font-style:italic;font-size:.68rem;color:var(--parch-600);white-space:nowrap;flex-shrink:0;"></span>
+    <span class="layer-when" id="statMlLastTrained"></span>
   </div>
   <div class="stats-row">
     <div class="stat-card accent-purple">

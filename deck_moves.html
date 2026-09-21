@@ -15,6 +15,21 @@
      s'ecrivent en entier : tronques, ils devenaient indistinguables entre deux
      versions d'un meme commandant. */
   .move--done { opacity: 0.45; }
+
+  /* C'est ce trajet qui fait tout l'ecran : « d'ou » et « vers ou ». Range sur
+     la ligne des metadonnees, il partageait la largeur d'une vignette avec le
+     code d'extension et le prix — sur telephone il n'en restait que les
+     premieres lettres du commandant de depart, et la proposition devenait
+     illisible. Il prend sa propre ligne, en entier, sous le nom de la carte. */
+  @media (max-width: 860px) {
+    #results .mtg-card__meta { flex-wrap: wrap; }
+    #results .mtg-card__meta > .dim {
+      flex-basis: 100%;
+      overflow: visible;
+      white-space: normal;
+      line-height: 1.35;
+    }
+  }
 </style>
 </head>
 <body>

@@ -48,16 +48,31 @@
 
   .sentinel { height: 40px; }
 
-  /* Vignettes agrandies : les illustrations restent lisibles sans zoom */
-
-  @media (max-width: 860px) {
-
-  }
-
   /* En vue liste, les liens marchands se rangent a droite de la ligne */
   .list-view .mtg-card__market { margin-top: 0; flex-shrink: 0; }
   .list-view .mtg-card__market .btn { flex: none; }
   /* Carte absente de la collection : grisee, avec une etiquette explicite */
+
+  /* En vue liste, tout tenait sur une seule ligne : miniature, titre, edition,
+     prix, possession, reglage, « Acheter », « Vendre ». Sous 720 px il ne
+     restait a chacun qu'une poignee de pixels, et le titre se cassait en
+     colonne de lettres. La miniature garde sa gauche, le reste s'empile a sa
+     droite — rien n'est retire, c'est la disposition qui change. */
+  @media (max-width: 720px) {
+    .list-view .mtg-card { align-items: flex-start; gap: var(--sp-3);
+      padding: var(--sp-3); }
+    .list-view .mtg-card__frame { width: 54px; }
+    .list-view .mtg-card__foot { flex-direction: column; align-items: stretch;
+      gap: var(--sp-2); }
+    .list-view .mtg-card__name { flex: none; white-space: normal; }
+    .list-view .mtg-card__market .btn { flex: 1; }
+  }
+
+  /* Les filtres prennent la largeur entiere plutot que de se ranger en colonnes
+     de 180 px, qui ne laissaient plus rien aux menus deroulants. */
+  @media (max-width: 680px) {
+    .filter-row > .stack-2 { min-width: 0; flex: 1 1 100%; }
+  }
 </style>
 </head>
 <body>

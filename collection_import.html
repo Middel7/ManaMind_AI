@@ -92,6 +92,24 @@
   .entry-table td { padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--line); }
   .entry-table tr:hover td { background: var(--surface); }
   .table-scroll { max-height: 460px; overflow-y: auto; }
+
+  /* Cinq colonnes dont quatre a largeur imposee : sur telephone, il ne restait
+     rien pour le nom de la carte, qui se cassait lettre par lettre. Le tableau
+     garde ses colonnes et c'est le bloc qui defile lateralement — un cadre
+     visible, jamais la page. Les quantites et les etats restent tous la :
+     c'est la seule relecture avant d'ecrire dans la collection. */
+  @media (max-width: 720px) {
+    .table-scroll {
+      overflow: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      border: 1px solid var(--line);
+      border-radius: var(--r-md);
+    }
+    .entry-table { min-width: 560px; }
+    /* L'entete colle en haut ne doit pas trainer la bordure du cadre avec lui. */
+    .entry-table th { top: -1px; }
+  }
 </style>
 </head>
 <body>

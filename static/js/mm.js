@@ -321,12 +321,74 @@
 
   /* ══ Modale ════════════════════════════════════════════════════════════ */
 
+  /* Ce qu'un Tab peut atteindre a l'interieur d'une modale ou d'un tiroir. */
+  const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]),'
+    + ' select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+  function focusables(root) {
+    return els(FOCUSABLE, root).filter((item) => item.offsetParent !== null
+      || item === document.activeElement);
+  }
+
+  /**
+   * Enferme la tabulation dans un element et la rend au declencheur a la
+   * fermeture. Sans cela, Tab sortait de la modale et parcourait la page
+   * derriere elle — qu'un lecteur d'ecran annonce alors qu'elle est masquee —
+   * et le focus retombait sur le corps du document une fois la modale fermee.
+   *
+   * @returns {Function} a appeler pour tout rendre en l'etat
+   */
+  function trapFocus(container) {
+    const previous = document.activeElement;
+
+    function onTab(event) {
+      if (event.key !== 'Tab') return;
+      const list = focusables(container);
+      if (!list.length) { event.preventDefault(); return; }
+      const first = list[0];
+      const last = list[list.length - 1];
+      // document.activeElement suffit : la cible de l'evenement peut etre le
+      // conteneur lui-meme quand il porte tabindex="-1".
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener('keydown', onTab, true);
+    // `rendre` a false quand la page s'apprete a changer : rendre le focus a un
+    // element qu'on quitte ne sert a rien et rouvre parfois ce qu'on ferme.
+    return function release(rendre = true) {
+      document.removeEventListener('keydown', onTab, true);
+      if (rendre && previous && previous.isConnected && previous.focus) previous.focus();
+    };
+  }
+
+  /* Le fond ne defile plus tant qu'une couche est ouverte : sur telephone, le
+     geste traversait la modale et emportait la page en dessous. Un compteur,
+     parce qu'une fiche de carte peut s'ouvrir depuis une autre fenetre. */
+  let couchesOuvertes = 0;
+  function bloquerFond() {
+    couchesOuvertes += 1;
+    document.body.style.overflow = 'hidden';
+  }
+  function libererFond() {
+    couchesOuvertes = Math.max(0, couchesOuvertes - 1);
+    if (!couchesOuvertes) document.body.style.overflow = '';
+  }
+
+  let modalSeq = 0;
+
   MM.modal = function ({ title, body, footer, wide = false, onClose }) {
+    const titleId = `mmModalTitle${(modalSeq += 1)}`;
     const overlay = node(`
-      <div class="modal" role="dialog" aria-modal="true">
-        <div class="modal__box ${wide ? 'modal__box--wide' : ''}">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="${titleId}">
+        <div class="modal__box ${wide ? 'modal__box--wide' : ''}" tabindex="-1">
           <div class="modal__head">
-            <h2 class="h3">${esc(title || '')}</h2>
+            <h2 class="h3" id="${titleId}">${esc(title || '')}</h2>
             <button class="btn btn--ghost btn--icon" data-close aria-label="Fermer">
               ${MM.icons.close}
             </button>
@@ -346,9 +408,16 @@
       else footHost.appendChild(footer);
     }
 
+    let release = null;
+    let ferme = false;
+
     function close() {
+      if (ferme) return;
+      ferme = true;
       document.removeEventListener('keydown', onKey);
       overlay.remove();
+      libererFond();
+      if (release) release();
       if (onClose) onClose();
     }
 
@@ -359,8 +428,14 @@
     });
     document.addEventListener('keydown', onKey);
     document.body.appendChild(overlay);
+    bloquerFond();
+    release = trapFocus(overlay);
 
-    const focusable = overlay.querySelector('input, button:not([data-close]), select, textarea');
+    // Un champ de saisie d'abord, sinon la boite elle-meme : le lecteur
+    // d'ecran annonce alors le titre de la fenetre plutot que de rester sur la
+    // page qu'elle recouvre.
+    const focusable = overlay.querySelector('input, select, textarea')
+      || el('.modal__box', overlay);
     if (focusable) focusable.focus();
 
     return { root: overlay, body: bodyHost, close };
@@ -696,19 +771,76 @@
     const sidebar = el('#mmSidebar', shell);
     sidebar.innerHTML = renderSidebar(nav, user);
 
-    // Tiroir sur petit ecran
+    // ── Tiroir sur petit ecran ────────────────────────────────────────────
+    //
+    // Sous 860 px la barre laterale sort de l'ecran par une transformation.
+    // Elle reste pourtant dans le document : au clavier, Tab y entrait et
+    // parcourait une dizaine de liens invisibles avant de revenir a la page, et
+    // les lecteurs d'ecran les annoncaient tous. `inert` la retire des deux
+    // tant qu'elle est fermee — et seulement dans cet etat, puisque au-dessus
+    // de 860 px c'est la navigation principale.
+    const burger = el('#mmBurger', shell);
+    const petitEcran = window.matchMedia('(max-width: 860px)');
     let scrim = null;
-    const closeDrawer = () => {
+    let relacherTiroir = null;
+
+    function ajusterInert() {
+      const ferme = sidebar.dataset.open !== 'true';
+      if (petitEcran.matches && ferme) sidebar.setAttribute('inert', '');
+      else sidebar.removeAttribute('inert');
+    }
+
+    const closeDrawer = (rendreLeFocus = true) => {
+      if (sidebar.dataset.open !== 'true') return;
       sidebar.dataset.open = 'false';
       if (scrim) { scrim.remove(); scrim = null; }
+      libererFond();
+      if (relacherTiroir) {
+        // Le focus ne revient au burger que si l'on ferme sur place : quand on
+        // suit un lien du menu, la page change et le rendre n'a pas de sens.
+        relacherTiroir(rendreLeFocus);
+        relacherTiroir = null;
+      }
+      ajusterInert();
+      burger.setAttribute('aria-expanded', 'false');
+      burger.setAttribute('aria-label', 'Ouvrir la navigation');
     };
-    el('#mmBurger', shell).addEventListener('click', () => {
-      if (sidebar.dataset.open === 'true') return closeDrawer();
+
+    const openDrawer = () => {
       sidebar.dataset.open = 'true';
+      ajusterInert();
+      burger.setAttribute('aria-expanded', 'true');
+      burger.setAttribute('aria-label', 'Fermer la navigation');
       scrim = node('<div class="scrim"></div>');
-      scrim.addEventListener('click', closeDrawer);
+      scrim.addEventListener('click', () => closeDrawer());
       document.body.appendChild(scrim);
+      bloquerFond();
+      relacherTiroir = trapFocus(sidebar);
+      const premier = focusables(sidebar)[0];
+      if (premier) premier.focus();
+    };
+
+    burger.setAttribute('aria-controls', 'mmSidebar');
+    burger.setAttribute('aria-expanded', 'false');
+    burger.addEventListener('click', () => {
+      if (sidebar.dataset.open === 'true') closeDrawer();
+      else openDrawer();
     });
+
+    // Suivre un lien ferme le tiroir : sur un lien qui ramene a la page
+    // courante, il serait sinon reste ouvert par-dessus.
+    sidebar.addEventListener('click', (event) => {
+      if (event.target.closest('a[href], button')) closeDrawer(false);
+    });
+
+    petitEcran.addEventListener('change', () => {
+      // Elargir la fenetre rend la barre visible en place : le tiroir n'a plus
+      // lieu d'etre, et son voile resterait sur un ecran qui n'en veut plus.
+      if (!petitEcran.matches) closeDrawer(false);
+      ajusterInert();
+    });
+    ajusterInert();
+
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDrawer(); });
 
     const bindLogout = () => {
@@ -769,6 +901,8 @@
    * @param {HTMLInputElement} input
    * @param {(card:object)=>void} onPick
    */
+  let autocompleteSeq = 0;
+
   MM.autocomplete = function (input, onPick, { minChars = 2 } = {}) {
     const wrap = input.closest('.autocomplete') || input.parentElement;
     wrap.classList.add('autocomplete');
@@ -776,20 +910,37 @@
     let items = [];
     let cursor = -1;
 
+    // Le champ se declare comme une liste a completer : sans ces attributs, un
+    // lecteur d'ecran ne signale ni l'ouverture de la liste, ni la proposition
+    // en cours — le clavier la parcourt sans que rien ne soit annonce.
+    const listId = `mmAcList${(autocompleteSeq += 1)}`;
+    input.setAttribute('role', 'combobox');
+    input.setAttribute('aria-autocomplete', 'list');
+    input.setAttribute('aria-expanded', 'false');
+    input.setAttribute('aria-controls', listId);
+    // Une completion se valide a la main : la correction automatique du
+    // telephone reecrivait les noms de cartes anglais pendant la frappe.
+    if (!input.hasAttribute('autocapitalize')) input.setAttribute('autocapitalize', 'off');
+    if (!input.hasAttribute('autocorrect')) input.setAttribute('autocorrect', 'off');
+    if (!input.hasAttribute('spellcheck')) input.setAttribute('spellcheck', 'false');
+
     function close() {
       if (list) { list.remove(); list = null; }
       items = []; cursor = -1;
+      input.setAttribute('aria-expanded', 'false');
+      input.removeAttribute('aria-activedescendant');
     }
 
     function open(results) {
       close();
       if (!results.length) return;
       items = results;
-      list = node('<div class="autocomplete__list" role="listbox"></div>');
+      list = node(`<div class="autocomplete__list" role="listbox" id="${listId}"></div>`);
       results.forEach((card, index) => {
         const image = card.image_small || card.image_normal;
         const button = node(`
-          <button type="button" class="autocomplete__item" role="option" data-index="${index}">
+          <button type="button" class="autocomplete__item" role="option"
+                  id="${listId}o${index}" data-index="${index}" aria-selected="false">
             ${image ? `<img src="${esc(image)}" alt="" loading="lazy">` : ''}
             <span class="grow truncate">${esc(card.name || card.card_name)}</span>
             ${card.set_code ? `<span class="xs dim">${esc(String(card.set_code).toUpperCase())}</span>` : ''}
@@ -798,6 +949,7 @@
         list.appendChild(button);
       });
       wrap.appendChild(list);
+      input.setAttribute('aria-expanded', 'true');
     }
 
     function highlight(next) {
@@ -808,6 +960,9 @@
       options.forEach((option, index) =>
         option.setAttribute('aria-selected', index === cursor ? 'true' : 'false'));
       options[cursor].scrollIntoView({ block: 'nearest' });
+      // Le focus reste dans le champ : c'est cet attribut qui dit au lecteur
+      // d'ecran quelle proposition est sous le curseur.
+      input.setAttribute('aria-activedescendant', options[cursor].id);
     }
 
     const search = debounce(async (term) => {
