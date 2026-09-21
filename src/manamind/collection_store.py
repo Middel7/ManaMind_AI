@@ -53,14 +53,19 @@ _ENRICH_SQL = """
            ON pd.id = uc.printing_id AND pd.set_code NOT ILIKE 'sl%'
 
     -- Repli : impression illustrative, quand l'edition n'est pas connue —
-    -- ou quand celle qui est enregistree est un Secret Lair.
+    -- ou quand celle qui est enregistree est un Secret Lair, ou encore quand
+    -- elle n'a pas d'illustration. Ce dernier cas laissait la vignette vide
+    -- alors qu'une autre impression de la meme carte en portait une : le
+    -- catalogue connait des impressions sans image, et l'exemplaire possede
+    -- pointait justement l'une d'elles.
     LEFT JOIN LATERAL (
         SELECT p.id, p.scryfall_id, p.set_code, p.collector_number, p.rarity,
                p.image_small, p.image_normal, p.scryfall_uri, p.artist,
                p.cardmarket_id
         FROM scryfall_card_printings p
-        WHERE pd.id IS NULL
+        WHERE (pd.id IS NULL OR pd.image_normal IS NULL)
           AND p.card_id = uc.card_id AND p.lang = 'en'
+          AND p.image_normal IS NOT NULL
         -- Les Secret Lair passent en dernier plutot que d'etre exclues : une
         -- poignee de cartes n'existent que la, et resteraient sans visuel.
         ORDER BY (p.set_code NOT ILIKE 'sl%') DESC,
