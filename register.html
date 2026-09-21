@@ -38,16 +38,16 @@
     position: fixed; inset: 0; z-index: -2;
     background-image: url('/assets/anges-bg.webp');
     background-size: cover;
-    /* 30 % et non 50 % : sur un ecran large, l'illustration deborde en hauteur,
+    /* 20 % et non 50 % : sur un ecran large, l'illustration deborde en hauteur,
        et montrer davantage de son haut fait descendre le personnage dans le
        cadre — sa lance cessait d'etre coupee par le bord inferieur. */
-    background-position: center 30%;
-    /* Un flou juste suffisant pour que l'illustration ne dispute pas le texte :
-       au-dela, elle perdait le detail des armures et des cathedrales. */
-    filter: blur(1.2px) saturate(1.05);
+    background-position: center 20%;
+    /* Un demi-pixel : de quoi adoucir le grain sans rien retirer au detail des
+       armures et des cathedrales, qui font l'interet de cette illustration. */
+    filter: blur(0.5px) saturate(1.05);
     /* L'echelle compense le flou, qui laisse sinon un liistere clair sur les
        quatre bords. Elle suit le flou : moins de flou, moins d'echelle. */
-    transform: scale(1.02);
+    transform: scale(1.01);
   }
 
   /* Deux voiles superposes : un degrade vertical qui ancre le bas de l'ecran,
@@ -104,10 +104,14 @@
     font-family: var(--font-display);
     /* Entre 2,25 rem et 3,5 rem selon la largeur : le titre porte la page, et
        un --text-3xl fixe le laissait maigre sur un grand ecran. */
-    font-size: clamp(2.25rem, 3.4vw, 3.5rem);
-    line-height: 1.08;
+    /* Plafond abaisse et largeur elargie : le titre compte desormais deux
+       fois plus de signes, et la borne precedente lui imposait cinq lignes. */
+    font-size: clamp(1.9rem, 2.6vw, 2.6rem);
+    line-height: 1.12;
     letter-spacing: -0.01em;
-    max-width: 14ch;
+    /* 23 signes par ligne : en dessous, le titre tombait sur quatre lignes dont
+       une derniere reduite a un mot seul. */
+    max-width: 23ch;
   }
   /* Le dernier mot reprend l'or de l'interface : un seul point d'accent, la ou
      l'oeil arrive en fin de phrase. */
