@@ -1006,6 +1006,13 @@ def suggest_from_collection_for_user(user_id: int, top_n: int = 40, commander_fi
     if commander_filter:
         decks_cfg = [d for d in all_decks
                      if _normalize(d.get("commander", "")) == _normalize(commander_filter)]
+        # Aucun deck ne porte ce commandant : c'est le cas normal de l'ecran de
+        # creation, ou l'on choisit un commandant qu'on ne joue pas encore. Sans
+        # cette ligne, la boucle ci-dessous ne tournait sur rien et l'ecran
+        # annoncait « aucune carte de votre collection ne ressort », alors que
+        # la collection et les statistiques du commandant etaient la.
+        if not decks_cfg:
+            decks_cfg = [{"commander": commander_filter}]
 
     # Cartes disponibles : celles de la collection non deja engagees dans un deck...
     available_collection: dict[str, tuple[int, str]] = {
