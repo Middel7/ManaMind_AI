@@ -295,24 +295,25 @@ button.nav__item { width: 100%; }
 }
 .version-tag:hover { opacity: 1; color: var(--text-1); }
 
-/* Lien de soutien, ancre a gauche du numero de version. Il partage son coin
-   mais pas son insistance : discret au repos, il ne prend l'or qu'au survol.
-   Le decalage de 58 px laisse passer la pastille de version, large d'une
-   quarantaine de pixels. */
+/* Lien de soutien, ancre en bas a droite de la fenetre et fixe : il suit le
+   defilement sans jamais disputer le haut de page au titre ni au numero de
+   version. */
 .support-tag {
-  position: fixed; top: 6px; right: 58px;
+  position: fixed; bottom: var(--sp-5); right: var(--sp-5);
   z-index: var(--z-sticky);
   display: inline-flex; align-items: center; gap: var(--sp-2);
   padding: 7px 14px;
   border-radius: var(--r-full);
-  /* Le lavis dore et le filet accent, au lieu du gris sur fond sombre : la
-     premiere version se lisait a peine, noir sur noir. */
-  background: var(--accent-wash);
+  /* Fond opaque, et non le lavis dore d'avant : pose sur une grille de cartes,
+     un fond translucide laissait passer les illustrations et le libelle
+     devenait illisible. L'or reste sur le filet et sur le texte. */
+  background: var(--bg-raised);
   border: 1px solid var(--line-accent);
   color: var(--accent-bright);
   font-size: var(--text-sm);
   font-weight: 500;
   text-decoration: none;
+  box-shadow: var(--shadow-md);
   transition: background var(--dur) var(--ease), color var(--dur) var(--ease),
               border-color var(--dur) var(--ease);
 }
@@ -323,11 +324,17 @@ button.nav__item { width: 100%; }
 }
 .support-tag svg { width: 16px; height: 16px; }
 
-/* Sous 720 px, l'icone suffit : le libelle disputerait la ligne au burger et
-   au numero de version. Le nom reste porte par aria-label. */
+/* Sous 860 px, la barre d'onglets occupe le bas de l'ecran : le lien se pose
+   juste au-dessus, sinon il recouvrirait la navigation. */
+@media (max-width: 860px) {
+  .support-tag { bottom: calc(var(--bottombar-h) + var(--sp-3)); }
+}
+
+/* Sous 720 px, l'icone suffit : le libelle couvrirait une bonne part de la
+   largeur, et donc du contenu. Le nom reste porte par aria-label. */
 @media (max-width: 720px) {
   .support-tag span { display: none; }
-  .support-tag { padding: 5px 7px; }
+  .support-tag { padding: 7px 9px; }
 }
 
 /* La barre du haut ne porte plus que le burger : sur grand ecran, ou la sidebar
