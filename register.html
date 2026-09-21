@@ -106,12 +106,10 @@
        un --text-3xl fixe le laissait maigre sur un grand ecran. */
     /* Plafond abaisse et largeur elargie : le titre compte desormais deux
        fois plus de signes, et la borne precedente lui imposait cinq lignes. */
-    font-size: clamp(1.9rem, 2.6vw, 2.6rem);
-    line-height: 1.12;
+    font-size: clamp(2.1rem, 3vw, 3rem);
+    line-height: 1.1;
     letter-spacing: -0.01em;
-    /* 23 signes par ligne : en dessous, le titre tombait sur quatre lignes dont
-       une derniere reduite a un mot seul. */
-    max-width: 23ch;
+    max-width: 17ch;
   }
   /* Le dernier mot reprend l'or de l'interface : un seul point d'accent, la ou
      l'oeil arrive en fin de phrase. */
@@ -124,7 +122,22 @@
      ombres portees tiennent la lisibilite quand le texte passe sur une zone
      claire de l'image. Valeurs nues, propres a ce cas — aucun jeton ne decrit
      une ombre de texte. */
-  .auth__title, .auth__point p { text-shadow: 0 2px 12px rgba(0, 0, 0, 0.55); }
+  .auth__title, .auth__lead, .auth__point p {
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.55);
+  }
+
+
+  /* L'accroche prolonge le titre : elle porte la phrase que celui-ci ne dit
+     plus depuis qu'il se contente de nommer l'outil. Un cran au-dessus du
+     corps de texte, pour qu'on la lise avant les trois arguments. */
+  .auth__lead {
+    margin: 0;
+    font-size: var(--text-lg);
+    line-height: var(--leading-normal);
+    color: var(--text-2);
+    max-width: 42ch;
+  }
+  .auth__lead em { font-style: normal; color: var(--accent); }
 
   .auth__points { display: flex; flex-direction: column; gap: var(--sp-4); }
 

@@ -106,12 +106,10 @@
        un --text-3xl fixe le laissait maigre sur un grand ecran. */
     /* Plafond abaisse et largeur elargie : le titre compte desormais deux
        fois plus de signes, et la borne precedente lui imposait cinq lignes. */
-    font-size: clamp(1.9rem, 2.6vw, 2.6rem);
-    line-height: 1.12;
+    font-size: clamp(2.1rem, 3vw, 3rem);
+    line-height: 1.1;
     letter-spacing: -0.01em;
-    /* 23 signes par ligne : en dessous, le titre tombait sur quatre lignes dont
-       une derniere reduite a un mot seul. */
-    max-width: 23ch;
+    max-width: 17ch;
   }
   /* Le dernier mot reprend l'or de l'interface : un seul point d'accent, la ou
      l'oeil arrive en fin de phrase. */
@@ -124,7 +122,22 @@
      ombres portees tiennent la lisibilite quand le texte passe sur une zone
      claire de l'image. Valeurs nues, propres a ce cas — aucun jeton ne decrit
      une ombre de texte. */
-  .auth__title, .auth__point p { text-shadow: 0 2px 12px rgba(0, 0, 0, 0.55); }
+  .auth__title, .auth__lead, .auth__point p {
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.55);
+  }
+
+
+  /* L'accroche prolonge le titre : elle porte la phrase que celui-ci ne dit
+     plus depuis qu'il se contente de nommer l'outil. Un cran au-dessus du
+     corps de texte, pour qu'on la lise avant les trois arguments. */
+  .auth__lead {
+    margin: 0;
+    font-size: var(--text-lg);
+    line-height: var(--leading-normal);
+    color: var(--text-2);
+    max-width: 42ch;
+  }
+  .auth__lead em { font-style: normal; color: var(--accent); }
 
   .auth__points { display: flex; flex-direction: column; gap: var(--sp-4); }
 
@@ -249,10 +262,12 @@
   <div class="auth__inner">
 
     <div class="auth__pitch">
-      <h1 class="auth__title">
-        Votre gestionnaire de collection MTG, pour <em>optimiser</em>
-        l'utilisation de vos&nbsp;cartes.
-      </h1>
+      <h1 class="auth__title">Votre gestionnaire de collection MTG</h1>
+
+      <p class="auth__lead">
+        Chaque carte que vous possédez mise au service de vos decks, pour
+        <em>jouer mieux</em> sans rien acheter de plus.
+      </p>
 
       <div class="auth__points">
         <div class="auth__point">
@@ -262,13 +277,13 @@
         </div>
         <div class="auth__point">
           <span data-icon="sparkle"></span>
-          <p class="small muted">Sur chacune de vos listes, il désigne les cartes de
-            vos boîtes qui l'amélioreraient.</p>
+          <p class="small muted">Les cartes à ajouter à une liste, et celles à en
+            sortir.</p>
         </div>
         <div class="auth__point">
           <span data-icon="crown"></span>
-          <p class="small muted">Il signale celles qui dorment, et les jetons à
-            prévoir avant la partie.</p>
+          <p class="small muted">Les cartes que vous n'avez jamais jouées, et les
+            decks où elles trouveraient leur place.</p>
         </div>
       </div>
     </div>
