@@ -38,13 +38,16 @@
     position: fixed; inset: 0; z-index: -2;
     background-image: url('/assets/anges-bg.webp');
     background-size: cover;
-    /* Le sujet occupe toute la hauteur de l'illustration : un cadrage centre le
-       garde entier, la ou un cadrage haut lui coupait les pieds. */
-    background-position: center center;
-    filter: blur(3px) saturate(1.05);
+    /* 30 % et non 50 % : sur un ecran large, l'illustration deborde en hauteur,
+       et montrer davantage de son haut fait descendre le personnage dans le
+       cadre — sa lance cessait d'etre coupee par le bord inferieur. */
+    background-position: center 30%;
+    /* Un flou juste suffisant pour que l'illustration ne dispute pas le texte :
+       au-dela, elle perdait le detail des armures et des cathedrales. */
+    filter: blur(1.2px) saturate(1.05);
     /* L'echelle compense le flou, qui laisse sinon un liistere clair sur les
-       quatre bords. */
-    transform: scale(1.04);
+       quatre bords. Elle suit le flou : moins de flou, moins d'echelle. */
+    transform: scale(1.02);
   }
 
   /* Deux voiles superposes : un degrade vertical qui ancre le bas de l'ecran,
