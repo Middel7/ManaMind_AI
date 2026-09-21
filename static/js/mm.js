@@ -555,9 +555,9 @@
       document.body.appendChild(node(`
         <a class="support-tag" href="https://ko-fi.com/middel7"
            target="_blank" rel="noopener noreferrer"
-           aria-label="Offrir un café à l'auteur de ManaMind"
-           title="Offrir un café à l'auteur de ManaMind"
-           >${MM.icons.coin}<span>Offrir un café</span></a>`));
+           aria-label="Support the project — buy me a coffee"
+           title="Support the project — buy me a coffee"
+           >${MM.icons.coin}<span>Support the project &mdash; buy me a coffee</span></a>`));
     }
 
     const bottombar = node(`<nav class="bottombar" aria-label="Navigation">${renderTabs(nav)}</nav>`);
