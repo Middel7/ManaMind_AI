@@ -266,6 +266,33 @@
   .strength[data-level="1"] span:nth-child(-n+1) { background: var(--danger); }
   .strength[data-level="2"] span:nth-child(-n+2) { background: var(--accent); }
   .strength[data-level="3"] span:nth-child(-n+3) { background: var(--ok); }
+
+  /* ── Montrer le mot de passe ────────────────────────────────────────────── */
+
+  /* Le bouton se pose DANS le champ : un bouton a cote decalerait l'alignement
+     des deux champs, et l'oeil doit designer sans ambiguite le mot de passe. */
+  .auth__secret { position: relative; }
+  .auth__secret .input { padding-right: 42px; }
+
+  .auth__eye {
+    position: absolute;
+    /* Cale sur la moitie du champ, sous son etiquette : le champ mesure 38 px
+       de haut et l'etiquette occupe le dessus du bloc. */
+    right: 6px; bottom: 5px;
+    display: grid; place-items: center;
+    width: 30px; height: 30px;
+    border: 0; border-radius: var(--r-sm);
+    background: transparent;
+    color: var(--text-3);
+    cursor: pointer;
+    transition: color var(--dur-fast) var(--ease),
+                background var(--dur-fast) var(--ease);
+  }
+  .auth__eye:hover { color: var(--text-2); background: var(--surface-2); }
+  .auth__eye:focus-visible { outline: 2px solid var(--line-accent); outline-offset: 1px; }
+  .auth__eye svg { width: 17px; height: 17px; }
+  /* Mot de passe visible : l'oeil prend l'or, comme tout ce qui est actif. */
+  .auth__eye[aria-pressed="true"] { color: var(--accent); }
 </style>
 </head>
 <body>
@@ -355,6 +382,34 @@
 (() => {
   MM.el('#mark').innerHTML = MM.icons.sparkle;
   MM.el('#noInviteIcon').innerHTML = MM.icons.shield;
+
+  // Chaque champ de mot de passe recoit un oeil : on tape sans voir, et une
+  // faute de frappe ne se decouvre qu'au refus de la connexion. Le bouton
+  // bascule le type du champ et porte son etat dans aria-pressed, pour que les
+  // lecteurs d'ecran l'annoncent aussi.
+  MM.els('input[type="password"]').forEach((champ) => {
+    champ.parentElement.classList.add('auth__secret');
+    const oeil = document.createElement('button');
+    oeil.type = 'button';
+    oeil.className = 'auth__eye';
+    oeil.setAttribute('aria-pressed', 'false');
+    oeil.setAttribute('aria-label', 'Afficher le mot de passe');
+    oeil.title = 'Afficher le mot de passe';
+    oeil.innerHTML = MM.icons.eye;
+    oeil.addEventListener('click', () => {
+      const visible = champ.type === 'text';
+      champ.type = visible ? 'password' : 'text';
+      oeil.setAttribute('aria-pressed', String(!visible));
+      const texte = visible ? 'Afficher le mot de passe' : 'Masquer le mot de passe';
+      oeil.setAttribute('aria-label', texte);
+      oeil.title = texte;
+      // Le curseur revient dans le champ, a la fin de la saisie : on continue
+      // de taper sans rattraper la souris.
+      champ.focus();
+      champ.setSelectionRange(champ.value.length, champ.value.length);
+    });
+    champ.insertAdjacentElement('afterend', oeil);
+  });
 
   const token = new URLSearchParams(location.search).get('token') || '';
   if (!token) {

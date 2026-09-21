@@ -569,6 +569,51 @@ def _load_deck_usage_for_user(user_id: int) -> dict[str, int]:
     return {r.cn: r.cnt for r in rows}
 
 
+def _collection_par_mode(user_id: int, mode: str) -> dict[str, int]:
+    """Les cartes a considerer, selon que l'on compte tout ou seulement le libre.
+
+    Partagee par la liste des commandants et par le detail d'un commandant :
+    les deux ecrans affichaient des comptes differents pour la meme collection
+    — sept cartes et 50 EUR d'un cote, trente-sept et 273 EUR de l'autre —
+    parce que le detail ignorait le mode et lisait user_collection seule.
+
+    En mode « available », une carte engagee dans un deck est ecartee
+    entierement, meme possedee en plusieurs exemplaires : l'ecran promet « les
+    cartes qui ne sont dans aucun de vos decks », et un deuxieme exemplaire
+    d'une carte deja jouee ne fonde pas un nouveau deck.
+
+    Les communes et peu communes des extensions cochees comme ouvertes
+    comptent comme disponibles : elles sont a portee de main sans avoir ete
+    saisies une par une. Zero exemplaire connu, donc elles ne priment jamais
+    sur une carte reellement en collection.
+    """
+    from sqlalchemy import text as _t
+
+    from manamind.collection_advisor import load_opened_set_cards
+    from manamind.db.engine import SessionLocal as _SL
+
+    deck_usage = _load_deck_usage_for_user(user_id) if mode == "available" else {}
+
+    with _SL() as sess:
+        lignes = sess.execute(_t("""
+            SELECT LOWER(TRIM(card_name)) AS name, SUM(quantity) AS quantity
+            FROM user_collection WHERE user_id = :uid
+            GROUP BY 1
+        """), {"uid": user_id}).fetchall()
+
+    coll: dict[str, int] = {}
+    for ligne in lignes:
+        if mode != "available" or deck_usage.get(ligne.name, 0) == 0:
+            coll[ligne.name] = ligne.quantity
+
+    for ouverte in load_opened_set_cards(user_id).values():
+        cle = ouverte.strip().lower()
+        if cle not in coll and deck_usage.get(cle, 0) == 0:
+            coll[cle] = 1
+
+    return coll
+
+
 @router.get("/api/collection-commanders")
 def api_collection_commanders(
     request: Request,
@@ -594,41 +639,9 @@ def api_collection_commanders(
         SessionLocal = None
         _DB_AVAILABLE = False
 
-    deck_usage = _load_deck_usage_for_user(user["id"]) if mode == "available" else {}
+    coll = _collection_par_mode(user["id"], mode)
 
     with SessionLocal() as s:
-        # Agréger par nom : une même carte peut exister en plusieurs exemplaires
-        # (éditions, finitions) sur des lignes distinctes.
-        collection_rows = s.execute(text("""
-            SELECT LOWER(TRIM(card_name)) AS name, SUM(quantity) AS quantity
-            FROM user_collection WHERE user_id = :uid
-            GROUP BY 1
-        """), {"uid": user["id"]}).fetchall()
-
-        # Construire la collection selon le mode
-        coll: dict[str, int] = {}
-        for r in collection_rows:
-            name_lower = r.name
-            if mode == "available":
-                # Une carte engagee dans un deck est ecartee entierement, meme
-                # possedee en plusieurs exemplaires : l'ecran promet « les cartes
-                # qui ne sont dans aucun de vos decks », et un deuxieme
-                # exemplaire d'une carte deja jouee ne fonde pas un nouveau deck.
-                if deck_usage.get(name_lower, 0) == 0:
-                    coll[name_lower] = r.quantity
-            else:
-                coll[name_lower] = r.quantity
-
-        # Les communes et peu communes des extensions cochees comme ouvertes
-        # comptent comme disponibles : elles sont a portee de main sans avoir
-        # ete saisies une par une. Zero exemplaire connu, donc elles ne
-        # priment jamais sur une carte reellement en collection.
-        from manamind.collection_advisor import load_opened_set_cards
-        for opened_name in load_opened_set_cards(user["id"]).values():
-            key = opened_name.strip().lower()
-            if key not in coll and deck_usage.get(key, 0) == 0:
-                coll[key] = 1
-
         if not coll:
             return _json_response({"commanders": []})
 
@@ -824,6 +837,7 @@ def _commander_images(session, names: list[str], user_id: int) -> dict[str, list
 def api_commander_build(
     commander: str,
     request: Request,
+    mode: str = Query(default="available"),  # "available" | "all"
     staple_threshold: float = Query(default=40.0, ge=0.0, le=100.0),
 ) -> Response:
     """Detail d'un commandant a construire : cartes possedees et a acheter.
@@ -841,54 +855,68 @@ def api_commander_build(
     from sqlalchemy import text
     from manamind.db.engine import SessionLocal
 
+    # La meme collection que la liste, sous le meme mode : sans cela, le detail
+    # annoncait trente-sept cartes la ou la vignette d'ou l'on venait en
+    # affichait sept.
+    collection = _collection_par_mode(user["id"], mode)
+
     with SessionLocal() as s:
-        collection = {
-            r.name: int(r.quantity)
-            for r in s.execute(text("""
-                SELECT LOWER(TRIM(card_name)) AS name, SUM(quantity) AS quantity
-                FROM user_collection WHERE user_id = :uid
-                GROUP BY 1
-            """), {"uid": user["id"]}).fetchall()
-        }
 
         # deck_stat_commander fait 3,5 M lignes : la comparaison doit rester
         # nue pour que ix_deck_stat_commander_commander serve. Le nom vient de
         # nos propres donnees, donc l'egalite exacte suffit presque toujours ;
         # le repli couvre une URL saisie a la main.
+        # Classer d'abord, ecarter ensuite : c'est l'ordre que suit la liste
+        # dont cette page est le detail. Filtrer avant de limiter faisait
+        # remonter des cartes de rang 101 et au-dela, absentes de la liste, et
+        # les deux ecrans annoncaient des comptes differents.
         top = s.execute(text("""
-            SELECT dsc.card_name, dsc.inclusion_rate
-            FROM deck_stat_commander dsc
-            WHERE dsc.commander = :cmd
-              AND COALESCE((
-                    SELECT g.global_frequency FROM deck_stat_global g
-                    WHERE LOWER(BTRIM(g.card_name)) = LOWER(BTRIM(dsc.card_name))
-                    LIMIT 1
-                  ), 0) <= :threshold
-              AND NOT EXISTS (
-                    SELECT 1 FROM scryfall_cards sc
-                    WHERE sc.normalized_name = mm_normalize_name(dsc.card_name)
-                      AND sc.type_line ILIKE 'Basic Land%'
-                  )
-            ORDER BY dsc.inclusion_rate DESC, dsc.card_name
-            LIMIT 100
-        """), {"cmd": commander, "threshold": staple_threshold}).fetchall()
-        if not top:
-            top = s.execute(text("""
+            WITH top100 AS (
                 SELECT dsc.card_name, dsc.inclusion_rate
                 FROM deck_stat_commander dsc
-                WHERE LOWER(TRIM(dsc.commander)) = LOWER(TRIM(:cmd))
-              AND COALESCE((
+                WHERE dsc.commander = :cmd
+                ORDER BY dsc.inclusion_rate DESC, dsc.card_name
+                LIMIT 100
+            )
+            SELECT t.card_name, t.inclusion_rate
+            FROM top100 t
+            WHERE COALESCE((
                     SELECT g.global_frequency FROM deck_stat_global g
-                    WHERE LOWER(BTRIM(g.card_name)) = LOWER(BTRIM(dsc.card_name))
+                    WHERE LOWER(BTRIM(g.card_name)) = LOWER(BTRIM(t.card_name))
                     LIMIT 1
                   ), 0) <= :threshold
               AND NOT EXISTS (
                     SELECT 1 FROM scryfall_cards sc
-                    WHERE sc.normalized_name = mm_normalize_name(dsc.card_name)
+                    WHERE sc.normalized_name = mm_normalize_name(t.card_name)
                       AND sc.type_line ILIKE 'Basic Land%'
                   )
-                ORDER BY dsc.inclusion_rate DESC, dsc.card_name
-                LIMIT 100
+            ORDER BY t.inclusion_rate DESC, t.card_name
+        """), {"cmd": commander, "threshold": staple_threshold}).fetchall()
+        if not top:
+            # Meme ordre que ci-dessus : classer, puis ecarter. C'est ce
+            # repli qui sert en pratique, la comparaison exacte echouant des
+            # que la casse ou les espaces different d'un caractere.
+            top = s.execute(text("""
+                WITH top100 AS (
+                    SELECT dsc.card_name, dsc.inclusion_rate
+                    FROM deck_stat_commander dsc
+                    WHERE LOWER(TRIM(dsc.commander)) = LOWER(TRIM(:cmd))
+                    ORDER BY dsc.inclusion_rate DESC, dsc.card_name
+                    LIMIT 100
+                )
+                SELECT t.card_name, t.inclusion_rate
+                FROM top100 t
+                WHERE COALESCE((
+                        SELECT g.global_frequency FROM deck_stat_global g
+                        WHERE LOWER(BTRIM(g.card_name)) = LOWER(BTRIM(t.card_name))
+                        LIMIT 1
+                      ), 0) <= :threshold
+                  AND NOT EXISTS (
+                        SELECT 1 FROM scryfall_cards sc
+                        WHERE sc.normalized_name = mm_normalize_name(t.card_name)
+                          AND sc.type_line ILIKE 'Basic Land%'
+                      )
+                ORDER BY t.inclusion_rate DESC, t.card_name
             """), {"cmd": commander, "threshold": staple_threshold}).fetchall()
 
         names = [r.card_name for r in top]
@@ -934,7 +962,7 @@ def api_commander_build(
             "low_price": float(info.low_price or 0) if info and info.low_price else 0.0,
             "image_url": info.image_url if info else None,
         }
-        qty = collection.get((r.card_name or "").strip().lower(), 0)
+        qty = int(collection.get((r.card_name or "").strip().lower(), 0))
         if qty:
             owned.append({**entry, "qty": qty})
         else:
@@ -942,6 +970,7 @@ def api_commander_build(
 
     return _json_response({
         "commander": commander,
+        "mode": mode,
         "commander_image": cmd_images[0] if cmd_images else None,
         "commander_images": cmd_images,
         "owned": owned,
