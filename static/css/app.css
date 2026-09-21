@@ -10,7 +10,12 @@ html { -webkit-text-size-adjust: 100%; }
 
 body {
   margin: 0;
+  /* 100vh vaut la fenetre barres d'adresse comprises : sur telephone, un pied
+     de page cale dessus se retrouve sous la barre du navigateur. 100dvh suit
+     la hauteur reellement visible ; la ligne 100vh reste pour les navigateurs
+     qui ignorent dvh. */
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-ui);
@@ -88,6 +93,7 @@ table { border-collapse: collapse; width: 100%; }
   display: grid;
   grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .main {
@@ -126,6 +132,7 @@ table { border-collapse: collapse; width: 100%; }
   position: sticky;
   top: 0;
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   gap: var(--sp-2);
@@ -331,17 +338,21 @@ button.nav__item { width: 100%; }
 }
 .support-tag svg { width: 16px; height: 16px; }
 
-/* Sous 860 px, la barre d'onglets occupe le bas de l'ecran : le lien se pose
-   juste au-dessus, sinon il recouvrirait la navigation. */
+/* Sous 860 px, ces deux pastilles cessent de flotter. Posees sur une grille de
+   cartes, elles masquaient la derniere vignette et les onglets d'une fiche de
+   deck ; l'ecran est trop etroit pour qu'on puisse les contourner du pouce, et
+   remonter au-dessus de la barre d'onglets ne fait que deplacer le probleme.
+   Elles rejoignent le fil de la page, lues une fois le contenu parcouru. */
 @media (max-width: 860px) {
-  .dock { bottom: calc(var(--bottombar-h) + var(--sp-3)); }
-}
-
-/* Sous 720 px, l'icone suffit : le libelle couvrirait une bonne part de la
-   largeur, et donc du contenu. Le nom reste porte par aria-label. */
-@media (max-width: 720px) {
-  .support-tag span { display: none; }
-  .support-tag { padding: 7px 9px; }
+  .dock {
+    position: static;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: var(--sp-6) var(--sp-4) calc(var(--bottombar-h) + var(--sp-6));
+  }
+  /* Dans le fil, la ligne entiere leur revient : le libelle peut donc revenir,
+     et se couper s'il le faut plutot que de pousser la page. */
+  .support-tag { white-space: normal; text-align: center; }
 }
 
 /* La barre du haut ne porte plus que le burger : sur grand ecran, ou la sidebar
@@ -1367,6 +1378,7 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
 .modal__box {
   width: min(560px, 100%);
   max-height: min(86vh, 760px);
+  max-height: min(86dvh, 760px);
   display: flex;
   flex-direction: column;
   border-radius: var(--r-xl);
@@ -1386,9 +1398,22 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
   gap: var(--sp-4);
   padding: var(--sp-5) var(--sp-5) var(--sp-4);
   border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
 }
 
-.modal__body { padding: var(--sp-5); overflow-y: auto; flex: 1; }
+/* Le titre d'une carte tient sur plusieurs lignes plutot que de pousser la
+   croix de fermeture hors de la boite. */
+.modal__head .h3 { min-width: 0; }
+
+.modal__body {
+  padding: var(--sp-5);
+  overflow-y: auto;
+  flex: 1;
+  /* Le geste de defilement s'arrete a la modale : sans cela, arrive en bas de
+     la liste, il continue sur la page qui se trouve derriere. */
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
 
 .modal__foot {
   display: flex;
@@ -1396,6 +1421,8 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
   gap: var(--sp-3);
   padding: var(--sp-4) var(--sp-5);
   border-top: 1px solid var(--line);
+  flex-shrink: 0;
+  background: var(--bg-raised);
 }
 
 @keyframes fade { from { opacity: 0; } }
@@ -1644,7 +1671,16 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
 .grow    { flex: 1; min-width: 0; }
 .center  { display: grid; place-items: center; }
 .hidden  { display: none !important; }
-.scroll-x { overflow-x: auto; }
+
+/* Un defilement lateral assume, borne a son conteneur : arrive au bout, le
+   geste ne se propage pas a la page — sur telephone il la faisait reculer dans
+   l'historique. C'est le seul defilement horizontal tolere du projet, et il
+   porte toujours sur un bloc nomme, jamais sur la page entiere. */
+.scroll-x {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
 
 .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--sp-4); }
 .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--sp-4); }
@@ -1747,23 +1783,146 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
   .hero__title { font-size: var(--text-2xl); }
   .hero__body { padding: var(--sp-6) var(--sp-5) var(--sp-5); }
   .stats { grid-template-columns: repeat(2, 1fr); }
-  .card-grid { --card-min: 124px; gap: var(--sp-3); }
+  /* 124 px donnait trois colonnes sur un telephone : le titre des cartes y
+     etait coupe des le deuxieme mot, et « Acheter » et « Vendre » tombaient a
+     56 px de large, sous la cible du pouce. Deux colonnes montrent moins de
+     cartes d'un coup, mais chacune se lit et s'actionne. Sur tablette, la
+     meme valeur en laisse quatre. */
+  .card-grid { --card-min: 150px; gap: var(--sp-3); }
   .card-grid--sm { --card-min: 96px; }
   .toasts { left: var(--sp-4); right: var(--sp-4); bottom: calc(var(--bottombar-h) + var(--sp-4)); }
   .toast { max-width: none; }
   .modal { align-items: flex-end; padding: 0; }
-  .modal__box { width: 100%; max-height: 92vh; border-radius: var(--r-xl) var(--r-xl) 0 0; }
+  .modal__box {
+    width: 100%;
+    max-height: 92vh;
+    max-height: 92dvh;
+    border-radius: var(--r-xl) var(--r-xl) 0 0;
+  }
+  /* Le clavier virtuel mange le bas de l'ecran, et l'encoche le reste : sans
+     cette reserve, « Envoyer » se retrouvait sous l'un ou sous l'autre. Le pied
+     reste colle au bas de la boite, le corps seul defile. */
+  .modal__foot {
+    padding-bottom: calc(var(--sp-4) + env(safe-area-inset-bottom, 0px));
+  }
+  /* Deux boutons cote a cote tiennent a 320 px, a condition de se partager la
+     largeur plutot que de se serrer a droite. */
+  .modal__foot .btn { flex: 1; }
   .row { padding: var(--sp-3) var(--sp-4); }
   .panel__body { padding: var(--sp-4); }
+  /* La liste des editions defilait dans la modale, qui defile deja : deux
+     ascenseurs imbriques sur un ecran tactile, dont l'interieur capture le
+     geste. Ici, seule la modale defile. */
+  .editions { max-height: none; overflow-y: visible; padding-right: 0; }
 }
 
 @media (max-width: 420px) {
   .stats { grid-template-columns: 1fr 1fr; }
-  .card-grid { --card-min: 108px; }
+  /* Assez bas pour que 320 px garde deux colonnes : a 150 px, la grille
+     retombait a une seule et la page devenait interminable. */
+  .card-grid { --card-min: 132px; }
   .hero__title { font-size: var(--text-xl); }
 }
 
+/* ═══ Au doigt ═══════════════════════════════════════════════════════════ */
+
+/* Tout ce qui suit ne concerne que les pointeurs grossiers — doigt, stylet.
+   La densite de l'interface a la souris ne change pas : c'est une largeur de
+   fenetre qui dit la place disponible, pas la facon dont on designe. Un
+   telephone tenu en paysage a 844 px reclame les memes cibles qu'a 390.
+
+   Le mot d'ordre : --tap en hauteur partout ou l'on appuie, et jamais un
+   agrandissement qui casserait la composition — la ou une pastille doit rester
+   petite, c'est sa zone sensible qui grandit, pas son dessin. */
+
+@media (pointer: coarse) {
+
+  /* ── Boutons ──────────────────────────────────────────────────────────── */
+
+  .btn { min-height: var(--tap); padding-inline: 18px; }
+  /* « Acheter », « Vendre », « Modifier » : minuscules sous la vignette, ils
+     restent visuellement discrets mais deviennent atteignables. */
+  .btn--sm { min-height: var(--tap); padding-inline: 14px; }
+  .btn--icon,
+  .btn--icon.btn--sm { width: var(--tap); height: var(--tap); padding: 10px; }
+  .btn--icon svg { width: 20px; height: 20px; }
+
+  /* Un chip de filtre se vise aussi mal qu'un bouton : meme traitement. */
+  .chip { min-height: var(--tap); padding-inline: 14px; }
+
+  /* ── Navigation ───────────────────────────────────────────────────────── */
+
+  /* Dans le tiroir, les entrees se touchent a 36 px de haut : on en ouvrait
+     une pour l'autre. */
+  .nav__item { min-height: var(--tap); }
+  .user-chip { min-height: var(--tap); }
+
+  /* ── Reglages de quantite ─────────────────────────────────────────────── */
+
+  /* Le « + » et le « − » d'une vignette sont les gestes les plus repetes de
+     l'application : ce sont eux qui meritent le plus de place. */
+  .stepper button { width: var(--tap); height: var(--tap); font-size: var(--text-lg); }
+  .stepper__value { min-width: 34px; font-size: var(--text-sm); }
+  /* Le reglage occupe desormais la moitie de la vignette : « en collection »
+     passe dessous plutot que de se casser en trois lignes dans les 40 px qui
+     lui restaient a droite. */
+  .mtg-card__ops { flex-wrap: wrap; }
+
+  /* ── Formulaires ──────────────────────────────────────────────────────── */
+
+  /* 16 px et pas moins : en dessous, Safari sur iOS zoome sur le champ des
+     qu'il prend le focus, et la page reste agrandie une fois la saisie finie. */
+  .input, .select, .textarea {
+    font-size: 16px;
+    min-height: var(--tap);
+  }
+  .textarea { min-height: 120px; }
+  .btn--lg { min-height: 52px; }
+
+  /* La case a cocher est petite par nature ; c'est son etiquette entiere qui
+     recoit l'appui. */
+  .switch { min-height: var(--tap); }
+
+  /* ── Listes deroulantes ───────────────────────────────────────────────── */
+
+  .autocomplete__item { min-height: var(--tap); }
+  .autocomplete__list { max-height: 50dvh; overscroll-behavior: contain; }
+
+  /* ── Pastilles flottantes ─────────────────────────────────────────────── */
+
+  .support-tag { min-height: var(--tap); padding-inline: 16px; }
+
+  /* Le numero de version doit rester ce petit reperage discret du coin : le
+     grossir en ferait un element de l'interface, ce qu'il n'est pas. Seule sa
+     zone sensible s'etend, par un calque invisible autour de lui — 12 px de
+     debord de chaque cote, soit 45 px de haut pour une pastille de 21. */
+  .version-tag::after {
+    content: "";
+    position: absolute;
+    inset: -12px;
+  }
+
+  /* ── Lignes cliquables ────────────────────────────────────────────────── */
+
+  .row { min-height: var(--tap); }
+
+  /* Deux des chiffres du bandeau d'accueil menent a la collection filtree. Ils
+     se donnent la meme hauteur que les autres pour que la ligne reste droite —
+     les aligner sur la ligne de base les aurait decales entre eux. */
+  .hero__stats { align-items: center; }
+  .hero__stat { min-height: var(--tap); align-items: center; }
+}
+
+/* Le survol n'existe pas au doigt : tout ce que le projet ne montre qu'au
+   survol doit se montrer d'emblee, sinon la fonction disparait. Les pages qui
+   en ont ajoutent leur propre regle ; celles du socle sont ici. */
+@media (hover: none) {
+  /* Le soulevement d'une vignette au survol restait « colle » apres un appui
+     sur les navigateurs tactiles, la carte gardant son decalage. */
+  .mtg-card:hover { transform: none; }
+}
+
 @media print {
-  .sidebar, .bottombar, .topbar, .toasts { display: none !important; }
+  .sidebar, .bottombar, .topbar, .toasts, .dock { display: none !important; }
   body { background: #fff; color: #000; }
 }

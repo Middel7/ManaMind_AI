@@ -30,6 +30,14 @@
      alourdissait une liste ou la donnee compte plus que l'action. */
   .cmd-row__go { opacity: 0; flex-shrink: 0; color: var(--accent);
     transition: opacity var(--dur) var(--ease); }
+  /* Au clavier, la ligne se signale comme au survol. */
+  a.cmd-row:focus-visible .cmd-row__go { opacity: 1; }
+  /* Sans survol, une fleche qui ne parait jamais ne dit plus rien : sur
+     telephone, rien ne distinguait une ligne qui mene a un deck d'une ligne
+     inerte. Elle s'affiche alors d'emblee, en retrait. */
+  @media (hover: none) {
+    a.cmd-row .cmd-row__go { opacity: 0.55; }
+  }
   .cmd-row__thumb { width: 48px; aspect-ratio: var(--card-ratio); object-fit: cover;
     border-radius: 4px; background: var(--surface-2); flex-shrink: 0; }
   .cmd-row__bar { width: 120px; flex-shrink: 0; }

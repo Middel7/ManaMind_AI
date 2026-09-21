@@ -17,10 +17,29 @@
   .cmd-bar { display: flex; gap: var(--sp-4); align-items: center; flex-wrap: wrap; }
   .cmd-bar__art { width: 76px; border-radius: 4.7% / 3.5%; box-shadow: var(--shadow-card); }
 
+  /* Les deux colonnes de la construction : la liste du deck a gauche, les
+     cartes proposees a droite. La colonne de gauche etait posee a
+     « minmax(300px, 1fr) » : sous 316 px de large, ce plancher debordait la
+     page. Le min() le ramene a la largeur disponible quand elle manque. */
+  .build-split {
+    display: grid; align-items: start; gap: var(--sp-4);
+    grid-template-columns: minmax(min(300px, 100%), 1fr) minmax(0, 2fr);
+  }
+  /* Sous 860 px, deux colonnes ne laissent a aucune de quoi montrer une carte :
+     la liste du deck passe au-dessus des propositions. */
+  @media (max-width: 860px) {
+    .build-split { grid-template-columns: 1fr; }
+  }
+
   /* Liste du deck en cours, a droite */
   .deck-side {
     position: sticky; top: var(--sp-4);
     display: flex; flex-direction: column; gap: var(--sp-4);
+  }
+  /* Empilee, elle ne colle plus : elle occuperait la hauteur de l'ecran
+     au-dessus des cartes qu'on vient y chercher. */
+  @media (max-width: 860px) {
+    .deck-side { position: static; }
   }
   .deck-line {
     display: flex; align-items: center; gap: var(--sp-2);
@@ -45,6 +64,21 @@
   .deck-line__qty button:hover { background: var(--surface-2); color: var(--text); }
   .deck-line__drop { opacity: 0.4; }
   .deck-line:hover .deck-line__drop { opacity: 1; }
+
+  /* Sans survol, ces trois boutons n'apparaissaient jamais : regler la quantite
+     d'un terrain de base et retirer une carte etaient impossibles au doigt. Ils
+     se montrent d'emblee, et prennent la taille qu'un doigt demande — la ligne
+     s'aere d'autant. */
+  @media (hover: none) {
+    .deck-line__qty button, .deck-line__drop { opacity: 1; }
+  }
+  @media (pointer: coarse) {
+    .deck-line { padding-block: 6px; gap: var(--sp-3); }
+    .deck-line__qty { gap: var(--sp-1); }
+    .deck-line__qty button { width: 36px; height: 36px; font-size: var(--text-base); }
+    .deck-line__qty output { min-width: 22px; }
+    .deck-line__drop { width: 36px; height: 36px; display: grid; place-items: center; }
+  }
 
   /* Courbe et repartition du mana, dans le bandeau du deck */
 
@@ -421,7 +455,7 @@
         </div>
       </div>
 
-      <div class="grid-2" style="align-items:start;grid-template-columns:minmax(300px,1fr) minmax(0,2fr)">
+      <div class="build-split">
         <div class="deck-side">
           <div class="field">
             <label class="label" for="cardSearch">Ajouter une autre carte</label>
