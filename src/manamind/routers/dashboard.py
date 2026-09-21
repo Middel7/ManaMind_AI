@@ -67,12 +67,29 @@ def _load_profile(user_id: int) -> dict:
     }
 
 
-def _progress(user: dict, profile: dict, stats: dict) -> dict:
-    """Trois jalons, chacun debloquant une capacite reelle de l'outil."""
+def _progress(user: dict, profile: dict, stats: dict, sets_ouverts: int = 0) -> dict:
+    """Quatre jalons, dans l'ordre ou l'on s'installe.
+
+    Le profil ouvre la marche : c'est le geste le plus court, et il nomme la
+    personne avant que l'outil ne lui parle de ses cartes. Viennent ensuite la
+    collection, puis un premier deck — l'analyse croise les deux. Les extensions
+    ouvertes ferment le parcours : elles n'ont de sens qu'une fois la collection
+    la, puisqu'elles la completent des communes et peu communes que l'on possede
+    sans les avoir saisies.
+    """
     has_identity = bool(
         (user.get("display_name") or "").strip() and profile.get("avatar_scryfall_id")
     )
     steps = [
+        {
+            "key": "identity",
+            "label": "Compléter mon profil",
+            "detail": "Un pseudo et une carte fétiche, pour que l'espace soit le vôtre.",
+            "done": has_identity,
+            "value": user.get("display_name") if has_identity else None,
+            "href": "/profil",
+            "cta": "Compléter",
+        },
         {
             "key": "collection",
             "label": "Importer ma collection",
@@ -92,13 +109,14 @@ def _progress(user: dict, profile: dict, stats: dict) -> dict:
             "cta": "Ajouter un deck",
         },
         {
-            "key": "identity",
-            "label": "Compléter mon profil",
-            "detail": "Un pseudo et une carte fétiche, pour que l'espace soit le vôtre.",
-            "done": has_identity,
-            "value": user.get("display_name") if has_identity else None,
-            "href": "/profil",
-            "cta": "Compléter",
+            "key": "sets",
+            "label": "Sélectionner les extensions que j'ai ouvertes",
+            "detail": "Celles dont vous possédez les communes et peu communes, "
+                      "sans avoir à les saisir une par une.",
+            "done": sets_ouverts > 0,
+            "value": f"{sets_ouverts} extensions" if sets_ouverts else None,
+            "href": "/collection/boosters",
+            "cta": "Sélectionner",
         },
     ]
     done = sum(1 for step in steps if step["done"])
@@ -134,6 +152,12 @@ def api_dashboard(request: Request) -> Response:
             LIMIT 6
         """), {"uid": user["id"]}).fetchall()
 
+        # Lu ici plutot que dans store.stats : ce compte ne sert qu'au parcours
+        # d'installation, et la table tient dans un index.
+        sets_ouverts = session.scalar(text(
+            "SELECT count(*) FROM user_opened_sets WHERE user_id = :uid"
+        ), {"uid": user["id"]}) or 0
+
     days = _days_since(stats["last_update"])
     checked_days = _days_since(profile["collection_checked_at"])
     freshness_days = min(d for d in (days, checked_days) if d is not None) \
@@ -148,7 +172,7 @@ def api_dashboard(request: Request) -> Response:
         },
         "profile": profile,
         "stats": stats,
-        "progress": _progress(user, profile, stats),
+        "progress": _progress(user, profile, stats, sets_ouverts),
         "freshness": {
             "days": freshness_days,
             "stale": freshness_days is not None and freshness_days >= STALE_AFTER_DAYS,
