@@ -729,8 +729,9 @@
         <aside class="sidebar" id="mmSidebar"></aside>
         <div class="main">
           <header class="topbar">
-            <button class="btn btn--ghost btn--icon topbar__burger" id="mmBurger"
-                    aria-label="Ouvrir la navigation">${MM.icons.menu}</button>
+            <button class="btn btn--ghost topbar__burger" id="mmBurger"
+                    aria-label="Ouvrir la navigation">
+              ${MM.icons.menu}<span>Menu</span></button>
           </header>
         </div>
       </div>
@@ -757,19 +758,30 @@
     // parcours d'installation, et n'a pas besoin d'une sollicitation de plus.
     // Le lien est nu, sans script ni image tierce : la page n'emet aucune
     // requete vers Ko-fi tant qu'on ne clique pas.
+    // Deux libelles par pastille : le long, au coin bas droit d'un grand ecran,
+    // ou la place ne manque pas ; le court, dans la barre du haut d'un
+    // telephone, qui doit loger le menu, ces deux pastilles et le numero de
+    // version. Une icone seule n'y disait rien de ce qu'elle declenchait.
     const dock = node('<div class="dock"></div>');
     dock.appendChild(node(`
       <button class="support-tag" type="button" id="mmFeedback"
               aria-label="Help me improve" title="Help me improve"
-              >${MM.icons.chat}<span>Help me improve</span></button>`));
-    if (nav !== 'home') {
-      dock.appendChild(node(`
-        <a class="support-tag" href="https://ko-fi.com/middel7"
-           target="_blank" rel="noopener noreferrer"
-           aria-label="Support the project — buy me a coffee"
-           title="Support the project — buy me a coffee"
-           >${MM.icons.coin}<span>Support the project &mdash; buy me a coffee</span></a>`));
-    }
+              >${MM.icons.chat}<span class="support-tag__long">Help me improve</span
+              ><span class="support-tag__short">Support</span></button>`));
+    // Le lien de soutien est partout, mais l'accueil le garde pour le petit
+    // ecran seulement : sur grand ecran cette page porte deja le bandeau, les
+    // chiffres et le parcours d'installation, et une sollicitation de plus y
+    // pesait. Dans la barre du haut d'un telephone, il ne prend la place de
+    // rien — c'est une feuille de style qui tranche, d'ou ce data-nav.
+    dock.dataset.nav = nav || '';
+    dock.appendChild(node(`
+      <a class="support-tag support-tag--kofi" href="https://ko-fi.com/middel7"
+         target="_blank" rel="noopener noreferrer"
+         aria-label="Support the project — buy me a coffee"
+         title="Support the project — buy me a coffee"
+         >${MM.icons.coin}<span class="support-tag__long"
+           >Support the project &mdash; buy me a coffee</span
+         ><span class="support-tag__short">Contribuer</span></a>`));
     el('#mmFeedback', dock).addEventListener('click', () => MM.feedbackForm());
     // Son point de chute definitif depend de la largeur : voir placerDock(),
     // plus bas, qui le monte dans la barre du haut sur petit ecran.
@@ -1745,13 +1757,17 @@
       // Les sources « de n'importe quelle couleur » restent hors du calcul :
       // elles alimentent toutes les couleurs et fausseraient la repartition.
       const total = shown.reduce((sum, color) => sum + counts[color], 0);
+      // Chaque couleur porte sa classe : c'est elle qui lui donne sa colonne,
+      // toujours la meme d'une rangee a l'autre, pour que le blanc des symboles
+      // tombe au-dessus du blanc des sources. Une couleur absente laisse sa
+      // colonne vide plutot que de decaler les suivantes.
       return `
-        <div class="mana-row">
+        <div class="mana-row mana-row--colors">
           <span class="mana-row__label">${esc(label)}</span>
           ${shown.map((color) => `
-            <span class="mana-count"
+            <span class="mana-count mana-count--${color}"
                   title="${counts[color]} sur ${total} — ${esc(label.toLowerCase())} ${color}">
-              <span class="pip pip--${color}"></span>${counts[color]}
+              <span class="mana-count__n"><span class="pip pip--${color}"></span>${counts[color]}</span>
               <span class="dim">${Math.round((counts[color] / total) * 100)} %</span></span>`).join('')}
           ${extra || ''}
         </div>`;
@@ -1791,7 +1807,8 @@
         <div class="mana-rows">
           ${MM.mana.row('Symboles', MM.mana.symbols(list))}
           ${MM.mana.row('Sources', src, src.any
-            ? `<span class="xs dim">+ ${src.any} toutes couleurs</span>` : '')}
+            ? `<span class="xs dim mana-row__extra">+ ${src.any} toutes couleurs</span>`
+            : '')}
           <div class="mana-row">
             <span class="mana-row__label">Terrains</span>
             <span class="mana-count"><span class="strong">${land.front}</span></span>

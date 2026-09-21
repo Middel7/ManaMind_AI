@@ -30,6 +30,25 @@
     background: var(--accent-wash); color: var(--accent);
   }
   .mode__mark svg { width: 20px; height: 20px; }
+
+  /* La tuile entiere est le bouton, mais rien ne le disait : on lisait un titre,
+     trois arguments et une pastille « Disponible » sans qu'aucun element ne
+     porte l'action. Ce faux bouton la nomme. Il n'est pas cliquable lui-meme —
+     c'est la tuile qui recoit le clic, et un bouton dans un bouton n'est pas du
+     HTML valide : d'ou un <span> qui emprunte l'aspect de .btn--primary plutot
+     qu'un composant de plus. */
+  .mode__foot {
+    display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap;
+    /* Colle au bas de la tuile : les deux modes n'ont pas la meme hauteur de
+       texte, et leurs actions doivent tomber sur la meme ligne. */
+    margin-top: auto; padding-top: var(--sp-2);
+  }
+  .mode__go { margin-left: auto; }
+  /* Sur telephone, l'action prend la largeur : a cote d'une pastille d'etat,
+     il ne lui restait que la moitie d'une colonne. */
+  @media (max-width: 680px) {
+    .mode__go { margin-left: 0; flex: 1 1 100%; }
+  }
 </style>
 </head>
 <body>
@@ -74,7 +93,10 @@
         <span class="checks__item" data-check>
           <span>Résultat <b>en quelques secondes</b>.</span></span>
       </span>
-      <span class="badge badge--ok" style="align-self:flex-start">Disponible</span>
+      <span class="mode__foot">
+        <span class="badge badge--ok">Disponible</span>
+        <span class="btn btn--primary mode__go">Lancer l'analyse</span>
+      </span>
     </button>
 
     <button class="mode" data-analysis="ia" id="modeIa" hidden>
@@ -95,8 +117,10 @@
         <span class="checks__item" data-check>
           <span>Compter <b>environ une minute</b> de calcul.</span></span>
       </span>
-      <span class="badge" id="engineBadge" style="align-self:flex-start">
-        Vérification du moteur…</span>
+      <span class="mode__foot">
+        <span class="badge" id="engineBadge">Vérification du moteur…</span>
+        <span class="btn btn--primary mode__go">Lancer l'analyse</span>
+      </span>
     </button>
   </div>
 

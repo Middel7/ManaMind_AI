@@ -160,9 +160,10 @@
             ${MM.fmt.plural(stats.copies, 'carte')} ·
             ${MM.fmt.plural(stats.decks, 'deck')} ·
             ${MM.fmt.eur(stats.value_eur, { compact: true })}
-            ${profile.favorite_commander
-              ? `· joue ${MM.esc(profile.favorite_commander)}` : ''}
           </p>
+          ${profile.favorite_commander
+            ? `<p class="muted small">joue ${MM.esc(profile.favorite_commander)}</p>`
+            : ''}
         </div>
       </div>
       ${profile.avatar_card_name
