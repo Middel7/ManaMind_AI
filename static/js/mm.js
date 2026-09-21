@@ -547,6 +547,19 @@
         </div>`);
     }
 
+    // Lien de soutien, partout sauf sur l'accueil : celui-ci porte deja le
+    // bandeau, les chiffres et le parcours d'installation, et n'a pas besoin
+    // d'une sollicitation de plus. Un lien nu, sans script ni image tierce :
+    // la page n'emet aucune requete vers Ko-fi tant qu'on ne clique pas.
+    if (nav !== 'home') {
+      document.body.appendChild(node(`
+        <a class="support-tag" href="https://ko-fi.com/middel7"
+           target="_blank" rel="noopener noreferrer"
+           aria-label="Offrir un café à l'auteur de ManaMind"
+           title="Offrir un café à l'auteur de ManaMind"
+           >${MM.icons.coin}<span>Offrir un café</span></a>`));
+    }
+
     const bottombar = node(`<nav class="bottombar" aria-label="Navigation">${renderTabs(nav)}</nav>`);
     document.body.appendChild(bottombar);
 
