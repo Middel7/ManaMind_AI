@@ -158,7 +158,6 @@
 
   function render() {
     renderHero();
-    const missing = cards.filter((card) => card.owned < card.quantity);
 
     MM.el('#content').innerHTML = `
       <div class="stack-6">
@@ -182,8 +181,6 @@
             <div class="cluster-2">
               ${view !== 'cards' ? '' : `
               <button class="btn btn--sm" id="addCard">Ajouter une carte</button>
-              ${missing.length ? `<button class="btn btn--sm" id="exportMissing">
-                Exporter les ${MM.fmt.int(missing.length)} cartes à acquérir</button>` : ''}
               <button class="btn btn--sm btn--ghost" id="exportDeck">Exporter le deck</button>`}
             </div>
           </div>
@@ -675,35 +672,6 @@
         setTimeout(() => { location.href = '/decks'; }, 700);
       } catch (err) { MM.toast.error(err.message); }
     });
-
-    const exportMissing = MM.el('#exportMissing');
-    if (exportMissing) {
-      exportMissing.addEventListener('click', () => {
-        const list = cards.filter((card) => card.owned < card.quantity);
-        // Une ligne « quantite nom » : ce que Cardmarket et les want lists
-        // attendent. La quantite est celle qu'il reste a acheter.
-        const content = list
-          .map((card) => `${card.quantity - card.owned} ${card.card_name}`)
-          .join('\n');
-        const total = list.reduce((sum, card) =>
-          sum + (card.unit_price || 0) * (card.quantity - card.owned), 0);
-        const modal = MM.modal({
-          title: `${list.length} cartes à acquérir · ${MM.fmt.eur(total)}`,
-          body: `<textarea class="textarea" readonly style="min-height:320px"
-                   id="missingArea">${MM.esc(content)}</textarea>`,
-          footer: '<button class="btn btn--primary" data-copy>Copier</button>',
-        });
-        MM.el('[data-copy]', modal.root).addEventListener('click', async () => {
-          try {
-            await navigator.clipboard.writeText(content);
-            MM.toast.ok('Liste copiée.');
-          } catch {
-            MM.el('#missingArea', modal.root).select();
-            MM.toast('Sélectionnez puis copiez le texte.');
-          }
-        });
-      });
-    }
 
     if (MM.el('#exportDeck')) MM.el('#exportDeck').addEventListener('click', async () => {
       try {
