@@ -749,7 +749,13 @@ def api_collection_commanders(
             GROUP BY s.commander
             ORDER BY total_value DESC
             LIMIT :top
-        """), {"names": coll_names, "qtys": coll_qtys, "top": top}).fetchall()
+        """), {"names": coll_names, "qtys": coll_qtys, "top": top,
+               # L'illustration du commandant respecte l'edition que
+               # l'utilisateur a choisie : le fragment qui la place en tete lit
+               # user_preferred_printings et reclame donc :uid. Sans lui,
+               # SQLAlchemy refusait la requete entiere — « A value is required
+               # for bind parameter 'uid' » — et l'ecran rendait une 500.
+               "uid": user["id"]}).fetchall()
 
     with SessionLocal() as s:
         images = _commander_images(s, [r.commander for r in rows], user["id"])
