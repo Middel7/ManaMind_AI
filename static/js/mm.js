@@ -427,7 +427,7 @@
           href: '/collection/commandants', icon: 'crown' },
         { key: 'improve', label: 'Améliorer mon deck avec les cartes de ma collection',
           href: '/decks/ameliorer', icon: 'sparkle' },
-        { key: 'analyze', label: 'Améliorer mon deck grâce à des analyses IA',
+        { key: 'analyze', label: 'Améliorer mon deck grâce aux suggestions de ManaMind',
           href: '/decks/analyse', icon: 'chart' },
         { key: 'card', label: 'Trouver un commandant pour une carte',
           href: '/cartes/commandant', icon: 'search' },

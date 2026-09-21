@@ -36,8 +36,13 @@
 
 <div id="page">
   <div class="stack-2">
-    <h2 class="h2">Améliorer mon deck grâce à des analyses IA</h2>
-    <p class="muted small">
+    <h2 class="h2">Améliorer mon deck grâce aux suggestions de ManaMind</h2>
+    <p class="muted small" id="chapeauSimple">
+      Votre deck comparé à ceux des autres joueurs du même commandant : ce qu'ils
+      jouent et qui manque à votre liste. Choisissez un deck, puis lancez
+      l'analyse.
+    </p>
+    <p class="muted small" id="chapeauDouble" hidden>
       Deux lectures de la même liste : l'une compare votre deck à ceux des autres
       joueurs, l'autre en étudie la mécanique interne. Choisissez un deck, puis
       l'analyse à lancer.
@@ -72,7 +77,7 @@
       <span class="badge badge--ok" style="align-self:flex-start">Disponible</span>
     </button>
 
-    <button class="mode" data-analysis="ia">
+    <button class="mode" data-analysis="ia" id="modeIa" hidden>
       <span class="mode__mark" data-icon="sparkle"></span>
       <span>
         <span class="h3" style="display:block">Amélioration grâce à l'intelligence
@@ -102,9 +107,9 @@
       <div class="intro__head">
         <span class="intro__mark" data-icon="layers"></span>
         <div class="stack-2" style="gap:4px">
-          <p class="intro__title">Laquelle choisir ?</p>
-          <p class="small muted">Les deux analyses ne répondent pas à la même
-            question.</p>
+          <p class="intro__title" id="introTitre">Ce que cette analyse répond</p>
+          <p class="small muted" id="introSous">Elle situe votre deck par rapport à
+            ceux des autres joueurs.</p>
         </div>
       </div>
       <div class="walk">
@@ -118,7 +123,7 @@
               rien de votre plan de jeu : elle compte.</p>
           </div>
         </div>
-        <div class="walk__step">
+        <div class="walk__step" data-moteur hidden>
           <span class="walk__index">2</span>
           <div class="stack-2" style="gap:2px">
             <p class="walk__title">« Ma liste tient-elle debout ? »</p>
@@ -127,7 +132,7 @@
               carte avec le reste du deck, puis propose des échanges argumentés.</p>
           </div>
         </div>
-        <div class="walk__step">
+        <div class="walk__step" data-moteur hidden>
           <span class="walk__index">3</span>
           <div class="stack-2" style="gap:2px">
             <p class="walk__title">Les deux, dans cet ordre</p>
@@ -151,8 +156,8 @@
               s'affichent sur une page de résultats : vous décidez carte par
               carte.</span></span>
           <span class="checks__item" data-check>
-            <span><b>Votre collection n'est pas un filtre ici.</b> Les deux analyses
-              peuvent proposer des cartes que vous ne possédez pas. Pour rester dans
+            <span><b>Votre collection n'est pas un filtre ici.</b> Les suggestions
+              peuvent porter sur des cartes que vous ne possédez pas. Pour rester dans
               vos boîtes, passez par
               <a href="/decks/ameliorer" style="color:var(--accent)">Améliorer mon deck
               avec les cartes de ma collection</a>.</span></span>
@@ -168,8 +173,22 @@
 <script src="/static/js/mm.js"></script>
 <script>
 (async () => {
-  const user = await MM.boot({ title: 'Améliorer mon deck grâce à des analyses IA', nav: 'analyze' });
+  const user = await MM.boot({ title: 'Améliorer mon deck grâce aux suggestions de ManaMind', nav: 'analyze' });
   if (!user) return;
+
+  // L'analyse par le modele n'est pas encore ouverte a tous : elle demande une
+  // minute de calcul et un moteur qui n'est charge que sur certaines machines.
+  // La tuile et le chapeau qui l'annonce ne paraissent donc qu'aux
+  // administrateurs. Simple affichage : la route reste protegee cote serveur.
+  if (user.role === 'admin') {
+    MM.el('#modeIa').hidden = false;
+    MM.el('#chapeauSimple').hidden = true;
+    MM.el('#chapeauDouble').hidden = false;
+    MM.els('[data-moteur]').forEach((bloc) => { bloc.hidden = false; });
+    MM.el('#introTitre').textContent = 'Laquelle choisir ?';
+    MM.el('#introSous').textContent =
+      'Les deux analyses ne répondent pas à la même question.';
+  }
 
   MM.els('[data-icon]').forEach((holder) => {
     holder.innerHTML = MM.icons[holder.dataset.icon];
