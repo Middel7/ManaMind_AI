@@ -351,10 +351,39 @@ button.nav__item { width: 100%; }
        reserve, la pastille de soutien passait dessous. */
     margin-right: 52px;
   }
-  /* L'icone seule : la barre doit loger le burger, deux pastilles et le numero
-     de version dans 320 px. Les noms restent portes par aria-label et title. */
-  .topbar .support-tag span { display: none; }
-  .topbar .support-tag { padding-inline: 0; width: var(--tap); justify-content: center; }
+  /* Le libelle court prend la place du long : « Help me improve » et « Support
+     the project — buy me a coffee » ne tiennent pas dans une barre qui loge
+     deja le menu et le numero de version, et une icone seule ne disait rien de
+     ce qu'elle declenchait. */
+  .topbar .support-tag__long { display: none; }
+  .topbar .support-tag__short { display: inline; }
+  .topbar .support-tag { padding-inline: 12px; gap: var(--sp-2); }
+}
+
+/* Sous 420 px, l'icone cede la place au mot. Quatre elements se partagent 288
+   pixels — le menu, les deux pastilles et le numero de version — et avec leurs
+   pictogrammes, les pastilles passaient sous le numero. C'est le mot qui dit ce
+   que fait le bouton ; l'icone ne faisait que l'accompagner. */
+@media (max-width: 420px) {
+  .topbar .support-tag svg { display: none; }
+  .topbar .support-tag { padding-inline: 8px; }
+  .topbar__burger { padding-inline: 6px; }
+  /* 40 px : le numero de version est large de 44 et ancre a 10 du bord, son
+     flanc gauche tombe donc a 54 du bord droit, dont 14 de remplissage de la
+     barre. C'est la reserve minimale, et a 320 px chaque pixel compte. */
+  .topbar .dock { margin-right: 40px; gap: var(--sp-1); }
+  .topbar { gap: var(--sp-1); }
+}
+
+/* Le libelle court ne sert qu'a la barre du haut ; ailleurs, c'est le long qui
+   parle. */
+.support-tag__short { display: none; }
+
+/* Sur l'accueil et sur grand ecran seulement, le lien de soutien s'efface : la
+   page porte deja le bandeau, les chiffres et le parcours d'installation. Dans
+   la barre du haut d'un telephone il ne coute rien, et il y reste. */
+@media (min-width: 861px) {
+  .dock[data-nav="home"] .support-tag--kofi { display: none; }
 }
 
 /* La barre du haut ne porte plus que le burger : sur grand ecran, ou la sidebar
@@ -1236,6 +1265,55 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
 }
 .mana-count .pip { width: 14px; height: 14px; }
 .mana-count .dim { font-weight: 400; }
+.mana-count__n { display: inline-flex; align-items: center; gap: 5px; }
+
+/* ── Symboles et sources, colonne par colonne ───────────────────────────── */
+
+/* Ces deux rangees ne se lisent pas seules : c'est leur comparaison qui dit si
+   le mana suit les symboles reclames. En ligne libre, chacune se repliait ou
+   elle pouvait — cinq couleurs aux symboles, trois aux sources, et le bleu de
+   l'une tombait sous le blanc de l'autre. Une colonne par couleur, toujours a
+   la meme place, les remet en face.
+   Les colonnes sont declarees identiques sur les deux rangees plutot que
+   partagees par un subgrid : les rangees ont la meme largeur, le resultat est
+   le meme et tient sur tous les navigateurs. */
+.mana-row--colors {
+  display: grid;
+  grid-template-columns: 82px repeat(5, minmax(0, 1fr));
+  align-items: center;
+  gap: var(--sp-1) var(--sp-2);
+}
+.mana-count--W { grid-column: 2; }
+.mana-count--U { grid-column: 3; }
+.mana-count--B { grid-column: 4; }
+.mana-count--R { grid-column: 5; }
+.mana-count--G { grid-column: 6; }
+/* « + 15 toutes couleurs » n'appartient a aucune couleur : elle passe sous la
+   rangee, alignee sur les chiffres plutot que sur l'intitule. */
+.mana-row__extra { grid-column: 2 / -1; }
+
+/* Sous 680 px, six colonnes ne tiennent plus sur une ligne. L'intitule prend la
+   sienne au-dessus, et chaque couleur empile son compte et sa part : les cinq
+   colonnes se resserrent a la largeur d'un nombre, et la comparaison verticale
+   d'une rangee a l'autre reste entiere. */
+@media (max-width: 680px) {
+  .mana-row--colors {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: var(--sp-1);
+  }
+  .mana-row--colors .mana-row__label { grid-column: 1 / -1; min-width: 0; }
+  .mana-count--W { grid-column: 1; }
+  .mana-count--U { grid-column: 2; }
+  .mana-count--B { grid-column: 3; }
+  .mana-count--R { grid-column: 4; }
+  .mana-count--G { grid-column: 5; }
+  .mana-row__extra { grid-column: 1 / -1; }
+  .mana-row--colors .mana-count {
+    flex-direction: column; align-items: flex-start; gap: 0;
+    font-size: var(--text-sm);
+  }
+  .mana-count .pip { width: 12px; height: 12px; }
+}
 
 .mana-cost { display: inline-flex; gap: 2px; }
 .mana-token {
@@ -1730,7 +1808,12 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
     animation: fade var(--dur) var(--ease);
   }
 
-  .topbar__burger { display: inline-flex; }
+  /* Le burger porte son nom : trois barres seules ne disent pas qu'on ouvre la
+     navigation, et c'est le seul acces au menu sur petit ecran. Le remplissage
+     se resserre — la barre doit loger ce bouton, deux pastilles et le numero de
+     version dans 320 px. */
+  .topbar__burger { display: inline-flex; padding-inline: 10px; }
+  .topbar { gap: var(--sp-2); padding: 0 var(--sp-4); }
 
   .content { padding: var(--sp-5) var(--sp-4) calc(var(--bottombar-h) + var(--sp-10)); }
 
