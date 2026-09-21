@@ -295,12 +295,19 @@ button.nav__item { width: 100%; }
 }
 .version-tag:hover { opacity: 1; color: var(--text-1); }
 
-/* Lien de soutien, ancre en bas a droite de la fenetre et fixe : il suit le
-   defilement sans jamais disputer le haut de page au titre ni au numero de
-   version. */
-.support-tag {
+/* Deux pastilles partagent desormais le coin bas droit : l'appel a retour et
+   le lien de soutien. Un conteneur les aligne, plutot que deux ancrages fixes
+   calcules l'un par rapport a l'autre — ainsi l'une peut manquer (le lien de
+   soutien est absent de l'accueil) sans deplacer l'autre. */
+.dock {
   position: fixed; bottom: var(--sp-5); right: var(--sp-5);
   z-index: var(--z-sticky);
+  display: flex; align-items: center; gap: var(--sp-3);
+}
+
+/* Pastille du coin bas droit : elle suit le defilement sans jamais disputer le
+   haut de page au titre ni au numero de version. */
+.support-tag {
   display: inline-flex; align-items: center; gap: var(--sp-2);
   padding: 7px 14px;
   border-radius: var(--r-full);
@@ -327,7 +334,7 @@ button.nav__item { width: 100%; }
 /* Sous 860 px, la barre d'onglets occupe le bas de l'ecran : le lien se pose
    juste au-dessus, sinon il recouvrirait la navigation. */
 @media (max-width: 860px) {
-  .support-tag { bottom: calc(var(--bottombar-h) + var(--sp-3)); }
+  .dock { bottom: calc(var(--bottombar-h) + var(--sp-3)); }
 }
 
 /* Sous 720 px, l'icone suffit : le libelle couvrirait une bonne part de la
@@ -539,6 +546,11 @@ button.nav__item { width: 100%; }
 }
 
 .textarea { resize: vertical; min-height: 120px; font-family: var(--font-mono); font-size: var(--text-sm); line-height: 1.6; }
+
+/* Le champ par defaut est en chasse fixe, parce qu'il recoit surtout des
+   decklists alignees. Un message ecrit en prose s'y lit mal : cette variante
+   lui rend la police du reste de l'interface. */
+.textarea--prose { font-family: var(--font-ui); font-size: var(--text-base); }
 
 .select {
   appearance: none;

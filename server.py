@@ -240,6 +240,7 @@ from manamind.routers.dashboard import router as dashboard_router
 from manamind.routers.decks import router as decks_router
 from manamind.routers.decks_v2 import router as decks_v2_router
 from manamind.routers.engine import router as engine_router
+from manamind.routers.feedback import router as feedback_router
 from manamind.routers.import_deck import router as import_router
 from manamind.routers.pages import router as pages_router
 from manamind.routers.scrape import router as scrape_router
@@ -254,6 +255,7 @@ app.include_router(dashboard_router)
 app.include_router(decks_router)
 app.include_router(decks_v2_router)
 app.include_router(engine_router)
+app.include_router(feedback_router)
 app.include_router(import_router)
 app.include_router(pages_router)
 app.include_router(scrape_router)
