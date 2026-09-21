@@ -303,23 +303,25 @@ button.nav__item { width: 100%; }
   position: fixed; top: 6px; right: 58px;
   z-index: var(--z-sticky);
   display: inline-flex; align-items: center; gap: var(--sp-2);
-  padding: 3px 10px;
+  padding: 7px 14px;
   border-radius: var(--r-full);
-  background: var(--overlay);
-  border: 1px solid var(--line);
-  color: var(--text-3);
-  font-size: var(--text-xs);
+  /* Le lavis dore et le filet accent, au lieu du gris sur fond sombre : la
+     premiere version se lisait a peine, noir sur noir. */
+  background: var(--accent-wash);
+  border: 1px solid var(--line-accent);
+  color: var(--accent-bright);
+  font-size: var(--text-sm);
+  font-weight: 500;
   text-decoration: none;
-  opacity: 0.75;
-  transition: opacity var(--dur) var(--ease), color var(--dur) var(--ease),
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease),
               border-color var(--dur) var(--ease);
 }
 .support-tag:hover {
-  opacity: 1;
-  color: var(--accent);
-  border-color: var(--line-accent);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--text-inverse);
 }
-.support-tag svg { width: 14px; height: 14px; }
+.support-tag svg { width: 16px; height: 16px; }
 
 /* Sous 720 px, l'icone suffit : le libelle disputerait la ligne au burger et
    au numero de version. Le nom reste porte par aria-label. */
