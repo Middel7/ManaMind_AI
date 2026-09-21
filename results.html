@@ -105,7 +105,9 @@
       <div class="hero__body">
         <div class="hero__cols">
           <div class="grow">
-            <p class="eyebrow">${MM.esc(deckInfo.commander || 'Analyse')}</p>
+            ${(() => { const sur = MM.deckEyebrow(deckInfo.commander, deckInfo.name)
+                        || (deckInfo.commander ? '' : 'Analyse');
+                      return sur ? `<p class="eyebrow">${MM.esc(sur)}</p>` : ''; })()}
             <h2 class="hero__title">${MM.esc(deckInfo.name || "Résultats d’analyse")}</h2>
             <p class="muted">${MM.esc(subtitle)}</p>
             ${stats || ''}
@@ -134,9 +136,12 @@
   function renderMana() {
     const courbe = MM.el('#manaCurve');
     if (!courbe || !deckCards) return;
+    // La courbe prend toute la hauteur du bandeau ; le cout moyen se range
+    // avec les autres donnees du deck, a droite.
     courbe.innerHTML = MM.mana.curve(deckCards, 112, {
-      commander: deckInfo.commander, reference: manaReference });
-    MM.el('#manaRows').innerHTML = MM.mana.rows(deckCards);
+      commander: deckInfo.commander, reference: manaReference, average: false });
+    MM.el('#manaRows').innerHTML = MM.mana.rows(deckCards, {
+      commander: deckInfo.commander, reference: manaReference, average: true });
   }
 
   if (deckInfo.deck_id) {
