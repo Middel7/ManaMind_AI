@@ -1143,6 +1143,7 @@ def api_card_inclusion(
 
 @router.get("/api/commander-suggest")
 def api_commander_suggest(
+    request: Request,
     card: str = Query(..., description="Nom de la carte à rechercher"),
     top: int = Query(default=3, ge=1, le=10),
     mode: str = Query(default="mine", description="'mine' = mes commandants, 'all' = tous"),
@@ -1150,9 +1151,15 @@ def api_commander_suggest(
     """
     mode='mine' : parmi les commandants de data/My_commanders.txt (comportement original)
     mode='all'  : tous les commandants de la DB, avec flag in_my_decks
+
+    La requête de `mode='all'` place l'édition retenue par l'utilisateur en tête
+    des illustrations : elle a donc besoin de savoir qui demande.
     """
+    from manamind.auth import COOKIE_NAME, get_current_user
     from manamind.card_commander_matcher import suggest_commanders, load_allowed_commanders
     from sqlalchemy import text as _text
+
+    user = get_current_user(mm_token=request.cookies.get(COOKIE_NAME))
     try:
         from src.manamind.db.engine import SessionLocal
         _DB_AVAILABLE = SessionLocal is not None
