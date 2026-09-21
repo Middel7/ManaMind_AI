@@ -295,6 +295,39 @@ button.nav__item { width: 100%; }
 }
 .version-tag:hover { opacity: 1; color: var(--text-1); }
 
+/* Lien de soutien, ancre a gauche du numero de version. Il partage son coin
+   mais pas son insistance : discret au repos, il ne prend l'or qu'au survol.
+   Le decalage de 58 px laisse passer la pastille de version, large d'une
+   quarantaine de pixels. */
+.support-tag {
+  position: fixed; top: 6px; right: 58px;
+  z-index: var(--z-sticky);
+  display: inline-flex; align-items: center; gap: var(--sp-2);
+  padding: 3px 10px;
+  border-radius: var(--r-full);
+  background: var(--overlay);
+  border: 1px solid var(--line);
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  text-decoration: none;
+  opacity: 0.75;
+  transition: opacity var(--dur) var(--ease), color var(--dur) var(--ease),
+              border-color var(--dur) var(--ease);
+}
+.support-tag:hover {
+  opacity: 1;
+  color: var(--accent);
+  border-color: var(--line-accent);
+}
+.support-tag svg { width: 14px; height: 14px; }
+
+/* Sous 720 px, l'icone suffit : le libelle disputerait la ligne au burger et
+   au numero de version. Le nom reste porte par aria-label. */
+@media (max-width: 720px) {
+  .support-tag span { display: none; }
+  .support-tag { padding: 5px 7px; }
+}
+
 /* La barre du haut ne porte plus que le burger : sur grand ecran, ou la sidebar
    est deployee, elle n'a plus rien a montrer et disparait. Elle ne subsiste en
    dessous de 860 px que parce que son burger y est le seul acces au tiroir. */
