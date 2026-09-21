@@ -238,17 +238,45 @@
       return src.replace('/normal/', '/art_crop/').replace('/small/', '/art_crop/');
     },
 
+    /**
+     * L'image que Scryfall sert pour une carte sans passer par notre
+     * catalogue. Elle repond a un identifiant d'impression, sinon a un nom
+     * exact. C'est la seule voie qui reste quand le catalogue ignore une carte
+     * ou n'en connait qu'une impression sans visuel — le cas des sorties
+     * recentes, dont la copie du catalogue n'a pas encore toutes les lignes.
+     */
+    scryfall(item, size = 'normal') {
+      if (!item) return null;
+      const version = size === 'small' ? 'small' : 'normal';
+      if (item.scryfall_id) {
+        return `https://api.scryfall.com/cards/${encodeURIComponent(item.scryfall_id)}`
+             + `?format=image&version=${version}`;
+      }
+      // Le nom peut ne citer que la face avant d'une recto-verso : Scryfall
+      // accepte les deux formes.
+      const name = (item.card_name || item.name || '').split(' // ')[0].trim();
+      if (!name) return null;
+      return `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}`
+           + `&format=image&version=${version}`;
+    },
+
     card(item, size) {
       if (!item) return null;
-      if (size === 'small') return item.image_small || item.image_normal || null;
-      return item.image_normal || item.image_small || null;
+      const stored = size === 'small'
+        ? (item.image_small || item.image_normal)
+        : (item.image_normal || item.image_small);
+      return stored || MM.img.scryfall(item, size) || null;
     },
 
     /** Vignette de carte, avec repli lisible quand l'image manque. */
     frame(item, { size = 'normal', lazy = true } = {}) {
       const src = MM.img.card(item, size);
       if (src) {
+        // `data-card` porte de quoi retenter ailleurs : une URL enregistree
+        // peut ne plus repondre, et le filet de MM.boot s'en sert.
         return `<img src="${esc(src)}" alt="${esc(item.card_name || '')}"
+                  data-card="${esc(item.card_name || '')}"
+                  ${item.scryfall_id ? `data-scryfall="${esc(item.scryfall_id)}"` : ''}
                   ${lazy ? 'loading="lazy" decoding="async"' : ''}>`;
       }
       return `<div class="mtg-card__fallback">
@@ -547,9 +575,59 @@
    * Construit la coquille autour de #page et charge la session.
    * @returns {Promise<object|null>} l'utilisateur connecte
    */
+  /**
+   * Filet pose une fois par page : une illustration de carte qui n'arrive pas
+   * est redemandee a Scryfall, qui la sert a partir de l'identifiant de
+   * l'impression ou du nom exact.
+   *
+   * Il ne suffit pas de bien choisir l'URL au moment du rendu : celle que
+   * porte le catalogue peut ne plus repondre, et les pages ne passent pas
+   * toutes par MM.img. En capture sur le document, l'evenement `error` d'une
+   * image est attrape d'ou qu'elle vienne. Deux reprises au plus, comptees sur
+   * l'element : sans ce compteur, une URL durablement morte tournerait en
+   * boucle.
+   */
+  function watchBrokenCardImages() {
+    if (document.body.dataset.mmImgWatch === '1') return;
+    document.body.dataset.mmImgWatch = '1';
+
+    document.addEventListener('error', (event) => {
+      const img = event.target;
+      if (!img || img.tagName !== 'IMG') return;
+
+      // L'identifiant se lit sur l'element quand MM.img a pose la vignette,
+      // sinon dans l'URL du catalogue : .../normal/front/a/b/<id>.jpg
+      const url = img.getAttribute('src') || '';
+      const parDefaut = url.match(
+        /cards\.scryfall\.io\/[^/]+\/[^/]+\/[^/]+\/[^/]+\/([0-9a-f-]{36})/i);
+      const item = {
+        scryfall_id: img.dataset.scryfall || (parDefaut ? parDefaut[1] : null),
+        card_name: img.dataset.card || img.getAttribute('alt') || '',
+      };
+      const taille = url.includes('/small/') ? 'small' : 'normal';
+      // Deux chances, dans cet ordre : l'impression exacte, puis le nom. Un
+      // identifiant peut avoir disparu du cote de Scryfall alors que la carte,
+      // elle, existe toujours.
+      const etapes = [
+        { scryfall_id: item.scryfall_id, card_name: '' },
+        { scryfall_id: null, card_name: item.card_name },
+      ];
+      const deja = img.dataset.mmRetried ? Number(img.dataset.mmRetried) : 0;
+      for (let etape = deja; etape < etapes.length; etape += 1) {
+        const secours = MM.img.scryfall(etapes[etape], taille);
+        if (!secours || secours === url) continue;
+        img.dataset.mmRetried = String(etape + 1);
+        img.src = secours;
+        return;
+      }
+    }, true);
+  }
+
   MM.boot = async function ({ title = '', nav = '', actions = '', back = null } = {}) {
     const page = el('#page');
     if (!page) throw new Error('MM.boot : #page introuvable');
+
+    watchBrokenCardImages();
 
     // Des l'entree, avant toute requete : le numero de version doit s'afficher
     // meme si la session ou les donnees echouent — c'est souvent la qu'on veut
