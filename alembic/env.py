@@ -53,6 +53,7 @@ MANAMIND_TABLES = frozenset({
     "user_collection",
     "user_deck_cards",
     "user_deck_tokens",
+    "user_feedback",
     "user_preferred_printings",
     "user_hidden_moves",
     "user_moxfield_decks",

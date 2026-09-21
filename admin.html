@@ -251,6 +251,24 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
 .tab.active { color: var(--blue); border-bottom-color: var(--blue); }
 .tab-panel[hidden] { display: none; }
 
+/* ── Retours ── */
+/* Un retour est un paragraphe, pas une ligne de tableau : une fiche le laisse
+   respirer sur toute la largeur, et l'entete porte qui l'a ecrit et quand. */
+.fb-list { display: flex; flex-direction: column; gap: 10px; }
+.fb-item { border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; background: var(--ink-card2); }
+/* Un retour deja traite recule d'un ton : il reste lisible, mais l'oeil va
+   d'abord a ce qui vient d'arriver. */
+.fb-item.is-handled { opacity: .5; }
+.fb-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.fb-author { font-family: var(--serif-engraved); font-size: .68rem; letter-spacing: .08em; color: var(--gold-soft); }
+.fb-date { font-family: var(--mono); font-size: .6rem; color: var(--parch-600); }
+.fb-actions { margin-left: auto; display: flex; gap: 6px; }
+.fb-msg { font-family: var(--serif-body); font-size: .82rem; line-height: 1.65; color: var(--parch-100); white-space: pre-wrap; }
+.fb-empty { text-align: center; color: var(--parch-600); padding: 28px; font-style: italic; }
+/* Compteur des retours en attente, colle au libelle de l'onglet. */
+.tab-count { font-family: var(--mono); font-size: .58rem; color: var(--amber); background: var(--amber-faint);
+             border: 1px solid var(--amber-border); border-radius: 3px; padding: 1px 6px; margin-left: 7px; }
+
 /* ── Utilisateurs ── */
 .usr-role { font-family: var(--mono); font-size: .62rem; border-radius: 3px; padding: 2px 8px; white-space: nowrap; }
 .usr-role.is-admin { color: var(--purple); background: var(--purple-faint); border: 1px solid var(--purple-border); }
@@ -288,6 +306,7 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
     <button class="tab active" data-tab="Scraping" role="tab">Scraping</button>
     <button class="tab" data-tab="Catalogue" role="tab">Catalogue</button>
     <button class="tab" data-tab="Users" role="tab">Utilisateurs</button>
+    <button class="tab" data-tab="Feedback" role="tab">Retours<span class="tab-count" id="fbBadge" hidden></span></button>
   </nav>
 
   <div class="tab-panel" id="tabScraping">
@@ -715,6 +734,29 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
     </div>
 
   </div><!-- /tabUsers -->
+
+  <div class="tab-panel" id="tabFeedback" hidden>
+
+    <div class="layer-header">
+      <span class="layer-label">Retours</span>
+      <span class="layer-badge badge-green">user_feedback</span>
+      <div class="layer-rule"></div>
+      <span id="fbCount" style="font-family:var(--serif-display);font-style:italic;font-size:.68rem;color:var(--parch-600);white-space:nowrap;"></span>
+    </div>
+
+    <div class="panel">
+      <p class="panel-hint" style="margin-top:0;margin-bottom:14px;">
+        Ce que les utilisateurs écrivent depuis le bouton « Help me improve ».
+        Les messages en attente sont en tête.
+      </p>
+      <div class="fb-list" id="fbList">
+        <div class="fb-empty">Chargement&hellip;</div>
+      </div>
+    </div>
+
+    <div class="error-box" id="fbError" style="display:none;margin-top:14px;"></div>
+
+  </div><!-- /tabFeedback -->
 
 </div>
 
@@ -1529,7 +1571,89 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
         loadUsers();
         loadInvitations();
       }
+      if (name === 'Feedback') loadFeedback();
     });
+  });
+
+  // ── Retours ───────────────────────────────────────────────────────────
+  // Le compteur de l'onglet se remplit des le chargement de la page, sans
+  // attendre qu'on l'ouvre : c'est lui qui signale qu'il y a quelque chose a
+  // lire. Le detail, lui, n'arrive qu'a l'ouverture.
+  function fbError(msg) {
+    const box = document.getElementById('fbError');
+    if (!msg) { box.style.display = 'none'; return; }
+    box.textContent = msg;
+    box.style.display = 'block';
+  }
+
+  function fbDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric',
+                                       hour: '2-digit', minute: '2-digit' });
+  }
+
+  function renderFeedback(items, pending) {
+    const badge = document.getElementById('fbBadge');
+    badge.textContent = pending ? String(pending) : '';
+    badge.hidden = !pending;
+
+    document.getElementById('fbCount').textContent =
+      items.length ? `${fmt(items.length)} message${items.length > 1 ? 's' : ''}` : '';
+
+    const host = document.getElementById('fbList');
+    if (!items.length) {
+      host.innerHTML = '<div class="fb-empty">Aucun retour pour le moment.</div>';
+      return;
+    }
+    host.innerHTML = items.map(f => `
+      <div class="fb-item${f.handled ? ' is-handled' : ''}">
+        <div class="fb-head">
+          <span class="fb-author">${esc(f.auteur || '')}</span>
+          <span class="fb-date">${esc(fbDate(f.created_at))}</span>
+          <span class="fb-actions">
+            <button class="btn btn-xs ${f.handled ? 'btn-ghost' : 'btn-teal'}"
+                    data-fb-handled="${f.id}" data-value="${f.handled ? '0' : '1'}"
+              >${f.handled ? 'Remettre en attente' : 'Marquer traité'}</button>
+            <button class="btn btn-red btn-xs" data-fb-del="${f.id}">Supprimer</button>
+          </span>
+        </div>
+        <div class="fb-msg">${esc(f.message || '')}</div>
+      </div>`).join('');
+  }
+
+  async function loadFeedback() {
+    fbError('');
+    try {
+      const data = await usrCall('GET', '/api/admin/feedback');
+      renderFeedback(data.feedback || [], data.pending || 0);
+    } catch (e) {
+      document.getElementById('fbList').innerHTML =
+        '<div class="fb-empty">Lecture impossible.</div>';
+      fbError(String(e.message || e));
+    }
+  }
+
+  document.getElementById('fbList').addEventListener('click', async (ev) => {
+    const traiter = ev.target.closest('button[data-fb-handled]');
+    const supprimer = ev.target.closest('button[data-fb-del]');
+    if (!traiter && !supprimer) return;
+    const btn = traiter || supprimer;
+    if (supprimer && !confirm('Supprimer ce retour ? Il ne sera pas récupérable.')) return;
+    btn.disabled = true;
+    fbError('');
+    try {
+      if (traiter) {
+        await usrCall('POST', `/api/admin/feedback/${traiter.dataset.fbHandled}/handled`,
+                      { handled: traiter.dataset.value === '1' });
+      } else {
+        await usrCall('DELETE', `/api/admin/feedback/${supprimer.dataset.fbDel}`);
+      }
+      await loadFeedback();
+    } catch (e) {
+      fbError(String(e.message || e));
+      btn.disabled = false;
+    }
   });
 
   // ── Utilisateurs ──────────────────────────────────────────────────────
@@ -1743,7 +1867,7 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
   // ── Init ──────────────────────────────────────────────────────────────
   document.querySelector('th[data-col="last_scraped_at"]').classList.add('sort-active');
   updateStaleMode();
-  await Promise.all([loadStats(), loadCommanders(), loadTiming()]);
+  await Promise.all([loadStats(), loadCommanders(), loadTiming(), loadFeedback()]);
 
 })();
 </script>

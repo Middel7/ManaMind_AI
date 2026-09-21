@@ -358,6 +358,49 @@
     });
   };
 
+  // Fenetre de retour, ouverte par le bouton du coin bas droit. Le message part
+  // avec le compte connecte : rien a saisir d'autre que le texte, et l'ecran
+  // d'administration sait de qui il vient.
+  MM.feedbackForm = function () {
+    const dialog = MM.modal({
+      title: 'Aidez-moi à améliorer ManaMind',
+      body: `
+        <div class="stack">
+          <p class="muted small">Ce qui vous manque, ce qui vous gêne, ce que vous
+            aimeriez voir&nbsp;: écrivez-le ici, je le lis.</p>
+          <label class="field">
+            <span class="sr-only">Votre message</span>
+            <textarea class="textarea textarea--prose" id="mmFeedbackText" rows="6"
+              maxlength="4000"
+              placeholder="Par exemple : j'aimerais pouvoir trier ma collection par extension."></textarea>
+          </label>
+        </div>`,
+      footer: `
+        <button class="btn" data-close>Annuler</button>
+        <button class="btn btn--primary" data-send>Envoyer</button>`,
+    });
+
+    const champ = el('#mmFeedbackText', dialog.root);
+    const bouton = el('[data-send]', dialog.root);
+    champ.focus();
+
+    bouton.addEventListener('click', async () => {
+      const message = champ.value.trim();
+      if (!message) { champ.focus(); return MM.toast.error("Écrivez quelque chose avant d'envoyer."); }
+      // Le bouton se verrouille le temps de l'envoi : un double clic creerait
+      // deux fois le meme retour.
+      bouton.disabled = true;
+      try {
+        await MM.api.post('/api/feedback', { message });
+        dialog.close();
+        MM.toast.ok('Merci, votre message est bien arrivé.');
+      } catch (error) {
+        bouton.disabled = false;
+        MM.toast.error(error.message || 'Envoi impossible.');
+      }
+    });
+  };
+
   /* ══ Icones ════════════════════════════════════════════════════════════ */
 
   const svg = (paths, extra = '') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -395,6 +438,7 @@
     eye: svg('<path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6Z"/><circle cx="12" cy="12" r="2.6"/>'),
     tag: svg('<path d="M3 12V4h8l9 9-8 8Z"/><path d="M7.5 7.5v.1"/>'),
     coin: svg('<circle cx="12" cy="12" r="9"/><path d="M15 9.5A3 3 0 0 0 9 11c0 2.5 6 1.5 6 4a3 3 0 0 1-6-1.5"/>'),
+    chat: svg('<path d="M20 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2Z"/>'),
     layers: svg('<path d="m12 3 9 5-9 5-9-5Z"/><path d="m3 13 9 5 9-5"/>'),
   };
 
@@ -547,18 +591,26 @@
         </div>`);
     }
 
-    // Lien de soutien, partout sauf sur l'accueil : celui-ci porte deja le
-    // bandeau, les chiffres et le parcours d'installation, et n'a pas besoin
-    // d'une sollicitation de plus. Un lien nu, sans script ni image tierce :
-    // la page n'emet aucune requete vers Ko-fi tant qu'on ne clique pas.
+    // Coin bas droit : l'appel a retour partout, le lien de soutien partout
+    // sauf sur l'accueil — celui-ci porte deja le bandeau, les chiffres et le
+    // parcours d'installation, et n'a pas besoin d'une sollicitation de plus.
+    // Le lien est nu, sans script ni image tierce : la page n'emet aucune
+    // requete vers Ko-fi tant qu'on ne clique pas.
+    const dock = node('<div class="dock"></div>');
+    dock.appendChild(node(`
+      <button class="support-tag" type="button" id="mmFeedback"
+              aria-label="Help me improve" title="Help me improve"
+              >${MM.icons.chat}<span>Help me improve</span></button>`));
     if (nav !== 'home') {
-      document.body.appendChild(node(`
+      dock.appendChild(node(`
         <a class="support-tag" href="https://ko-fi.com/middel7"
            target="_blank" rel="noopener noreferrer"
            aria-label="Support the project — buy me a coffee"
            title="Support the project — buy me a coffee"
            >${MM.icons.coin}<span>Support the project &mdash; buy me a coffee</span></a>`));
     }
+    el('#mmFeedback', dock).addEventListener('click', () => MM.feedbackForm());
+    document.body.appendChild(dock);
 
     const bottombar = node(`<nav class="bottombar" aria-label="Navigation">${renderTabs(nav)}</nav>`);
     document.body.appendChild(bottombar);
