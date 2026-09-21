@@ -143,11 +143,11 @@
     <div class="hero__body">
       <p class="hero__title hero__hello">${MM.esc(greeting)}</p>
       <h2 class="hero__title">${empty
-        ? 'Votre collection vous attend'
+        ? 'Votre collection a besoin de vous'
         : 'Je vous aide à mieux piloter votre collection !'}</h2>
-      ${empty ? `<p class="muted">Importez vos cartes une fois, et l'outil vous dira quels
-        decks construire, quelles cartes dorment et lesquelles amélioreraient vos
-        listes.</p>` : ''}
+      ${empty ? `<p class="muted">Importez vos cartes et vos decklists, l'outil vous
+        recommandera quels decks construire et quelles cartes utiliser pour améliorer
+        vos listes.</p>` : ''}
       ${heroStats}
       ${empty ? `
         <div class="hero__actions" style="margin-top:var(--sp-4)">
