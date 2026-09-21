@@ -10,54 +10,207 @@
 <link rel="stylesheet" href="/static/css/tokens.css">
 <link rel="stylesheet" href="/static/css/app.css">
 <style>
-  .auth { display: grid; grid-template-columns: 1fr 460px; min-height: 100vh; }
-  @media (max-width: 960px) { .auth { grid-template-columns: 1fr; } .auth__art { display: none; } }
+  /* La page de connexion est la seule a n'avoir ni barre laterale ni onglets :
+     l'illustration y tient toute la surface, et le contenu flotte au centre.
+     Ces regles sont prefixees par .auth et ne touchent a aucun composant
+     partage. */
 
-  .auth__art {
+  /* Un ecran, pas une grille en deux colonnes : la colonne opaque de droite
+     coupait l'illustration en deux et poussait le formulaire contre le bord. */
+  .auth {
     position: relative;
     isolation: isolate;
-    display: flex; flex-direction: column; justify-content: flex-end;
-    padding: var(--sp-12);
-    background: var(--bg-sunken);
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: var(--sp-8) var(--sp-6);
+  }
+
+  /* L'illustration couvre tout, derriere le contenu. Le flou est leger : il
+     calme les details sans effacer l'image, et fait remonter le texte au
+     premier plan sans qu'un voile opaque soit necessaire. */
+  /* `fixed` et non `absolute` : agrandi de 4 %, un fond en flux normal
+     debordait de la page et y ajoutait une barre de defilement horizontale. Un
+     element fixe n'entre dans aucun calcul de defilement, et le decor reste en
+     place quand la page defile sur un ecran etroit. */
+  .auth::before {
+    content: "";
+    position: fixed; inset: 0; z-index: -2;
+    background-image: url('/assets/grimoire-bg.avif');
+    background-size: cover;
+    background-position: center 28%;
+    filter: blur(3px) saturate(1.05);
+    /* L'echelle compense le flou, qui laisse sinon un liistere clair sur les
+       quatre bords. */
+    transform: scale(1.04);
+  }
+
+  /* Deux voiles superposes : un degrade vertical qui ancre le bas de l'ecran,
+     et un halo radial qui eclaire le centre — c'est lui qui donne son relief a
+     l'ensemble, sans ombre portee sur le texte. */
+  .auth::after {
+    content: "";
+    position: fixed; inset: 0; z-index: -1;
+    background:
+      radial-gradient(120% 90% at 50% 40%,
+                      rgba(8, 8, 12, 0.35) 0%,
+                      rgba(8, 8, 12, 0.78) 55%,
+                      var(--bg) 100%),
+      linear-gradient(to bottom, rgba(8, 8, 12, 0.5) 0%, rgba(8, 8, 12, 0.2) 45%,
+                      rgba(8, 8, 12, 0.85) 100%);
+  }
+
+  .auth__inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 400px;
+    align-items: center;
+    gap: var(--sp-16);
+    width: 100%;
+    max-width: 1080px;
+  }
+
+  /* ── Le discours ────────────────────────────────────────────────────────── */
+
+  .auth__pitch { display: flex; flex-direction: column; gap: var(--sp-6); }
+
+  .auth__title {
+    font-family: var(--font-display);
+    /* Entre 2,25 rem et 3,5 rem selon la largeur : le titre porte la page, et
+       un --text-3xl fixe le laissait maigre sur un grand ecran. */
+    font-size: clamp(2.25rem, 3.4vw, 3.5rem);
+    line-height: 1.08;
+    letter-spacing: -0.01em;
+    max-width: 14ch;
+  }
+  /* Le dernier mot reprend l'or de l'interface : un seul point d'accent, la ou
+     l'oeil arrive en fin de phrase. */
+  .auth__title em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  .auth__points { display: flex; flex-direction: column; gap: var(--sp-4); }
+
+  .auth__point {
+    display: flex;
+    gap: var(--sp-4);
+    align-items: flex-start;
+    max-width: 44ch;
+  }
+  /* La pastille remplace l'icone nue : elle aligne les trois arguments sur une
+     meme colonne, quelle que soit la longueur du texte. */
+  .auth__point > span {
+    display: grid; place-items: center;
+    width: 32px; height: 32px;
+    flex-shrink: 0;
+    border-radius: var(--r-md);
+    border: 1px solid var(--line-accent);
+    background: var(--accent-wash);
+    color: var(--accent);
+  }
+  .auth__point svg { width: 16px; height: 16px; }
+  .auth__point p { margin: 0; }
+
+  /* ── La carte de connexion ──────────────────────────────────────────────── */
+
+  /* Verre depoli plutot que fond plein : l'illustration reste perceptible
+     derriere le formulaire, et la carte se pose sur l'image au lieu de la
+     masquer. */
+  .auth__card {
+    position: relative;
+    display: flex; flex-direction: column;
+    gap: var(--sp-6);
+    padding: var(--sp-8);
+    border-radius: var(--r-xl);
+    border: 1px solid var(--line-strong);
+    background: rgba(14, 14, 21, 0.72);
+    backdrop-filter: blur(18px) saturate(1.2);
+    -webkit-backdrop-filter: blur(18px) saturate(1.2);
+    /* Deux ombres : la portee habituelle, et une lueur doree tres diffuse qui
+       decolle la carte de l'illustration. Sans elle, le verre depoli se fond
+       dans les zones sombres de l'image et la carte perd ses contours. */
+    box-shadow: var(--shadow-lg), 0 0 80px rgba(224, 169, 74, 0.07);
+    /* Le filet dore suit l'arrondi : depassant des angles, il restait invisible. */
     overflow: hidden;
   }
-  .auth__art::before {
-    content: ""; position: absolute; inset: 0; z-index: -2;
-    background-image: url('/assets/grimoire-bg.avif');
-    background-size: cover; background-position: center;
-    opacity: 0.55;
-  }
-  .auth__art::after {
-    content: ""; position: absolute; inset: 0; z-index: -1;
-    background: linear-gradient(20deg, var(--bg) 12%,
-                rgba(8,8,12,0.6) 55%, rgba(8,8,12,0.25) 100%);
-  }
-
-  .auth__form {
-    display: flex; flex-direction: column; justify-content: center;
-    gap: var(--sp-6);
-    padding: var(--sp-10) var(--sp-8);
-    border-left: 1px solid var(--line);
-    background: var(--bg-raised);
+  /* Un filet dore en haut de la carte, large d'un pixel : il la rattache a
+     l'interface sans ajouter de couleur ailleurs. */
+  .auth__card::before {
+    content: "";
+    display: block;
+    /* `flex: 0 0 1px` et non `height` seule : dans une colonne flex, le filet
+       se laissait comprimer a zero et ne s'affichait jamais. */
+    flex: 0 0 1px;
+    height: 1px;
+    margin: calc(var(--sp-8) * -1) calc(var(--sp-8) * -1) 0;
+    background: linear-gradient(90deg, transparent,
+                var(--line-accent) 30%, var(--line-accent) 70%, transparent);
   }
 
-  .auth__points { display: flex; flex-direction: column; gap: var(--sp-3); max-width: 460px; }
-  .auth__point { display: flex; gap: var(--sp-3); align-items: flex-start; }
-  .auth__point svg { width: 18px; height: 18px; color: var(--accent); flex-shrink: 0; margin-top: 3px; }
+  .auth__foot {
+    margin: 0;
+    padding-top: var(--sp-4);
+    border-top: 1px solid var(--line);
+  }
+
+  /* ── Apparition ─────────────────────────────────────────────────────────── */
+
+  /* Une montee de quelques pixels, une seule fois, a l'ouverture. La carte suit
+     le discours d'un souffle : l'oeil lit le titre, puis trouve le formulaire. */
+  @keyframes auth-monte {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: none; }
+  }
+  .auth__pitch, .auth__card {
+    animation: auth-monte var(--dur-slow) var(--ease-out) both;
+  }
+  .auth__card { animation-delay: 0.08s; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .auth__pitch, .auth__card { animation: none; }
+  }
+
+  /* ── Adaptation aux ecrans etroits ──────────────────────────────────────── */
+
+  @media (max-width: 1080px) {
+    .auth__inner { gap: var(--sp-10); grid-template-columns: minmax(0, 1fr) 370px; }
+  }
+
+  /* 860 px : le point de rupture du reste du site, la ou la barre laterale
+     cede la place. Les deux blocs passent l'un sous l'autre, discours en tete. */
+  @media (max-width: 860px) {
+    .auth { place-items: start center; padding-top: var(--sp-12); }
+    .auth__inner {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--sp-8);
+      max-width: 440px;
+    }
+    .auth__title { font-size: clamp(1.9rem, 7vw, 2.4rem); max-width: none; }
+    .auth__point { max-width: none; }
+  }
+
+  @media (max-width: 420px) {
+    .auth { padding: var(--sp-6) var(--sp-4); }
+    .auth__card { padding: var(--sp-6); }
+    .auth__card::before { margin: calc(var(--sp-6) * -1) calc(var(--sp-6) * -1) 0; }
+  }
 </style>
 </head>
 <body>
 
 <div class="auth">
-  <div class="auth__art">
-    <div class="stack">
+  <div class="auth__inner">
+
+    <div class="auth__pitch">
       <div class="cluster-2">
         <span class="brand__mark" id="mark"></span>
-        <span class="brand__name" style="font-size:1.5rem">ManaMind</span>
+        <span class="brand__name" style="font-size:1.35rem">ManaMind</span>
       </div>
-      <h1 class="h1" style="max-width:520px">
-        Votre collection Magic, enfin exploitable.
+
+      <h1 class="auth__title">
+        Votre collection Magic, enfin <em>exploitable</em>.
       </h1>
+
       <div class="auth__points">
         <div class="auth__point">
           <span data-icon="collection"></span>
@@ -76,37 +229,38 @@
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="auth__form">
-    <div class="stack-2">
-      <h2 class="h2">Connexion</h2>
-      <p class="muted small">Accédez à votre collection et à vos decks.</p>
+    <div class="auth__card">
+      <div class="stack-2">
+        <h2 class="h2">Connexion</h2>
+        <p class="muted small">Accédez à votre collection et à vos decks.</p>
+      </div>
+
+      <form class="stack" id="form" novalidate>
+        <div class="field">
+          <label class="label" for="email">Adresse e-mail</label>
+          <input class="input" id="email" type="email" required autocomplete="email"
+                 placeholder="vous@exemple.com" autofocus>
+        </div>
+        <div class="field">
+          <label class="label" for="password">Mot de passe</label>
+          <input class="input" id="password" type="password" required
+                 autocomplete="current-password" placeholder="••••••••">
+        </div>
+
+        <p class="small" id="error" style="color:var(--danger)" hidden></p>
+
+        <button class="btn btn--primary btn--lg btn--block" type="submit" id="submit">
+          Se connecter
+        </button>
+      </form>
+
+      <p class="xs dim auth__foot">
+        L'accès se fait sur invitation. Si vous avez reçu un lien d'invitation,
+        ouvrez-le pour créer votre compte.
+      </p>
     </div>
 
-    <form class="stack" id="form" novalidate>
-      <div class="field">
-        <label class="label" for="email">Adresse e-mail</label>
-        <input class="input" id="email" type="email" required autocomplete="email"
-               placeholder="vous@exemple.com" autofocus>
-      </div>
-      <div class="field">
-        <label class="label" for="password">Mot de passe</label>
-        <input class="input" id="password" type="password" required
-               autocomplete="current-password" placeholder="••••••••">
-      </div>
-
-      <p class="small" id="error" style="color:var(--danger)" hidden></p>
-
-      <button class="btn btn--primary btn--lg btn--block" type="submit" id="submit">
-        Se connecter
-      </button>
-    </form>
-
-    <p class="xs dim">
-      L'accès se fait sur invitation. Si vous avez reçu un lien d'invitation,
-      ouvrez-le pour créer votre compte.
-    </p>
   </div>
 </div>
 
@@ -114,8 +268,10 @@
 <script>
 (() => {
   MM.el('#mark').innerHTML = MM.icons.sparkle;
+  // L'icone se pose DANS la pastille, elle ne la remplace pas : `outerHTML`
+  // effacait le span, et avec lui le cadre dore qui aligne les trois arguments.
   MM.els('[data-icon]').forEach((holder) => {
-    holder.outerHTML = MM.icons[holder.dataset.icon];
+    holder.innerHTML = MM.icons[holder.dataset.icon];
   });
 
   const form = MM.el('#form');
