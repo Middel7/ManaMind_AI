@@ -138,7 +138,9 @@
        voile s'est leve, l'accroche traverse un ciel clair ou ce gris se lisait
        mal. Sa taille et sa graisse la distinguent deja du titre. */
     color: var(--text);
-    max-width: 42ch;
+    /* 34 signes : l'accroche raccourcie tenait sur deux lignes tres inegales,
+       la seconde reduite aux deux derniers mots. */
+    max-width: 34ch;
   }
   .auth__lead em { font-style: normal; color: var(--accent); }
 
@@ -268,25 +270,29 @@
       <h1 class="auth__title">Votre gestionnaire de collection MTG</h1>
 
       <p class="auth__lead">
-        Chaque carte que vous possédez mise au service de vos decks, pour
-        <em>jouer mieux</em> sans rien acheter de plus.
+        Chaque carte que vous possédez mise au service de <em>vos decks</em>.
       </p>
 
       <div class="auth__points">
         <div class="auth__point">
           <span data-icon="collection"></span>
-          <p class="small muted">Dites ce que vous possédez : ManaMind vous montre
-            les decks que vous pouvez monter dès aujourd'hui.</p>
+          <p class="small muted">Une vue sur ce que vous possédez, un achat et une
+            mise en vente simplifiée.</p>
         </div>
         <div class="auth__point">
           <span data-icon="sparkle"></span>
-          <p class="small muted">Les cartes à ajouter à une liste, et celles à en
+          <p class="small muted">Les cartes à ajouter à un deck, et celles à en
             sortir.</p>
         </div>
         <div class="auth__point">
-          <span data-icon="crown"></span>
-          <p class="small muted">Les cartes que vous n'avez jamais jouées, et les
-            decks où elles trouveraient leur place.</p>
+          <span data-icon="booster"></span>
+          <p class="small muted">Trouver un deck pour une carte que vous venez
+            d'ouvrir.</p>
+        </div>
+        <div class="auth__point">
+          <span data-icon="box"></span>
+          <p class="small muted">Vos cartes qui dorment, et les decks où elles
+            trouveraient leur place.</p>
         </div>
       </div>
     </div>
