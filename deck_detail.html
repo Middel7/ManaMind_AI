@@ -89,7 +89,9 @@
       <div class="hero__body">
         <div class="hero__cols">
         <div class="grow">
-        <p class="eyebrow">${MM.esc(deck.commander || 'Deck')}</p>
+        ${(() => { const sur = MM.deckEyebrow(deck.commander, deck.name)
+                     || (deck.commander ? '' : 'Deck');
+                   return sur ? `<p class="eyebrow">${MM.esc(sur)}</p>` : ''; })()}
         <h2 class="hero__title">${MM.esc(deck.name)}</h2>
         <div class="hero__stats">
           <span class="hero__stat"><b>${MM.fmt.int(deck.card_count)}</b>
@@ -114,8 +116,9 @@
         </div>
         </div>
         <div class="hero__curve">${MM.mana.curve(cards, 112, {
-          commander: deck.commander, reference: manaReference })}</div>
-        <div>${MM.mana.rows(cards)}</div>
+          commander: deck.commander, reference: manaReference, average: false })}</div>
+        <div>${MM.mana.rows(cards, {
+          commander: deck.commander, reference: manaReference, average: true })}</div>
       </div>
       </div>`;
   }

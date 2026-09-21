@@ -1401,8 +1401,12 @@
      *  `commander` et `reference` sont facultatifs : donnes, ils ajoutent la
      *  courbe moyenne des decks qui jouent le meme commandant, en repere par
      *  dessus les barres, et la comparaison des couts moyens sous la courbe.
-     *  Sans reference, le cout moyen du deck s'affiche seul. */
-    curve(list, height = 40, { commander = null, reference = null } = {}) {
+     *  Sans reference, le cout moyen du deck s'affiche seul.
+     *
+     *  `average: false` retire cette ligne : dans un bandeau, elle volait a la
+     *  courbe la hauteur qui porte toute son information, et le chiffre se lit
+     *  mieux range avec les autres donnees du deck (voir `rows`). */
+    curve(list, height = 40, { commander = null, reference = null, average = true } = {}) {
       const { buckets, total, shares } = MM.mana.shares(list, commander);
       const refShares = (reference && reference.curve && reference.curve.length === BUCKETS)
         ? reference.curve : null;
@@ -1431,7 +1435,7 @@
 
       return `<div class="curve-block">
         <div class="curve" style="--curve-h:${height}px">${bars}</div>
-        ${total ? MM.mana.averageLine(list, commander, reference) : ''}
+        ${average && total ? MM.mana.averageLine(list, commander, reference) : ''}
       </div>`;
     },
 
@@ -1497,8 +1501,34 @@
         </div>`;
     },
 
-    /** Symboles exiges, sources et terrains — la lecture des couleurs. */
-    rows(list) {
+    /** Le cout moyen au gabarit des autres donnees du deck, pour les ecrans
+     *  qui le sortent de sous la courbe. La comparaison ne redit pas le nom du
+     *  commandant : la ligne vit sous un bandeau qui le porte deja. */
+    avgRow(list, commander = null, reference = null) {
+      const average = MM.mana.average(list, commander);
+      if (average === null) return '';
+      const ref = reference && reference.avg_mana_value ? reference : null;
+      const delta = ref ? average - ref.avg_mana_value : null;
+      const title = ref
+        ? `Coût de mana moyen des sorts du deck, hors terrains et commandant, `
+          + `comparé à ${MM.fmt.dec(ref.avg_mana_value)} pour ${MM.fmt.int(ref.decks)} `
+          + `deck${ref.decks > 1 ? 's' : ''} jouant ${ref.commander}`
+        : 'Coût de mana moyen des sorts du deck, hors terrains et commandant';
+      return `
+        <div class="mana-row" title="${esc(title)}">
+          <span class="mana-row__label">Coût moyen</span>
+          <span class="mana-count"><span class="strong">${MM.fmt.dec(average)}</span></span>
+          ${ref ? `<span class="xs dim">
+            <i class="curve-avg__key" aria-hidden="true"></i>
+            vs ${MM.fmt.dec(ref.avg_mana_value)} pour ce commandant
+            (${delta >= 0 ? '+' : '−'}${MM.fmt.dec(Math.abs(delta))})</span>` : ''}
+        </div>`;
+    },
+
+    /** Symboles exiges, sources et terrains — la lecture des couleurs.
+     *  `average: true` y ajoute le cout moyen, quand la courbe ne le porte
+     *  plus elle-meme. */
+    rows(list, { commander = null, reference = null, average = false } = {}) {
       const src = MM.mana.sources(list);
       const land = MM.mana.lands(list);
       return `
@@ -1513,6 +1543,7 @@
               title="Cartes dont seule la face arrière est un terrain"
               >+ ${land.back} au verso</span>` : ''}
           </div>
+          ${average ? MM.mana.avgRow(list, commander, reference) : ''}
         </div>`;
     },
 
@@ -1677,6 +1708,21 @@
       keys.add(front(key));
     });
     return keys.has(target) || keys.has(front(target));
+  };
+
+  /**
+   * Le commandant en surtitre d'un bandeau, ou rien quand le deck porte deja
+   * son nom. « Kestia, the Cultivator » ecrit deux fois, l'un au-dessus de
+   * l'autre, n'apprend rien et alourdit le bandeau. Le numero qui prefixe les
+   * decks importes (« 05 - Jodah… ») ne compte pas dans la comparaison.
+   */
+  MM.deckEyebrow = function (commander, deckName) {
+    const nom = String(commander || '').trim();
+    if (!nom) return '';
+    const cle = (value) => String(value || '')
+      .replace(/^\s*\d+\s*[-–—.)]\s*/, '')
+      .trim().toLowerCase();
+    return cle(deckName) === cle(nom) ? '' : nom;
   };
 
   /**

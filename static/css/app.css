@@ -381,15 +381,17 @@ button.nav__item { width: 100%; }
   transform: scale(1.04);
 }
 
-/* Le degrade garantit la lisibilite du texte quelle que soit l'illustration */
+/* Le degrade garantit la lisibilite du texte quelle que soit l'illustration.
+   Sa moitie droite s'est densifiee le jour ou la courbe est venue s'y poser :
+   les parts en petit gris se perdaient sur une illustration claire. */
 .hero::after {
   content: "";
   position: absolute;
   inset: 0;
   z-index: -1;
   background:
-    linear-gradient(100deg, var(--bg) 4%, color-mix(in srgb, var(--bg) 76%, transparent) 46%,
-                    color-mix(in srgb, var(--bg) 24%, transparent) 100%),
+    linear-gradient(100deg, var(--bg) 4%, color-mix(in srgb, var(--bg) 78%, transparent) 46%,
+                    color-mix(in srgb, var(--bg) 46%, transparent) 100%),
     linear-gradient(0deg, var(--bg) 0%, transparent 62%);
 }
 
@@ -397,7 +399,7 @@ button.nav__item { width: 100%; }
    contenu s'etale au lieu d'etre empile dans une colonne de 720 px. */
 .hero__body {
   position: relative;
-  padding: var(--sp-4) var(--sp-6);
+  padding: var(--sp-5) var(--sp-6);
   display: flex;
   flex-direction: column;
   gap: var(--sp-2);
@@ -1091,7 +1093,10 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
 /* La piste occupe ce qui reste une fois la part et le cout poses ; la barre s'y
    dresse en proportion. Sans elle, la barre etait un element flex parmi les
    autres : elle se laissait comprimer et toutes finissaient a la meme hauteur. */
-.curve__track { flex: 1; position: relative; min-height: 8px; }
+.curve__track {
+  flex: 1; position: relative; min-height: 8px;
+  border-bottom: 1px solid var(--line);
+}
 .curve__fill {
   position: absolute; left: 0; right: 0; bottom: 0;
   min-height: 2px; border-radius: 3px 3px 0 0;
@@ -1138,25 +1143,70 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
 
 /* Bandeau en trois colonnes : ce qu'est le deck, sa courbe, ses couleurs. */
 .hero__cols {
-  display: grid; gap: var(--sp-6); align-items: center;
+  /* Les colonnes s'etirent sur la hauteur de la ligne, et seule la courbe s'en
+     sert : c'est cette hauteur qui porte toute son information. Le texte et
+     les donnees restent centres, sinon ils flotteraient en haut d'un bandeau
+     dont la courbe fixe desormais la hauteur. */
+  display: grid; gap: var(--sp-5) var(--sp-8); align-items: stretch;
   /* La derniere colonne se limite a son contenu : etiree, elle laissait un
      grand vide a droite des symboles. Les deux colonnes de droite se centrent
      dans la place qui leur revient. */
-  grid-template-columns: minmax(0, 1.1fr) minmax(260px, 0.9fr) max-content;
+  grid-template-columns: minmax(0, 1.25fr) minmax(260px, 0.75fr) max-content;
 }
 /* La courbe s'etire sur sa colonne ; les couleurs, elles, tiennent leur
    largeur propre — centrer la courbe la ramenait a sa largeur minimale. */
-.hero__cols > :nth-child(3) { justify-self: center; }
+.hero__cols > :nth-child(1) { align-self: center; }
+.hero__cols > :nth-child(3) { justify-self: center; align-self: center; }
 .hero__cols .mana-rows { margin-left: 0; }
-/* Faute de largeur, les couleurs passent sous les deux premieres colonnes
-   plutot que de les comprimer toutes les trois. */
-@media (max-width: 1400px) {
-  .hero__cols { grid-template-columns: minmax(0, 1fr) minmax(240px, auto); }
-  .hero__cols > :nth-child(3) { grid-column: 1 / -1; }
+
+/* La colonne de gauche empilait cinq elements sans respiration : l'accroche
+   touchait le titre, et les boutons les chiffres. Un rythme vertical les
+   separe, plus large la ou le regard change de nature d'information. */
+.hero__cols > .grow {
+  display: flex; flex-direction: column; align-items: flex-start;
+  gap: var(--sp-1);
+}
+.hero__cols > .grow .hero__stats { margin-top: var(--sp-3); }
+.hero__cols > .grow .hero__actions { margin-top: var(--sp-4); align-self: stretch; }
+
+/* La colonne du milieu porte la courbe et rien d'autre : elle la laisse
+   remplir la hauteur qu'on lui a donnee, et la largeur aussi — le plafond de
+   460 px laissait un vide a sa droite sur grand ecran. */
+.hero__cols > :nth-child(2) { display: flex; min-height: 0; }
+.hero__cols .curve-block { flex: 1; max-width: none; justify-content: center; }
+/* Dans un panneau, ces chiffres se posent sur une surface unie. Dans un
+   bandeau, l'illustration passe dessous et une zone claire les effacait : une
+   ombre d'un pixel leur rend un fond, sans les alourdir. */
+.hero__cols .curve__pct, .hero__cols .curve__label {
+  color: var(--text-2);
+  text-shadow: 0 1px 2px var(--bg);
+}
+.hero__cols .curve {
+  height: auto; flex: 1; min-height: var(--curve-h, 40px);
+  /* Passe cette hauteur, la courbe ne dit rien de plus et se met a dominer le
+     bandeau : au-dela elle se centre dans la place qui lui reste. */
+  max-height: 240px;
+}
+/* Faute de largeur pour trois colonnes, les donnees se rangent sous le titre
+   et la courbe garde sa colonne sur les deux lignes. Posees en travers du
+   bandeau, elles laissaient un vide a gauche et ajoutaient leur hauteur a
+   celle de la colonne de gauche. */
+@media (max-width: 1200px) {
+  .hero__cols { grid-template-columns: minmax(0, 1fr) minmax(300px, 0.85fr); }
+  /* Les places sont donnees explicitement : sans cela, la courbe etendue sur
+     deux lignes prenait la premiere colonne et renvoyait le titre a droite. */
+  .hero__cols > :nth-child(1) { grid-column: 1; grid-row: 1; }
+  .hero__cols > :nth-child(2) { grid-column: 2; grid-row: 1 / 3; }
+  .hero__cols > :nth-child(3) {
+    grid-column: 1; grid-row: 2; justify-self: start; align-self: start;
+  }
 }
 @media (max-width: 860px) {
   .hero__cols { grid-template-columns: 1fr; }
-  .hero__cols > :nth-child(3) { grid-column: auto; }
+  .hero__cols > :nth-child(1),
+  .hero__cols > :nth-child(2),
+  .hero__cols > :nth-child(3) { grid-column: auto; grid-row: auto; }
+  .hero__cols > :nth-child(3) { justify-self: start; }
 }
 .mana-rows {
   display: flex; flex-direction: column; gap: var(--sp-1, 4px);
