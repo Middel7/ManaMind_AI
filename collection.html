@@ -48,6 +48,19 @@
 
   .sentinel { height: 40px; }
 
+  /* Acces a l'ajout, propre au telephone. Sur grand ecran, la barre laterale
+     porte cette entree en permanence et le bouton ferait doublon ; sur petit
+     ecran elle est repliee derriere le burger, et le rond central de la barre
+     d'onglets ne mene plus a l'ajout. Sans lui, ajouter une carte depuis sa
+     collection demandait deux gestes pour ouvrir un menu. */
+  .add-here { display: none; }
+  @media (max-width: 860px) {
+    .add-here { display: inline-flex; }
+    /* Il prend la ligne entiere plutot que de finir a cote de « Liste » : c'est
+       l'action principale de l'ecran, elle ne se glisse pas dans un coin. */
+    .toolbar > .add-here { flex: 1 1 100%; justify-content: center; }
+  }
+
   /* En vue liste, les liens marchands se rangent a droite de la ligne */
   .list-view .mtg-card__market { margin-top: 0; flex-shrink: 0; }
   .list-view .mtg-card__market .btn { flex: none; }
@@ -108,6 +121,9 @@
       <button class="btn btn--sm" id="viewGrid" aria-pressed="true">Grille</button>
       <button class="btn btn--sm" id="viewList" aria-pressed="false">Liste</button>
     </div>
+
+    <a class="btn btn--primary add-here" href="/collection/ajout">
+      Ajouter des cartes à ma collection</a>
   </div>
 
   <div class="filters" id="filters" hidden>

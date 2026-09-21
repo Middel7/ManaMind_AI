@@ -586,10 +586,14 @@
     },
   ];
 
+  // Le rond central de la barre d'onglets menait a l'ajout de cartes. Il mene
+  // desormais a l'analyse : ajouter une carte se fait depuis « Ma collection »,
+  // qui porte son propre bouton, tandis qu'ameliorer un deck n'avait aucun
+  // acces direct sur telephone. Le libelle reprend celui de la barre laterale.
   const TABS = [
     { key: 'home', label: 'Accueil', href: '/', icon: 'home' },
     { key: 'collection', label: 'Collection', href: '/collection', icon: 'collection' },
-    { key: 'add', label: 'Ajouter', href: '/collection/ajout', icon: 'plus', primary: true },
+    { key: 'analyze', label: 'Améliorer', href: '/decks/analyse', icon: 'chart', primary: true },
     { key: 'decks', label: 'Decks', href: '/decks', icon: 'decks' },
     { key: 'profile', label: 'Profil', href: '/profil', icon: 'user' },
   ];
@@ -636,8 +640,12 @@
   function renderTabs(active) {
     return TABS.map((tab) => {
       if (tab.primary) {
-        return `<a class="tab tab--add" href="${tab.href}" aria-label="${esc(tab.label)}">
-                  <span>${MM.icons.plus}</span><em>${esc(tab.label)}</em>
+        // L'icone vient de l'onglet, et non plus du seul « plus » : ce rond ne
+        // designe plus une seule action, c'est la place centrale de la barre.
+        return `<a class="tab tab--primary" href="${tab.href}"
+                   aria-label="${esc(tab.label)}"
+                   ${tab.key === active ? 'aria-current="page"' : ''}>
+                  <span>${MM.icons[tab.icon]}</span><em>${esc(tab.label)}</em>
                 </a>`;
       }
       return `<a class="tab" href="${tab.href}" ${tab.key === active ? 'aria-current="page"' : ''}>
@@ -763,6 +771,8 @@
            >${MM.icons.coin}<span>Support the project &mdash; buy me a coffee</span></a>`));
     }
     el('#mmFeedback', dock).addEventListener('click', () => MM.feedbackForm());
+    // Son point de chute definitif depend de la largeur : voir placerDock(),
+    // plus bas, qui le monte dans la barre du haut sur petit ecran.
     document.body.appendChild(dock);
 
     const bottombar = node(`<nav class="bottombar" aria-label="Navigation">${renderTabs(nav)}</nav>`);
@@ -789,6 +799,18 @@
       if (petitEcran.matches && ferme) sidebar.setAttribute('inert', '');
       else sidebar.removeAttribute('inert');
     }
+
+    // Les deux pastilles — retour et soutien — vivent dans la barre du haut sur
+    // petit ecran, et flottent au coin bas droit au-dela. Elles changent donc de
+    // parent, et non seulement de position : la barre du haut disparait
+    // au-dessus de 860 px, une pastille qui y serait restee disparaitrait avec
+    // elle. Le noeud est deplace, pas recree — ses ecouteurs le suivent.
+    const topbar = el('.topbar', shell);
+    function placerDock() {
+      const hote = petitEcran.matches ? topbar : document.body;
+      if (dock.parentElement !== hote) hote.appendChild(dock);
+    }
+    placerDock();
 
     const closeDrawer = (rendreLeFocus = true) => {
       if (sidebar.dataset.open !== 'true') return;
@@ -838,6 +860,7 @@
       // lieu d'etre, et son voile resterait sur un ecran qui n'en veut plus.
       if (!petitEcran.matches) closeDrawer(false);
       ajusterInert();
+      placerDock();
     });
     ajusterInert();
 

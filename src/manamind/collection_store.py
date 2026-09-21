@@ -42,22 +42,31 @@ SORTS = {
     "rarity": "rarity_rank DESC NULLS LAST, card_name ASC",
 }
 
-# Les editions Secret Lair (codes SL*) sont ecartees de tout choix
-# d'illustration : leurs visuels alternatifs ne representent pas la carte.
-NO_SECRET_LAIR = "{alias}.set_code NOT ILIKE 'sl%%'"
+# Certaines editions habillent la carte d'une illustration venue d'ailleurs :
+# les Secret Lair (codes SL*) et Marvel Universe — « mar », plus ses inserts
+# « lmar ». Ce n'est pas cette image qu'on veut reconnaitre dans une grille.
+#
+# La regle est partout la meme dans le projet : ces editions passent en dernier
+# dans le choix d'un visuel, elles ne sont jamais exclues. Une carte qui
+# n'existe que la doit garder une illustration.
+#
+# Le fragment s'ecrit en clair a chaque requete plutot que d'etre compose ici :
+# le nombre de pourcents a echapper depend du chemin d'execution de chacune.
 
 # Bloc SQL commun : resout impression, carte, prix et extension d'un exemplaire.
 _ENRICH_SQL = """
     -- Impression exacte de l'exemplaire (renseignee a l'ajout)
     LEFT JOIN scryfall_card_printings pd
-           ON pd.id = uc.printing_id AND pd.set_code NOT ILIKE 'sl%'
+           ON pd.id = uc.printing_id
+          AND pd.set_code NOT ILIKE 'sl%'
+          AND LOWER(pd.set_code) NOT IN ('mar', 'lmar')
 
-    -- Repli : impression illustrative, quand l'edition n'est pas connue —
-    -- ou quand celle qui est enregistree est un Secret Lair, ou encore quand
-    -- elle n'a pas d'illustration. Ce dernier cas laissait la vignette vide
-    -- alors qu'une autre impression de la meme carte en portait une : le
-    -- catalogue connait des impressions sans image, et l'exemplaire possede
-    -- pointait justement l'une d'elles.
+    -- Repli : impression illustrative, quand l'edition n'est pas connue — ou
+    -- quand celle qui est enregistree porte une illustration hors sujet (voir
+    -- plus haut), ou encore quand elle n'a pas d'image du tout. Ce dernier cas
+    -- laissait la vignette vide alors qu'une autre impression de la meme carte
+    -- en portait une : le catalogue connait des impressions sans image, et
+    -- l'exemplaire possede pointait justement l'une d'elles.
     LEFT JOIN LATERAL (
         SELECT p.id, p.scryfall_id, p.set_code, p.collector_number, p.rarity,
                p.image_small, p.image_normal, p.scryfall_uri, p.artist,
@@ -66,9 +75,10 @@ _ENRICH_SQL = """
         WHERE (pd.id IS NULL OR pd.image_normal IS NULL)
           AND p.card_id = uc.card_id AND p.lang = 'en'
           AND p.image_normal IS NOT NULL
-        -- Les Secret Lair passent en dernier plutot que d'etre exclues : une
-        -- poignee de cartes n'existent que la, et resteraient sans visuel.
-        ORDER BY (p.set_code NOT ILIKE 'sl%') DESC,
+        -- Secret Lair et Marvel Universe passent en dernier plutot que d'etre
+        -- exclus : une poignee de cartes n'existent que la, et resteraient
+        -- sans visuel.
+        ORDER BY (p.set_code NOT ILIKE 'sl%' AND LOWER(p.set_code) NOT IN ('mar', 'lmar')) DESC,
                  (p.image_normal IS NOT NULL) DESC, p.released_at DESC NULLS LAST
         LIMIT 1
     ) pf ON TRUE
@@ -579,7 +589,7 @@ def _resolve_printing(session: Any, name: str, set_code: str | None,
           AND p.lang = 'en'
           AND (:set IS NULL OR UPPER(p.set_code) = UPPER(:set))
         ORDER BY (c.normalized_name = mm_normalize_name(:name)) DESC,
-                 (p.set_code NOT ILIKE 'sl%') DESC,
+                 (p.set_code NOT ILIKE 'sl%' AND LOWER(p.set_code) NOT IN ('mar', 'lmar')) DESC,
                  (p.image_normal IS NOT NULL) DESC, p.released_at DESC NULLS LAST
         LIMIT 1
     """), {"name": name, "set": set_code}).fetchone()
