@@ -123,9 +123,18 @@
       // Aucun deck courant ici : la carte passe d'un deck a un autre, le
       // reglage n'aurait pas de cible.
       context: null,
-      flag: `+${MM.fmt.pct(move.gain, 0)}`,
-      flagTitle: `Gain de popularité si la carte change de deck`,
-      note: `${MM.esc(move.from_commander)} → ${MM.esc(move.to_commander)}`,
+      // Cet ecran ne pose qu'une question — deplacer la carte, ou ne plus la
+      // proposer. L'achat, la vente et la recherche de commandant y ouvraient
+      // quatre chemins de plus sous chaque vignette, pour une liste qui en
+      // compte soixante.
+      market: false,
+      commander: false,
+      // Le gain se lit sous la carte, en tete de la ligne qui nomme les deux
+      // decks : pose sur l'illustration, il couvrait l'art et se confondait
+      // avec les pastilles que d'autres ecrans y mettent.
+      note: `<b class="accent" title="Gain de popularité si la carte change de deck"
+              >+${MM.fmt.pct(move.gain, 0)}</b> · ${MM.esc(move.from_commander)}
+             → ${MM.esc(move.to_commander)}`,
       actions: [
         { label: 'Déplacer', act: 'move',
           title: `Retirer de ${MM.esc(move.from_commander)} et ajouter à `
