@@ -18,7 +18,16 @@
 <link rel="stylesheet" href="/static/css/app.css">
 <style>
   .search-hero { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: var(--sp-6); align-items: start; }
-  @media (max-width: 720px) { .search-hero { grid-template-columns: 1fr; } }
+  @media (max-width: 720px) {
+    /* « 1fr » garde un minimum egal a la largeur de son contenu : la liste des
+       commandants etirait la colonne a 393 px pour 380 px disponibles, et la
+       page entiere partait en defilement lateral. Le minmax(0, …) la borne. */
+    .search-hero { grid-template-columns: minmax(0, 1fr); }
+    /* La vignette ne prend plus toute la largeur : pleine page, elle repoussait
+       la liste des commandants sous la ligne de flottaison, et son bord droit
+       touchait l'ecran quand le gauche gardait sa marge. */
+    .search-hero > .mtg-card { width: min(240px, 100%); margin-inline: auto; }
+  }
 
   .cmd-row {
     display: flex; align-items: center; gap: var(--sp-4);
@@ -46,6 +55,12 @@
   }
   .cmd-row__thumb { width: 48px; aspect-ratio: var(--card-ratio); object-fit: cover;
     border-radius: 4px; background: var(--surface-2); flex-shrink: 0; }
+  /* La miniature ouvre la carte en grand. A 48 px on ne lit ni le texte ni le
+     cout de mana du commandant : c'etait la seule facon de le regarder
+     vraiment, et rien ne disait qu'elle etait cliquable. */
+  .cmd-row__thumb[data-zoom] { cursor: zoom-in; transition: outline-color var(--dur) var(--ease); outline: 2px solid transparent; }
+  .cmd-row__thumb[data-zoom]:hover,
+  .cmd-row__thumb[data-zoom]:focus-visible { outline-color: var(--accent); }
   .cmd-row__bar { width: 120px; flex-shrink: 0; }
   @media (max-width: 720px) { .cmd-row__bar { display: none; } }
 </style>
@@ -260,7 +275,9 @@
             <${balise} class="cmd-row"${lien}>
               ${entry.image_url
                 ? `<img class="cmd-row__thumb" src="${MM.esc(entry.image_url)}"
-                     alt="" loading="lazy">`
+                     alt="" loading="lazy" data-zoom="${MM.esc(entry.commander)}"
+                     role="button" tabindex="0"
+                     title="Voir ${MM.esc(entry.commander)} en grand">`
                 : '<span class="cmd-row__thumb"></span>'}
               <div class="grow" style="min-width:0">
                 <p class="strong truncate">${MM.esc(entry.commander)}
@@ -300,7 +317,22 @@
   }
 
 
+  /** Ouvre la fiche d'un commandant : son illustration en grand, son texte et
+   *  ce que vous en possedez. Le clic est intercepte avant la ligne, qui mene
+   *  sinon a l'analyse du deck. */
+  function zoom(cible) {
+    MM.cardDetail(cible.dataset.zoom);
+  }
+
   results.addEventListener('click', (event) => {
+    const vignette = event.target.closest('[data-zoom]');
+    if (vignette) {
+      event.preventDefault();
+      event.stopPropagation();
+      zoom(vignette);
+      return;
+    }
+
     if (event.target.closest('[data-act="back"]')) {
       // Retour a l'ecran de depart : le champ se vide et l'URL oublie la carte,
       // pour qu'un rechargement ramene bien la liste et non le resultat.
@@ -309,6 +341,15 @@
       history.replaceState(null, '', '/cartes/commandant');
       showDormant();
     }
+  });
+
+  // Au clavier, la miniature repond comme le bouton qu'elle annonce etre.
+  results.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    const vignette = event.target.closest('[data-zoom]');
+    if (!vignette) return;
+    event.preventDefault();
+    zoom(vignette);
   });
 
   /** Ecran d'accueil : les cartes rares et mythiques qu'aucun deck n'utilise,

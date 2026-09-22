@@ -379,13 +379,6 @@ button.nav__item { width: 100%; }
    parle. */
 .support-tag__short { display: none; }
 
-/* Sur l'accueil et sur grand ecran seulement, le lien de soutien s'efface : la
-   page porte deja le bandeau, les chiffres et le parcours d'installation. Dans
-   la barre du haut d'un telephone il ne coute rien, et il y reste. */
-@media (min-width: 861px) {
-  .dock[data-nav="home"] .support-tag--kofi { display: none; }
-}
-
 /* La barre du haut ne porte plus que le burger : sur grand ecran, ou la sidebar
    est deployee, elle n'a plus rien a montrer et disparait. Elle ne subsiste en
    dessous de 860 px que parce que son burger y est le seul acces au tiroir. */

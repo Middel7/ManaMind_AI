@@ -42,12 +42,13 @@
      porte l'action. Ce faux bouton la nomme. Il n'est pas cliquable lui-meme —
      c'est la tuile qui recoit le clic, et un bouton dans un bouton n'est pas du
      HTML valide : d'ou un <span> qui emprunte l'aspect de .btn--primary plutot
-     qu'un composant de plus. */
-  .mode__foot {
+     qu'un composant de plus.
+
+     L'action se tient en tete de tuile, sur la ligne du pictogramme. Elle
+     fermait la tuile, sous trois arguments et une note : sur telephone, il
+     fallait derouler tout le texte pour decouvrir qu'il y avait un bouton. */
+  .mode__head {
     display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap;
-    /* Colle au bas de la tuile : les deux modes n'ont pas la meme hauteur de
-       texte, et leurs actions doivent tomber sur la meme ligne. */
-    margin-top: auto; padding-top: var(--sp-2);
   }
   .mode__go { margin-left: auto; }
   /* Sur telephone, l'action prend la largeur : a cote d'une pastille d'etat,
@@ -82,7 +83,11 @@
 
   <div class="modes" id="modes">
     <button class="mode" data-analysis="popular">
-      <span class="mode__mark" data-icon="chart"></span>
+      <span class="mode__head">
+        <span class="mode__mark" data-icon="chart"></span>
+        <span class="badge badge--ok">Disponible</span>
+        <span class="btn btn--primary mode__go">Lancer l'analyse</span>
+      </span>
       <span>
         <span class="h3" style="display:block">Amélioration utilisant la popularité
           des cartes</span>
@@ -99,14 +104,14 @@
         <span class="checks__item" data-check>
           <span>Résultat <b>en quelques secondes</b>.</span></span>
       </span>
-      <span class="mode__foot">
-        <span class="badge badge--ok">Disponible</span>
-        <span class="btn btn--primary mode__go">Lancer l'analyse</span>
-      </span>
     </button>
 
     <button class="mode" data-analysis="ia" id="modeIa" hidden>
-      <span class="mode__mark" data-icon="sparkle"></span>
+      <span class="mode__head">
+        <span class="mode__mark" data-icon="sparkle"></span>
+        <span class="badge" id="engineBadge">Vérification du moteur…</span>
+        <span class="btn btn--primary mode__go">Lancer l'analyse</span>
+      </span>
       <span>
         <span class="h3" style="display:block">Amélioration grâce à l'intelligence
           artificielle</span>
@@ -122,10 +127,6 @@
             la courbe de mana et l'identité de couleur.</span></span>
         <span class="checks__item" data-check>
           <span>Compter <b>environ une minute</b> de calcul.</span></span>
-      </span>
-      <span class="mode__foot">
-        <span class="badge" id="engineBadge">Vérification du moteur…</span>
-        <span class="btn btn--primary mode__go">Lancer l'analyse</span>
       </span>
     </button>
   </div>

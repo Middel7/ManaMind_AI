@@ -753,9 +753,9 @@
         </div>`);
     }
 
-    // Coin bas droit : l'appel a retour partout, le lien de soutien partout
-    // sauf sur l'accueil — celui-ci porte deja le bandeau, les chiffres et le
-    // parcours d'installation, et n'a pas besoin d'une sollicitation de plus.
+    // Coin bas droit : l'appel a retour et le lien de soutien, sur toutes les
+    // pages sans exception — l'accueil les portait a moitie, ce qui rendait
+    // leur presence imprevisible d'un ecran a l'autre.
     // Le lien est nu, sans script ni image tierce : la page n'emet aucune
     // requete vers Ko-fi tant qu'on ne clique pas.
     // Deux libelles par pastille : le long, au coin bas droit d'un grand ecran,
@@ -767,13 +767,7 @@
       <button class="support-tag" type="button" id="mmFeedback"
               aria-label="Help me improve" title="Help me improve"
               >${MM.icons.chat}<span class="support-tag__long">Help me improve</span
-              ><span class="support-tag__short">Support</span></button>`));
-    // Le lien de soutien est partout, mais l'accueil le garde pour le petit
-    // ecran seulement : sur grand ecran cette page porte deja le bandeau, les
-    // chiffres et le parcours d'installation, et une sollicitation de plus y
-    // pesait. Dans la barre du haut d'un telephone, il ne prend la place de
-    // rien — c'est une feuille de style qui tranche, d'ou ce data-nav.
-    dock.dataset.nav = nav || '';
+              ><span class="support-tag__short">Feedback</span></button>`));
     dock.appendChild(node(`
       <a class="support-tag support-tag--kofi" href="https://ko-fi.com/middel7"
          target="_blank" rel="noopener noreferrer"
