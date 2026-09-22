@@ -1336,6 +1336,17 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
   margin-top: auto; padding-top: var(--sp-2);
   display: flex; flex-direction: column; gap: var(--sp-2);
 }
+/* Le chemin vers « dans quel commandant jouer cette carte », sous chaque
+   vignette. Pleine largeur : c'est une question, pas un troisieme bouton de la
+   ligne d'achat, et le libelle ne tiendrait pas a cote des deux autres. Il
+   s'enroule plutot que de deborder — les grilles reduites le serrent a 116 px. */
+.mtg-card__commander {
+  width: 100%;
+  justify-content: center;
+  text-align: center;
+  white-space: normal;
+}
+
 .mtg-card__actions { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
 .mtg-card__actions .btn,
 .mtg-card__market .btn { flex: 1; justify-content: center; }
