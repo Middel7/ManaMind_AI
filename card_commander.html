@@ -278,7 +278,9 @@
                      alt="" loading="lazy" data-zoom="${MM.esc(entry.commander)}"
                      role="button" tabindex="0"
                      title="Voir ${MM.esc(entry.commander)} en grand">`
-                : '<span class="cmd-row__thumb"></span>'}
+                : `<span class="cmd-row__thumb" data-zoom="${MM.esc(entry.commander)}"
+                     role="button" tabindex="0"
+                     title="Voir ${MM.esc(entry.commander)} en grand"></span>`}
               <div class="grow" style="min-width:0">
                 <p class="strong truncate">${MM.esc(entry.commander)}
                   ${entry.in_my_decks
@@ -322,9 +324,12 @@
 
   /** Ouvre la fiche d'un commandant : son illustration en grand, son texte et
    *  ce que vous en possedez. Le clic est intercepte avant la ligne, qui mene
-   *  sinon a l'analyse du deck. */
+   *  sinon a l'analyse du deck — c'est ce qui arrivait quand la vignette
+   *  n'avait pas d'illustration a montrer.
+   *  Un duo de partenaires est stocke « A & B » et ne nomme aucune carte : la
+   *  fiche s'ouvre alors sur le premier des deux. */
   function zoom(cible) {
-    MM.cardDetail(cible.dataset.zoom);
+    MM.cardDetail(String(cible.dataset.zoom).split(' & ')[0].trim());
   }
 
   results.addEventListener('click', (event) => {
