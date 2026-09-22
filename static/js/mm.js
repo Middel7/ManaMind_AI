@@ -2152,5 +2152,21 @@
       </div>`;
   };
 
+  /* ══ Installation sur l'ecran d'accueil ════════════════════════════════ */
+
+  /**
+   * Enregistre le service worker. C'est lui qui fait la difference, sur
+   * Chrome Android, entre « Creer un raccourci » — un marque-page — et
+   * « Installer l'application ». L'enregistrement se fait ici plutot que dans
+   * MM.boot pour couvrir aussi la connexion et l'inscription, seules pages
+   * sans coquille : c'est souvent la qu'on arrive en premier.
+   */
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js', { scope: '/' })
+        .catch(() => { /* hors contexte securise : l'application marche sans */ });
+    });
+  }
+
   global.MM = MM;
 })(window);

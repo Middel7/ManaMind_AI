@@ -123,6 +123,36 @@ def admin_page() -> FileResponse:
     return _page("admin.html")
 
 
+# ── Installation sur l'écran d'accueil ────────────────────────────────────────
+# Les deux fichiers vivent dans `static/` avec le reste du front, mais se
+# servent depuis la racine : un service worker ne contrôle que les URL situées
+# sous la sienne, et `/static/js/sw.js` ne verrait jamais passer une navigation
+# vers `/decks`. Le manifeste les rejoint par symétrie, avec son type MIME
+# propre — `mimetypes` ne connaît pas `.webmanifest` sur toutes les machines.
+
+@router.get("/manifest.webmanifest", include_in_schema=False)
+def web_manifest() -> FileResponse:
+    return FileResponse(
+        ROOT / "static" / "manifest.webmanifest",
+        media_type="application/manifest+json",
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
+@router.get("/sw.js", include_in_schema=False)
+def service_worker() -> FileResponse:
+    return FileResponse(
+        ROOT / "static" / "js" / "sw.js",
+        media_type="text/javascript",
+        headers={
+            "Cache-Control": "no-cache",
+            # Redondant tant que le fichier est servi depuis la racine, mais
+            # c'est ce qui autorisera un jour un autre chemin sans casse.
+            "Service-Worker-Allowed": "/",
+        },
+    )
+
+
 # ── Redirections depuis l'ancienne arborescence ───────────────────────────────
 
 _LEGACY_REDIRECTS = {
