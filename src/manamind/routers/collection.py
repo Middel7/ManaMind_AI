@@ -1173,6 +1173,17 @@ def api_commander_suggest(
 
     if mode == "mine":
         results = suggest_commanders(card, top_n=top)
+        # Les illustrations manquaient dans ce mode : « Tous » montrait les
+        # cartes, « Mes commandants » alignait des cases vides. Le matcher ne
+        # lit que les statistiques de decks ; l'image se résout ici, par le même
+        # chemin que partout ailleurs — édition retenue en tête, duos découpés.
+        if results and _DB_AVAILABLE:
+            with SessionLocal() as session:
+                images = _commander_images(
+                    session, [r["commander"] for r in results], user["id"])
+            for entry in results:
+                urls = images.get(entry["commander"]) or []
+                entry["image_url"] = urls[0] if urls else None
         return _json_response({"card": card, "mode": "mine", "suggestions": results})
 
     # mode == "all" : requête globale sans filtre commandant
