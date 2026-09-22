@@ -366,23 +366,43 @@ def _normalized(name: str) -> str:
     return normalize_card_name(name or "")
 
 
-def load_deck_cards(user_id: int, commander: str) -> list[tuple[str, int]]:
-    """Cartes du deck de ce commandant, commandant lui-même exclu."""
+def load_deck_cards(user_id: int, commander: str,
+                    deck_id: str | None = None) -> list[tuple[str, int]]:
+    """Cartes du deck de ce commandant, commandant lui-même exclu.
+
+    Le `deck_id` prime quand l'appelant le connaît : deux decks peuvent porter
+    le même commandant, et les chercher par nom mélangeait leurs cartes — celles
+    qu'ils ont en commun revenaient deux fois dans l'analyse, une fois par deck.
+
+    Le regroupement par nom normalisé ferme la seconde porte : l'unicité de
+    `user_deck_cards` porte sur le nom brut, donc deux écritures d'une même
+    carte — une importée, une ajoutée à la main — tiennent sur deux lignes.
+    Les quantités s'additionnent, la carte reste une.
+    """
     cmd_lower = _normalized(commander)
     with SessionLocal() as sess:
-        rows = sess.execute(text("""
-            SELECT card_name, quantity
-            FROM user_deck_cards
-            WHERE user_id = :uid AND LOWER(TRIM(commander)) = LOWER(TRIM(:cmd))
-        """), {"uid": user_id, "cmd": commander}).fetchall()
+        if deck_id:
+            rows = sess.execute(text("""
+                SELECT card_name, quantity
+                FROM user_deck_cards
+                WHERE user_id = :uid AND deck_id = :did
+            """), {"uid": user_id, "did": deck_id}).fetchall()
+        else:
+            rows = sess.execute(text("""
+                SELECT card_name, quantity
+                FROM user_deck_cards
+                WHERE user_id = :uid AND LOWER(TRIM(commander)) = LOWER(TRIM(:cmd))
+            """), {"uid": user_id, "cmd": commander}).fetchall()
 
-    cards: list[tuple[str, int]] = []
+    groupees: dict[str, tuple[str, int]] = {}
     for row in rows:
         name = (row.card_name or "").strip()
-        if not name or _normalized(name) == cmd_lower:
+        cle = _normalized(name)
+        if not name or cle == cmd_lower:
             continue
-        cards.append((name, int(row.quantity or 1)))
-    return cards
+        affichage, quantite = groupees.get(cle, (name, 0))
+        groupees[cle] = (affichage, quantite + int(row.quantity or 1))
+    return list(groupees.values())
 
 
 def analyze_deck(
@@ -429,6 +449,7 @@ def suggest_swaps(
     max_colors: int = 5,
     min_inclusion: float = DEFAULT_MIN_INCLUSION,
     missing_min_inclusion: float = MISSING_MIN_INCLUSION,
+    deck_id: str | None = None,
 ) -> dict:
     """
     Classe les commandants alternatifs pour le deck de `commander`.
@@ -449,7 +470,7 @@ def suggest_swaps(
     max_colors = max(1, min(5, max_colors))
     min_inclusion = max(0.0, min(100.0, min_inclusion))
     missing_min_inclusion = max(0.0, min(100.0, missing_min_inclusion))
-    cards = load_deck_cards(user_id, commander)
+    cards = load_deck_cards(user_id, commander, deck_id)
     if not cards:
         return {
             "commander": commander,
