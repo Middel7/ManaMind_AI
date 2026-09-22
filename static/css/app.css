@@ -1799,6 +1799,11 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
     transform: translateX(-100%);
     transition: transform var(--dur) var(--ease-out);
     box-shadow: none;
+    /* Le tiroir descend jusqu'au bas de l'ecran, la ou l'attend la barre
+       d'onglets : son pied — la deconnexion et le profil — passait dessous, et
+       l'on ne pouvait pas se deconnecter depuis un telephone. */
+    padding-bottom: calc(var(--bottombar-h) + env(safe-area-inset-bottom, 0px)
+                         + var(--sp-3));
   }
 
   .sidebar[data-open="true"] { transform: none; box-shadow: var(--shadow-lg); }

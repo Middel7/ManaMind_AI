@@ -622,6 +622,9 @@
         ${user && user.role === 'admin'
           ? `<a class="nav__item" href="/admin">${MM.icons.shield}<span>Administration</span></a>`
           : ''}
+        <button class="nav__item" id="mmLogout" type="button">
+          ${MM.icons.logout}<span>Déconnexion</span>
+        </button>
         <a class="user-chip" href="/profil">
           <span class="avatar" id="mmAvatar">${esc(initials)}</span>
           <span class="grow truncate">
@@ -631,9 +634,6 @@
             <span class="xs dim">Voir mon profil</span>
           </span>
         </a>
-        <button class="nav__item" id="mmLogout" type="button">
-          ${MM.icons.logout}<span>Déconnexion</span>
-        </button>
       </div>`;
   }
 
