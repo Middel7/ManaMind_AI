@@ -1084,10 +1084,13 @@
    *   note    {string}   mention de l'ecran (frequence, score, motif…)
    *   muted   {boolean}  vignette grisee
    *   market  {boolean}  proposer l'achat et la vente (vrai par defaut)
+   *   commander {boolean} proposer la recherche de commandant (vrai par defaut ;
+   *                       faux sur l'ecran qui la rend deja, ou le lien
+   *                       ramenerait a la page ouverte)
    */
   MM.cardTile = function (item, options = {}) {
     const { context = 'collection', deckQty = null, actions = [],
-            note = '', muted = false, market = true } = options;
+            note = '', muted = false, market = true, commander = true } = options;
     const facts = cardFacts(item);
     const finish = MM.fmt.finish(item.finish);
 
@@ -1104,7 +1107,10 @@
     }
 
     // Reglage : le deck quand on est sur un ecran de deck, la collection sinon.
-    const stepper = (kind, value, label, hint) => `
+    // Le reglage ne se nomme plus sous les boutons — « en collection » repetait
+    // la ligne juste au-dessus, qui dit deja ce qui est possede et ce qui reste
+    // libre. L'intitule survit dans les aria-label, ou il sert vraiment.
+    const stepper = (kind, value, hint) => `
       <span class="mtg-card__ops">
         <span class="stepper">
           <button data-mm="${kind}-dec" data-card="${esc(facts.name)}"
@@ -1115,15 +1121,12 @@
                   ${item.id ? `data-item="${esc(item.id)}"` : ''}
                   aria-label="Ajouter un exemplaire ${hint}">+</button>
         </span>
-        <span class="xs dim">${label}</span>
       </span>`;
 
     return `
       <article class="mtg-card ${muted ? 'mtg-card--muted' : ''}"
                data-id="${esc(item.id ?? '')}" data-name="${esc(facts.name)}">
-        <div class="mtg-card__frame"
-             ${options.frameLink ? `data-href="${esc(options.frameLink)}"` : ''}
-             ${options.frameTitle ? `title="${esc(options.frameTitle)}"` : ''}>
+        <div class="mtg-card__frame" title="Voir ${esc(facts.name)} en grand">
           ${MM.img.frame({ ...item, card_name: facts.name })}
           ${badges.length ? `<div class="mtg-card__badges">${badges.join('')}</div>` : ''}
         </div>
@@ -1152,9 +1155,9 @@
           </span>
 
           ${context === 'deck'
-            ? stepper('deck', deckQty ?? 0, 'dans le deck', 'de ce deck')
+            ? stepper('deck', deckQty ?? 0, 'de ce deck')
             : (context === 'collection'
-              ? stepper('coll', facts.owned, 'en collection', 'de ma collection')
+              ? stepper('coll', facts.owned, 'de ma collection')
               : '')}
 
           <span class="mtg-card__bottom">
@@ -1169,6 +1172,12 @@
                  title="Proposer ${esc(facts.name)} à la vente sur RELIC-TRADE"
                 >Vendre</a>
             </span>` : ''}
+
+          ${commander ? `
+            <a class="btn btn--sm mtg-card__commander"
+               href="/cartes/commandant?card=${encodeURIComponent(facts.name)}"
+               title="Chercher les commandants dont les decks jouent ${esc(facts.name)}"
+              >Dans quel commandant ?</a>` : ''}
 
           ${actions.length ? `
             <span class="mtg-card__actions">
@@ -1418,21 +1427,17 @@
 
   };
 
-  // Le titre d'une carte ouvre sa fiche, sur tous les ecrans. En phase de
-  // capture : la vignette entiere est souvent cliquable pour autre chose.
+  // L'illustration et le titre d'une carte ouvrent sa fiche, sur tous les
+  // ecrans sans exception. Deux d'entre eux envoyaient ailleurs le clic sur
+  // l'illustration — vers la recherche de commandant — et l'on ne savait plus
+  // d'un ecran a l'autre ce qu'un clic sur une carte allait faire. Cette
+  // recherche a desormais son bouton, sous chaque vignette.
+  // En phase de capture : la vignette entiere est souvent cliquable pour autre
+  // chose.
   document.addEventListener('click', (event) => {
     const label = event.target.closest(
       '[data-card-detail], .mtg-card__name, .mtg-card__frame, .deck-line__name');
     if (!label || label.hasAttribute('data-no-detail')) return;
-    // Un ecran peut envoyer ailleurs le clic sur l'illustration ; le nom, lui,
-    // ouvre toujours la fiche.
-    const detour = label.dataset.href;
-    if (detour) {
-      event.preventDefault();
-      event.stopPropagation();
-      location.href = detour;
-      return;
-    }
 
     const tile = label.closest('.mtg-card');
     const itemId = tile && tile.dataset.id ? Number(tile.dataset.id) : null;

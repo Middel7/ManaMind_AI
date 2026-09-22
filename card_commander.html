@@ -309,6 +309,9 @@
       { ...state.card, card_name: state.card.name, owned: state.card.owned },
       {
         context: 'collection',
+        // Le bouton « Dans quel commandant ? » ramenerait a cet ecran, pour
+        // cette carte : c'est celui qu'on regarde.
+        commander: false,
         actions: [
           { label: 'Regarder une autre carte', act: 'back', variant: 'ghost',
             title: 'Revenir à la liste des cartes qui dorment' },
@@ -376,14 +379,12 @@
             <span class="badge">${MM.fmt.int(items.length)}</span>
           </div>
           <p class="muted small">Rares et mythiques qu’aucun de vos decks n’utilise, de la
-            plus chère à la moins chère. Cliquez sur l’une d’elles pour lui chercher un
-            commandant, ou saisissez un autre nom ci-dessus.</p>
+            plus chère à la moins chère. « Dans quel commandant ? », sous une carte,
+            lance la recherche ; saisissez un autre nom ci-dessus pour en viser
+            une qui n’est pas dans cette liste.</p>
           <div class="card-grid">
             ${items.map((item) => MM.cardTile(item, {
               context: 'collection',
-              // L'illustration lance la recherche : c'est l'objet de l'ecran.
-              frameLink: `/cartes/commandant?card=${encodeURIComponent(item.card_name)}`,
-              frameTitle: `Chercher un commandant pour ${item.card_name}`,
             })).join('')}
           </div>
         </div>`;
