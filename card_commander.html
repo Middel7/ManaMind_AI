@@ -81,7 +81,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
            stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
       <input class="input" id="cardInput" type="text" autocomplete="off"
-             placeholder="Nom de la carte…" autofocus>
+             placeholder="Nom de la carte…" enterkeyhint="search">
     </div>
     <div class="btn-group" role="group" aria-label="Périmètre">
       <button class="btn btn--sm" data-mode="mine" aria-pressed="true">Mes commandants</button>
@@ -406,6 +406,15 @@
     load();
   } else {
     showDormant();
+  }
+
+  // Le champ ne prend le curseur qu'a la souris, et seulement si l'on arrive
+  // les mains vides. Sur telephone, l'ancien `autofocus` levait le clavier
+  // alors que « Dans quel commandant ? » venait deja de poser la carte et de
+  // lancer la recherche : il ne restait plus qu'a refermer un clavier pour
+  // lire un resultat qu'on n'avait pas demande a saisir.
+  if (!requested && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    MM.el('#cardInput').focus();
   }
 })();
 </script>
