@@ -75,7 +75,6 @@
     <div class="section-head">
       <div class="section-head__title">
         <h2 class="h2">Vos cartes non utilisées dans un deck</h2>
-        <span class="muted small" id="dormantCount"></span>
       </div>
       <a class="btn btn--sm" href="/collection?in_deck=no">Tout voir</a>
     </div>
@@ -248,8 +247,9 @@
 
     if (highlights.dormant.length) {
       MM.el('#dormantSection').hidden = false;
-      MM.el('#dormantCount').textContent =
-        `${MM.fmt.int(stats.dormant)} au total`;
+      // Le nombre de cartes qui dorment ne se repete pas ici : le bandeau du
+      // haut le donne deja, et sur telephone il serrait le titre contre le
+      // bouton « Tout voir ».
       MM.el('#dormantGrid').innerHTML =
         highlights.dormant.map((item) => MM.cardTile(item, {
           context: 'collection',
