@@ -18,6 +18,7 @@ router = APIRouter()
 def api_commander_swap(
     request: Request,
     commander: str = Query(..., description="Commandant actuel du deck à analyser"),
+    deck: str | None = Query(default=None, description="Deck visé, quand l'écran le connaît"),
     top: int = Query(default=10, ge=1, le=25),
     sort: str = Query(default="value", description="value | affinity"),
     max_colors: int = Query(default=5, ge=1, le=5),
@@ -37,6 +38,9 @@ def api_commander_swap(
                         la carte ne compte pas comme conservée ;
     - missing_min_inclusion : au-delà de ce % de présence, une carte absente du
                         deck est proposée à l'achat (top 10 par prix).
+
+    `deck` vise un deck precis : deux decks peuvent porter le meme commandant,
+    et les chercher par nom melangeait leurs cartes.
     """
     from manamind.auth import COOKIE_NAME, get_current_user
     user = get_current_user(mm_token=request.cookies.get(COOKIE_NAME))
@@ -56,6 +60,7 @@ def api_commander_swap(
             max_colors=max_colors,
             min_inclusion=min_inclusion,
             missing_min_inclusion=missing_min_inclusion,
+            deck_id=(deck or "").strip() or None,
         )
     except Exception as exc:  # base indisponible, SQL en erreur…
         return _json_response({"error": f"Erreur d'analyse : {exc}"}, status_code=500)

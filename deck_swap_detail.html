@@ -41,6 +41,9 @@
   const dataReq = (from && commander)
     ? MM.api.get('/api/commander-swap' + MM.api.qs({
         commander: from, top: 25,
+        // Relaye le deck d'ou l'on vient : sans lui, l'analyse retombe sur le
+        // nom du commandant, que deux decks peuvent partager.
+        deck: params.get('deck') || '',
         sort: params.get('sort') || 'value',
         max_colors: Number(params.get('max_colors')) || 5,
       })).then((value) => ({ value }), (error) => ({ error }))

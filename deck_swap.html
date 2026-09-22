@@ -167,6 +167,9 @@
     try {
       const data = await MM.api.get('/api/commander-swap' + MM.api.qs({
         commander: state.deck.commander,
+        // Le deck choisi, et pas seulement son commandant : deux decks peuvent
+        // porter le meme, et l'analyse melangeait alors leurs cartes.
+        deck: state.deck.deck_id,
         top: 12,
         sort: state.sort,
         max_colors: state.maxColors,
@@ -239,7 +242,8 @@
             </div>
             <div class="cluster-2">
               <a class="btn btn--sm" href="/decks/commandant/detail${MM.api.qs({
-                from: state.deck.commander, commander: cand.commander,
+                from: state.deck.commander, deck: state.deck.deck_id,
+                commander: cand.commander,
                 sort: state.sort, max_colors: state.maxColors })}">Voir le détail</a>
               ${cand.missing_value ? `<span class="badge badge--warn">
                 ${MM.fmt.eur(cand.missing_value)} à acquérir</span>` : ''}
