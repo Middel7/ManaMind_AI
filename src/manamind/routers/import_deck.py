@@ -236,7 +236,12 @@ async def api_import_confirm(request: Request) -> JSONResponse:
         )
         found = found[:MAX_COMMANDERS]
     commander = join_commanders(found) or None
-    name = deck_name or deck.deck_name or commander or "Deck importé"
+    # Le nom proposé par défaut est celui des commandants, reliés par « / »
+    # dans l'ordre où le serveur les enregistre, face avant seule.
+    commander_title = " / ".join(
+        sorted((n.split(" // ")[0] for n in found), key=str.lower)
+    )
+    name = (deck_name or "").strip() or commander_title or deck.deck_name or "Deck importé"
 
     for destination in destinations:
         if destination == "collection":

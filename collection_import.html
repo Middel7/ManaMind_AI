@@ -116,6 +116,14 @@
     /* L'entete colle en haut ne doit pas trainer la bordure du cadre avec lui. */
     .entry-table th { top: -1px; }
   }
+
+  /* Les lignes .row sont faites pour une liste pleine largeur : posees seules
+     dans un panneau, elles flottaient sans bord pour dire ou elles finissent. */
+  .import-cmdr {
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    overflow: hidden;
+  }
 </style>
 </head>
 <body>
@@ -430,6 +438,17 @@
       ['unresolved', 'invalid_line', 'unsupported_digital_card'].includes(entry.resolution_status));
     const copies = entries.reduce((sum, entry) => sum + (entry.quantity || 1), 0);
     const zones = [...new Set(entries.map((entry) => entry.zone))];
+    // Meme ordre alphabetique que le serveur ecrit les paires : le nom
+    // propose et le commandant enregistre se lisent alors de la meme facon.
+    const commanders = entries
+      .filter((entry) => entry.zone === 'commander')
+      .sort((a, b) => (a.canonical_name || a.raw_name)
+        .localeCompare(b.canonical_name || b.raw_name));
+    // Face avant seule : « // » a cote du separateur « / » se lirait mal.
+    const defaultName = commanders.length
+      ? commanders.map((entry) =>
+          (entry.canonical_name || entry.raw_name).split(' // ')[0]).join(' / ')
+      : (deck.deck_name || '');
 
     const sourceLabel = {
       manabox: 'ManaBox', moxfield: 'Moxfield', archidekt: 'Archidekt',
@@ -485,10 +504,34 @@
           </div>
 
           ${state.destination === 'deck' ? `
+            <div class="stack-2">
+              <span class="label">${{ 0: 'Commandant', 1: 'Commandant identifié' }[commanders.length]
+                || 'Commandants identifiés'}</span>
+              ${commanders.length ? `
+                <div class="import-cmdr">
+                  ${commanders.map((entry) => `
+                    <div class="row">
+                      ${entry.scryfall_id
+                        ? `<img class="row__thumb" alt="" loading="lazy"
+                               src="${MM.esc(MM.scryfallArt(entry.scryfall_id, 'small'))}">`
+                        : `<span class="row__thumb"
+                               data-card="${MM.esc(entry.canonical_name || entry.raw_name)}"></span>`}
+                      <div class="row__main">
+                        <div class="row__title">${MM.esc(entry.canonical_name || entry.raw_name)}</div>
+                        <div class="row__sub">${(entry.warnings || []).some((w) => w.includes('déduit'))
+                          ? 'Repéré à sa place dans la liste'
+                          : 'Désigné comme commandant dans la liste'}</div>
+                      </div>
+                    </div>`).join('')}
+                </div>` : `
+                <p class="small muted">Aucun commandant dans cette liste : le deck
+                  sera enregistré sans commandant. Pour en désigner un, placez-le
+                  sous une ligne « Commander » avant de déposer la liste.</p>`}
+            </div>
             <div class="field">
               <label class="label" for="deckName">Nom du deck</label>
               <input class="input" id="deckName" type="text"
-                     value="${MM.esc(deck.deck_name || '')}" placeholder="Mon nouveau deck">
+                     value="${MM.esc(defaultName)}" placeholder="Mon nouveau deck">
             </div>
             <label class="switch">
               <input type="checkbox" id="alsoCollection">
@@ -550,6 +593,7 @@
       </div>`;
 
     renderRows(false);
+    fillCommanderThumbs();
 
     MM.el('#switchDest').addEventListener('click', () => {
       state.destination = state.destination === 'deck' ? 'collection' : 'deck';
@@ -574,6 +618,25 @@
 
     MM.el('#cancelImport').addEventListener('click', () => location.reload());
     MM.el('#confirmImport').addEventListener('click', confirmImport);
+  }
+
+  /* Une liste sans edition ne donne pas d'impression : on montre alors celle
+     que le reste du site retient pour la carte. */
+  async function fillCommanderThumbs() {
+    const slots = MM.els('.import-cmdr span.row__thumb[data-card]');
+    if (!slots.length) return;
+    try {
+      const resolved = await MM.resolveCards(slots.map((slot) => slot.dataset.card));
+      slots.forEach((slot) => {
+        const info = resolved[slot.dataset.card];
+        if (!info || !info.image_small) return;
+        const img = document.createElement('img');
+        img.className = 'row__thumb';
+        img.alt = '';
+        img.src = info.image_small;
+        slot.replaceWith(img);
+      });
+    } catch { /* la vignette est un complement : le nom suffit */ }
   }
 
   function renderRows(problemsOnly) {
