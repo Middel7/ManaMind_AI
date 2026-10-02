@@ -455,6 +455,62 @@ Maybeboard
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# 8 bis. Exports Moxfield : commandants non étiquetés
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_BODY = [
+    "Ambitious Dragonborn", "Bloomvine Regent", "Command Tower", "Dark Confidant",
+    "Eternal Witness", "Forest", "Llanowar Elves", "Sol Ring", "Swamp",
+    "Woodland Cemetery", "Zombify",
+]
+
+
+class TestMoxfieldCommanders:
+    def test_trailing_block_is_candidate(self):
+        """Export MTGO / texte : les commandants suivent une ligne vide."""
+        from manamind.deck_import.resolver import _commander_candidates
+
+        raw = "\n".join(f"1 {n}" for n in _BODY)
+        raw += "\n\n1 Acolyte of Bahamut\n1 Shadowheart, Dark Justiciar\n"
+        deck = parse(raw)
+        assert _names(_commander_candidates(deck.entries)) == [
+            "Acolyte of Bahamut", "Shadowheart, Dark Justiciar"]
+
+    def test_leading_lines_out_of_order_are_candidates(self):
+        """Export avec éditions : les commandants précèdent la liste triée."""
+        from manamind.deck_import.resolver import _commander_candidates
+
+        raw = "1 Acolyte of Bahamut (CLB) 513 *E*\n1 Shadowheart, Dark Justiciar (SLD) 2483\n"
+        raw += "\n".join(f"1 {n} (FDN) 1" for n in _BODY)
+        deck = parse(raw)
+        assert _names(_commander_candidates(deck.entries)) == [
+            "Acolyte of Bahamut", "Shadowheart, Dark Justiciar"]
+
+    def test_sorted_list_has_no_candidate(self):
+        from manamind.deck_import.resolver import _commander_candidates
+
+        deck = parse("\n".join(f"1 {n}" for n in _BODY))
+        assert _commander_candidates(deck.entries) == []
+
+    def test_sections_disable_trailing_block(self):
+        """Avec des en-têtes, la ligne vide ne sépare plus les commandants."""
+        raw = "Deck\n1 Sol Ring\n\nSideboard\n1 Negate\n"
+        deck = parse(raw)
+        assert not any(e.tags for e in deck.entries)
+
+    def test_the_list_collector_number(self):
+        deck = parse("1 Sol Ring (PLST) C18-222\n")
+        assert deck.entries[0].set_code == "PLST"
+        assert deck.entries[0].collector_number == "C18-222"
+
+    def test_single_slash_double_faced_name(self):
+        from manamind.deck_import.resolver import _normalize_split
+
+        assert _normalize_split("Bloomvine Regent / Claim Territory") == "bloomvine regent"
+        assert _normalize_split("Fire // Ice") == "fire"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # 9. Endpoints HTTP
 # ═══════════════════════════════════════════════════════════════════════════════
 

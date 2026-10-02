@@ -204,7 +204,10 @@ class BaseParser(ABC):
         set_code = (m.group("set") or m.group("set2") or "").upper() or None
         col_num = (m.group("num1") or m.group("num2") or "").strip() or None
         # Refuse un col_num qui n'est pas plausible (ex: un second mot du nom)
-        if col_num and not re.match(r"^[0-9★][A-Za-z0-9★\-]*$", col_num):
+        # The List numérote « C18-222 » : édition d'origine, tiret, numéro.
+        if col_num and not re.match(
+            r"^(?:[0-9★][A-Za-z0-9★\-]*|[A-Za-z][A-Za-z0-9]{1,4}-\d+[a-z]?)$", col_num
+        ):
             col_num = None
 
         marker_raw = (m.group("marker") or "").lower().strip("*")

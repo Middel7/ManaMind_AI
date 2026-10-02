@@ -14,6 +14,7 @@ from ..models import (
     ImportStatistics,
     Zone,
 )
+from ..resolver import TRAILING_BLOCK_TAG
 from .base import MAX_ENTRIES, MAX_LINES, BaseParser
 
 # En-têtes de métadonnées Moxfield/Arena à ignorer silencieusement
@@ -62,6 +63,12 @@ class TextParser(BaseParser):
         deck_name: str | None = None
         detected_zones: set[str] = set()
         stats = ImportStatistics(lines_received=len(lines))
+        # Blocs séparés par des lignes vides : sans en-tête de section, le
+        # dernier bloc d'un export Moxfield (MTGO, texte simple) porte les
+        # commandants. Le résolveur décide s'il s'agit bien de commandants.
+        block = 0
+        entry_blocks: list[int] = []
+        header_seen = False
 
         # Détection du nom de deck depuis un commentaire initial
         for line in lines[:5]:
@@ -77,7 +84,11 @@ class TextParser(BaseParser):
         for lineno, line in enumerate(lines, start=1):
             stripped = line.strip()
 
-            if not stripped or stripped.startswith("//") or stripped.startswith("#"):
+            if not stripped:
+                if entry_blocks and entry_blocks[-1] == block:
+                    block += 1
+                continue
+            if stripped.startswith("//") or stripped.startswith("#"):
                 continue
 
             # Ligne de métadonnée "Name ..." → nom du deck
@@ -96,6 +107,7 @@ class TextParser(BaseParser):
             if zone is not None:
                 current_zone = zone
                 detected_zones.add(zone.value)
+                header_seen = True
                 continue
 
             # Ligne carte
@@ -126,8 +138,14 @@ class TextParser(BaseParser):
             )
 
             result.entries.append(entry)
+            entry_blocks.append(block)
             stats.cards_detected += 1
             stats.copies_detected += entry.quantity
+
+        if not header_seen and entry_blocks and entry_blocks[-1] > entry_blocks[0]:
+            for entry, entry_block in zip(result.entries, entry_blocks):
+                if entry_block == entry_blocks[-1]:
+                    entry.tags.append(TRAILING_BLOCK_TAG)
 
         # Détection format Commander si une zone commander existe
         if Zone.COMMANDER.value in detected_zones:

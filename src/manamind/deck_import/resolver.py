@@ -13,9 +13,10 @@ Lookup dans la DB Scryfall locale selon l'ordre de priorité :
 from __future__ import annotations
 
 import logging
+import re
 import unicodedata
 
-from .models import CanonicalDeckImport, CanonicalEntry, ResolutionStatus
+from .models import CanonicalDeckImport, CanonicalEntry, ResolutionStatus, Zone
 
 log = logging.getLogger(__name__)
 
@@ -26,8 +27,26 @@ def _normalize(name: str) -> str:
 
 
 def _normalize_split(name: str) -> str:
-    """Normalise les split cards : 'Fire // Ice' → prend la première partie."""
-    return _normalize(name.split("//")[0].strip())
+    """Normalise les cartes doubles en ne gardant que la première face.
+
+    Moxfield écrit « Bloomvine Regent / Claim Territory » avec une seule
+    barre, Scryfall « Fire // Ice » avec deux : les deux formes sont admises.
+    """
+    return _normalize(re.split(r"\s+/{1,2}\s+|//", name)[0].strip())
+
+
+def _pick_printing(rows):
+    """Choisit une impression parmi celles d'un même couple édition + numéro.
+
+    Le catalogue garde une ligne par langue : six lignes pour TDM 178 ne
+    font pas une ambiguïté tant qu'elles désignent la même carte. On préfère
+    l'anglais. Retourne None si plusieurs cartes différentes répondent.
+    """
+    if not rows:
+        return None
+    if len({r[1] for r in rows}) > 1:
+        return None
+    return next((r for r in rows if r[8] == "en"), rows[0])
 
 
 def resolve(deck: CanonicalDeckImport) -> CanonicalDeckImport:
@@ -84,6 +103,11 @@ def resolve(deck: CanonicalDeckImport) -> CanonicalDeckImport:
             ):
                 unresolved += 1
 
+        try:
+            _infer_commanders(deck, sess)
+        except Exception as exc:
+            log.warning("Commander inference error: %s", exc)
+
     deck.statistics.exact_matches = exact
     deck.statistics.ambiguous_matches = ambiguous
     deck.statistics.unresolved_entries = unresolved
@@ -128,15 +152,16 @@ def _resolve_entry(entry: CanonicalEntry, sess) -> None:
     if entry.set_code and entry.collector_number:
         rows = sess.execute(text("""
             SELECT p.scryfall_id, p.oracle_id, c.name, c.normalized_name,
-                   p.set_code, p.collector_number, p.digital, p.cardmarket_id
+                   p.set_code, p.collector_number, p.digital, p.cardmarket_id,
+                   p.lang
             FROM scryfall_card_printings p
             JOIN scryfall_cards c ON c.id = p.card_id
             WHERE UPPER(p.set_code) = UPPER(:set_code)
               AND LOWER(p.collector_number) = LOWER(:col_num)
         """), {"set_code": entry.set_code, "col_num": entry.collector_number}).fetchall()
 
-        if len(rows) == 1:
-            row = rows[0]
+        row = _pick_printing(rows)
+        if row is not None:
             _apply_printing(entry, row)
             entry.canonical_name = row[2]  # nom canonique Scryfall
             # Vérifier cohérence avec le nom fourni
@@ -150,24 +175,26 @@ def _resolve_entry(entry: CanonicalEntry, sess) -> None:
                 entry.resolution_status = ResolutionStatus.UNSUPPORTED_DIGITAL_CARD
                 entry.warnings.append("Digital-only card (not available in paper)")
             return
-        if len(rows) > 1:
+        if rows:
+            # Plusieurs cartes distinctes sous le même numéro : on laisse le
+            # nom trancher aux étapes suivantes plutôt que de bloquer ici.
             entry.warnings.append(f"Ambiguous set+number: {len(rows)} printings found")
-            entry.resolution_status = ResolutionStatus.AMBIGUOUS
-            entry.confidence = 40
-            return
 
     # ── 4. nom normalisé + set_code + collector_number ───────────────────────
     if entry.raw_name and entry.set_code and entry.collector_number:
         norm = _normalize_split(entry.raw_name)
         rows = sess.execute(text("""
             SELECT p.scryfall_id, p.oracle_id, c.name, c.normalized_name,
-                   p.set_code, p.collector_number, p.digital, p.cardmarket_id
+                   p.set_code, p.collector_number, p.digital, p.cardmarket_id,
+                   p.lang
             FROM scryfall_card_printings p
             JOIN scryfall_cards c ON c.id = p.card_id
             WHERE UPPER(p.set_code) = UPPER(:set_code)
               AND LOWER(p.collector_number) = LOWER(:col_num)
               AND (LOWER(c.normalized_name) = :norm
-                   OR LOWER(c.name) = :raw_lower)
+                   OR LOWER(c.name) = :raw_lower
+                   OR split_part(LOWER(c.normalized_name), ' // ', 1) = :norm)
+            ORDER BY (p.lang = 'en') DESC
         """), {
             "set_code": entry.set_code,
             "col_num": entry.collector_number,
@@ -196,8 +223,9 @@ def _resolve_entry(entry: CanonicalEntry, sess) -> None:
             JOIN scryfall_cards c ON c.id = p.card_id
             WHERE UPPER(p.set_code) = UPPER(:set_code)
               AND (LOWER(c.normalized_name) = :norm
-                   OR LOWER(c.name) = :raw_lower)
-            ORDER BY p.released_at DESC
+                   OR LOWER(c.name) = :raw_lower
+                   OR split_part(LOWER(c.normalized_name), ' // ', 1) = :norm)
+            ORDER BY (p.lang = 'en') DESC, p.released_at DESC
             LIMIT 5
         """), {
             "set_code": entry.set_code,
@@ -225,12 +253,17 @@ def _resolve_entry(entry: CanonicalEntry, sess) -> None:
     if entry.raw_name:
         norm = _normalize_split(entry.raw_name)
         rows = sess.execute(text("""
-            SELECT c.oracle_id, c.name, c.normalized_name
+            SELECT c.oracle_id, c.name, c.normalized_name, c.type_line
             FROM scryfall_cards c
             WHERE LOWER(c.normalized_name) = :norm
                OR LOWER(c.name) = :raw_lower
-            LIMIT 3
+            LIMIT 5
         """), {"norm": norm, "raw_lower": entry.raw_name.lower()}).fetchall()
+        # Un jeton ou une carte d'art peut porter le nom d'une vraie carte
+        # (jeton « Llanowar Elves » de TSR) : la carte jouable l'emporte.
+        playable = [r for r in rows if not (r[3] or "").startswith(("Token", "Card"))]
+        if playable:
+            rows = playable
 
         # Repli sur la face avant : une liste ne donne souvent que le recto
         # d'une carte double (« Bloomvine Regent » pour « Bloomvine Regent //
@@ -277,6 +310,76 @@ def _resolve_entry(entry: CanonicalEntry, sess) -> None:
 
     entry.resolution_status = ResolutionStatus.UNRESOLVED
     entry.confidence = 0
+
+
+TRAILING_BLOCK_TAG = "bloc_final"
+_MAX_COMMANDERS = 2
+
+
+def _commander_candidates(entries: list[CanonicalEntry]) -> list[CanonicalEntry]:
+    """Repère les lignes que l'export place à part sans les étiqueter.
+
+    Moxfield ne marque pas les commandants dans ses exports texte, mais les
+    isole : en fin de liste après une ligne vide (export MTGO, texte simple),
+    ou en tête devant une liste par ailleurs alphabétique (export avec
+    éditions). Retourne ces lignes, ou une liste vide si rien ne se détache.
+    """
+    trailing = [e for e in entries if TRAILING_BLOCK_TAG in e.tags]
+    if 0 < len(trailing) <= _MAX_COMMANDERS and len(trailing) < len(entries):
+        return trailing
+
+    def _sorted(block: list[CanonicalEntry]) -> bool:
+        keys = [_normalize(e.raw_name) for e in block]
+        return keys == sorted(keys)
+
+    if len(entries) < 10 or _sorted(entries):
+        return []
+    for k in range(1, _MAX_COMMANDERS + 1):
+        if _sorted(entries[k:]):
+            return entries[:k]
+    return []
+
+
+def _can_lead(type_line: str, oracle_text: str) -> bool:
+    """Une carte peut-elle occuper la zone de commandement ?"""
+    t = type_line.split("//")[0]
+    return (
+        ("Legendary" in t and "Creature" in t)
+        or "Background" in t
+        or "can be your commander" in oracle_text
+    )
+
+
+def _infer_commanders(deck: CanonicalDeckImport, sess) -> None:
+    """Range en zone commandant les cartes que la liste isole sans le dire.
+
+    Ne fait rien si une zone commandant existe déjà, ou si une des cartes
+    isolées ne peut pas être commandant : mieux vaut ne rien déduire que
+    d'analyser un deck sous un faux commandant.
+    """
+    from sqlalchemy import text
+
+    if any(e.zone == Zone.COMMANDER for e in deck.entries):
+        return
+    main = [e for e in deck.entries if e.zone == Zone.MAINBOARD]
+    candidates = _commander_candidates(main)
+    if not candidates or any(e.quantity != 1 or not e.oracle_id for e in candidates):
+        return
+
+    rows = sess.execute(text("""
+        SELECT oracle_id, type_line, COALESCE(oracle_text, '')
+        FROM scryfall_cards
+        WHERE oracle_id = ANY(:ids)
+    """), {"ids": [str(e.oracle_id) for e in candidates]}).fetchall()
+    eligible = {str(r[0]) for r in rows if _can_lead(r[1] or "", r[2])}
+    if not all(str(e.oracle_id) in eligible for e in candidates):
+        return
+
+    for e in candidates:
+        e.zone = Zone.COMMANDER
+        e.warnings.append("Commandant déduit de sa place dans la liste")
+    deck.format = "commander"
+    deck.detected_zones = sorted(set(deck.detected_zones) | {Zone.COMMANDER.value})
 
 
 def _apply_printing(entry: CanonicalEntry, row) -> None:
