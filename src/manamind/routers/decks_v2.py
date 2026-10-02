@@ -75,12 +75,12 @@ _LEAD_SQL = """
     ) lead ON TRUE
 """
 
-# Prix de reference du projet : le low_price Cardmarket de l'edition la moins
-# chere. L'impression illustrative surevaluerait les cartes reimprimees en
-# premium, et la tendance depasse presque toujours la meilleure offre.
+# Prix de reference du projet : la tendance Cardmarket de l'edition la moins
+# chere, precalculee par card_min_price. L'impression illustrative
+# surevaluerait les cartes reimprimees en premium.
 _PRICE_SQL = """
     LEFT JOIN LATERAL (
-        SELECT MIN(cmp.low_price) AS unit_price
+        SELECT MIN(cmp.price) AS unit_price
         FROM scryfall_cards c2
         JOIN card_min_price cmp ON cmp.card_id = c2.id
         WHERE c2.normalized_name = mm_normalize_name({name_expr})

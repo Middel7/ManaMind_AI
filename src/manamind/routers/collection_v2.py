@@ -401,7 +401,7 @@ async def api_cards_resolve(request: Request) -> Response:
                    COALESCE(c.game_changer, false) AS game_changer,
                    art.scryfall_id, art.image_small, art.image_normal,
                    art.rarity, art.set_code,
-                   price.low_price AS unit_price,
+                   price.price AS unit_price,
                    COALESCE(owned.qty, 0) AS owned,
                    COALESCE(du.decks, 0) AS decks_used,
                    COALESCE(g.global_frequency, 0) AS global_frequency
@@ -452,7 +452,7 @@ async def api_cards_resolve(request: Request) -> Response:
                          p.released_at DESC NULLS LAST
                 LIMIT 1
             ) art ON TRUE
-            -- Prix de reference : low_price de l'edition la moins chere
+            -- Prix de reference : tendance de l'edition la moins chere
             LEFT JOIN card_min_price price ON price.card_id = c.id
             LEFT JOIN LATERAL (
                 SELECT SUM(uc.quantity) AS qty
@@ -531,6 +531,7 @@ def api_card_detail(card_name: str, request: Request) -> Response:
                    p.promo, p.full_art, p.artist, p.scryfall_uri,
                    ms.name AS set_name, ms.icon_svg_uri,
                    latest.low_price, latest.trend_price, latest.foil_low,
+                   latest.foil_trend,
                    -- Éditions dont l'illustration ne représente pas la carte :
                    -- Secret Lair, et Marvel Universe (« mar », plus ses inserts
                    -- « lmar »). Proposées au choix, mais jamais par défaut.
@@ -539,7 +540,7 @@ def api_card_detail(card_name: str, request: Request) -> Response:
             FROM scryfall_card_printings p
             LEFT JOIN scryfall_mtg_sets ms ON LOWER(ms.code) = LOWER(p.set_code)
             LEFT JOIN LATERAL (
-                SELECT pge.low_price, pge.trend_price, pge.foil_low
+                SELECT pge.low_price, pge.trend_price, pge.foil_low, pge.foil_trend
                 FROM cardmarket_price_guide_entries pge
                 WHERE pge.id_product = p.cardmarket_id
                 ORDER BY pge.captured_at DESC
@@ -637,6 +638,7 @@ def api_card_detail(card_name: str, request: Request) -> Response:
                 "low_price": _num(r.low_price),
                 "trend_price": _num(r.trend_price),
                 "foil_low": _num(r.foil_low),
+                "foil_trend": _num(r.foil_trend),
                 "alt_art": bool(r.alt_art),
             }
             for r in printings

@@ -623,7 +623,7 @@ def api_collection_commanders(
 ) -> Response:
     """
     Retourne les `top` commandants pour lesquels la collection couvre
-    la plus grande valeur (Cardmarket low_price) parmi leurs 100 cartes
+    la plus grande valeur (tendance Cardmarket) parmi leurs 100 cartes
     les plus jouées. Images Scryfall incluses.
     mode="available" : seulement les cartes non utilisées dans les decks
     mode="all"       : toute la collection sans filtre deck
@@ -706,10 +706,13 @@ def api_collection_commanders(
                 -- complet de la grille : le planificateur bascule alors sur un
                 -- plan a plusieurs minutes. Le filtre par sous-requete reste le
                 -- meilleur compromis mesure.
-                SELECT cp.en_name AS card_name, MIN(pe.low_price) AS low_price
+                -- Tendance la plus basse, la meilleure offre faute de tendance.
+                SELECT cp.en_name AS card_name,
+                       COALESCE(MIN(pe.trend_price) FILTER (WHERE pe.trend_price > 0),
+                                MIN(pe.low_price) FILTER (WHERE pe.low_price > 0)) AS low_price
                 FROM cardmarket_products cp
                 JOIN cardmarket_price_guide_entries pe ON pe.id_product = cp.id_product
-                WHERE pe.low_price IS NOT NULL AND pe.low_price > 0
+                WHERE (pe.trend_price > 0 OR pe.low_price > 0)
                   AND LOWER(TRIM(cp.en_name)) IN (SELECT card_name_lower FROM avail)
                 GROUP BY cp.en_name
             ),
@@ -932,11 +935,13 @@ def api_commander_build(
                            img.image_url
                     FROM unnest(CAST(:names AS TEXT[])) AS n(card_name)
                     LEFT JOIN LATERAL (
-                        SELECT MIN(pe.low_price) AS low_price
+                        SELECT COALESCE(
+                                   MIN(pe.trend_price) FILTER (WHERE pe.trend_price > 0),
+                                   MIN(pe.low_price) FILTER (WHERE pe.low_price > 0)) AS low_price
                         FROM cardmarket_products cp
                         JOIN cardmarket_price_guide_entries pe ON pe.id_product = cp.id_product
                         WHERE cp.en_name = n.card_name
-                          AND pe.low_price IS NOT NULL AND pe.low_price > 0
+                          AND (pe.trend_price > 0 OR pe.low_price > 0)
                     ) pr ON TRUE
                     LEFT JOIN LATERAL (
                         SELECT MIN(p.image_normal) AS image_url

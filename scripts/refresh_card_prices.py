@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Recalcule le prix de reference de chaque carte.
 
-Le prix affiche dans l'application est le low_price Cardmarket de l'edition la
+Le prix affiche dans l'application est la tendance Cardmarket de l'edition la
 moins chere, precalcule par la vue materialisee card_min_price. Cette vue ne se
 met pas a jour toute seule : lancer ce script apres chaque import de prix.
 

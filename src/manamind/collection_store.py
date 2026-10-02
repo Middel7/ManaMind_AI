@@ -98,7 +98,7 @@ _ENRICH_SQL = """
                 COALESCE(sc.normalized_name, mm_normalize_name(uc.card_name)), ' // ', 1)
     ) pp ON TRUE
 
-    -- Prix de reference du projet : le low_price Cardmarket de l'edition la
+    -- Prix de reference du projet : la tendance Cardmarket de l'edition la
     -- moins chere, precalcule par la vue card_min_price. Il ne depend ni de
     -- l'edition possedee ni de la finition.
     LEFT JOIN card_min_price cm ON cm.card_id = uc.card_id
@@ -107,9 +107,9 @@ _ENRICH_SQL = """
            ON UPPER(st.code) = UPPER(COALESCE(pd.set_code, pf.set_code, uc.set_code))
 """
 
-# Prix unitaire : low_price Cardmarket de l'edition la moins chere.
+# Prix unitaire : tendance Cardmarket de l'edition la moins chere.
 _UNIT_PRICE_SQL = """
-    cm.low_price
+    cm.price
 """
 
 _RARITY_RANK_SQL = """
