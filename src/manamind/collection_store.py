@@ -568,8 +568,12 @@ def _resolve_printing(session: Any, name: str, set_code: str | None,
         row = session.execute(text("""
             SELECT p.id, p.card_id, p.scryfall_id, p.set_code, p.collector_number
             FROM scryfall_card_printings p
+            JOIN scryfall_cards c ON c.id = p.card_id
             WHERE UPPER(p.set_code) = UPPER(:set) AND p.collector_number = :num
               AND p.lang = 'en'
+              -- Cartes d'art (« Card // Card ») : hors du projet. Une ligne
+              -- « Minas Tirith (ALTR) 12 » retombe sur la vraie carte par son nom.
+              AND c.type_line NOT LIKE 'Card%'
             LIMIT 1
         """), {"set": set_code, "num": collector_number}).fetchone()
         if row:
@@ -580,13 +584,22 @@ def _resolve_printing(session: Any, name: str, set_code: str | None,
                 "collector_number": row.collector_number,
             }
 
-    # Le nom peut ne citer que la face avant d'une carte recto-verso.
-    row = session.execute(text("""
+    # Le nom peut ne citer que la face avant d'une carte recto-verso. Une
+    # édition qui n'offre que des cartes d'art (ALTR, AMOM…) ne donne rien :
+    # on retente alors sans elle, pour trouver la vraie carte.
+    art_set = bool(set_code) and bool(session.execute(text("""
+        SELECT 1 FROM scryfall_mtg_sets
+        WHERE LOWER(code) = LOWER(:set) AND set_type = 'memorabilia'
+    """), {"set": set_code}).scalar())
+    row = None
+    for edition in ([set_code, None] if art_set else [set_code]):
+        row = session.execute(text("""
         SELECT p.id, p.card_id, p.scryfall_id, p.set_code, p.collector_number
         FROM scryfall_card_printings p
         JOIN scryfall_cards c ON c.id = p.card_id
         WHERE (c.normalized_name = mm_normalize_name(:name)
                OR split_part(c.normalized_name, ' // ', 1) = mm_normalize_name(:name))
+          AND c.type_line NOT LIKE 'Card%'
           AND p.lang = 'en'
           AND (:set IS NULL OR UPPER(p.set_code) = UPPER(:set))
         ORDER BY (c.normalized_name = mm_normalize_name(:name)) DESC,
@@ -594,7 +607,9 @@ def _resolve_printing(session: Any, name: str, set_code: str | None,
                  (p.digital IS NOT TRUE) DESC,
                  (p.image_normal IS NOT NULL) DESC, p.released_at DESC NULLS LAST
         LIMIT 1
-    """), {"name": name, "set": set_code}).fetchone()
+    """), {"name": name, "set": edition}).fetchone()
+        if row:
+            break
     if row:
         return {
             "printing_id": row.id, "card_id": row.card_id,
@@ -606,10 +621,12 @@ def _resolve_printing(session: Any, name: str, set_code: str | None,
     # Carte connue mais sans impression anglaise exploitable : on garde la carte
     card_id = session.execute(text("""
         SELECT sc.id FROM scryfall_cards sc
-        WHERE sc.normalized_name = mm_normalize_name(:name)
-           OR split_part(sc.normalized_name, ' // ', 1) = mm_normalize_name(:name)
+        WHERE (sc.normalized_name = mm_normalize_name(:name)
+               OR split_part(sc.normalized_name, ' // ', 1) = mm_normalize_name(:name))
+          -- Cartes d'art (« Card // Card ») : hors du projet.
+          AND sc.type_line NOT LIKE 'Card%'
         ORDER BY (sc.normalized_name = mm_normalize_name(:name)) DESC,
-                 (sc.type_line NOT LIKE 'Card%') DESC, (EXISTS (SELECT 1 FROM scryfall_card_printings q WHERE q.card_id = sc.id AND q.digital IS NOT TRUE)) DESC,
+                 (EXISTS (SELECT 1 FROM scryfall_card_printings q WHERE q.card_id = sc.id AND q.digital IS NOT TRUE)) DESC,
                  (sc.type_line NOT ILIKE '%Token%') DESC, sc.id
         LIMIT 1
     """), {"name": name}).scalar()

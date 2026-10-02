@@ -51,7 +51,8 @@ resolved AS (
         SELECT c.mana_value, c.type_line
         FROM scryfall_cards c
         WHERE c.normalized_name = mm_normalize_name(n.card_name)
-        ORDER BY (c.type_line NOT LIKE 'Card%%') DESC, (EXISTS (SELECT 1 FROM scryfall_card_printings q WHERE q.card_id = c.id AND q.digital IS NOT TRUE)) DESC, (c.type_line NOT ILIKE '%%Token%%') DESC, c.id
+          AND c.type_line NOT LIKE 'Card%%'
+        ORDER BY (EXISTS (SELECT 1 FROM scryfall_card_printings q WHERE q.card_id = c.id AND q.digital IS NOT TRUE)) DESC, (c.type_line NOT ILIKE '%%Token%%') DESC, c.id
         LIMIT 1
     ) sc ON TRUE
 ),

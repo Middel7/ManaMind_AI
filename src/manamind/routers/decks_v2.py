@@ -308,7 +308,8 @@ def api_deck_detail(deck_id: str, request: Request) -> Response:
                        c.oracle_text, c.game_changer, c.normalized_name
                 FROM scryfall_cards c
                 WHERE c.normalized_name = mm_normalize_name(dc.card_name)
-                ORDER BY (c.type_line NOT LIKE 'Card%') DESC, (EXISTS (SELECT 1 FROM scryfall_card_printings q WHERE q.card_id = c.id AND q.digital IS NOT TRUE)) DESC, (c.type_line NOT ILIKE '%Token%') DESC, c.id
+                  AND c.type_line NOT LIKE 'Card%'
+                ORDER BY (EXISTS (SELECT 1 FROM scryfall_card_printings q WHERE q.card_id = c.id AND q.digital IS NOT TRUE)) DESC, (c.type_line NOT ILIKE '%Token%') DESC, c.id
                 LIMIT 1
             ) sc ON TRUE
             {_ART_SQL.format(name_expr="dc.card_name")}
@@ -643,7 +644,8 @@ _DECK_TOKENS_SQL = """
         JOIN LATERAL (
             SELECT c.id FROM scryfall_cards c
             WHERE c.normalized_name = d.nname
-            ORDER BY (c.type_line NOT LIKE 'Card%%') DESC, (EXISTS (SELECT 1 FROM scryfall_card_printings q WHERE q.card_id = c.id AND q.digital IS NOT TRUE)) DESC, (c.type_line NOT ILIKE '%%Token%%') DESC, c.id
+              AND c.type_line NOT LIKE 'Card%%'
+            ORDER BY (EXISTS (SELECT 1 FROM scryfall_card_printings q WHERE q.card_id = c.id AND q.digital IS NOT TRUE)) DESC, (c.type_line NOT ILIKE '%%Token%%') DESC, c.id
             LIMIT 1
         ) sc ON TRUE
     ),

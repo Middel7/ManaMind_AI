@@ -145,7 +145,7 @@ def search_cards(
                 .outerjoin(FallbackPrinting, FallbackPrinting.id == first_printing_subq.c.pid)
                 .outerjoin(price_subq, Card.id == price_subq.c.card_id)
                 # ilike = ILIKE PostgreSQL : case-insensitive, paramétré → pas d'injection SQL
-                .where(Card.name.ilike(f"%{q}%"))
+                .where(Card.name.ilike(f"%{q}%"), Card.type_line.notlike("Card%"))
                 # Tri par popularité méta (1 = plus populaire), sans rank en dernier
                 .order_by(Card.edhrec_rank.asc().nulls_last(), Card.name)
                 .limit(limit)
@@ -404,7 +404,7 @@ def autocomplete_cards(
             # Noms anglais commençant par q
             en_stmt = (
                 select(Card.name)
-                .where(Card.name.ilike(f"{q}%"))
+                .where(Card.name.ilike(f"{q}%"), Card.type_line.notlike("Card%"))
                 .order_by(Card.edhrec_rank.asc().nulls_last(), Card.name)
                 .limit(limit)
             )
@@ -417,6 +417,8 @@ def autocomplete_cards(
                 .where(
                     CardPrinting.printed_name.isnot(None),
                     CardPrinting.printed_name.ilike(f"{q}%"),
+                    # Cartes d'art (« Card // Card ») : hors du projet.
+                    Card.type_line.notlike("Card%"),
                 )
                 .order_by(Card.edhrec_rank.asc().nulls_last(), Card.name)
                 .limit(limit)

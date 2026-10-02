@@ -67,6 +67,8 @@ front_match AS (
     JOIN scryfall_cards sc
       ON split_part(sc.normalized_name, ' // ', 1) = d.card_lower
     WHERE d.card_lower NOT IN (SELECT card_lower FROM exact_match)
+      -- Cartes d'art (« Card // Card ») : hors du projet.
+      AND sc.type_line NOT LIKE 'Card%'
     ORDER BY d.card_lower, sc.id
 ),
 resolved AS (
@@ -171,7 +173,8 @@ part_front AS (
     FROM cmd_parts cp
     JOIN scryfall_cards sc
       ON split_part(sc.normalized_name, ' // ', 1) = cp.part
-    WHERE NOT EXISTS (
+    WHERE sc.type_line NOT LIKE 'Card%'
+      AND NOT EXISTS (
         SELECT 1 FROM part_exact pe
         WHERE pe.commander = cp.commander AND pe.part = cp.part
     )

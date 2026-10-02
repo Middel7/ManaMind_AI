@@ -265,6 +265,8 @@ def api_card_suggest(
                     = split_part(c.normalized_name, ' // ', 1)
             ) owned ON TRUE
             WHERE c.type_line NOT ILIKE '%Token%'
+              -- Cartes d'art (« Card // Card ») : hors du projet.
+              AND c.type_line NOT LIKE 'Card%'
             -- Correspondance exacte d'abord, puis les noms qui commencent par
             -- le terme, puis ceux qui le contiennent ailleurs.
             ORDER BY (c.name ILIKE :exact) DESC,
@@ -412,7 +414,8 @@ async def api_cards_resolve(request: Request) -> Response:
                        sc.color_identity, sc.game_changer, sc.normalized_name
                 FROM scryfall_cards sc
                 WHERE sc.normalized_name = mm_normalize_name(n.raw)
-                ORDER BY (sc.type_line NOT LIKE 'Card%') DESC, (EXISTS (SELECT 1 FROM scryfall_card_printings q WHERE q.card_id = sc.id AND q.digital IS NOT TRUE)) DESC, (sc.type_line NOT ILIKE '%Token%') DESC, sc.id
+                  AND sc.type_line NOT LIKE 'Card%'
+                ORDER BY (EXISTS (SELECT 1 FROM scryfall_card_printings q WHERE q.card_id = sc.id AND q.digital IS NOT TRUE)) DESC, (sc.type_line NOT ILIKE '%Token%') DESC, sc.id
                 LIMIT 1
             ) exact ON TRUE
 
@@ -425,7 +428,9 @@ async def api_cards_resolve(request: Request) -> Response:
                 FROM scryfall_cards sc
                 WHERE exact.id IS NULL
                   AND split_part(sc.normalized_name, ' // ', 1) = mm_normalize_name(n.raw)
-                ORDER BY (sc.type_line NOT LIKE 'Card%') DESC, (EXISTS (SELECT 1 FROM scryfall_card_printings q WHERE q.card_id = sc.id AND q.digital IS NOT TRUE)) DESC, (sc.type_line NOT ILIKE '%Token%') DESC, sc.id
+                  -- Cartes d'art (« Card // Card ») : hors du projet.
+                  AND sc.type_line NOT LIKE 'Card%'
+                ORDER BY (EXISTS (SELECT 1 FROM scryfall_card_printings q WHERE q.card_id = sc.id AND q.digital IS NOT TRUE)) DESC, (sc.type_line NOT ILIKE '%Token%') DESC, sc.id
                 LIMIT 1
             ) face ON TRUE
 
@@ -516,10 +521,12 @@ def api_card_detail(card_name: str, request: Request) -> Response:
                    c.color_identity, c.keywords, c.legal_commander,
                    c.edhrec_rank, COALESCE(c.game_changer, false) AS game_changer
             FROM scryfall_cards c
-            WHERE c.normalized_name = mm_normalize_name(:name)
-               OR split_part(c.normalized_name, ' // ', 1) = mm_normalize_name(:name)
+            WHERE (c.normalized_name = mm_normalize_name(:name)
+                   OR split_part(c.normalized_name, ' // ', 1) = mm_normalize_name(:name))
+              -- Cartes d'art (« Card // Card ») : hors du projet.
+              AND c.type_line NOT LIKE 'Card%'
             ORDER BY (c.normalized_name = mm_normalize_name(:name)) DESC,
-                     (c.type_line NOT LIKE 'Card%') DESC, (EXISTS (SELECT 1 FROM scryfall_card_printings q WHERE q.card_id = c.id AND q.digital IS NOT TRUE)) DESC,
+                     (EXISTS (SELECT 1 FROM scryfall_card_printings q WHERE q.card_id = c.id AND q.digital IS NOT TRUE)) DESC,
                      (c.type_line NOT ILIKE '%Token%') DESC, c.id
             LIMIT 1
         """), {"name": card_name}).fetchone()
@@ -761,7 +768,10 @@ def api_set_cards(
     """Cartes d'une extension, avec le nombre deja possede par l'utilisateur."""
     user = _user(request)
     params: dict = {"code": code.lower(), "uid": user["id"], "limit": limit}
-    where = ["LOWER(p.set_code) = :code", "p.lang = 'en'"]
+    # Cartes d'art (« Card // Card ») : hors du projet, même dans une extension
+    # qui en mélange à ses cartes.
+    where = ["LOWER(p.set_code) = :code", "p.lang = 'en'",
+             "c.type_line NOT LIKE 'Card%'"]
     if search:
         where.append("c.name ILIKE :q")
         params["q"] = f"%{search}%"
