@@ -1993,6 +1993,18 @@
    * l'autre, n'apprend rien et alourdit le bandeau. Le numero qui prefixe les
    * decks importes (« 05 - Jodah… ») ne compte pas dans la comparaison.
    */
+  /**
+   * Les commandants d'un deck, principal en tete. La paire s'ecrit par ordre
+   * alphabetique pour les statistiques ; l'affichage suit le principal que le
+   * serveur renvoie (choisi, sinon le premier qui n'est pas un Background).
+   */
+  MM.leadFirst = function (deck) {
+    const names = MM.commanders(deck && deck.commander);
+    const lead = deck && deck.lead_commander;
+    if (names.length < 2 || !lead) return (deck && deck.commander) || '';
+    return [lead, ...names.filter((name) => name !== lead)].join(' & ');
+  };
+
   MM.deckEyebrow = function (commander, deckName) {
     const nom = String(commander || '').trim();
     if (!nom) return '';

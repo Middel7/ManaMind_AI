@@ -147,7 +147,7 @@
             <p class="h3 truncate deck-tile__name" data-rename="${MM.esc(deck.deck_id)}"
                title="Double-cliquez pour renommer ce deck">${MM.esc(deck.name)}</p>
             <p class="xs dim truncate" style="margin-bottom:10px">
-              ${MM.esc(deck.commander || '')}</p>
+              ${MM.esc(MM.leadFirst(deck))}</p>
             <div class="progress" style="margin-bottom:6px">
               <div class="progress__bar" style="width:${percent}%"></div>
             </div>

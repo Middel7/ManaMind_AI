@@ -81,10 +81,11 @@
   let manaReference = null;
 
   function renderHero() {
-    // Un deck peut avoir deux commandants : l'illustration vient du premier
-    // d'entre eux qui en porte une.
-    const commanderCard = cards.find((card) =>
-      MM.isCommander(deck.commander, card.card_name) && card.scryfall_id)
+    // Un deck peut avoir deux commandants : l'illustration vient du
+    // principal, sinon du premier d'entre eux qui en porte une.
+    const commanderCard = cards.find((card) => isLead(card) && card.scryfall_id)
+      || cards.find((card) =>
+        MM.isCommander(deck.commander, card.card_name) && card.scryfall_id)
       || cards.find((card) => card.scryfall_id);
     const art = commanderCard && commanderCard.scryfall_id
       ? MM.scryfallArt(commanderCard.scryfall_id) : null;
@@ -95,7 +96,7 @@
       <div class="hero__body">
         <div class="hero__cols">
         <div class="grow">
-        ${(() => { const sur = MM.deckEyebrow(deck.commander, deck.name)
+        ${(() => { const sur = MM.deckEyebrow(MM.leadFirst(deck), deck.name)
                      || (deck.commander ? '' : 'Deck');
                    return sur ? `<p class="eyebrow">${MM.esc(sur)}</p>` : ''; })()}
         <h2 class="hero__title">${MM.esc(deck.name)}</h2>
@@ -129,6 +130,15 @@
       </div>`;
   }
 
+  /* ── Commandant principal ─────────────────────────────────────────────── */
+
+  // La paire s'ecrit par ordre alphabetique pour les statistiques ; le
+  // principal, choisi ou deduit par le serveur, passe devant a l'affichage.
+  function isLead(card) {
+    return Boolean(deck.lead_commander) && MM.commanders(deck.commander).length > 1
+      && MM.isCommander(deck.lead_commander, card.card_name);
+  }
+
   /* ── Regroupement par type ────────────────────────────────────────────── */
 
   const TYPE_ORDER = [
@@ -157,7 +167,9 @@
         // ainsi qu'on lit une liste de deck, et que se voit sa courbe. Une
         // carte dont le cout n'est pas connu ferme la marche.
         groups.push([label, matched.sort((a, b) =>
-          (a.mana_value ?? Infinity) - (b.mana_value ?? Infinity)
+          // Le commandant principal ouvre la liste, avant tout tri par cout.
+          (label.startsWith('Commandant') ? isLead(b) - isLead(a) : 0)
+          || (a.mana_value ?? Infinity) - (b.mana_value ?? Infinity)
           || a.card_name.localeCompare(b.card_name, 'fr'))]);
       }
     });
@@ -225,10 +237,14 @@
   function commanderActions(card) {
     const current = MM.commanders(deck.commander);
     if (MM.isCommander(deck.commander, card.card_name)) {
-      return current.length > 1
-        ? [{ label: 'Retirer des commandants', act: 'uncmd', variant: 'ghost',
-             title: `« ${MM.esc(card.card_name)} » redeviendrait une carte ordinaire` }]
-        : [];
+      if (current.length < 2) return [];
+      return [
+        ...(isLead(card) ? [] : [{
+          label: 'Principal', act: 'lead', variant: 'ghost',
+          title: `Faire de « ${MM.esc(card.card_name)} » le commandant principal` }]),
+        { label: 'Retirer des commandants', act: 'uncmd', variant: 'ghost',
+          title: `« ${MM.esc(card.card_name)} » redeviendrait une carte ordinaire` },
+      ];
     }
     if (!/Legendary/i.test(card.type_line || '')) return [];
     return [{
@@ -467,6 +483,8 @@
             ${list.map((card) => MM.cardTile(card, {
               context: 'deck',
               deckQty: card.quantity,
+              ...(isLead(card) ? { flag: 'Principal',
+                flagTitle: 'Commandant principal : il illustre le deck' } : {}),
               actions: [
                 ...commanderActions(card),
                 { label: 'Retirer', act: 'drop', variant: 'ghost',
@@ -581,6 +599,21 @@
     }
   }
 
+  /** Designe le commandant principal : la paire ne change pas, seul l'ordre
+   *  d'affichage et l'illustration du deck suivent. */
+  async function setLead(name, button) {
+    button.disabled = true;
+    try {
+      await MM.api.post(`/api/v2/decks/${encodeURIComponent(deckId)}/lead`,
+        { card_name: name });
+      MM.toast.ok(`${name} est désormais le commandant principal de ce deck.`);
+      await reload();
+    } catch (err) {
+      MM.toast.error(err.message);
+      button.disabled = false;
+    }
+  }
+
   // Les reglages « dans le deck » des vignettes visent ce deck.
   MM.deckContext = { deck_id: deckId, commander: deck.commander };
   document.addEventListener('mm:card-change', (event) => {
@@ -621,6 +654,9 @@
 
       const uncrown = event.target.closest('[data-act="uncmd"]');
       if (uncrown) return dropCommander(uncrown.dataset.card, uncrown);
+
+      const lead = event.target.closest('[data-act="lead"]');
+      if (lead) return setLead(lead.dataset.card, lead);
 
       const button = event.target.closest('[data-act="drop"]');
       if (!button) return;
