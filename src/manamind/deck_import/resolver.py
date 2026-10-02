@@ -80,10 +80,14 @@ def resolve(deck: CanonicalDeckImport) -> CanonicalDeckImport:
     ambiguous = 0
     unresolved = 0
 
+    # Appels à Scryfall autorisés pour cette liste : un fichier truffé de
+    # lignes fantaisistes ne doit pas tenir l'import une minute.
+    remote_budget = {"left": _SCRYFALL_BUDGET}
+
     with _session() as sess:
         for entry in deck.entries:
             try:
-                _resolve_entry(entry, sess)
+                _resolve_entry(entry, sess, remote_budget)
             except Exception as exc:
                 log.warning("Resolution error for %r: %s", entry.raw_name, exc)
                 entry.resolution_status = ResolutionStatus.UNRESOLVED
@@ -114,7 +118,7 @@ def resolve(deck: CanonicalDeckImport) -> CanonicalDeckImport:
     return deck
 
 
-def _resolve_entry(entry: CanonicalEntry, sess) -> None:
+def _resolve_entry(entry: CanonicalEntry, sess, remote_budget: dict | None = None) -> None:
     """Résout une entrée unique. Modifie entry in-place."""
     from sqlalchemy import text
 
@@ -293,7 +297,13 @@ def _resolve_entry(entry: CanonicalEntry, sess) -> None:
             entry.warnings.append("Multiple cards with similar name found")
             return
 
-    # ── 7. Fuzzy (suggestion) ────────────────────────────────────────────────
+    # ── 7. Nom d'illustration (Scryfall) ─────────────────────────────────────
+    if entry.raw_name and remote_budget and remote_budget["left"] > 0:
+        remote_budget["left"] -= 1
+        if _resolve_flavor_name(entry, sess):
+            return
+
+    # ── 8. Fuzzy (suggestion) ────────────────────────────────────────────────
     if entry.raw_name:
         norm = _normalize_split(entry.raw_name)
         rows = sess.execute(text("""
@@ -310,6 +320,90 @@ def _resolve_entry(entry: CanonicalEntry, sess) -> None:
 
     entry.resolution_status = ResolutionStatus.UNRESOLVED
     entry.confidence = 0
+
+
+_SCRYFALL_NAMED = "https://api.scryfall.com/cards/named"
+_SCRYFALL_TIMEOUT = 4.0
+_SCRYFALL_BUDGET = 25
+
+
+def _flavor_match(payload: dict, raw_name: str) -> bool:
+    """Le nom cité désigne-t-il bien la carte renvoyée par Scryfall ?
+
+    La recherche approchée de Scryfall renvoie toujours quelque chose : on ne
+    retient la réponse que si le nom cité est, à la casse et aux accents près,
+    le nom réel de la carte, l'une de ses faces, ou l'un de ses noms
+    d'illustration (« Dracula, Blood Immortal » pour Falkenrath Forebear).
+    """
+    wanted = _normalize(raw_name)
+    faces = payload.get("card_faces") or []
+    names = [payload.get("name"), payload.get("flavor_name")]
+    names += [f.get("name") for f in faces] + [f.get("flavor_name") for f in faces]
+    return any(n and _normalize(n) == wanted for n in names)
+
+
+def _fetch_scryfall_named(raw_name: str) -> dict | None:
+    """Interroge Scryfall sur un nom ; None si rien ou si le réseau fait défaut."""
+    import httpx
+
+    try:
+        resp = httpx.get(
+            _SCRYFALL_NAMED,
+            params={"fuzzy": raw_name},
+            headers={"Accept": "application/json",
+                     "User-Agent": "ManaMind/1.0 (import de decklists)"},
+            timeout=_SCRYFALL_TIMEOUT,
+        )
+    except httpx.HTTPError as exc:
+        log.info("Scryfall unreachable for %r: %s", raw_name, exc)
+        return None
+    return resp.json() if resp.status_code == 200 else None
+
+
+def _resolve_flavor_name(entry: CanonicalEntry, sess) -> bool:
+    """Dernier recours pour un nom absent du catalogue : un nom d'illustration.
+
+    Les séries à thème (Dracula de Crimson Vow, Godzilla d'Ikoria, Secret
+    Lair…) impriment des cartes sous un autre nom, que les deckbuilders
+    exportent tel quel. Le catalogue ne garde pas ces noms ; Scryfall, si.
+    Sa réponse n'est retenue que si la carte figure dans le catalogue.
+    """
+    from sqlalchemy import text
+
+    payload = _fetch_scryfall_named(entry.raw_name)
+    if not payload or not _flavor_match(payload, entry.raw_name):
+        return False
+
+    row = sess.execute(text("""
+        SELECT c.oracle_id, c.name
+        FROM scryfall_cards c
+        WHERE c.oracle_id = :oid
+    """), {"oid": payload.get("oracle_id") or
+           (payload.get("card_faces") or [{}])[0].get("oracle_id")}).fetchone()
+    if row is None:
+        return False
+
+    entry.oracle_id = row[0]
+    entry.canonical_name = row[1]
+    entry.resolution_status = ResolutionStatus.EXACT_CARD_UNKNOWN_PRINTING
+    entry.confidence = 60
+
+    # L'impression qui porte ce nom d'illustration, si le catalogue l'a : c'est
+    # elle que possède celui qui la cite sous ce nom.
+    printing = sess.execute(text("""
+        SELECT p.scryfall_id, p.oracle_id, c.name, c.normalized_name,
+               p.set_code, p.collector_number, p.digital, p.cardmarket_id
+        FROM scryfall_card_printings p
+        JOIN scryfall_cards c ON c.id = p.card_id
+        WHERE p.scryfall_id = :sid
+    """), {"sid": payload.get("id")}).fetchone()
+    if printing is not None and not entry.set_code:
+        _apply_printing(entry, printing)
+        entry.resolution_status = ResolutionStatus.EXACT_PRINTING
+        entry.confidence = 80
+
+    entry.warnings.append(f"Nom d'illustration : carte « {row[1]} »")
+    return True
 
 
 TRAILING_BLOCK_TAG = "bloc_final"

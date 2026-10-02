@@ -503,6 +503,28 @@ class TestMoxfieldCommanders:
         assert deck.entries[0].set_code == "PLST"
         assert deck.entries[0].collector_number == "C18-222"
 
+    def test_flavor_name_matches_card(self):
+        """« Dracula, Blood Immortal » est le nom d'illustration de Falkenrath Forebear."""
+        from manamind.deck_import.resolver import _flavor_match
+
+        payload = {"name": "Falkenrath Forebear", "flavor_name": "Dracula, Blood Immortal"}
+        assert _flavor_match(payload, "Dracula, Blood Immortal")
+        assert _flavor_match(payload, "falkenrath forebear")
+
+    def test_flavor_name_on_a_face(self):
+        from manamind.deck_import.resolver import _flavor_match
+
+        payload = {"name": "Voldaren Bloodcaster // Bloodbat Summoner", "card_faces": [
+            {"name": "Voldaren Bloodcaster", "flavor_name": "Dracula, Lord of Blood"},
+            {"name": "Bloodbat Summoner", "flavor_name": "Dracula, Lord of Bats"}]}
+        assert _flavor_match(payload, "Dracula, Lord of Blood")
+
+    def test_fuzzy_answer_for_a_typo_is_refused(self):
+        """La recherche approchée corrige « Sol Rnig » : on ne s'y fie pas."""
+        from manamind.deck_import.resolver import _flavor_match
+
+        assert not _flavor_match({"name": "Sol Ring"}, "Sol Rnig")
+
     def test_single_slash_double_faced_name(self):
         from manamind.deck_import.resolver import _normalize_split
 
