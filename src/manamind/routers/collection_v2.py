@@ -246,6 +246,7 @@ def api_card_suggest(
                 WHERE pr.card_id = c.id AND pr.lang = 'en'
                 -- Une edition standard represente mieux la carte qu'un promo
                 ORDER BY """ + _PREFERRED_BY_NAME_PR + """,
+                         (pr.digital IS NOT TRUE) DESC,
                          (pr.image_normal IS NOT NULL) DESC,
                          (pr.promo IS NOT TRUE) DESC,
                          (COALESCE(ms.set_type, '') NOT IN
@@ -411,7 +412,7 @@ async def api_cards_resolve(request: Request) -> Response:
                        sc.color_identity, sc.game_changer, sc.normalized_name
                 FROM scryfall_cards sc
                 WHERE sc.normalized_name = mm_normalize_name(n.raw)
-                ORDER BY (sc.type_line NOT ILIKE '%Token%') DESC, sc.id
+                ORDER BY (sc.type_line NOT LIKE 'Card%') DESC, (EXISTS (SELECT 1 FROM scryfall_card_printings q WHERE q.card_id = sc.id AND q.digital IS NOT TRUE)) DESC, (sc.type_line NOT ILIKE '%Token%') DESC, sc.id
                 LIMIT 1
             ) exact ON TRUE
 
@@ -424,7 +425,7 @@ async def api_cards_resolve(request: Request) -> Response:
                 FROM scryfall_cards sc
                 WHERE exact.id IS NULL
                   AND split_part(sc.normalized_name, ' // ', 1) = mm_normalize_name(n.raw)
-                ORDER BY (sc.type_line NOT ILIKE '%Token%') DESC, sc.id
+                ORDER BY (sc.type_line NOT LIKE 'Card%') DESC, (EXISTS (SELECT 1 FROM scryfall_card_printings q WHERE q.card_id = sc.id AND q.digital IS NOT TRUE)) DESC, (sc.type_line NOT ILIKE '%Token%') DESC, sc.id
                 LIMIT 1
             ) face ON TRUE
 
@@ -446,6 +447,7 @@ async def api_cards_resolve(request: Request) -> Response:
                 WHERE p.card_id = c.id AND p.lang = 'en'
                 ORDER BY """ + _PREFERRED_BY_NAME + """,
                          (p.set_code NOT ILIKE 'sl%' AND LOWER(p.set_code) NOT IN ('mar', 'lmar')) DESC,
+                         (p.digital IS NOT TRUE) DESC,
                          (p.image_normal IS NOT NULL) DESC,
                          (p.promo IS NOT TRUE) DESC,
                          (COALESCE(ms.set_type, '') NOT IN ('promo', 'memorabilia')) DESC,
@@ -517,6 +519,7 @@ def api_card_detail(card_name: str, request: Request) -> Response:
             WHERE c.normalized_name = mm_normalize_name(:name)
                OR split_part(c.normalized_name, ' // ', 1) = mm_normalize_name(:name)
             ORDER BY (c.normalized_name = mm_normalize_name(:name)) DESC,
+                     (c.type_line NOT LIKE 'Card%') DESC, (EXISTS (SELECT 1 FROM scryfall_card_printings q WHERE q.card_id = c.id AND q.digital IS NOT TRUE)) DESC,
                      (c.type_line NOT ILIKE '%Token%') DESC, c.id
             LIMIT 1
         """), {"name": card_name}).fetchone()
@@ -547,6 +550,9 @@ def api_card_detail(card_name: str, request: Request) -> Response:
                 LIMIT 1
             ) latest ON TRUE
             WHERE p.card_id = :cid AND p.lang = 'en'
+              -- Une impression réservée à Arena ou MTGO ne se possède pas :
+              -- la proposer au choix de son édition n'aurait pas de sens.
+              AND p.digital IS NOT TRUE
             -- Les écarter de la liste empêchait de choisir l'exemplaire Secret
             -- Lair qu'on possède : elles restent, rangées en fin de liste.
             ORDER BY alt_art, p.released_at DESC NULLS LAST, p.collector_number

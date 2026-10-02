@@ -79,6 +79,7 @@ _ENRICH_SQL = """
         -- exclus : une poignee de cartes n'existent que la, et resteraient
         -- sans visuel.
         ORDER BY (p.set_code NOT ILIKE 'sl%' AND LOWER(p.set_code) NOT IN ('mar', 'lmar')) DESC,
+                 (p.digital IS NOT TRUE) DESC,
                  (p.image_normal IS NOT NULL) DESC, p.released_at DESC NULLS LAST
         LIMIT 1
     ) pf ON TRUE
@@ -590,6 +591,7 @@ def _resolve_printing(session: Any, name: str, set_code: str | None,
           AND (:set IS NULL OR UPPER(p.set_code) = UPPER(:set))
         ORDER BY (c.normalized_name = mm_normalize_name(:name)) DESC,
                  (p.set_code NOT ILIKE 'sl%' AND LOWER(p.set_code) NOT IN ('mar', 'lmar')) DESC,
+                 (p.digital IS NOT TRUE) DESC,
                  (p.image_normal IS NOT NULL) DESC, p.released_at DESC NULLS LAST
         LIMIT 1
     """), {"name": name, "set": set_code}).fetchone()
@@ -607,6 +609,7 @@ def _resolve_printing(session: Any, name: str, set_code: str | None,
         WHERE sc.normalized_name = mm_normalize_name(:name)
            OR split_part(sc.normalized_name, ' // ', 1) = mm_normalize_name(:name)
         ORDER BY (sc.normalized_name = mm_normalize_name(:name)) DESC,
+                 (sc.type_line NOT LIKE 'Card%') DESC, (EXISTS (SELECT 1 FROM scryfall_card_printings q WHERE q.card_id = sc.id AND q.digital IS NOT TRUE)) DESC,
                  (sc.type_line NOT ILIKE '%Token%') DESC, sc.id
         LIMIT 1
     """), {"name": name}).scalar()
