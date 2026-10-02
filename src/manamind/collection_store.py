@@ -59,7 +59,7 @@ _ENRICH_SQL = """
     LEFT JOIN scryfall_card_printings pd
            ON pd.id = uc.printing_id
           AND pd.set_code NOT ILIKE 'sl%'
-          AND LOWER(pd.set_code) NOT IN ('mar', 'lmar')
+          AND LOWER(pd.set_code) NOT IN ('mar', 'lmar', 'pza')
 
     -- Repli : impression illustrative, quand l'edition n'est pas connue — ou
     -- quand celle qui est enregistree porte une illustration hors sujet (voir
@@ -78,7 +78,7 @@ _ENRICH_SQL = """
         -- Secret Lair et Marvel Universe passent en dernier plutot que d'etre
         -- exclus : une poignee de cartes n'existent que la, et resteraient
         -- sans visuel.
-        ORDER BY (p.set_code NOT ILIKE 'sl%' AND LOWER(p.set_code) NOT IN ('mar', 'lmar')) DESC,
+        ORDER BY (p.set_code NOT ILIKE 'sl%' AND LOWER(p.set_code) NOT IN ('mar', 'lmar', 'pza')) DESC,
                  (p.digital IS NOT TRUE) DESC,
                  (p.image_normal IS NOT NULL) DESC, p.released_at DESC NULLS LAST
         LIMIT 1
@@ -590,7 +590,7 @@ def _resolve_printing(session: Any, name: str, set_code: str | None,
           AND p.lang = 'en'
           AND (:set IS NULL OR UPPER(p.set_code) = UPPER(:set))
         ORDER BY (c.normalized_name = mm_normalize_name(:name)) DESC,
-                 (p.set_code NOT ILIKE 'sl%' AND LOWER(p.set_code) NOT IN ('mar', 'lmar')) DESC,
+                 (p.set_code NOT ILIKE 'sl%' AND LOWER(p.set_code) NOT IN ('mar', 'lmar', 'pza')) DESC,
                  (p.digital IS NOT TRUE) DESC,
                  (p.image_normal IS NOT NULL) DESC, p.released_at DESC NULLS LAST
         LIMIT 1

@@ -43,7 +43,7 @@ _ART_SQL = """
                        AND pref.card_key = split_part(
                              mm_normalize_name({name_expr}), ' // ', 1)
                  )) DESC NULLS LAST,
-                 (p.set_code NOT ILIKE 'sl%%' AND LOWER(p.set_code) NOT IN ('mar', 'lmar')) DESC,
+                 (p.set_code NOT ILIKE 'sl%%' AND LOWER(p.set_code) NOT IN ('mar', 'lmar', 'pza')) DESC,
                  (p.digital IS NOT TRUE) DESC,
                  (p.image_normal IS NOT NULL) DESC,
                  (p.promo IS NOT TRUE) DESC,

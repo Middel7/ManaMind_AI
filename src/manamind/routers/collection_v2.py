@@ -446,7 +446,7 @@ async def api_cards_resolve(request: Request) -> Response:
                 LEFT JOIN scryfall_mtg_sets ms ON LOWER(ms.code) = LOWER(p.set_code)
                 WHERE p.card_id = c.id AND p.lang = 'en'
                 ORDER BY """ + _PREFERRED_BY_NAME + """,
-                         (p.set_code NOT ILIKE 'sl%' AND LOWER(p.set_code) NOT IN ('mar', 'lmar')) DESC,
+                         (p.set_code NOT ILIKE 'sl%' AND LOWER(p.set_code) NOT IN ('mar', 'lmar', 'pza')) DESC,
                          (p.digital IS NOT TRUE) DESC,
                          (p.image_normal IS NOT NULL) DESC,
                          (p.promo IS NOT TRUE) DESC,
@@ -536,10 +536,11 @@ def api_card_detail(card_name: str, request: Request) -> Response:
                    latest.low_price, latest.trend_price, latest.foil_low,
                    latest.foil_trend,
                    -- Éditions dont l'illustration ne représente pas la carte :
-                   -- Secret Lair, et Marvel Universe (« mar », plus ses inserts
-                   -- « lmar »). Proposées au choix, mais jamais par défaut.
+                   -- Secret Lair, Marvel Universe (« mar », plus ses inserts
+                   -- « lmar ») et Tortues Ninja Source Material (« pza »).
+                   -- Proposées au choix, mais jamais par défaut.
                    (p.set_code ILIKE 'sl%'
-                    OR LOWER(p.set_code) IN ('mar', 'lmar')) AS alt_art
+                    OR LOWER(p.set_code) IN ('mar', 'lmar', 'pza')) AS alt_art
             FROM scryfall_card_printings p
             LEFT JOIN scryfall_mtg_sets ms ON LOWER(ms.code) = LOWER(p.set_code)
             LEFT JOIN LATERAL (
@@ -670,17 +671,17 @@ def api_card_printings(
             LEFT JOIN scryfall_mtg_sets s ON LOWER(s.code) = LOWER(p.set_code)
             WHERE c.normalized_name = mm_normalize_name(:name) AND p.lang = 'en'
               -- Editions dont l'illustration ne represente pas la carte :
-              -- Secret Lair, et Marvel Universe (« mar », plus ses inserts
-              -- « lmar »). Ecartees de la liste, sauf quand la carte n'existe
+              -- Secret Lair, Marvel Universe (« mar », plus ses inserts
+              -- « lmar ») et Tortues Ninja Source Material (« pza »). Ecartees de la liste, sauf quand la carte n'existe
               -- nulle part ailleurs — elle resterait alors sans visuel.
               AND (
                     (p.set_code NOT ILIKE 'sl%'
-                     AND LOWER(p.set_code) NOT IN ('mar', 'lmar'))
+                     AND LOWER(p.set_code) NOT IN ('mar', 'lmar', 'pza'))
                  OR NOT EXISTS (
                         SELECT 1 FROM scryfall_card_printings q
                         WHERE q.card_id = p.card_id AND q.lang = 'en'
                           AND q.set_code NOT ILIKE 'sl%'
-                          AND LOWER(q.set_code) NOT IN ('mar', 'lmar')))
+                          AND LOWER(q.set_code) NOT IN ('mar', 'lmar', 'pza')))
             ORDER BY p.released_at DESC NULLS LAST
             LIMIT :limit
         """), {"name": card_name, "limit": limit}).fetchall()
