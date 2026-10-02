@@ -1277,7 +1277,12 @@
     // montrent les autres ecrans, donc elle qui ouvre la fiche.
     const preferred = data.preferred_printing || null;
     const chosen = printings.find((p) => p.scryfall_id === (current || preferred));
-    const shown = chosen || cheapest || printings[0] || {};
+    // Faute de choix, une illustration Secret Lair ou Marvel ne represente pas
+    // la carte : elle n'ouvre la fiche que si la carte n'existe que la.
+    const usual = printings.filter((p) => !p.alt_art);
+    const usualCheapest = usual.filter((p) => p.low_price != null)
+      .reduce((best, p) => (!best || p.low_price < best.low_price ? p : best), null);
+    const shown = chosen || usualCheapest || usual[0] || cheapest || printings[0] || {};
 
     const stats = [];
     if (card.power != null) stats.push(`${esc(card.power)}/${esc(card.toughness)}`);
