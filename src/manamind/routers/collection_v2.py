@@ -530,7 +530,12 @@ def api_card_detail(card_name: str, request: Request) -> Response:
                    p.rarity, p.image_small, p.image_normal, p.released_at,
                    p.promo, p.full_art, p.artist, p.scryfall_uri,
                    ms.name AS set_name, ms.icon_svg_uri,
-                   latest.low_price, latest.trend_price, latest.foil_low
+                   latest.low_price, latest.trend_price, latest.foil_low,
+                   -- Éditions dont l'illustration ne représente pas la carte :
+                   -- Secret Lair, et Marvel Universe (« mar », plus ses inserts
+                   -- « lmar »). Proposées au choix, mais jamais par défaut.
+                   (p.set_code ILIKE 'sl%'
+                    OR LOWER(p.set_code) IN ('mar', 'lmar')) AS alt_art
             FROM scryfall_card_printings p
             LEFT JOIN scryfall_mtg_sets ms ON LOWER(ms.code) = LOWER(p.set_code)
             LEFT JOIN LATERAL (
@@ -541,19 +546,9 @@ def api_card_detail(card_name: str, request: Request) -> Response:
                 LIMIT 1
             ) latest ON TRUE
             WHERE p.card_id = :cid AND p.lang = 'en'
-              -- Editions dont l'illustration ne represente pas la carte :
-              -- Secret Lair, et Marvel Universe (« mar », plus ses inserts
-              -- « lmar »). Ecartees de la liste, sauf quand la carte n'existe
-              -- nulle part ailleurs — elle resterait alors sans visuel.
-              AND (
-                    (p.set_code NOT ILIKE 'sl%'
-                     AND LOWER(p.set_code) NOT IN ('mar', 'lmar'))
-                 OR NOT EXISTS (
-                        SELECT 1 FROM scryfall_card_printings q
-                        WHERE q.card_id = p.card_id AND q.lang = 'en'
-                          AND q.set_code NOT ILIKE 'sl%'
-                          AND LOWER(q.set_code) NOT IN ('mar', 'lmar')))
-            ORDER BY p.released_at DESC NULLS LAST, p.collector_number
+            -- Les écarter de la liste empêchait de choisir l'exemplaire Secret
+            -- Lair qu'on possède : elles restent, rangées en fin de liste.
+            ORDER BY alt_art, p.released_at DESC NULLS LAST, p.collector_number
         """), {"cid": card.id}).fetchall()
 
         # Lignes de collection de cette carte : la fiche doit savoir laquelle
@@ -642,6 +637,7 @@ def api_card_detail(card_name: str, request: Request) -> Response:
                 "low_price": _num(r.low_price),
                 "trend_price": _num(r.trend_price),
                 "foil_low": _num(r.foil_low),
+                "alt_art": bool(r.alt_art),
             }
             for r in printings
         ],
