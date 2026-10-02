@@ -83,14 +83,16 @@ deck_cards AS (
     LEFT JOIN scryfall_cards sc ON sc.id = r.card_id
 ),
 prices AS (
-    -- Cote la plus basse parmi les éditions, au dernier relevé Cardmarket.
+    -- Tendance la plus basse parmi les éditions, au dernier relevé Cardmarket
+    -- (la meilleure offre, à défaut de tendance sur toutes les éditions).
     -- La vue encapsule déjà le MAX(captured_at) par impression : inutile de
     -- refaire le tri par date ici.
-    SELECT dc.card_lower, MIN(v.low_price) AS eur_price
+    SELECT dc.card_lower, COALESCE(MIN(v.trend_price) FILTER (WHERE v.trend_price > 0),
+                    MIN(v.low_price) FILTER (WHERE v.low_price > 0)) AS eur_price
     FROM deck_cards dc
     JOIN scryfall_card_printings pr ON pr.card_id = dc.card_id
     JOIN v_cardmarket_latest_prices_by_printing v ON v.printing_id = pr.id
-    WHERE v.low_price > 0
+    WHERE (v.trend_price > 0 OR v.low_price > 0)
     GROUP BY dc.card_lower
 )
 SELECT dc.card_lower,
@@ -309,12 +311,13 @@ resolved AS (
     ORDER BY m.commander, m.card_lower, sc.id
 ),
 prices AS (
-    -- Cote la plus basse par carte, au dernier relevé Cardmarket. La vue porte
+    -- Tendance la plus basse par carte, au dernier relevé Cardmarket. La vue porte
     -- déjà le MAX(captured_at) : l'ancien CTE last_date n'a plus d'objet.
-    SELECT pr.card_id, MIN(v.low_price) AS eur_price
+    SELECT pr.card_id, COALESCE(MIN(v.trend_price) FILTER (WHERE v.trend_price > 0),
+                    MIN(v.low_price) FILTER (WHERE v.low_price > 0)) AS eur_price
     FROM scryfall_card_printings pr
     JOIN v_cardmarket_latest_prices_by_printing v ON v.printing_id = pr.id
-    WHERE v.low_price > 0
+    WHERE (v.trend_price > 0 OR v.low_price > 0)
     GROUP BY pr.card_id
 ),
 ranked AS (

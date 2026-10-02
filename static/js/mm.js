@@ -1259,11 +1259,14 @@
 
     const card = data.card;
     const printings = data.printings || [];
-    // L'edition la moins chere sert de reference de prix dans tout le projet :
-    // elle ouvre la fiche et porte un repere dans la liste.
-    const priced = printings.filter((p) => p.low_price != null);
+    // Prix de reference du projet : la tendance Cardmarket, la meilleure offre
+    // a defaut. L'edition la moins chere ainsi cotee ouvre la fiche et porte
+    // un repere dans la liste.
+    const refPrice = (p) => (p.trend_price > 0 ? p.trend_price
+      : (p.low_price > 0 ? p.low_price : null));
+    const priced = printings.filter((p) => refPrice(p) != null);
     const cheapest = priced.length
-      ? priced.reduce((best, p) => (p.low_price < best.low_price ? p : best))
+      ? priced.reduce((best, p) => (refPrice(p) < refPrice(best) ? p : best))
       : null;
 
     // Ligne de collection a laquelle rattacher l'edition choisie : celle d'ou
@@ -1280,8 +1283,8 @@
     // Faute de choix, une illustration Secret Lair ou Marvel ne represente pas
     // la carte : elle n'ouvre la fiche que si la carte n'existe que la.
     const usual = printings.filter((p) => !p.alt_art);
-    const usualCheapest = usual.filter((p) => p.low_price != null)
-      .reduce((best, p) => (!best || p.low_price < best.low_price ? p : best), null);
+    const usualCheapest = usual.filter((p) => refPrice(p) != null)
+      .reduce((best, p) => (!best || refPrice(p) < refPrice(best) ? p : best), null);
     const shown = chosen || usualCheapest || usual[0] || cheapest || printings[0] || {};
 
     const stats = [];
@@ -1367,14 +1370,14 @@
                   <span>${esc(p.set_code || '')}${p.collector_number
                     ? ` #${esc(p.collector_number)}` : ''}</span>
                   <span class="dim">${esc(MM.fmt.rarity(p.rarity))}</span>
-                  ${p.low_price != null
-                    ? `<span class="mtg-card__price">${MM.fmt.eur(p.low_price)}</span>`
+                  ${refPrice(p) != null
+                    ? `<span class="mtg-card__price">${MM.fmt.eur(refPrice(p))}</span>`
                     : '<span class="dim">non cotée</span>'}
                 </span>
                 <span class="mtg-card__meta">
                   <span class="dim">${MM.fmt.date(p.released_at)}</span>
-                  ${p.foil_low != null
-                    ? `<span class="dim">foil ${MM.fmt.eur(p.foil_low)}</span>` : ''}
+                  ${(p.foil_trend || p.foil_low) != null
+                    ? `<span class="dim">foil ${MM.fmt.eur(p.foil_trend || p.foil_low)}</span>` : ''}
                   ${p.scryfall_id === current
                     ? '<span class="badge badge--ok">votre édition</span>'
                     : (p.scryfall_id === preferred
