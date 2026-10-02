@@ -156,7 +156,7 @@ def _resolve_entry(entry: CanonicalEntry, sess) -> None:
                    p.lang
             FROM scryfall_card_printings p
             JOIN scryfall_cards c ON c.id = p.card_id
-            WHERE UPPER(p.set_code) = UPPER(:set_code)
+            WHERE p.set_code = LOWER(:set_code)  -- éditions en minuscules : l'index reste utilisable
               AND LOWER(p.collector_number) = LOWER(:col_num)
         """), {"set_code": entry.set_code, "col_num": entry.collector_number}).fetchall()
 
@@ -189,7 +189,7 @@ def _resolve_entry(entry: CanonicalEntry, sess) -> None:
                    p.lang
             FROM scryfall_card_printings p
             JOIN scryfall_cards c ON c.id = p.card_id
-            WHERE UPPER(p.set_code) = UPPER(:set_code)
+            WHERE p.set_code = LOWER(:set_code)  -- éditions en minuscules : l'index reste utilisable
               AND LOWER(p.collector_number) = LOWER(:col_num)
               AND (LOWER(c.normalized_name) = :norm
                    OR LOWER(c.name) = :raw_lower
@@ -221,7 +221,7 @@ def _resolve_entry(entry: CanonicalEntry, sess) -> None:
                    p.set_code, p.collector_number, p.digital, p.cardmarket_id
             FROM scryfall_card_printings p
             JOIN scryfall_cards c ON c.id = p.card_id
-            WHERE UPPER(p.set_code) = UPPER(:set_code)
+            WHERE p.set_code = LOWER(:set_code)  -- éditions en minuscules : l'index reste utilisable
               AND (LOWER(c.normalized_name) = :norm
                    OR LOWER(c.name) = :raw_lower
                    OR split_part(LOWER(c.normalized_name), ' // ', 1) = :norm)

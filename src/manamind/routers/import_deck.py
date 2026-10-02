@@ -301,6 +301,7 @@ def _save_to_collection(user_id: int, entries) -> tuple[int, int, list[str]]:
 
 def _save_to_deck(user_id: int, commander: str, deck_name: str, entries) -> tuple[int, int, list[str]]:
     """Sauvegarde les entrées dans user_moxfield_decks + user_deck_cards."""
+    from ..collection_store import adopt_listed_printings
     from ..user_decks import save_deck_for_user, set_deck_cards
 
     deck_id = f"import-{uuid.uuid4().hex[:12]}"
@@ -331,11 +332,28 @@ def _save_to_deck(user_id: int, commander: str, deck_name: str, entries) -> tupl
     errors: list[str] = []
 
     try:
-        set_deck_cards(user_id=user_id, commander=commander, cards=cards)
+        # Le deck_id vise le deck tout juste créé : sans lui, la recherche
+        # par commandant tombait sur le plus ancien deck du même commandant,
+        # et c'est lui qui recevait les cartes.
+        set_deck_cards(user_id=user_id, commander=commander, cards=cards,
+                       deck_id=deck_id)
         imported = len(cards)
     except Exception as exc:
         errors.append(f"Error saving cards: {exc}")
         skipped = len(cards)
+        return imported, skipped, errors
+
+    # Le deck ne garde que des noms : l'édition qu'une ligne désigne avec
+    # certitude devient celle que les écrans montrent pour cette carte.
+    exact = (ResolutionStatus.EXACT_IDENTIFIER, ResolutionStatus.EXACT_PRINTING)
+    try:
+        adopt_listed_printings(user_id, [
+            (entry.canonical_name or entry.raw_name, entry.scryfall_id)
+            for entry in entries
+            if entry.scryfall_id and entry.resolution_status in exact
+        ])
+    except Exception as exc:
+        log.warning("Preferred printings not saved: %s", exc)
 
     return imported, skipped, errors
 

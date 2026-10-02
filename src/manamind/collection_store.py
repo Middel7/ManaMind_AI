@@ -754,6 +754,33 @@ def set_preferred_printing(user_id: int, card_name: str, scryfall_id: str) -> di
             "set_code": printing.set_code}
 
 
+def adopt_listed_printings(user_id: int, printings: list[tuple[str, str]]) -> int:
+    """Retient les éditions qu'une liste importée désigne explicitement.
+
+    Une ligne « Shadowheart, Dark Justiciar (SLD) 2483 » dit quelle édition
+    l'utilisateur possède : sans cela, l'heuristique d'affichage, qui relègue
+    les Secret Lair, montrerait une autre carte que la sienne. Un choix déjà
+    fait à l'écran n'est pas écrasé : il est délibéré, le fichier ne l'est pas.
+    Renvoie le nombre d'éditions retenues.
+    """
+    if not printings:
+        return 0
+    added = 0
+    with SessionLocal() as session:
+        for card_name, scryfall_id in printings:
+            result = session.execute(text(f"""
+                INSERT INTO user_preferred_printings (user_id, card_key, scryfall_id)
+                SELECT :uid, {_CARD_KEY_SQL}, p.scryfall_id
+                FROM scryfall_card_printings p
+                WHERE p.scryfall_id = :sid
+                LIMIT 1
+                ON CONFLICT (user_id, card_key) DO NOTHING
+            """), {"uid": user_id, "name": card_name, "sid": scryfall_id})
+            added += result.rowcount
+        session.commit()
+    return added
+
+
 def get_preferred_printing(user_id: int, card_name: str) -> str | None:
     """L'edition retenue pour cette carte, si l'utilisateur en a choisi une."""
     with SessionLocal() as session:
