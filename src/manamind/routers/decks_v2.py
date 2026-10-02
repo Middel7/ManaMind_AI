@@ -52,6 +52,29 @@ _ART_SQL = """
     ) art ON TRUE
 """
 
+# Commandant principal d'un deck : celui que l'utilisateur a designe, sinon
+# le premier qui n'est pas un Background — la paire s'ecrit par ordre
+# alphabetique, et « Acolyte of Bahamut » passerait devant la creature qu'il
+# accompagne. Attend l'alias `d` sur user_moxfield_decks.
+_LEAD_SQL = """
+    LEFT JOIN LATERAL (
+        SELECT cmd.name
+        FROM unnest(string_to_array(d.commander, ' & '))
+             WITH ORDINALITY AS cmd(name, pos)
+        LEFT JOIN user_deck_lead pick
+          ON pick.user_id = d.user_id AND pick.deck_id = d.deck_id
+        LEFT JOIN LATERAL (
+            SELECT c.type_line FROM scryfall_cards c
+            WHERE c.normalized_name = mm_normalize_name(cmd.name)
+            LIMIT 1
+        ) t ON TRUE
+        ORDER BY (LOWER(cmd.name) = LOWER(pick.card_name)) DESC NULLS LAST,
+                 (COALESCE(t.type_line, '') ILIKE '%Background%'),
+                 cmd.pos
+        LIMIT 1
+    ) lead ON TRUE
+"""
+
 # Prix de reference du projet : le low_price Cardmarket de l'edition la moins
 # chere. L'impression illustrative surevaluerait les cartes reimprimees en
 # premium, et la tendance depasse presque toujours la meilleure offre.
@@ -106,10 +129,14 @@ def api_decks(request: Request) -> Response:
                    d.locally_modified,
                    COALESCE(agg.cards, 0)  AS card_count,
                    COALESCE(agg.owned, 0)  AS owned_count,
+                   lead.name AS lead_commander,
                    art.scryfall_id, art.image_small, art.image_normal
             FROM user_moxfield_decks d
             LEFT JOIN agg ON agg.deck_id = d.deck_id
-            {_ART_SQL.format(name_expr="split_part(d.commander, '//', 1)")}
+            {_LEAD_SQL}
+            -- Le commandant principal illustre le deck : la chaine entiere
+            -- d'une paire, « A & B », ne designe aucune carte du catalogue.
+            {_ART_SQL.format(name_expr="split_part(COALESCE(lead.name, d.commander), '//', 1)")}
             WHERE d.user_id = :uid
             ORDER BY COALESCE(d.fetched_at, d.created_at) DESC NULLS LAST
         """), {"uid": user["id"]}).fetchall()
@@ -122,6 +149,7 @@ def api_decks(request: Request) -> Response:
             "deck_id": row.deck_id,
             "name": row.name or row.commander,
             "commander": row.commander,
+            "lead_commander": row.lead_commander,
             "url": row.moxfield_url,
             "card_count": cards,
             "owned_count": owned,
@@ -235,11 +263,13 @@ def api_deck_detail(deck_id: str, request: Request) -> Response:
     user = _user(request)
 
     with SessionLocal() as session:
-        deck = session.execute(text("""
-            SELECT deck_id, name, commander, moxfield_url, locally_modified,
-                   COALESCE(fetched_at, created_at) AS updated_at
-            FROM user_moxfield_decks
-            WHERE user_id = :uid AND deck_id = :did
+        deck = session.execute(text(f"""
+            SELECT d.deck_id, d.name, d.commander, d.moxfield_url, d.locally_modified,
+                   COALESCE(d.fetched_at, d.created_at) AS updated_at,
+                   lead.name AS lead_commander
+            FROM user_moxfield_decks d
+            {_LEAD_SQL}
+            WHERE d.user_id = :uid AND d.deck_id = :did
         """), {"uid": user["id"], "did": deck_id}).fetchone()
 
         if deck is None:
@@ -327,6 +357,7 @@ def api_deck_detail(deck_id: str, request: Request) -> Response:
             "deck_id": deck.deck_id,
             "name": deck.name or deck.commander,
             "commander": deck.commander,
+            "lead_commander": deck.lead_commander,
             "url": deck.moxfield_url,
             "locally_modified": bool(deck.locally_modified),
             "updated_at": deck.updated_at.isoformat() if deck.updated_at else None,
@@ -422,6 +453,50 @@ async def api_set_commander(deck_id: str, request: Request) -> Response:
         "commander": commander,
         "commanders": split_commanders(commander),
     })
+
+
+@router.post("/api/v2/decks/{deck_id}/lead")
+async def api_set_lead_commander(deck_id: str, request: Request) -> Response:
+    """Désigne le commandant principal d'un deck qui en a deux.
+
+    La paire reste écrite telle quelle, par ordre alphabétique, pour les
+    statistiques : seul change celui des deux qui illustre le deck et ouvre
+    sa liste.
+    """
+    user = _user(request)
+    try:
+        body = await request.json()
+    except Exception:
+        return _json_response({"error": "Corps JSON invalide"}, status_code=400)
+
+    card_name = (body.get("card_name") or "").strip()
+    if not card_name:
+        return _json_response({"error": "Nom de carte manquant"}, status_code=400)
+
+    with SessionLocal() as session:
+        current = session.execute(text("""
+            SELECT commander FROM user_moxfield_decks
+            WHERE user_id = :uid AND deck_id = :did
+        """), {"uid": user["id"], "did": deck_id}).scalar()
+        if current is None:
+            return _json_response({"error": "Deck introuvable"}, status_code=404)
+
+        match = next((n for n in split_commanders(current)
+                      if n.lower() == card_name.lower()), None)
+        if match is None:
+            return _json_response(
+                {"error": "Cette carte n'est pas un commandant de ce deck"},
+                status_code=400)
+
+        session.execute(text("""
+            INSERT INTO user_deck_lead (user_id, deck_id, card_name)
+            VALUES (:uid, :did, :name)
+            ON CONFLICT (user_id, deck_id) DO UPDATE
+              SET card_name = EXCLUDED.card_name, updated_at = NOW()
+        """), {"uid": user["id"], "did": deck_id, "name": match})
+        session.commit()
+
+    return _json_response({"ok": True, "lead_commander": match})
 
 
 @router.get("/api/v2/hidden-moves")
