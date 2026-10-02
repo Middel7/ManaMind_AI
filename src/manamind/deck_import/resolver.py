@@ -232,6 +232,20 @@ def _resolve_entry(entry: CanonicalEntry, sess) -> None:
             LIMIT 3
         """), {"norm": norm, "raw_lower": entry.raw_name.lower()}).fetchall()
 
+        # Repli sur la face avant : une liste ne donne souvent que le recto
+        # d'une carte double (« Bloomvine Regent » pour « Bloomvine Regent //
+        # Claim Territory »). Les cartes d'art (« X // X », type « Card // Card »)
+        # sont écartées, sans quoi chaque recto deviendrait ambigu.
+        if not rows:
+            rows = sess.execute(text("""
+                SELECT c.oracle_id, c.name, c.normalized_name
+                FROM scryfall_cards c
+                WHERE c.normalized_name LIKE '% // %'
+                  AND split_part(LOWER(c.normalized_name), ' // ', 1) = :norm
+                  AND c.type_line NOT LIKE 'Card%'
+                LIMIT 3
+            """), {"norm": norm}).fetchall()
+
         if len(rows) == 1:
             entry.oracle_id = rows[0][0]
             entry.canonical_name = rows[0][1]
