@@ -565,7 +565,7 @@
         <div class="panel__head">
           <h2 class="h3">Détail des lignes</h2>
           <div class="cluster-2">
-            <button class="btn btn--sm" id="filterProblems" aria-pressed="false">
+            <button class="btn btn--sm" id="filterProblems" aria-pressed="true">
               Problèmes seulement</button>
           </div>
         </div>
@@ -592,7 +592,9 @@
         </button>
       </div>`;
 
-    renderRows(false);
+    // Les problemes d'abord : ce sont les seules lignes qui demandent une
+    // action, les autres se relisent a la demande.
+    renderRows(true);
     fillCommanderThumbs();
 
     MM.el('#switchDest').addEventListener('click', () => {
@@ -658,7 +660,9 @@
         <td><span class="badge badge--${kind}">${MM.esc(label)}</span></td>
       </tr>`;
     }).join('') || `<tr><td colspan="5" class="dim" style="padding:var(--sp-6);text-align:center">
-      Aucune ligne à afficher.</td></tr>`;
+      ${problemsOnly
+        ? 'Aucun problème : toutes les lignes ont été identifiées.'
+        : 'Aucune ligne à afficher.'}</td></tr>`;
   }
 
   /* ── Étape 3 — confirmation ───────────────────────────────────────────── */
