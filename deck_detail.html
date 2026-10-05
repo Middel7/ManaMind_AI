@@ -27,8 +27,6 @@
   /* La chance de piocher la categorie se lit en bout de ligne, loin du titre :
      c'est une information de second plan. */
   .type-group__chance { margin-left: auto; text-align: right; }
-  /* La bascule type / cout ouvre la liste, separee du premier groupe. */
-  .group-mode { margin-bottom: var(--sp-5); }
 
 
   /* La courbe de mana tient dans le bandeau, sous les chiffres du deck */
@@ -232,6 +230,9 @@
             <!-- Le filtre tient sur la ligne du titre : la liste commence
                  aussitot dessous, sans bandeau intermediaire. -->
             <div id="manaFilterHost" class="grow"></div>
+            <!-- Type ou cout : une lecture de la liste, comme le filtre, et non
+                 un geste sur les cartes ; elle se range donc a ses cotes. -->
+            <div id="groupModeHost" class="cluster-2"></div>
             <!-- Ajouter une carte, exporter la liste : trois gestes qui ne
                  visent que les cartes. En vue jetons ils designeraient autre
                  chose que ce que le panneau montre. -->
@@ -490,6 +491,7 @@
   function renderPanel() {
     if (view === 'tokens') {
       MM.el('#manaFilterHost').innerHTML = '';
+      MM.el('#groupModeHost').innerHTML = '';
       renderTokens();
       loadTokens();
       return;
@@ -510,17 +512,15 @@
     const mode = (value, label, title) => `
       <button class="chip" data-group="${value}" aria-pressed="${groupMode === value}"
               title="${MM.esc(title)}">${label}</button>`;
-    MM.el('#cardList').innerHTML = `
-      <div class="cluster-2 group-mode">
-        <span class="filter-label">Regrouper</span>
-        <div class="chips" id="groupMode">
-          ${mode('type', 'Par type', 'Créatures, éphémères, artefacts…')}
-          ${mode('cost', 'Par coût', 'Par coût en mana, terrains à part')}
-        </div>
-      </div>
-      ${shown.length
-        ? renderGroups(shown)
-        : `<p class="muted small">Aucune carte à ce coût.</p>`}`;
+    MM.el('#groupModeHost').innerHTML = `
+      <span class="filter-label">Regrouper</span>
+      <div class="chips" id="groupMode">
+        ${mode('type', 'Par type', 'Créatures, éphémères, artefacts…')}
+        ${mode('cost', 'Par coût', 'Par coût en mana, terrains à part')}
+      </div>`;
+    MM.el('#cardList').innerHTML = shown.length
+      ? renderGroups(shown)
+      : `<p class="muted small">Aucune carte à ce coût.</p>`;
   }
 
   // Main de depart et premiere pioche : les huit cartes vues avant de jouer.
@@ -729,16 +729,15 @@
       renderCards();
     });
 
-    MM.el('#cardList').addEventListener('click', async (event) => {
+    MM.el('#groupModeHost').addEventListener('click', (event) => {
       const modeChip = event.target.closest('[data-group]');
-      if (modeChip) {
-        if (modeChip.dataset.group === groupMode) return;
-        groupMode = modeChip.dataset.group;
-        try { localStorage.setItem(GROUP_KEY, groupMode); } catch {}
-        renderCards();
-        return;
-      }
+      if (!modeChip || modeChip.dataset.group === groupMode) return;
+      groupMode = modeChip.dataset.group;
+      try { localStorage.setItem(GROUP_KEY, groupMode); } catch {}
+      renderCards();
+    });
 
+    MM.el('#cardList').addEventListener('click', async (event) => {
       const crown = event.target.closest('[data-act="setcmd"]');
       if (crown) return setCommander(crown.dataset.card, crown);
 
