@@ -154,19 +154,64 @@ def _scroll_and_collect(page: Page, seen: set[str]) -> int:
     return len(seen) - before
 
 
-def _fill_card_field(page: Page, field_id: str, card_name: str) -> None:
-    """Remplit un champ carte via l'autocomplétion Moxfield et sélectionne la première suggestion."""
+def _norm_suggestion(text: str) -> str:
+    """Texte d'une suggestion Moxfield, ramené à une forme comparable."""
+    return " ".join(_DFC_SEP.sub(" // ", text).split()).lower()
+
+
+def pick_suggestion(suggestions: list[str], wanted: str) -> int:
+    """Indice de la suggestion à retenir pour la carte `wanted`.
+
+    Moxfield ne cherche que sur la face avant : taper « Valki, God of Lies »
+    propose « Valki, God of Lies // Valki, God of Lies » avant « Valki, God of
+    Lies // Tibalt, Cosmic Impostor ». Prendre la première, comme auparavant,
+    filtrait sur la mauvaise carte. On retient donc, dans l'ordre :
+
+    1. la suggestion identique au nom complet demandé ;
+    2. sinon une suggestion qui commence par lui, en écartant les « X // X »
+       (une face répétée n'est jamais le commandant cherché) ;
+    3. sinon la première.
+    """
+    if not suggestions:
+        return 0
+    target = _norm_suggestion(wanted)
+    names = [_norm_suggestion(s) for s in suggestions]
+    for i, name in enumerate(names):
+        if name == target:
+            return i
+
+    def repeated(name: str) -> bool:
+        faces = name.split(" // ")
+        return len(faces) == 2 and faces[0] == faces[1]
+
+    for i, name in enumerate(names):
+        if name.startswith(target) and not repeated(name):
+            return i
+    return 0
+
+
+def _fill_card_field(page: Page, field_id: str, card_name: str,
+                     wanted: str | None = None) -> None:
+    """Remplit un champ carte via l'autocomplétion Moxfield.
+
+    `card_name` est ce qu'on tape (la face avant d'une carte recto-verso) ;
+    `wanted` le nom complet qui doit être retenu parmi les suggestions.
+    """
     page.wait_for_selector(f"#{field_id}", timeout=10000)
     page.fill(f"#{field_id}", card_name)
     page.wait_for_timeout(2000)
-    suggestion = page.locator(
-        f"xpath=//input[@id='{field_id}']/following-sibling::*//li[1]"
-        f" | //input[@id='{field_id}']/..//li[1]"
-        f" | //input[@id='{field_id}']/../..//li[1]"
-    ).first
+    # Les suggestions sont les options du listbox que le champ désigne par
+    # aria-controls. L'ancien sélecteur cherchait des <li> qui n'existent
+    # pas : il échouait toujours, et le repli cliquait le premier texte venu.
+    listbox = page.locator(f"#{field_id}").get_attribute("aria-controls")
+    items = page.locator(
+        f"[id='{listbox}'] [role=option]" if listbox
+        else ".dropdown-menu.show [role=option]"
+    )
     try:
-        suggestion.wait_for(state="visible", timeout=3000)
-        suggestion.click()
+        items.first.wait_for(state="visible", timeout=3000)
+        texts = items.all_inner_texts()
+        items.nth(pick_suggestion(texts, wanted or card_name)).click()
     except Exception:
         page.click(f"text={card_name}")
     page.wait_for_timeout(1000)
@@ -195,7 +240,10 @@ def _apply_commander_filter(
         raise RuntimeError("Bouton Filters introuvable sur la page")
     page.wait_for_timeout(1500)
 
-    _fill_card_field(page, "commanderCardId", commander)
+    # Une carte recto-verso se tape par sa face avant, mais doit être retenue
+    # sous son nom complet : plusieurs cartes partagent parfois la même face.
+    full_name = f"{commander} // {partner}" if is_dfc and partner else commander
+    _fill_card_field(page, "commanderCardId", commander, wanted=full_name)
     if partner and not is_dfc:
         _fill_card_field(page, "partnerCardId", partner)
 
