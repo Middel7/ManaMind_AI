@@ -43,7 +43,8 @@ _ART_SQL = """
                        AND pref.card_key = split_part(
                              mm_normalize_name({name_expr}), ' // ', 1)
                  )) DESC NULLS LAST,
-                 (p.set_code NOT ILIKE 'sl%%' AND LOWER(p.set_code) NOT IN ('mar', 'lmar')) DESC,
+                 (p.set_code NOT ILIKE 'sl%%' AND LOWER(p.set_code) NOT IN ('mar', 'lmar', 'pza')) DESC,
+                 (p.digital IS NOT TRUE) DESC,
                  (p.image_normal IS NOT NULL) DESC,
                  (p.promo IS NOT TRUE) DESC,
                  (COALESCE(ms.set_type, '') NOT IN ('promo', 'memorabilia')) DESC,
@@ -307,7 +308,8 @@ def api_deck_detail(deck_id: str, request: Request) -> Response:
                        c.oracle_text, c.game_changer, c.normalized_name
                 FROM scryfall_cards c
                 WHERE c.normalized_name = mm_normalize_name(dc.card_name)
-                ORDER BY (c.type_line NOT ILIKE '%Token%') DESC, c.id
+                  AND c.type_line NOT LIKE 'Card%'
+                ORDER BY (EXISTS (SELECT 1 FROM scryfall_card_printings q WHERE q.card_id = c.id AND q.digital IS NOT TRUE)) DESC, (c.type_line NOT ILIKE '%Token%') DESC, c.id
                 LIMIT 1
             ) sc ON TRUE
             {_ART_SQL.format(name_expr="dc.card_name")}
@@ -642,7 +644,8 @@ _DECK_TOKENS_SQL = """
         JOIN LATERAL (
             SELECT c.id FROM scryfall_cards c
             WHERE c.normalized_name = d.nname
-            ORDER BY (c.type_line NOT ILIKE '%%Token%%') DESC, c.id
+              AND c.type_line NOT LIKE 'Card%%'
+            ORDER BY (EXISTS (SELECT 1 FROM scryfall_card_printings q WHERE q.card_id = c.id AND q.digital IS NOT TRUE)) DESC, (c.type_line NOT ILIKE '%%Token%%') DESC, c.id
             LIMIT 1
         ) sc ON TRUE
     ),

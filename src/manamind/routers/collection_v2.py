@@ -246,6 +246,7 @@ def api_card_suggest(
                 WHERE pr.card_id = c.id AND pr.lang = 'en'
                 -- Une edition standard represente mieux la carte qu'un promo
                 ORDER BY """ + _PREFERRED_BY_NAME_PR + """,
+                         (pr.digital IS NOT TRUE) DESC,
                          (pr.image_normal IS NOT NULL) DESC,
                          (pr.promo IS NOT TRUE) DESC,
                          (COALESCE(ms.set_type, '') NOT IN
@@ -264,6 +265,8 @@ def api_card_suggest(
                     = split_part(c.normalized_name, ' // ', 1)
             ) owned ON TRUE
             WHERE c.type_line NOT ILIKE '%Token%'
+              -- Cartes d'art (« Card // Card ») : hors du projet.
+              AND c.type_line NOT LIKE 'Card%'
             -- Correspondance exacte d'abord, puis les noms qui commencent par
             -- le terme, puis ceux qui le contiennent ailleurs.
             ORDER BY (c.name ILIKE :exact) DESC,
@@ -411,7 +414,8 @@ async def api_cards_resolve(request: Request) -> Response:
                        sc.color_identity, sc.game_changer, sc.normalized_name
                 FROM scryfall_cards sc
                 WHERE sc.normalized_name = mm_normalize_name(n.raw)
-                ORDER BY (sc.type_line NOT ILIKE '%Token%') DESC, sc.id
+                  AND sc.type_line NOT LIKE 'Card%'
+                ORDER BY (EXISTS (SELECT 1 FROM scryfall_card_printings q WHERE q.card_id = sc.id AND q.digital IS NOT TRUE)) DESC, (sc.type_line NOT ILIKE '%Token%') DESC, sc.id
                 LIMIT 1
             ) exact ON TRUE
 
@@ -424,7 +428,9 @@ async def api_cards_resolve(request: Request) -> Response:
                 FROM scryfall_cards sc
                 WHERE exact.id IS NULL
                   AND split_part(sc.normalized_name, ' // ', 1) = mm_normalize_name(n.raw)
-                ORDER BY (sc.type_line NOT ILIKE '%Token%') DESC, sc.id
+                  -- Cartes d'art (« Card // Card ») : hors du projet.
+                  AND sc.type_line NOT LIKE 'Card%'
+                ORDER BY (EXISTS (SELECT 1 FROM scryfall_card_printings q WHERE q.card_id = sc.id AND q.digital IS NOT TRUE)) DESC, (sc.type_line NOT ILIKE '%Token%') DESC, sc.id
                 LIMIT 1
             ) face ON TRUE
 
@@ -445,7 +451,8 @@ async def api_cards_resolve(request: Request) -> Response:
                 LEFT JOIN scryfall_mtg_sets ms ON LOWER(ms.code) = LOWER(p.set_code)
                 WHERE p.card_id = c.id AND p.lang = 'en'
                 ORDER BY """ + _PREFERRED_BY_NAME + """,
-                         (p.set_code NOT ILIKE 'sl%' AND LOWER(p.set_code) NOT IN ('mar', 'lmar')) DESC,
+                         (p.set_code NOT ILIKE 'sl%' AND LOWER(p.set_code) NOT IN ('mar', 'lmar', 'pza')) DESC,
+                         (p.digital IS NOT TRUE) DESC,
                          (p.image_normal IS NOT NULL) DESC,
                          (p.promo IS NOT TRUE) DESC,
                          (COALESCE(ms.set_type, '') NOT IN ('promo', 'memorabilia')) DESC,
@@ -514,9 +521,12 @@ def api_card_detail(card_name: str, request: Request) -> Response:
                    c.color_identity, c.keywords, c.legal_commander,
                    c.edhrec_rank, COALESCE(c.game_changer, false) AS game_changer
             FROM scryfall_cards c
-            WHERE c.normalized_name = mm_normalize_name(:name)
-               OR split_part(c.normalized_name, ' // ', 1) = mm_normalize_name(:name)
+            WHERE (c.normalized_name = mm_normalize_name(:name)
+                   OR split_part(c.normalized_name, ' // ', 1) = mm_normalize_name(:name))
+              -- Cartes d'art (« Card // Card ») : hors du projet.
+              AND c.type_line NOT LIKE 'Card%'
             ORDER BY (c.normalized_name = mm_normalize_name(:name)) DESC,
+                     (EXISTS (SELECT 1 FROM scryfall_card_printings q WHERE q.card_id = c.id AND q.digital IS NOT TRUE)) DESC,
                      (c.type_line NOT ILIKE '%Token%') DESC, c.id
             LIMIT 1
         """), {"name": card_name}).fetchone()
@@ -533,10 +543,11 @@ def api_card_detail(card_name: str, request: Request) -> Response:
                    latest.low_price, latest.trend_price, latest.foil_low,
                    latest.foil_trend,
                    -- Éditions dont l'illustration ne représente pas la carte :
-                   -- Secret Lair, et Marvel Universe (« mar », plus ses inserts
-                   -- « lmar »). Proposées au choix, mais jamais par défaut.
+                   -- Secret Lair, Marvel Universe (« mar », plus ses inserts
+                   -- « lmar ») et Tortues Ninja Source Material (« pza »).
+                   -- Proposées au choix, mais jamais par défaut.
                    (p.set_code ILIKE 'sl%'
-                    OR LOWER(p.set_code) IN ('mar', 'lmar')) AS alt_art
+                    OR LOWER(p.set_code) IN ('mar', 'lmar', 'pza')) AS alt_art
             FROM scryfall_card_printings p
             LEFT JOIN scryfall_mtg_sets ms ON LOWER(ms.code) = LOWER(p.set_code)
             LEFT JOIN LATERAL (
@@ -547,6 +558,9 @@ def api_card_detail(card_name: str, request: Request) -> Response:
                 LIMIT 1
             ) latest ON TRUE
             WHERE p.card_id = :cid AND p.lang = 'en'
+              -- Une impression réservée à Arena ou MTGO ne se possède pas :
+              -- la proposer au choix de son édition n'aurait pas de sens.
+              AND p.digital IS NOT TRUE
             -- Les écarter de la liste empêchait de choisir l'exemplaire Secret
             -- Lair qu'on possède : elles restent, rangées en fin de liste.
             ORDER BY alt_art, p.released_at DESC NULLS LAST, p.collector_number
@@ -664,17 +678,17 @@ def api_card_printings(
             LEFT JOIN scryfall_mtg_sets s ON LOWER(s.code) = LOWER(p.set_code)
             WHERE c.normalized_name = mm_normalize_name(:name) AND p.lang = 'en'
               -- Editions dont l'illustration ne represente pas la carte :
-              -- Secret Lair, et Marvel Universe (« mar », plus ses inserts
-              -- « lmar »). Ecartees de la liste, sauf quand la carte n'existe
+              -- Secret Lair, Marvel Universe (« mar », plus ses inserts
+              -- « lmar ») et Tortues Ninja Source Material (« pza »). Ecartees de la liste, sauf quand la carte n'existe
               -- nulle part ailleurs — elle resterait alors sans visuel.
               AND (
                     (p.set_code NOT ILIKE 'sl%'
-                     AND LOWER(p.set_code) NOT IN ('mar', 'lmar'))
+                     AND LOWER(p.set_code) NOT IN ('mar', 'lmar', 'pza'))
                  OR NOT EXISTS (
                         SELECT 1 FROM scryfall_card_printings q
                         WHERE q.card_id = p.card_id AND q.lang = 'en'
                           AND q.set_code NOT ILIKE 'sl%'
-                          AND LOWER(q.set_code) NOT IN ('mar', 'lmar')))
+                          AND LOWER(q.set_code) NOT IN ('mar', 'lmar', 'pza')))
             ORDER BY p.released_at DESC NULLS LAST
             LIMIT :limit
         """), {"name": card_name, "limit": limit}).fetchall()
@@ -754,7 +768,10 @@ def api_set_cards(
     """Cartes d'une extension, avec le nombre deja possede par l'utilisateur."""
     user = _user(request)
     params: dict = {"code": code.lower(), "uid": user["id"], "limit": limit}
-    where = ["LOWER(p.set_code) = :code", "p.lang = 'en'"]
+    # Cartes d'art (« Card // Card ») : hors du projet, même dans une extension
+    # qui en mélange à ses cartes.
+    where = ["LOWER(p.set_code) = :code", "p.lang = 'en'",
+             "c.type_line NOT LIKE 'Card%'"]
     if search:
         where.append("c.name ILIKE :q")
         params["q"] = f"%{search}%"

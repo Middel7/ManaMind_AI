@@ -129,7 +129,7 @@ def _resolve_entry(entry: CanonicalEntry, sess, remote_budget: dict | None = Non
                    p.set_code, p.collector_number, p.digital, p.cardmarket_id
             FROM scryfall_card_printings p
             JOIN scryfall_cards c ON c.id = p.card_id
-            WHERE p.scryfall_id = :sid
+            WHERE c.type_line NOT LIKE 'Card%' AND p.scryfall_id = :sid
         """), {"sid": entry.scryfall_id}).fetchone()
         if row:
             _apply_printing(entry, row)
@@ -144,7 +144,7 @@ def _resolve_entry(entry: CanonicalEntry, sess, remote_budget: dict | None = Non
                    p.set_code, p.collector_number, p.digital, p.cardmarket_id
             FROM scryfall_card_printings p
             JOIN scryfall_cards c ON c.id = p.card_id
-            WHERE p.cardmarket_id = :cid
+            WHERE c.type_line NOT LIKE 'Card%' AND p.cardmarket_id = :cid
         """), {"cid": entry.cardmarket_product_id}).fetchone()
         if row:
             _apply_printing(entry, row)
@@ -160,7 +160,7 @@ def _resolve_entry(entry: CanonicalEntry, sess, remote_budget: dict | None = Non
                    p.lang
             FROM scryfall_card_printings p
             JOIN scryfall_cards c ON c.id = p.card_id
-            WHERE UPPER(p.set_code) = UPPER(:set_code)
+            WHERE c.type_line NOT LIKE 'Card%' AND UPPER(p.set_code) = UPPER(:set_code)
               AND LOWER(p.collector_number) = LOWER(:col_num)
         """), {"set_code": entry.set_code, "col_num": entry.collector_number}).fetchall()
 
@@ -193,7 +193,7 @@ def _resolve_entry(entry: CanonicalEntry, sess, remote_budget: dict | None = Non
                    p.lang
             FROM scryfall_card_printings p
             JOIN scryfall_cards c ON c.id = p.card_id
-            WHERE UPPER(p.set_code) = UPPER(:set_code)
+            WHERE c.type_line NOT LIKE 'Card%' AND UPPER(p.set_code) = UPPER(:set_code)
               AND LOWER(p.collector_number) = LOWER(:col_num)
               AND (LOWER(c.normalized_name) = :norm
                    OR LOWER(c.name) = :raw_lower
@@ -225,7 +225,7 @@ def _resolve_entry(entry: CanonicalEntry, sess, remote_budget: dict | None = Non
                    p.set_code, p.collector_number, p.digital, p.cardmarket_id
             FROM scryfall_card_printings p
             JOIN scryfall_cards c ON c.id = p.card_id
-            WHERE UPPER(p.set_code) = UPPER(:set_code)
+            WHERE c.type_line NOT LIKE 'Card%' AND UPPER(p.set_code) = UPPER(:set_code)
               AND (LOWER(c.normalized_name) = :norm
                    OR LOWER(c.name) = :raw_lower
                    OR split_part(LOWER(c.normalized_name), ' // ', 1) = :norm)
@@ -259,8 +259,9 @@ def _resolve_entry(entry: CanonicalEntry, sess, remote_budget: dict | None = Non
         rows = sess.execute(text("""
             SELECT c.oracle_id, c.name, c.normalized_name, c.type_line
             FROM scryfall_cards c
-            WHERE LOWER(c.normalized_name) = :norm
-               OR LOWER(c.name) = :raw_lower
+            WHERE (LOWER(c.normalized_name) = :norm
+                   OR LOWER(c.name) = :raw_lower)
+              AND c.type_line NOT LIKE 'Card%'
             LIMIT 5
         """), {"norm": norm, "raw_lower": entry.raw_name.lower()}).fetchall()
         # Un jeton ou une carte d'art peut porter le nom d'une vraie carte
@@ -310,6 +311,7 @@ def _resolve_entry(entry: CanonicalEntry, sess, remote_budget: dict | None = Non
             SELECT c.oracle_id, c.name
             FROM scryfall_cards c
             WHERE LOWER(c.normalized_name) LIKE :prefix
+              AND c.type_line NOT LIKE 'Card%'
             LIMIT 5
         """), {"prefix": norm[:8] + "%"}).fetchall()
 
@@ -395,7 +397,7 @@ def _resolve_flavor_name(entry: CanonicalEntry, sess) -> bool:
                p.set_code, p.collector_number, p.digital, p.cardmarket_id
         FROM scryfall_card_printings p
         JOIN scryfall_cards c ON c.id = p.card_id
-        WHERE p.scryfall_id = :sid
+        WHERE c.type_line NOT LIKE 'Card%' AND p.scryfall_id = :sid
     """), {"sid": payload.get("id")}).fetchone()
     if printing is not None and not entry.set_code:
         _apply_printing(entry, printing)

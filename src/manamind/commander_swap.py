@@ -67,6 +67,8 @@ front_match AS (
     JOIN scryfall_cards sc
       ON split_part(sc.normalized_name, ' // ', 1) = d.card_lower
     WHERE d.card_lower NOT IN (SELECT card_lower FROM exact_match)
+      -- Cartes d'art (« Card // Card ») : hors du projet.
+      AND sc.type_line NOT LIKE 'Card%'
     ORDER BY d.card_lower, sc.id
 ),
 resolved AS (
@@ -120,7 +122,7 @@ LEFT JOIN LATERAL (
               AND pref.card_key = split_part(dc.card_lower, ' // ', 1)
         )
     ) DESC NULLS LAST,
-             (p.set_code NOT ILIKE 'sl%' AND LOWER(p.set_code) NOT IN ('mar', 'lmar')) DESC, p.released_at DESC NULLS LAST, p.id
+             (p.set_code NOT ILIKE 'sl%' AND LOWER(p.set_code) NOT IN ('mar', 'lmar', 'pza')) DESC, p.released_at DESC NULLS LAST, p.id
     LIMIT 1
 ) img ON TRUE
 """
@@ -171,7 +173,8 @@ part_front AS (
     FROM cmd_parts cp
     JOIN scryfall_cards sc
       ON split_part(sc.normalized_name, ' // ', 1) = cp.part
-    WHERE NOT EXISTS (
+    WHERE sc.type_line NOT LIKE 'Card%'
+      AND NOT EXISTS (
         SELECT 1 FROM part_exact pe
         WHERE pe.commander = cp.commander AND pe.part = cp.part
     )
@@ -242,7 +245,7 @@ cmd_img AS (
                   AND pref.card_key = split_part(sc.normalized_name, ' // ', 1)
             )
         ) DESC NULLS LAST,
-                 (p.set_code NOT ILIKE 'sl%' AND LOWER(p.set_code) NOT IN ('mar', 'lmar')) DESC
+                 (p.set_code NOT ILIKE 'sl%' AND LOWER(p.set_code) NOT IN ('mar', 'lmar', 'pza')) DESC
         LIMIT 1
     ) img ON TRUE
 )
@@ -346,7 +349,7 @@ LEFT JOIN LATERAL (
               AND pref.card_key = split_part(rk_.display_name, ' // ', 1)
         )
     ) DESC NULLS LAST,
-             (p.set_code NOT ILIKE 'sl%' AND LOWER(p.set_code) NOT IN ('mar', 'lmar')) DESC, p.released_at DESC NULLS LAST, p.id
+             (p.set_code NOT ILIKE 'sl%' AND LOWER(p.set_code) NOT IN ('mar', 'lmar', 'pza')) DESC, p.released_at DESC NULLS LAST, p.id
     LIMIT 1
 ) img ON TRUE
 WHERE rk_.rk <= :missing_top
