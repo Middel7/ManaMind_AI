@@ -178,6 +178,29 @@ def api_decks(request: Request) -> Response:
     })
 
 
+@router.get("/api/v2/decks/cards-index")
+def api_decks_cards_index(request: Request) -> Response:
+    """Noms des cartes de chaque deck, pour chercher un deck par son contenu.
+
+    Une vingtaine de decks de cent cartes tiennent en quelques dizaines de
+    kilo-octets : la page les charge une fois et filtre ensuite à la frappe,
+    sans aller-retour serveur par caractère.
+    """
+    user = _user(request)
+    with SessionLocal() as session:
+        rows = session.execute(text("""
+            SELECT dc.deck_id, array_agg(dc.card_name ORDER BY dc.card_name) AS cards
+            FROM user_deck_cards dc
+            WHERE dc.user_id = :uid
+              AND EXISTS (
+                  SELECT 1 FROM user_moxfield_decks d
+                  WHERE d.user_id = dc.user_id AND d.deck_id = dc.deck_id
+              )
+            GROUP BY dc.deck_id
+        """), {"uid": user["id"]}).fetchall()
+    return _json_response({"decks": {r.deck_id: list(r.cards or []) for r in rows}})
+
+
 @router.post("/api/v2/decks/last")
 async def api_set_last_deck(request: Request) -> Response:
     """Retient le deck sur lequel l'utilisateur travaille.
