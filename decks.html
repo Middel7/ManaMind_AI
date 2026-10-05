@@ -55,6 +55,10 @@
     font-size: var(--text-lg); font-weight: 600; letter-spacing: -0.01em;
     padding: 4px 8px;
   }
+
+  /* La carte trouvee s'intercale entre la jauge et le decompte : sans marge,
+     les deux lignes de meme taille se confondaient. */
+  .deck-tile__hit { margin-bottom: var(--sp-2); }
 </style>
 </head>
 <body>
@@ -64,7 +68,7 @@
     <div class="search toolbar__search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
            stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
-      <input class="input" id="search" type="search" placeholder="Rechercher un deck…">
+      <input class="input" id="search" type="search" placeholder="Rechercher un deck, un commandant ou une carte…">
     </div>
     <select class="select" id="sort" style="width:auto">
       <option value="name" selected>Nom</option>
@@ -89,7 +93,9 @@
   if (!user) return;
 
   // Les decks se rangent par nom : c'est ainsi qu'on cherche le sien.
-  const state = { decks: [], search: '', sort: 'name' };
+  // cards : noms des cartes de chaque deck, charges a part pour que la grille
+  // s'affiche sans les attendre ; la recherche par carte s'active a leur arrivee.
+  const state = { decks: [], search: '', sort: 'name', cards: {} };
 
   try {
     const data = await MM.api.get('/api/v2/decks');
@@ -112,11 +118,24 @@
     }
   }
 
+  // Sans accents ni casse : « eowyn » doit trouver « Éowyn ».
+  const fold = (value) => String(value || '').normalize('NFD')
+    .replace(/[̀-ͯ]/g, '').toLowerCase();
+
+  /** Cartes du deck dont le nom contient le terme cherche. */
+  function cardHits(deck, term) {
+    return (state.cards[deck.deck_id] || []).filter((name) => fold(name).includes(term));
+  }
+
   function render() {
-    const term = state.search.toLowerCase();
-    const decks = sorted(state.decks.filter((deck) =>
-      !term || deck.name.toLowerCase().includes(term)
-      || (deck.commander || '').toLowerCase().includes(term)));
+    const term = fold(state.search);
+    const hits = {};
+    const decks = sorted(state.decks.filter((deck) => {
+      if (!term) return true;
+      if (fold(deck.name).includes(term) || fold(deck.commander).includes(term)) return true;
+      hits[deck.deck_id] = cardHits(deck, term);
+      return hits[deck.deck_id].length > 0;
+    }));
 
     if (!state.decks.length) {
       MM.el('#results').innerHTML = MM.empty({
@@ -151,6 +170,12 @@
             <div class="progress" style="margin-bottom:6px">
               <div class="progress__bar" style="width:${percent}%"></div>
             </div>
+            ${hits[deck.deck_id] ? `<p class="xs truncate deck-tile__hit"
+                 title="${MM.esc(hits[deck.deck_id].join(' · '))}">
+                 Contient <span class="accent">${MM.esc(hits[deck.deck_id].slice(0, 3).join(' · '))}</span>${
+                 hits[deck.deck_id].length > 3
+                   ? ` et ${MM.fmt.int(hits[deck.deck_id].length - 3)} autre${hits[deck.deck_id].length > 4 ? 's' : ''}`
+                   : ''}</p>` : ''}
             <p class="xs muted">
               ${MM.fmt.int(deck.card_count)} cartes ·
               <span class="${missing ? 'accent' : ''}">${percent} % en collection</span>
@@ -319,6 +344,12 @@
   });
 
   render();
+
+  // Les cartes de chaque deck arrivent apres la grille : une recherche deja
+  // saisie est relancee pour tenir compte de leur contenu.
+  MM.api.get('/api/v2/decks/cards-index')
+    .then((data) => { state.cards = data.decks || {}; if (state.search) render(); })
+    .catch(() => { /* la recherche se limite alors aux noms et commandants */ });
 })();
 </script>
 </body>
