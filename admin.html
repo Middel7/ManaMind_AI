@@ -1200,6 +1200,11 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
     let seenLog = 0;
     const startMs = Date.now();
 
+    // Une tache qui echoue ou se perd doit laisser relancer : sans cela le
+    // bouton restait grise jusqu'au rechargement de la page.
+    const launchBtn = document.getElementById(
+      { recent: 'recentLaunchBtn', stale: 'staleLaunchBtn', ml: 'mlRetrainBtn' }[prefix]);
+
     const timerIv = setInterval(() => {
       if (!elapsedEl) return;
       const s = Math.floor((Date.now() - startMs) / 1000);
@@ -1219,6 +1224,7 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
           clearInterval(timerIv);
           if (stopBtn) stopBtn.style.display = 'none';
           showPanel(prefix, 'Error');
+          if (launchBtn) launchBtn.disabled = false;
           document.getElementById(`${prefix}Error`).textContent =
             'Tâche perdue : le serveur a redémarré pendant son exécution. '
             + 'Ce qui était déjà enregistré est conservé ; relancez-la pour terminer.';
@@ -1298,6 +1304,7 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
           clearInterval(timerIv);
           if (stopBtn) stopBtn.style.display = 'none';
           showPanel(prefix, 'Error');
+          if (launchBtn) launchBtn.disabled = false;
           document.getElementById(`${prefix}Error`).textContent = d.error || 'Erreur inconnue';
         }
       } catch {}
