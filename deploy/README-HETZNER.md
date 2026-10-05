@@ -119,7 +119,21 @@ l'écran, et la tâche survit à la fermeture de l'onglet.
 
 ### Les statistiques ManaMind — depuis le poste de travail
 
-À lancer **depuis le PC**, après un scraping ou un recalcul :
+**Voie courte.** Le bouton « Lancer le réentraînement » de l'écran
+d'administration du poste publie de lui-même en fin de course (étape
+« Publication sur le site en ligne »). À la main, depuis Git Bash :
+
+```bash
+./deploy/publier.sh --check   # compare poste et serveur, n'écrit rien
+./deploy/publier.sh           # publie, après confirmation
+```
+
+Le script ouvre un tunnel SSH vers la base du serveur, lit ses identifiants
+dans `/app/.env` du serveur, publie les statistiques, renvoie les modèles s'ils
+ont changé depuis la dernière publication (puis redémarre le site), et referme
+le tunnel. Aucun mot de passe n'est conservé sur le poste.
+
+**Voie détaillée**, à lancer **depuis le PC**, après un scraping ou un recalcul :
 
 ```bash
 export SOURCE_DATABASE_URL='postgresql://manamind:<mdp>@localhost:5432/manamind'
