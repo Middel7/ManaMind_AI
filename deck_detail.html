@@ -24,6 +24,11 @@
     padding-bottom: var(--sp-2); margin-bottom: var(--sp-3);
     border-bottom: 1px solid var(--line);
   }
+  /* La chance de piocher la categorie se lit en bout de ligne, loin du titre :
+     c'est une information de second plan. */
+  .type-group__chance { margin-left: auto; text-align: right; }
+  /* La bascule type / cout ouvre la liste, separee du premier groupe. */
+  .group-mode { margin-bottom: var(--sp-5); }
 
 
   /* La courbe de mana tient dans le bandeau, sous les chiffres du deck */
@@ -146,12 +151,43 @@
     ['Créatures', (card) => /Creature/i.test(card.type_line)],
     ['Éphémères', (card) => /Instant/i.test(card.type_line)],
     ['Rituels', (card) => /Sorcery/i.test(card.type_line)],
-    ['Artefacts', (card) => /Artifact/i.test(card.type_line)],
+    // Les equipements se jouent et se comptent a part des autres artefacts :
+    // un deck en veut un nombre precis, noye sinon parmi les rocks de mana.
+    ['Artefacts', (card) => /Artifact/i.test(card.type_line)
+      && !/Equipment/i.test(card.type_line)],
+    ['Équipements', (card) => /Equipment/i.test(card.type_line)],
     ['Enchantements', (card) => /Enchantment/i.test(card.type_line)],
     ['Planeswalkers', (card) => /Planeswalker/i.test(card.type_line)],
     ['Terrains', (card) => /Land/i.test(card.type_line)],
     ['Autres', () => true],
   ];
+
+  /** Commandants en tete, puis les sorts par cout, les terrains a part : a
+   *  zero mana, ils noieraient les quelques sorts gratuits du deck. */
+  function groupByCost(list) {
+    const byName = (a, b) => a.card_name.localeCompare(b.card_name, 'fr');
+    const isLand = (card) => /Land/i.test((card.type_line || '').split('//')[0]);
+    const groups = [];
+    const commanders = list.filter((card) => MM.isCommander(deck.commander, card.card_name));
+    const rest = list.filter((card) => !commanders.includes(card));
+    if (commanders.length) {
+      groups.push([commanders.length > 1 ? 'Commandants' : 'Commandant',
+        commanders.sort((a, b) => isLead(b) - isLead(a) || byName(a, b))]);
+    }
+    const spells = rest.filter((card) => !isLand(card));
+    MANA_STEPS.forEach((step) => {
+      const matched = spells.filter((card) => atStep(card, step)).sort(byName);
+      if (!matched.length) return;
+      const label = step === LAST_STEP ? `${step} manas et plus`
+        : `${step} mana${step > 1 ? 's' : ''}`;
+      groups.push([label, matched]);
+    });
+    const unknown = spells.filter((card) => manaStep(card) === null).sort(byName);
+    if (unknown.length) groups.push(['Coût inconnu', unknown]);
+    const lands = rest.filter(isLand).sort(byName);
+    if (lands.length) groups.push(['Terrains', lands]);
+    return groups;
+  }
 
   function group(list) {
     const groups = [];
@@ -408,6 +444,12 @@
   const LAST_STEP = MANA_STEPS[MANA_STEPS.length - 1];
   let manaFilter = null;   // null : tous les coûts
 
+  // Regroupement des cartes : par type ou par cout. Retenu par navigateur,
+  // comme un reglage d'affichage ; un stockage indisponible n'y change rien.
+  const GROUP_KEY = 'mm_deck_group_mode';
+  let groupMode = 'type';
+  try { if (localStorage.getItem(GROUP_KEY) === 'cost') groupMode = 'cost'; } catch {}
+
   // Une carte dont le coût n'a pas pu être résolu n'appartient à aucune
   // famille : elle reste visible tant qu'aucun filtre n'est posé, plutôt que
   // de passer pour une carte à zéro mana.
@@ -465,19 +507,58 @@
     MM.el('#manaFilterHost').innerHTML = manaFilterBar();
 
     const shown = filteredCards();
-    MM.el('#cardList').innerHTML = shown.length
-      ? renderGroups(shown)
-      : `<p class="muted small">Aucune carte à ce coût.</p>`;
+    const mode = (value, label, title) => `
+      <button class="chip" data-group="${value}" aria-pressed="${groupMode === value}"
+              title="${MM.esc(title)}">${label}</button>`;
+    MM.el('#cardList').innerHTML = `
+      <div class="cluster-2 group-mode">
+        <span class="filter-label">Regrouper</span>
+        <div class="chips" id="groupMode">
+          ${mode('type', 'Par type', 'Créatures, éphémères, artefacts…')}
+          ${mode('cost', 'Par coût', 'Par coût en mana, terrains à part')}
+        </div>
+      </div>
+      ${shown.length
+        ? renderGroups(shown)
+        : `<p class="muted small">Aucune carte à ce coût.</p>`}`;
+  }
+
+  // Main de depart et premiere pioche : les huit cartes vues avant de jouer.
+  const SEEN_CARDS = 8;
+
+  /**
+   * Chance d'avoir au moins une des `hits` cartes parmi les huit premieres
+   * d'une bibliotheque de `size` cartes (loi hypergeometrique). Les
+   * commandants ne sont pas dans la bibliotheque : ils n'entrent pas dans
+   * `size`.
+   */
+  function seenChance(hits, size) {
+    if (hits <= 0 || size <= 0) return 0;
+    let miss = 1;
+    for (let i = 0; i < Math.min(SEEN_CARDS, size); i += 1) {
+      miss *= Math.max(0, size - hits - i) / (size - i);
+    }
+    return 1 - miss;
   }
 
   function renderGroups(shown) {
-    return group(shown).map(([label, list]) => {
-      const copies = list.reduce((sum, card) => sum + card.quantity, 0);
+    const copiesOf = (list) => list.reduce((sum, card) => sum + card.quantity, 0);
+    // La bibliotheque compte tout le deck, filtre de cout ou non : c'est elle
+    // que l'on pioche, quelles que soient les cartes affichees.
+    const library = copiesOf(cards.filter((card) => !MM.isCommander(deck.commander, card.card_name)));
+    const groups = groupMode === 'cost' ? groupByCost(shown) : group(shown);
+    return groups.map(([label, list]) => {
+      const copies = copiesOf(list);
+      const inLibrary = !label.startsWith('Commandant');
+      const chance = inLibrary ? seenChance(copies, library) : null;
       return `
         <div class="type-group">
           <div class="type-group__head">
             <h3 class="h4">${MM.esc(label)}</h3>
             <span class="xs dim">${copies}</span>
+            ${chance !== null ? `<span class="xs muted type-group__chance"
+                title="Chance d'avoir au moins une de ces cartes parmi les ${SEEN_CARDS} premières : main de départ et première pioche">
+                ${MM.fmt.pct(chance * 100, 0)} dans les ${SEEN_CARDS} premières cartes</span>` : ''}
           </div>
           <div class="card-grid">
             ${list.map((card) => MM.cardTile(card, {
@@ -649,6 +730,15 @@
     });
 
     MM.el('#cardList').addEventListener('click', async (event) => {
+      const modeChip = event.target.closest('[data-group]');
+      if (modeChip) {
+        if (modeChip.dataset.group === groupMode) return;
+        groupMode = modeChip.dataset.group;
+        try { localStorage.setItem(GROUP_KEY, groupMode); } catch {}
+        renderCards();
+        return;
+      }
+
       const crown = event.target.closest('[data-act="setcmd"]');
       if (crown) return setCommander(crown.dataset.card, crown);
 
