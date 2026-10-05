@@ -1210,6 +1210,20 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
     const iv = setInterval(async () => {
       try {
         const r = await fetch(`/api/admin/scrape/status/${jobId}`);
+        // Les taches ne vivent qu'en memoire : un redemarrage du serveur (a la
+        // main, ou par le rechargement automatique quand un fichier du depot
+        // change) les efface. Sans cet arret, la page interrogeait sans fin une
+        // tache qui n'existait plus.
+        if (r.status === 404) {
+          clearInterval(iv);
+          clearInterval(timerIv);
+          if (stopBtn) stopBtn.style.display = 'none';
+          showPanel(prefix, 'Error');
+          document.getElementById(`${prefix}Error`).textContent =
+            'Tâche perdue : le serveur a redémarré pendant son exécution. '
+            + 'Ce qui était déjà enregistré est conservé ; relancez-la pour terminer.';
+          return;
+        }
         const d = await r.json();
 
         // Append new log entries incrementalement
