@@ -63,6 +63,13 @@ def main() -> None:
             reload=True,
             # Surveiller aussi les fichiers HTML et JSON
             reload_includes=["*.html", "*.json"],
+            # ...sauf ceux que le serveur écrit lui-même : le scraping note ses
+            # durées dans scrape_metadata.json en fin de course, l'entraînement
+            # écrit ml_metadata.json et les modèles sous data/. Surveillés, ils
+            # relançaient le serveur et effaçaient la tâche en cours. Chemins
+            # absolus : uvicorn ne reconnaît pas un dossier donné en relatif.
+            reload_excludes=["scrape_metadata.json", "ml_metadata.json",
+                             str(ROOT / "data"), str(ROOT / "outputs")],
         )
     except KeyboardInterrupt:
         print("\n[Start] Serveur arrêté.")
