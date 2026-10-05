@@ -207,6 +207,13 @@ def save_recommendations(
             writer.writerow(["remove", card, "", cnt, round(rate, 1)])
 
 
+# Suggestions proposées par analyse : quelques-unes de plus que le strict
+# nécessaire, pour que l'utilisateur garde le choix après avoir écarté celles
+# qui ne collent pas à son deck.
+ADD_LIMIT = 42
+REMOVE_LIMIT = 24
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Recommandations par popularité depuis deck_stat_commander.")
     parser.add_argument("--input",  required=True,                  help="Decklist texte (.txt)")
@@ -216,7 +223,8 @@ def main() -> None:
     cards, commander = parse_decklist_text(Path(args.input))
     print(f"Commander détecté : {commander or '(aucun)'}")
 
-    additions, removals = recommend_from_db(cards, commander, add_limit=40)
+    additions, removals = recommend_from_db(
+        cards, commander, limit=REMOVE_LIMIT, add_limit=ADD_LIMIT)
     print(f"{len(additions)} cartes à ajouter, {len(removals)} cartes à retirer suggérées")
 
     save_recommendations(Path(args.output), commander, additions, removals)
