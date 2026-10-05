@@ -636,7 +636,31 @@ _ML_SCRIPT_STEPS = {
     "stats": ("Calcul des statistiques", "mox_to_stats.py"),
     "tfidf": ("Calcul TF-IDF",           "compute_commander_tfidf.py"),
 }
-_ML_ALL_STEPS = ["stats", "tfidf", "reload"]
+_ML_ALL_STEPS = ["stats", "tfidf", "reload", "publish"]
+
+
+def _git_bash() -> str | None:
+    """Le bash de Git pour Windows, qui porte ssh, scp et les scripts deploy/.
+
+    shutil.which("bash") renverrait sous Windows celui de WSL
+    (System32/bash.exe), qui ne voit ni la clé SSH ni les outils PostgreSQL
+    du poste : on cherche d'abord Git.
+    """
+    import os as _os
+    import shutil
+
+    explicit = _os.environ.get("MANAMIND_BASH")
+    if explicit and _os.path.exists(explicit):
+        return explicit
+    for root in (_os.environ.get("ProgramFiles", r"C:\Program Files"),
+                 _os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")):
+        candidate = _os.path.join(root, "Git", "bin", "bash.exe")
+        if _os.path.exists(candidate):
+            return candidate
+    found = shutil.which("bash")
+    if found and "system32" not in found.lower():
+        return found
+    return None
 
 
 def _run_ml_retrain(job_id: str, steps: list) -> None:
@@ -692,6 +716,46 @@ def _run_ml_retrain(job_id: str, steps: list) -> None:
                 return
             log_fn(f"✓ Étape {done} terminée.")
 
+        elif step_key == "publish":
+            job["progress"]["phase"] = "Publication sur le site en ligne"
+            job["progress"]["decks_done"] = done - 1
+            log_fn(f"Étape {done}/{step_total} — Publication sur le site en ligne…")
+            bash = _git_bash()
+            repo_root = _os.path.normpath(_os.path.join(scripts_dir, ".."))
+            if bash is None:
+                _JOBS[job_id].update(
+                    status="error",
+                    error="Entraînement terminé, mais publication impossible : "
+                          "Git Bash est introuvable sur ce poste.",
+                )
+                return
+            try:
+                proc = subprocess.Popen(
+                    [bash, "deploy/publier.sh", "--yes"], cwd=repo_root,
+                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                    text=True, encoding="utf-8", errors="replace",
+                )
+                assert proc.stdout is not None
+                for line in proc.stdout:
+                    line = line.rstrip()
+                    if line:
+                        log_fn(line)
+                proc.wait()
+            except Exception as exc:
+                _JOBS[job_id].update(
+                    status="error",
+                    error=f"Entraînement terminé, mais la publication a échoué : {exc}")
+                return
+            if proc.returncode != 0:
+                _JOBS[job_id].update(
+                    status="error",
+                    error="Entraînement terminé, mais la publication a échoué "
+                          f"(code retour : {proc.returncode}). Le site garde ses "
+                          "données précédentes.",
+                )
+                return
+            log_fn(f"✓ Étape {done} terminée : le site en ligne est à jour.")
+
         elif step_key == "reload":
             job["progress"]["phase"] = "Rechargement du moteur IA"
             job["progress"]["decks_done"] = done - 1
@@ -742,7 +806,10 @@ async def start_ml_retrain(request: Request, _user: dict = Depends(require_admin
         steps = body.get("steps", _ML_ALL_STEPS)
     except Exception:
         steps = _ML_ALL_STEPS
-    steps = [s for s in steps if s in {"stats", "tfidf", "reload"}]
+    steps = [s for s in steps if s in set(_ML_ALL_STEPS)]
+    # La publication part en dernier, quel que soit l'ordre reçu : elle envoie
+    # en ligne ce que les étapes précédentes viennent de calculer.
+    steps.sort(key=_ML_ALL_STEPS.index)
     if not steps:
         steps = list(_ML_ALL_STEPS)
     job_id = str(uuid.uuid4())

@@ -624,6 +624,10 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
         <input type="checkbox" id="mlStepReload" checked />
         <span>Rechargement du moteur IA</span>
       </label>
+      <label class="step-item">
+        <input type="checkbox" id="mlStepPublish" checked />
+        <span>Publication sur le site en ligne <em class="step-hint">(deploy/publier.sh)</em></span>
+      </label>
     </div>
     <button class="btn btn-purple" id="mlRetrainBtn">Lancer le réentraînement</button>
     <div class="panel-state" id="mlState" style="display:none;">
@@ -1406,8 +1410,9 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
   function reportMl(s) {
     return `<div class="report-row"><span class="report-label">Étapes complétées</span><span class="report-val v-green">${(s?.steps_completed ?? 0)}</span></div>`;
   }
-  const _mlStepIds = ['mlStepStats', 'mlStepTfidf', 'mlStepReload'];
-  const _mlStepKeys = { mlStepStats: 'stats', mlStepTfidf: 'tfidf', mlStepReload: 'reload' };
+  const _mlStepIds = ['mlStepStats', 'mlStepTfidf', 'mlStepReload', 'mlStepPublish'];
+  const _mlStepKeys = { mlStepStats: 'stats', mlStepTfidf: 'tfidf', mlStepReload: 'reload',
+                        mlStepPublish: 'publish' };
 
   function _mlUpdateBtn() {
     const anyChecked = _mlStepIds.some(id => document.getElementById(id).checked);
