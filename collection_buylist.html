@@ -35,6 +35,10 @@
   .buylist.card-grid--sm .mtg-card__owned { display: none; }
   .buylist.card-grid--sm .mtg-card__meta { font-size: var(--text-xs); }
   .buylist.card-grid--sm .mtg-card__actions .btn { width: 100%; }
+  /* Sans la note, l'espace reserve au-dessus de « Masquer » n'a plus rien a
+     separer : il se reduit au minimum, et le bouton s'aplatit. */
+  .buylist.card-grid--sm .mtg-card__bottom { padding-top: var(--sp-1); gap: 0; }
+  .buylist.card-grid--sm .mtg-card__actions .btn { padding-block: 2px; }
 
   /* Le bouton enfonce se lit comme un interrupteur, a la maniere des chips. */
   #compactToggle[aria-pressed="true"] {
@@ -142,8 +146,10 @@
           + 'ou libres dans votre collection.' });
       return;
     }
+    // La legende explique « × n » et « x % », que la vue compacte n'affiche
+    // pas : elle n'y occuperait que de la hauteur.
     results.innerHTML = `
-      ${MM.legend([
+      ${compact ? '' : MM.legend([
         { icon: 'coin', strong: '× n :',
           text: 'un exemplaire par deck qui la réclame, moins vos exemplaires libres.' },
         { icon: 'chart', strong: 'x % :',
@@ -167,7 +173,10 @@
           // Les commandants sont nommes sous la carte : la recherche « Dans
           // quel commandant ? » repeterait ce que l'ecran dit deja.
           commander: false,
-          note: `<b class="accent">× ${MM.fmt.int(card.to_buy)}</b>
+          // En vue compacte, la ligne « quantite · popularite · commandants »
+          // prenait jusqu'a cinq lignes sous une vignette de 116 px : elle s'y
+          // efface, la vue normale et l'export la gardent.
+          note: compact ? '' : `<b class="accent">× ${MM.fmt.int(card.to_buy)}</b>
                  · ${MM.fmt.pct(card.popularity, 0)}
                  · <span title="${MM.esc(decks)}">${commandersText(card.decks)}</span>`,
           actions: [{
