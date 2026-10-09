@@ -543,12 +543,15 @@ button.nav__item { width: 100%; }
 .btn-group .btn { border-radius: 0; margin-left: -1px; }
 .btn-group .btn:first-child { border-radius: var(--r-md) 0 0 var(--r-md); margin-left: 0; }
 .btn-group .btn:last-child { border-radius: 0 var(--r-md) var(--r-md) 0; }
-.btn-group .btn[aria-pressed="true"] {
+/* Un bouton bascule enfonce se voit, groupe ou seul : reserve au groupe, ce
+   style laissait un bouton isole comme « Problemes seulement » identique
+   qu'il soit actif ou non, et l'on desactivait le filtre sans le savoir. */
+.btn[aria-pressed="true"]:not(.btn--primary) {
   background: var(--accent-wash);
   border-color: var(--line-accent);
   color: var(--accent-bright);
-  z-index: 1;
 }
+.btn-group .btn[aria-pressed="true"] { z-index: 1; }
 
 /* ═══ Formulaires ════════════════════════════════════════════════════════ */
 
