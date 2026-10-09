@@ -36,20 +36,13 @@
   <div class="stack-2">
     <h2 class="h2">Ma buylist</h2>
     <p class="muted small">
-      Les cartes à acheter pour compléter vos decks, terrains exclus, classées
-      par popularité dans les decks de leur commandant.
+      Les cartes qui manquent à vos decks, d'après l'analyse de chacun d'eux :
+      les plus jouées par son commandant, terrains exclus. Une carte que vous
+      possédez déjà n'y figure que si tous vos exemplaires servent ailleurs.
     </p>
   </div>
 
   <div class="toolbar">
-    <div class="chips" id="views" role="tablist">
-      <button class="chip" data-view="missing" aria-pressed="true"
-              title="Cartes déjà dans vos decks dont il vous manque des exemplaires">
-        Manquantes <span class="chip__count" id="countMissing">…</span></button>
-      <button class="chip" data-view="suggested" aria-pressed="false"
-              title="Cartes populaires pour vos commandants, absentes de leur deck">
-        Suggérées <span class="chip__count" id="countSuggested">…</span></button>
-    </div>
     <p class="small muted" id="summary"></p>
   </div>
 
@@ -63,26 +56,25 @@
   if (!user) return;
 
   const results = MM.el('#results');
-  // Une liste par onglet, chargee a la premiere ouverture puis gardee.
-  const lists = { missing: null, suggested: null };
-  let view = 'missing';
+  results.innerHTML = `<div class="card-grid">${MM.cardSkeletons(12)}</div>`;
 
-  const COUNT_ID = { missing: '#countMissing', suggested: '#countSuggested' };
+  let cards;
+  let resolved;
+  try {
+    cards = (await MM.api.get('/api/v2/buylist')).cards;
+    resolved = await MM.resolveCards(cards.map((card) => card.card_name));
+  } catch (err) {
+    results.innerHTML = MM.empty({
+      icon: 'warning', title: 'Calcul impossible', text: err.message });
+    return;
+  }
 
-  // Chargement en cours par onglet : ouvrir « Suggérées » pendant que son
-  // compte se calcule en arriere-plan reprend ce calcul au lieu d'en lancer
-  // un second.
-  const pending = {};
-
-  function fetchList(kind) {
-    pending[kind] = pending[kind] || (async () => {
-      const data = await MM.api.get(`/api/v2/buylist?kind=${kind}`);
-      const resolved = await MM.resolveCards(data.cards.map((card) => card.card_name));
-      lists[kind] = { ...data, resolved };
-      MM.el(COUNT_ID[kind]).textContent = MM.fmt.int(data.cards.length);
-      return lists[kind];
-    })().catch((err) => { delete pending[kind]; throw err; });
-    return pending[kind];
+  if (!cards.length) {
+    results.innerHTML = MM.empty({
+      icon: 'check', title: 'Rien à acheter',
+      text: 'Les cartes les plus jouées par vos commandants sont déjà dans leur deck '
+        + 'ou libres dans votre collection.' });
+    return;
   }
 
   /** Les commandants concernes, en entier : trois au plus, puis le compte. */
@@ -93,88 +85,43 @@
     return rest > 0 ? `${shown} et ${MM.fmt.int(rest)} autre${rest > 1 ? 's' : ''}` : shown;
   }
 
-  function render() {
-    const list = lists[view];
-    if (!list.cards.length) {
-      results.innerHTML = MM.empty(view === 'missing'
-        ? { icon: 'check', title: 'Vos decks sont complets',
-            text: 'Toutes les cartes de vos decks, terrains mis à part, sont dans votre collection.' }
-        : { icon: 'check', title: 'Aucune suggestion à acheter',
-            text: 'Les cartes les plus jouées par vos commandants sont déjà dans leur deck '
-              + 'ou libres dans votre collection.' });
-      MM.el('#summary').textContent = '';
-      return;
-    }
+  // Cout estime au prix de reference du site : la tendance de l'edition la
+  // moins chere, multipliee par le nombre d'exemplaires a acheter.
+  const copies = cards.reduce((sum, card) => sum + card.to_buy, 0);
+  const cost = cards.reduce((sum, card) => {
+    const price = (resolved[card.card_name] || {}).unit_price;
+    return sum + (price ? price * card.to_buy : 0);
+  }, 0);
+  MM.el('#summary').innerHTML = `${MM.fmt.plural(cards.length, 'carte')} ·
+    ${MM.fmt.plural(copies, 'exemplaire')} ·
+    environ <span class="strong">${MM.fmt.eur(cost)}</span>`;
 
-    // Cout estime au prix de reference du site : la tendance de l'edition la
-    // moins chere, multipliee par le nombre d'exemplaires a acheter.
-    const copies = list.cards.reduce((sum, card) => sum + card.to_buy, 0);
-    const cost = list.cards.reduce((sum, card) => {
-      const price = (list.resolved[card.card_name] || {}).unit_price;
-      return sum + (price ? price * card.to_buy : 0);
-    }, 0);
-    MM.el('#summary').innerHTML = `${MM.fmt.plural(copies, 'exemplaire')} ·
-      environ <span class="strong">${MM.fmt.eur(cost)}</span>`;
-
-    results.innerHTML = `
-      ${MM.legend([
-        { icon: 'coin', strong: '× n :',
-          text: view === 'missing'
-            ? 'exemplaires qui manquent, une fois comptés ceux de votre collection.'
-            : 'un exemplaire par deck qui la réclame, moins vos exemplaires libres.' },
-        { icon: 'chart', strong: 'x % :',
-          text: 'part des decks de ce commandant qui jouent la carte, la plus haute parmi vos commandants.' },
-        { icon: 'crown', strong: 'Commandants :',
-          text: view === 'missing'
-            ? 'les decks qui jouent cette carte.'
-            : 'les decks pour lesquels elle est suggérée.' },
-      ])}
-      <div class="card-grid buylist" style="margin-top:var(--sp-4)">${list.cards.map((card) => {
-        const decks = card.decks.map((deck) =>
-          `${deck.commander} (${MM.fmt.pct(deck.inclusion_rate, 0)})`).join('\n');
-        return MM.cardTile({
-          ...(list.resolved[card.card_name] || {}),
-          card_name: card.card_name,
-        }, {
-          // Aucun deck ni collection a regler ici : on regarde quoi acheter.
-          context: null,
-          // Les commandants sont nommes sous la carte : la recherche « Dans
-          // quel commandant ? » repeterait ce que l'ecran dit deja.
-          commander: false,
-          note: `<b class="accent">× ${MM.fmt.int(card.to_buy)}</b>
-                 · ${MM.fmt.pct(card.popularity, 0)}
-                 · <span title="${MM.esc(decks)}">${commandersText(card.decks)}</span>`,
-        });
-      }).join('')}</div>`;
-  }
-
-  async function show(kind) {
-    view = kind;
-    MM.els('#views .chip').forEach((chip) =>
-      chip.setAttribute('aria-pressed', String(chip.dataset.view === kind)));
-    if (!lists[kind]) {
-      results.innerHTML = `<div class="card-grid">${MM.cardSkeletons(12)}</div>`;
-      MM.el('#summary').textContent = '';
-      try {
-        await fetchList(kind);
-      } catch (err) {
-        results.innerHTML = MM.empty({
-          icon: 'warning', title: 'Calcul impossible', text: err.message });
-        return;
-      }
-      if (view !== kind) return;
-    }
-    render();
-  }
-
-  MM.el('#views').addEventListener('click', (event) => {
-    const chip = event.target.closest('.chip');
-    if (chip && chip.dataset.view !== view) show(chip.dataset.view);
-  });
-
-  await show('missing');
-  // Le compte de l'autre onglet s'affiche sans attendre qu'on l'ouvre.
-  fetchList('suggested').catch(() => { MM.el('#countSuggested').textContent = '—'; });
+  results.innerHTML = `
+    ${MM.legend([
+      { icon: 'coin', strong: '× n :',
+        text: 'un exemplaire par deck qui la réclame, moins vos exemplaires libres.' },
+      { icon: 'chart', strong: 'x % :',
+        text: 'part des decks de ce commandant qui jouent la carte, la plus haute parmi vos commandants.' },
+      { icon: 'crown', strong: 'Commandants :',
+        text: 'les decks auxquels la carte manque.' },
+    ])}
+    <div class="card-grid buylist" style="margin-top:var(--sp-4)">${cards.map((card) => {
+      const decks = card.decks.map((deck) =>
+        `${deck.commander} (${MM.fmt.pct(deck.inclusion_rate, 0)})`).join('\n');
+      return MM.cardTile({
+        ...(resolved[card.card_name] || {}),
+        card_name: card.card_name,
+      }, {
+        // Aucun deck ni collection a regler ici : on regarde quoi acheter.
+        context: null,
+        // Les commandants sont nommes sous la carte : la recherche « Dans
+        // quel commandant ? » repeterait ce que l'ecran dit deja.
+        commander: false,
+        note: `<b class="accent">× ${MM.fmt.int(card.to_buy)}</b>
+               · ${MM.fmt.pct(card.popularity, 0)}
+               · <span title="${MM.esc(decks)}">${commandersText(card.decks)}</span>`,
+      });
+    }).join('')}</div>`;
 })();
 </script>
 </body>
