@@ -498,6 +498,20 @@ class TestMoxfieldCommanders:
         deck = parse(raw)
         assert not any(e.tags for e in deck.entries)
 
+    def test_type_headers_close_the_commander_section(self):
+        """[CRÉATURES], [TERRAINS]… rangent par type : ils ouvrent le deck principal."""
+        raw = ("[COMMANDER]\n1 Hashaton, poing du Scarabée\n\n[PLANESWALKERS]\n1 Jace ravivé\n\n"
+               "[CRÉATURES]\n1 Le Dieu-Scarabée\n\n[TERRAINS]\n4 Marais\n")
+        deck = parse(raw)
+        assert _names(_entries_by_zone(deck, Zone.COMMANDER)) == ["Hashaton, poing du Scarabée"]
+        assert _names(_entries_by_zone(deck, Zone.MAINBOARD)) == [
+            "Jace ravivé", "Le Dieu-Scarabée", "Marais"]
+        assert not deck.warnings
+
+    def test_known_bracket_zones_still_win(self):
+        deck = parse("[Commander]\n1 Atraxa, Praetor's Voice\n[Sideboard]\n1 Negate\n")
+        assert _names(_entries_by_zone(deck, Zone.SIDEBOARD)) == ["Negate"]
+
     def test_the_list_collector_number(self):
         deck = parse("1 Sol Ring (PLST) C18-222\n")
         assert deck.entries[0].set_code == "PLST"

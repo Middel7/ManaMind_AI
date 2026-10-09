@@ -19,6 +19,7 @@ from .base import MAX_ENTRIES, MAX_LINES, BaseParser
 
 # En-têtes de métadonnées Moxfield/Arena à ignorer silencieusement
 _RE_META_NAME = re.compile(r'^Name\s+"?([^"]+)"?\s*$', re.IGNORECASE)
+_RE_BRACKET_HEADER = re.compile(r"^\[\s*[^\[\]\d][^\[\]]*\]\s*:?\s*$")
 _META_SKIP_LINES = re.compile(
     r'^(About|Description|Format|Deck\s+Description)\s*$',
     re.IGNORECASE,
@@ -107,6 +108,16 @@ class TextParser(BaseParser):
             if zone is not None:
                 current_zone = zone
                 detected_zones.add(zone.value)
+                header_seen = True
+                continue
+
+            # Autre en-tête entre crochets : un rangement par type de carte
+            # ([CRÉATURES], [TERRAINS], [PLANESWALKERS]…). Ignoré, il laissait
+            # toutes les cartes suivantes dans la section précédente — souvent
+            # [COMMANDER], et le deck entier passait pour ses commandants.
+            if _RE_BRACKET_HEADER.match(stripped):
+                current_zone = Zone.MAINBOARD
+                detected_zones.add(current_zone.value)
                 header_seen = True
                 continue
 

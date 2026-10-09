@@ -298,6 +298,10 @@ def _resolve_entry(entry: CanonicalEntry, sess, remote_budget: dict | None = Non
             entry.warnings.append("Multiple cards with similar name found")
             return
 
+    # ── 6 bis. Nom imprimé dans une autre langue ────────────────────────────
+    if entry.raw_name and _resolve_printed_name(entry, sess):
+        return
+
     # ── 7. Nom d'illustration (Scryfall) ─────────────────────────────────────
     if entry.raw_name and remote_budget and remote_budget["left"] > 0:
         remote_budget["left"] -= 1
@@ -322,6 +326,65 @@ def _resolve_entry(entry: CanonicalEntry, sess, remote_budget: dict | None = Non
 
     entry.resolution_status = ResolutionStatus.UNRESOLVED
     entry.confidence = 0
+
+
+def _resolve_printed_name(entry: CanonicalEntry, sess) -> bool:
+    """Reconnaît une carte citée sous son nom traduit (« Tour de commandement »).
+
+    Les listes exportées en français, en allemand… gardent les noms imprimés ;
+    le catalogue les connaît par impression (printed_name, indexé en
+    minuscules). L'apostrophe typographique est essayée aussi : les éditions
+    l'impriment, les claviers tapent l'apostrophe droite.
+    """
+    from sqlalchemy import text
+
+    raw = entry.raw_name.strip()
+    variants = {raw.lower(), raw.replace("'", "’").lower(),
+                raw.replace("’", "'").lower()}
+    rows = sess.execute(text("""
+        SELECT c.oracle_id, c.name, count(*) AS hits
+        FROM scryfall_card_printings p
+        JOIN scryfall_cards c ON c.id = p.card_id
+        WHERE lower(p.printed_name) = ANY(:names)
+          AND c.type_line NOT LIKE 'Card%'
+          AND c.type_line NOT ILIKE 'Token%'
+        GROUP BY c.oracle_id, c.name
+        ORDER BY hits DESC, c.name
+        LIMIT 3
+    """), {"names": sorted(variants)}).fetchall()
+    if not rows:
+        # Carte recto-verso citée par sa seule face avant : le nom imprimé
+        # porte les deux (« Ojer Taq, Fondation des profondeurs // … »). Sans
+        # index, ce parcours ne part qu'une fois la recherche exacte vaine.
+        rows = sess.execute(text("""
+            SELECT c.oracle_id, c.name, count(*) AS hits
+            FROM scryfall_card_printings p
+            JOIN scryfall_cards c ON c.id = p.card_id
+            WHERE p.printed_name LIKE '% // %'
+              AND split_part(lower(p.printed_name), ' // ', 1) = ANY(:names)
+              AND c.type_line NOT LIKE 'Card%'
+              AND c.type_line NOT ILIKE 'Token%'
+            GROUP BY c.oracle_id, c.name
+            ORDER BY hits DESC, c.name
+            LIMIT 3
+        """), {"names": sorted(variants)}).fetchall()
+    if not rows:
+        return False
+
+    entry.oracle_id = rows[0][0]
+    entry.canonical_name = rows[0][1]
+    if len(rows) == 1:
+        entry.resolution_status = ResolutionStatus.EXACT_CARD_UNKNOWN_PRINTING
+        entry.confidence = 60
+    else:
+        # Deux cartes traduites sous le même nom : la plus imprimée l'emporte,
+        # mais la ligne reste à vérifier.
+        entry.resolution_status = ResolutionStatus.PROBABLE_MATCH
+        entry.confidence = 45
+        entry.warnings.append("Nom traduit partagé par plusieurs cartes : "
+                              + ", ".join(r[1] for r in rows))
+    entry.warnings.append(f"Nom traduit : carte « {rows[0][1]} »")
+    return True
 
 
 _SCRYFALL_NAMED = "https://api.scryfall.com/cards/named"
