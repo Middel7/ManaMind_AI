@@ -42,6 +42,11 @@ def page_collection_boosters() -> FileResponse:
     return _page("collection_boosters.html")
 
 
+@router.get("/collection/buylist")
+def page_collection_buylist() -> FileResponse:
+    return _page("collection_buylist.html")
+
+
 @router.get("/collection/commandants")
 def page_collection_commanders() -> FileResponse:
     return _page("collection_commanders.html")

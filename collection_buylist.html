@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>ManaMind — Ma buylist</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#08080C">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ManaMind">
+<link rel="icon" href="/static/img/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/app.css">
+<style>
+  /* La ligne « a acheter · popularite · commandants » est ce que l'ecran
+     apporte : rangee sur la ligne des metadonnees, elle partageait la largeur
+     de la vignette avec le prix et le nom des commandants etait tronque. Elle
+     prend sa propre ligne, en entier, sous le nom de la carte. */
+  .buylist .mtg-card__meta { flex-wrap: wrap; }
+  .buylist .mtg-card__meta > .dim {
+    flex-basis: 100%;
+    overflow: visible;
+    white-space: normal;
+    line-height: 1.35;
+  }
+</style>
+</head>
+<body>
+
+<div id="page">
+  <div class="stack-2">
+    <h2 class="h2">Ma buylist</h2>
+    <p class="muted small">
+      Les cartes à acheter pour compléter vos decks, terrains exclus, classées
+      par popularité dans les decks de leur commandant.
+    </p>
+  </div>
+
+  <div class="toolbar">
+    <div class="chips" id="views" role="tablist">
+      <button class="chip" data-view="missing" aria-pressed="true"
+              title="Cartes déjà dans vos decks dont il vous manque des exemplaires">
+        Manquantes <span class="chip__count" id="countMissing">…</span></button>
+      <button class="chip" data-view="suggested" aria-pressed="false"
+              title="Cartes populaires pour vos commandants, absentes de leur deck">
+        Suggérées <span class="chip__count" id="countSuggested">…</span></button>
+    </div>
+    <p class="small muted" id="summary"></p>
+  </div>
+
+  <div id="results"></div>
+</div>
+
+<script src="/static/js/mm.js"></script>
+<script>
+(async () => {
+  const user = await MM.boot({ title: 'Ma buylist', nav: 'buylist' });
+  if (!user) return;
+
+  const results = MM.el('#results');
+  // Une liste par onglet, chargee a la premiere ouverture puis gardee.
+  const lists = { missing: null, suggested: null };
+  let view = 'missing';
+
+  const COUNT_ID = { missing: '#countMissing', suggested: '#countSuggested' };
+
+  // Chargement en cours par onglet : ouvrir « Suggérées » pendant que son
+  // compte se calcule en arriere-plan reprend ce calcul au lieu d'en lancer
+  // un second.
+  const pending = {};
+
+  function fetchList(kind) {
+    pending[kind] = pending[kind] || (async () => {
+      const data = await MM.api.get(`/api/v2/buylist?kind=${kind}`);
+      const resolved = await MM.resolveCards(data.cards.map((card) => card.card_name));
+      lists[kind] = { ...data, resolved };
+      MM.el(COUNT_ID[kind]).textContent = MM.fmt.int(data.cards.length);
+      return lists[kind];
+    })().catch((err) => { delete pending[kind]; throw err; });
+    return pending[kind];
+  }
+
+  /** Les commandants concernes, en entier : trois au plus, puis le compte. */
+  function commandersText(decks) {
+    const names = decks.map((deck) => deck.commander);
+    const shown = names.slice(0, 3).map(MM.esc).join(' · ');
+    const rest = names.length - 3;
+    return rest > 0 ? `${shown} et ${MM.fmt.int(rest)} autre${rest > 1 ? 's' : ''}` : shown;
+  }
+
+  function render() {
+    const list = lists[view];
+    if (!list.cards.length) {
+      results.innerHTML = MM.empty(view === 'missing'
+        ? { icon: 'check', title: 'Vos decks sont complets',
+            text: 'Toutes les cartes de vos decks, terrains mis à part, sont dans votre collection.' }
+        : { icon: 'check', title: 'Aucune suggestion à acheter',
+            text: 'Les cartes les plus jouées par vos commandants sont déjà dans leur deck '
+              + 'ou libres dans votre collection.' });
+      MM.el('#summary').textContent = '';
+      return;
+    }
+
+    // Cout estime au prix de reference du site : la tendance de l'edition la
+    // moins chere, multipliee par le nombre d'exemplaires a acheter.
+    const copies = list.cards.reduce((sum, card) => sum + card.to_buy, 0);
+    const cost = list.cards.reduce((sum, card) => {
+      const price = (list.resolved[card.card_name] || {}).unit_price;
+      return sum + (price ? price * card.to_buy : 0);
+    }, 0);
+    MM.el('#summary').innerHTML = `${MM.fmt.plural(copies, 'exemplaire')} ·
+      environ <span class="strong">${MM.fmt.eur(cost)}</span>`;
+
+    results.innerHTML = `
+      ${MM.legend([
+        { icon: 'coin', strong: '× n :',
+          text: view === 'missing'
+            ? 'exemplaires qui manquent, une fois comptés ceux de votre collection.'
+            : 'un exemplaire par deck qui la réclame, moins vos exemplaires libres.' },
+        { icon: 'chart', strong: 'x % :',
+          text: 'part des decks de ce commandant qui jouent la carte, la plus haute parmi vos commandants.' },
+        { icon: 'crown', strong: 'Commandants :',
+          text: view === 'missing'
+            ? 'les decks qui jouent cette carte.'
+            : 'les decks pour lesquels elle est suggérée.' },
+      ])}
+      <div class="card-grid buylist" style="margin-top:var(--sp-4)">${list.cards.map((card) => {
+        const decks = card.decks.map((deck) =>
+          `${deck.commander} (${MM.fmt.pct(deck.inclusion_rate, 0)})`).join('\n');
+        return MM.cardTile({
+          ...(list.resolved[card.card_name] || {}),
+          card_name: card.card_name,
+        }, {
+          // Aucun deck ni collection a regler ici : on regarde quoi acheter.
+          context: null,
+          // Les commandants sont nommes sous la carte : la recherche « Dans
+          // quel commandant ? » repeterait ce que l'ecran dit deja.
+          commander: false,
+          note: `<b class="accent">× ${MM.fmt.int(card.to_buy)}</b>
+                 · ${MM.fmt.pct(card.popularity, 0)}
+                 · <span title="${MM.esc(decks)}">${commandersText(card.decks)}</span>`,
+        });
+      }).join('')}</div>`;
+  }
+
+  async function show(kind) {
+    view = kind;
+    MM.els('#views .chip').forEach((chip) =>
+      chip.setAttribute('aria-pressed', String(chip.dataset.view === kind)));
+    if (!lists[kind]) {
+      results.innerHTML = `<div class="card-grid">${MM.cardSkeletons(12)}</div>`;
+      MM.el('#summary').textContent = '';
+      try {
+        await fetchList(kind);
+      } catch (err) {
+        results.innerHTML = MM.empty({
+          icon: 'warning', title: 'Calcul impossible', text: err.message });
+        return;
+      }
+      if (view !== kind) return;
+    }
+    render();
+  }
+
+  MM.el('#views').addEventListener('click', (event) => {
+    const chip = event.target.closest('.chip');
+    if (chip && chip.dataset.view !== view) show(chip.dataset.view);
+  });
+
+  await show('missing');
+  // Le compte de l'autre onglet s'affiche sans attendre qu'on l'ouvre.
+  fetchList('suggested').catch(() => { MM.el('#countSuggested').textContent = '—'; });
+})();
+</script>
+</body>
+</html>

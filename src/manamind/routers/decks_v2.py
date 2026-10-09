@@ -524,6 +524,23 @@ async def api_set_lead_commander(deck_id: str, request: Request) -> Response:
     return _json_response({"ok": True, "lead_commander": match})
 
 
+@router.get("/api/v2/buylist")
+def api_buylist(request: Request, kind: str = "missing", top: int = 100) -> Response:
+    """Les cartes à acheter pour compléter ses decks, terrains exclus.
+
+    `kind` : « missing » pour les cartes déjà dans les decks mais en nombre
+    insuffisant, « suggested » pour les cartes populaires de chaque commandant
+    absentes de son deck.
+    """
+    from manamind.buylist import compute_buylist
+
+    user = _user(request)
+    if kind not in ("missing", "suggested"):
+        return _json_response({"error": "kind doit valoir missing ou suggested"},
+                              status_code=400)
+    return _json_response(compute_buylist(user["id"], kind, max(1, min(top, 200))))
+
+
 @router.get("/api/v2/hidden-moves")
 def api_hidden_moves(request: Request) -> Response:
     """Deplacements que l'utilisateur a ecartes, les plus recents d'abord."""
