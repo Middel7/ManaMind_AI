@@ -110,12 +110,73 @@ def _lands(session, names: set[str]) -> set[str]:
     return lands
 
 
+def _hidden_pairs(session, user_id: int) -> set[tuple[str, str]]:
+    """Couples (deck, carte) que l'utilisateur a masqués."""
+    rows = session.execute(text("""
+        SELECT deck_id, card_key FROM user_buylist_hidden WHERE user_id = :uid
+    """), {"uid": user_id}).fetchall()
+    return {(r.deck_id, r.card_key) for r in rows}
+
+
+def hide_card(user_id: int, card_name: str, deck_ids: list[str]) -> int:
+    """Ne plus recommander `card_name` pour ces decks. Renvoie le nombre de
+    decks concernés ; les decks qui ne sont pas à l'utilisateur sont ignorés."""
+    if not deck_ids:
+        return 0
+    with SessionLocal() as session:
+        owned = {r.deck_id for r in session.execute(text("""
+            SELECT deck_id FROM user_moxfield_decks
+            WHERE user_id = :uid AND deck_id = ANY(:ids)
+        """), {"uid": user_id, "ids": list(deck_ids)})}
+        for deck_id in owned:
+            session.execute(text("""
+                INSERT INTO user_buylist_hidden (user_id, deck_id, card_key, card_name)
+                VALUES (:uid, :did, :key, :name)
+                ON CONFLICT (user_id, deck_id, card_key) DO NOTHING
+            """), {"uid": user_id, "did": deck_id, "key": _key(card_name),
+                   "name": card_name})
+        session.commit()
+    return len(owned)
+
+
+def list_hidden(user_id: int) -> list[dict]:
+    """Cartes masquées, la plus récente d'abord, avec les decks concernés."""
+    with SessionLocal() as session:
+        rows = session.execute(text("""
+            SELECT h.card_key, h.card_name, h.deck_id, h.hidden_at,
+                   COALESCE(d.name, d.commander, h.deck_id) AS deck_name,
+                   d.commander
+            FROM user_buylist_hidden h
+            LEFT JOIN user_moxfield_decks d
+              ON d.user_id = h.user_id AND d.deck_id = h.deck_id
+            WHERE h.user_id = :uid
+            ORDER BY h.hidden_at DESC, deck_name
+        """), {"uid": user_id}).fetchall()
+    cards: dict[str, dict] = {}
+    for r in rows:
+        card = cards.setdefault(r.card_key, {"card_name": r.card_name, "decks": []})
+        card["decks"].append({"deck_id": r.deck_id, "name": r.deck_name,
+                              "commander": r.commander})
+    return list(cards.values())
+
+
+def restore_card(user_id: int, card_name: str) -> int:
+    """Remet `card_name` dans les recommandations de tous les decks."""
+    with SessionLocal() as session:
+        result = session.execute(text("""
+            DELETE FROM user_buylist_hidden WHERE user_id = :uid AND card_key = :key
+        """), {"uid": user_id, "key": _key(card_name)})
+        session.commit()
+    return result.rowcount
+
+
 def compute_buylist(user_id: int, top: int = TOP_DEFAULT) -> dict:
     """Les `top` cartes à acheter pour compléter les decks de l'utilisateur."""
     with SessionLocal() as session:
         decks = _load_decks(session, user_id)
         deck_cards = _load_deck_cards(session, user_id)
         owned = _owned(session, user_id)
+        hidden = _hidden_pairs(session, user_id)
 
         # Exemplaires déjà engagés dans les decks, par carte.
         used: dict[str, int] = {}
@@ -152,7 +213,8 @@ def compute_buylist(user_id: int, top: int = TOP_DEFAULT) -> dict:
                 if taken >= SUGGESTIONS_PER_DECK:
                     break
                 k = _key(row["card_name"])
-                if k in in_deck[deck["deck_id"]]:
+                # Une carte masquée cède sa place à la suivante du commandant.
+                if k in in_deck[deck["deck_id"]] or (deck["deck_id"], k) in hidden:
                     continue
                 note(k, row["card_name"], deck)
                 taken += 1

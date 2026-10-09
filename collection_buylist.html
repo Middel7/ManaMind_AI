@@ -44,6 +44,11 @@
 
   <div class="toolbar">
     <p class="small muted" id="summary"></p>
+    <!-- Un lien discret plutot que des onglets : la buylist reste l'ecran,
+         les cartes masquees ne servent qu'a revenir sur un choix. -->
+    <button class="btn btn--sm btn--ghost" id="hiddenToggle" aria-pressed="false"
+      ><span id="hiddenLabel">Cartes masquées</span>
+       <span class="chip__count" id="hiddenCount">…</span></button>
   </div>
 
   <div id="results"></div>
@@ -56,72 +61,184 @@
   if (!user) return;
 
   const results = MM.el('#results');
-  results.innerHTML = `<div class="card-grid">${MM.cardSkeletons(12)}</div>`;
-
-  let cards;
-  let resolved;
-  try {
-    cards = (await MM.api.get('/api/v2/buylist')).cards;
-    resolved = await MM.resolveCards(cards.map((card) => card.card_name));
-  } catch (err) {
-    results.innerHTML = MM.empty({
-      icon: 'warning', title: 'Calcul impossible', text: err.message });
-    return;
-  }
-
-  if (!cards.length) {
-    results.innerHTML = MM.empty({
-      icon: 'check', title: 'Rien à acheter',
-      text: 'Les cartes les plus jouées par vos commandants sont déjà dans leur deck '
-        + 'ou libres dans votre collection.' });
-    return;
-  }
+  let cards = [];
+  let resolved = {};
+  let hidden = [];
+  // Une carte remise peut reprendre sa place : la liste se recalcule alors au
+  // retour, plutot qu'a chaque bascule entre les deux vues.
+  let stale = true;
+  let view = 'list';
 
   /** Les commandants concernes, en entier : trois au plus, puis le compte. */
   function commandersText(decks) {
-    const names = decks.map((deck) => deck.commander);
+    const names = decks.map((deck) => deck.commander || deck.name);
     const shown = names.slice(0, 3).map(MM.esc).join(' · ');
     const rest = names.length - 3;
     return rest > 0 ? `${shown} et ${MM.fmt.int(rest)} autre${rest > 1 ? 's' : ''}` : shown;
   }
 
-  // Cout estime au prix de reference du site : la tendance de l'edition la
-  // moins chere, multipliee par le nombre d'exemplaires a acheter.
-  const copies = cards.reduce((sum, card) => sum + card.to_buy, 0);
-  const cost = cards.reduce((sum, card) => {
-    const price = (resolved[card.card_name] || {}).unit_price;
-    return sum + (price ? price * card.to_buy : 0);
-  }, 0);
-  MM.el('#summary').innerHTML = `${MM.fmt.plural(cards.length, 'carte')} ·
-    ${MM.fmt.plural(copies, 'exemplaire')} ·
-    environ <span class="strong">${MM.fmt.eur(cost)}</span>`;
+  async function loadHidden() {
+    try {
+      hidden = (await MM.api.get('/api/v2/buylist/hidden')).cards || [];
+    } catch { hidden = []; }
+    MM.el('#hiddenCount').textContent = MM.fmt.int(hidden.length);
+  }
 
-  results.innerHTML = `
-    ${MM.legend([
-      { icon: 'coin', strong: '× n :',
-        text: 'un exemplaire par deck qui la réclame, moins vos exemplaires libres.' },
-      { icon: 'chart', strong: 'x % :',
-        text: 'part des decks de ce commandant qui jouent la carte, la plus haute parmi vos commandants.' },
-      { icon: 'crown', strong: 'Commandants :',
-        text: 'les decks auxquels la carte manque.' },
-    ])}
-    <div class="card-grid buylist" style="margin-top:var(--sp-4)">${cards.map((card) => {
-      const decks = card.decks.map((deck) =>
-        `${deck.commander} (${MM.fmt.pct(deck.inclusion_rate, 0)})`).join('\n');
-      return MM.cardTile({
-        ...(resolved[card.card_name] || {}),
-        card_name: card.card_name,
-      }, {
-        // Aucun deck ni collection a regler ici : on regarde quoi acheter.
-        context: null,
-        // Les commandants sont nommes sous la carte : la recherche « Dans
-        // quel commandant ? » repeterait ce que l'ecran dit deja.
-        commander: false,
-        note: `<b class="accent">× ${MM.fmt.int(card.to_buy)}</b>
-               · ${MM.fmt.pct(card.popularity, 0)}
-               · <span title="${MM.esc(decks)}">${commandersText(card.decks)}</span>`,
-      });
-    }).join('')}</div>`;
+  async function loadList() {
+    results.innerHTML = `<div class="card-grid">${MM.cardSkeletons(12)}</div>`;
+    MM.el('#summary').textContent = '';
+    cards = (await MM.api.get('/api/v2/buylist')).cards;
+    resolved = await MM.resolveCards(cards.map((card) => card.card_name));
+    stale = false;
+  }
+
+  function renderSummary() {
+    if (!cards.length) { MM.el('#summary').textContent = ''; return; }
+    // Cout estime au prix de reference du site : la tendance de l'edition la
+    // moins chere, multipliee par le nombre d'exemplaires a acheter.
+    const copies = cards.reduce((sum, card) => sum + card.to_buy, 0);
+    const cost = cards.reduce((sum, card) => {
+      const price = (resolved[card.card_name] || {}).unit_price;
+      return sum + (price ? price * card.to_buy : 0);
+    }, 0);
+    MM.el('#summary').innerHTML = `${MM.fmt.plural(cards.length, 'carte')} ·
+      ${MM.fmt.plural(copies, 'exemplaire')} ·
+      environ <span class="strong">${MM.fmt.eur(cost)}</span>`;
+  }
+
+  function renderList() {
+    renderSummary();
+    if (!cards.length) {
+      results.innerHTML = MM.empty({
+        icon: 'check', title: 'Rien à acheter',
+        text: 'Les cartes les plus jouées par vos commandants sont déjà dans leur deck '
+          + 'ou libres dans votre collection.' });
+      return;
+    }
+    results.innerHTML = `
+      ${MM.legend([
+        { icon: 'coin', strong: '× n :',
+          text: 'un exemplaire par deck qui la réclame, moins vos exemplaires libres.' },
+        { icon: 'chart', strong: 'x % :',
+          text: 'part des decks de ce commandant qui jouent la carte, la plus haute parmi vos commandants.' },
+        { icon: 'eye', strong: 'Masquer :',
+          text: 'ne plus recommander la carte pour les decks indiqués ; « Cartes masquées » permet de la remettre.' },
+      ])}
+      <div class="card-grid buylist" style="margin-top:var(--sp-4)">${cards.map((card) => {
+        const decks = card.decks.map((deck) =>
+          `${deck.commander} (${MM.fmt.pct(deck.inclusion_rate, 0)})`).join('\n');
+        return MM.cardTile({
+          ...(resolved[card.card_name] || {}),
+          card_name: card.card_name,
+        }, {
+          // Aucun deck ni collection a regler ici : on regarde quoi acheter.
+          context: null,
+          // Les commandants sont nommes sous la carte : la recherche « Dans
+          // quel commandant ? » repeterait ce que l'ecran dit deja.
+          commander: false,
+          note: `<b class="accent">× ${MM.fmt.int(card.to_buy)}</b>
+                 · ${MM.fmt.pct(card.popularity, 0)}
+                 · <span title="${MM.esc(decks)}">${commandersText(card.decks)}</span>`,
+          actions: [{
+            label: 'Masquer', act: 'hide', variant: 'ghost',
+            title: `Ne plus recommander ${card.card_name} pour `
+              + card.decks.map((deck) => deck.commander).join(', '),
+          }],
+        });
+      }).join('')}</div>`;
+  }
+
+  function renderHidden() {
+    MM.el('#summary').textContent = '';
+    if (!hidden.length) {
+      results.innerHTML = MM.empty({
+        icon: 'check', title: 'Aucune carte masquée',
+        text: 'Les cartes que vous masquez dans la buylist apparaîtront ici, '
+          + 'et pourront y être remises.' });
+      return;
+    }
+    results.innerHTML = `<div class="rows">${hidden.map((card) => `
+      <div class="row">
+        <span class="row__main">
+          <span class="row__title truncate">${MM.esc(card.card_name)}</span>
+          <span class="row__sub">Masquée pour ${commandersText(card.decks)}</span>
+        </span>
+        <span class="row__aside">
+          <button class="btn btn--sm" data-restore="${MM.esc(card.card_name)}"
+                  title="Recommander à nouveau cette carte pour tous vos decks">Remettre</button>
+        </span>
+      </div>`).join('')}</div>`;
+  }
+
+  async function show(next) {
+    view = next;
+    const toggle = MM.el('#hiddenToggle');
+    toggle.setAttribute('aria-pressed', String(view === 'hidden'));
+    MM.el('#hiddenLabel').textContent =
+      view === 'hidden' ? 'Retour à la buylist' : 'Cartes masquées';
+    if (view === 'hidden') { renderHidden(); return; }
+    if (stale) {
+      try {
+        await loadList();
+      } catch (err) {
+        results.innerHTML = MM.empty({
+          icon: 'warning', title: 'Calcul impossible', text: err.message });
+        return;
+      }
+    }
+    if (view === 'list') renderList();
+  }
+
+  MM.el('#hiddenToggle').addEventListener('click', () =>
+    show(view === 'hidden' ? 'list' : 'hidden'));
+
+  results.addEventListener('click', async (event) => {
+    const hide = event.target.closest('[data-act="hide"]');
+    if (hide) {
+      const card = cards.find((item) => item.card_name === hide.dataset.card);
+      if (!card) return;
+      hide.disabled = true;
+      try {
+        await MM.api.post('/api/v2/buylist/hidden', {
+          card_name: card.card_name,
+          deck_ids: card.decks.map((deck) => deck.deck_id),
+        });
+        // La vignette part tout de suite ; la carte suivante de chaque
+        // commandant n'apparaitra qu'au prochain calcul, pour ne pas faire
+        // sauter la grille a chaque clic.
+        cards = cards.filter((item) => item !== card);
+        hide.closest('.mtg-card').remove();
+        renderSummary();
+        stale = true;
+        await loadHidden();
+        MM.toast.ok(`${card.card_name} ne sera plus recommandée pour `
+          + `${MM.fmt.plural(card.decks.length, 'deck')}.`);
+      } catch (err) {
+        MM.toast.error(err.message);
+        hide.disabled = false;
+      }
+      return;
+    }
+
+    const restore = event.target.closest('[data-restore]');
+    if (restore) {
+      restore.disabled = true;
+      try {
+        await MM.api.del('/api/v2/buylist/hidden?card_name='
+          + encodeURIComponent(restore.dataset.restore));
+        stale = true;
+        await loadHidden();
+        renderHidden();
+        MM.toast.ok(`${restore.dataset.restore} est de nouveau recommandable.`);
+      } catch (err) {
+        MM.toast.error(err.message);
+        restore.disabled = false;
+      }
+    }
+  });
+
+  await loadHidden();
+  await show('list');
 })();
 </script>
 </body>

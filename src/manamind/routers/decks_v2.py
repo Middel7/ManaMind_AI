@@ -534,6 +534,40 @@ def api_buylist(request: Request, top: int = 100) -> Response:
     return _json_response(compute_buylist(user["id"], max(1, min(top, 200))))
 
 
+@router.get("/api/v2/buylist/hidden")
+def api_buylist_hidden(request: Request) -> Response:
+    """Cartes que l'utilisateur ne veut plus voir recommandées."""
+    from manamind.buylist import list_hidden
+
+    return _json_response({"cards": list_hidden(_user(request)["id"])})
+
+
+@router.post("/api/v2/buylist/hidden")
+async def api_buylist_hide(request: Request) -> Response:
+    """Masque une carte de la buylist pour les decks indiqués."""
+    from manamind.buylist import hide_card
+
+    user = _user(request)
+    try:
+        body = await request.json()
+    except Exception:
+        return _json_response({"error": "Corps JSON invalide"}, status_code=400)
+    card_name = (body.get("card_name") or "").strip()
+    deck_ids = [str(d) for d in (body.get("deck_ids") or []) if d]
+    if not card_name or not deck_ids:
+        return _json_response({"error": "card_name et deck_ids requis"}, status_code=400)
+    return _json_response({"ok": True, "decks": hide_card(user["id"], card_name, deck_ids)})
+
+
+@router.delete("/api/v2/buylist/hidden")
+def api_buylist_restore(request: Request, card_name: str) -> Response:
+    """Remet une carte dans les recommandations, pour tous les decks."""
+    from manamind.buylist import restore_card
+
+    return _json_response({"ok": True,
+                           "restored": restore_card(_user(request)["id"], card_name)})
+
+
 @router.get("/api/v2/hidden-moves")
 def api_hidden_moves(request: Request) -> Response:
     """Deplacements que l'utilisateur a ecartes, les plus recents d'abord."""
