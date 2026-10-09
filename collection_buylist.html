@@ -28,6 +28,19 @@
     white-space: normal;
     line-height: 1.35;
   }
+
+  /* Vue compacte : la grille passe aux petites vignettes du socle. La ligne de
+     possession et le texte de la note prenaient a elles seules la hauteur
+     d'une carte ; seuls restent le nom, la note et « Masquer ». */
+  .buylist.card-grid--sm .mtg-card__owned { display: none; }
+  .buylist.card-grid--sm .mtg-card__meta { font-size: var(--text-xs); }
+  .buylist.card-grid--sm .mtg-card__actions .btn { width: 100%; }
+
+  /* Le bouton enfonce se lit comme un interrupteur, a la maniere des chips. */
+  #compactToggle[aria-pressed="true"] {
+    border-color: var(--line-accent);
+    color: var(--accent);
+  }
 </style>
 </head>
 <body>
@@ -46,9 +59,17 @@
     <p class="small muted" id="summary"></p>
     <!-- Un lien discret plutot que des onglets : la buylist reste l'ecran,
          les cartes masquees ne servent qu'a revenir sur un choix. -->
-    <button class="btn btn--sm btn--ghost" id="hiddenToggle" aria-pressed="false"
-      ><span id="hiddenLabel">Cartes masquées</span>
-       <span class="chip__count" id="hiddenCount">…</span></button>
+    <div class="cluster-2">
+      <button class="btn btn--sm" id="compactToggle" aria-pressed="false"
+              title="Petites vignettes : nom, commandants et prix, pour voir plus de cartes à la fois"
+        >Vue compacte</button>
+      <button class="btn btn--sm" id="exportTxt"
+              title="Télécharger les recommandations en texte, importable sur Cardmarket ou Moxfield"
+        >Exporter (.txt)</button>
+      <button class="btn btn--sm btn--ghost" id="hiddenToggle" aria-pressed="false"
+        ><span id="hiddenLabel">Cartes masquées</span>
+         <span class="chip__count" id="hiddenCount">…</span></button>
+    </div>
   </div>
 
   <div id="results"></div>
@@ -68,6 +89,12 @@
   // retour, plutot qu'a chaque bascule entre les deux vues.
   let stale = true;
   let view = 'list';
+
+  // Vue compacte : un reglage d'affichage, retenu par navigateur. Un stockage
+  // indisponible laisse simplement la vue normale.
+  const COMPACT_KEY = 'mm_buylist_compact';
+  let compact = false;
+  try { compact = localStorage.getItem(COMPACT_KEY) === '1'; } catch {}
 
   /** Les commandants concernes, en entier : trois au plus, puis le compte. */
   function commandersText(decks) {
@@ -124,7 +151,8 @@
         { icon: 'eye', strong: 'Masquer :',
           text: 'ne plus recommander la carte pour les decks indiqués ; « Cartes masquées » permet de la remettre.' },
       ])}
-      <div class="card-grid buylist" style="margin-top:var(--sp-4)">${cards.map((card) => {
+      <div class="card-grid buylist ${compact ? 'card-grid--sm' : ''}"
+           style="margin-top:var(--sp-4)">${cards.map((card) => {
         const decks = card.decks.map((deck) =>
           `${deck.commander} (${MM.fmt.pct(deck.inclusion_rate, 0)})`).join('\n');
         return MM.cardTile({
@@ -133,6 +161,9 @@
         }, {
           // Aucun deck ni collection a regler ici : on regarde quoi acheter.
           context: null,
+          // En vue compacte, l'achat et la vente cedent la place : la vue sert
+          // a parcourir, et deux boutons par vignette doublaient sa hauteur.
+          market: !compact,
           // Les commandants sont nommes sous la carte : la recherche « Dans
           // quel commandant ? » repeterait ce que l'ecran dit deja.
           commander: false,
@@ -188,6 +219,52 @@
     }
     if (view === 'list') renderList();
   }
+
+  function applyCompact() {
+    MM.el('#compactToggle').setAttribute('aria-pressed', String(compact));
+  }
+
+  MM.el('#compactToggle').addEventListener('click', () => {
+    compact = !compact;
+    try { localStorage.setItem(COMPACT_KEY, compact ? '1' : '0'); } catch {}
+    applyCompact();
+    if (view === 'list' && !stale) renderList();
+  });
+
+  /**
+   * Export texte : une ligne « quantite nom » par carte, que Cardmarket et
+   * Moxfield importent tels quels. Les commandants concernes passent sur une
+   * ligne de commentaire au-dessus : en fin de ligne apres « // », ils
+   * seraient lus comme la seconde face d'une carte double.
+   */
+  function exportTxt() {
+    if (!cards.length) {
+      MM.toast.error('Aucune recommandation à exporter.');
+      return;
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    const lines = [
+      `// Ma buylist ManaMind — ${today}`,
+      `// ${cards.length} cartes, ${cards.reduce((sum, card) => sum + card.to_buy, 0)} exemplaires`,
+      '',
+    ];
+    cards.forEach((card) => {
+      lines.push(`// ${card.decks.map((deck) => deck.commander).join(' · ')}`);
+      lines.push(`${card.to_buy} ${card.card_name}`);
+    });
+    // Fins de ligne Windows : le Bloc-notes et Cardmarket les lisent toutes.
+    const blob = new Blob([lines.join('\r\n') + '\r\n'], { type: 'text/plain;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `buylist-${today}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  }
+
+  MM.el('#exportTxt').addEventListener('click', exportTxt);
+  applyCompact();
 
   MM.el('#hiddenToggle').addEventListener('click', () =>
     show(view === 'hidden' ? 'list' : 'hidden'));

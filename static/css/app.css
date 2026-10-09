@@ -1915,6 +1915,9 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
   /* Assez bas pour que 320 px garde deux colonnes : a 150 px, la grille
      retombait a une seule et la page devenait interminable. */
   .card-grid { --card-min: 132px; }
+  /* Redit apres la regle ci-dessus : sans cela elle ecrasait la petite grille,
+     et les vues compactes s'affichaient en grandes vignettes sur telephone. */
+  .card-grid--sm { --card-min: 96px; }
   .hero__title { font-size: var(--text-xl); }
 }
 
