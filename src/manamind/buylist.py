@@ -1,16 +1,13 @@
 """Ma buylist : les cartes à acheter pour compléter ses decks.
 
-Deux listes, terrains exclus :
-
-- **manquantes** : cartes déjà dans les decks de l'utilisateur, pour
-  lesquelles il manque des exemplaires. Une carte possédée mais engagée dans
-  un autre deck compte : il en faut un de plus.
-- **suggérées** : cartes populaires pour le commandant de chaque deck, absentes
-  de ce deck, et dont l'utilisateur n'a pas d'exemplaire libre.
+L'analyse parcourt chaque deck de l'utilisateur et retient les cartes les plus
+jouées par son commandant qui manquent à ce deck, terrains exclus. Une carte
+n'est à acheter que si l'utilisateur n'en a pas d'exemplaire libre : un
+exemplaire possédé mais engagé dans un autre deck ne compte pas.
 
 Une carte utile à plusieurs decks tient sur une seule ligne, qui nomme tous les
-commandants concernés. Les deux listes se classent par popularité : le taux
-d'inclusion le plus haut de la carte parmi ces commandants.
+commandants concernés. La liste se classe par popularité : le taux d'inclusion
+le plus haut de la carte parmi ces commandants.
 """
 
 from __future__ import annotations
@@ -113,8 +110,8 @@ def _lands(session, names: set[str]) -> set[str]:
     return lands
 
 
-def compute_buylist(user_id: int, kind: str = "missing", top: int = TOP_DEFAULT) -> dict:
-    """Les `top` cartes à acheter, `kind` valant « missing » ou « suggested »."""
+def compute_buylist(user_id: int, top: int = TOP_DEFAULT) -> dict:
+    """Les `top` cartes à acheter pour compléter les decks de l'utilisateur."""
     with SessionLocal() as session:
         decks = _load_decks(session, user_id)
         deck_cards = _load_deck_cards(session, user_id)
@@ -147,31 +144,22 @@ def compute_buylist(user_id: int, kind: str = "missing", top: int = TOP_DEFAULT)
             })
             line["popularity"] = max(line["popularity"], rate)
 
-        if kind == "suggested":
-            for deck in decks:
-                ranked = sorted(freq[deck["deck_id"]].values(),
-                                key=lambda r: -(r["inclusion_rate"] or 0))
-                taken = 0
-                for row in ranked:
-                    if taken >= SUGGESTIONS_PER_DECK:
-                        break
-                    k = _key(row["card_name"])
-                    if k in in_deck[deck["deck_id"]]:
-                        continue
-                    note(k, row["card_name"], deck)
-                    taken += 1
-            # Un exemplaire par deck qui la réclame, moins ceux restés libres.
-            # Le déficit des decks qui la jouent déjà relève des manquantes :
-            # le compter ici ferait acheter deux fois les mêmes cartes.
-            for k, line in lines.items():
-                free = max(0, owned.get(k, 0) - used.get(k, 0))
-                line["to_buy"] = len(line["decks"]) - free
-        else:
-            for deck in decks:
-                for name, _qty in deck_cards.get(deck["deck_id"], []):
-                    note(_key(name), name, deck)
-            for k, line in lines.items():
-                line["to_buy"] = used.get(k, 0) - owned.get(k, 0)
+        for deck in decks:
+            ranked = sorted(freq[deck["deck_id"]].values(),
+                            key=lambda r: -(r["inclusion_rate"] or 0))
+            taken = 0
+            for row in ranked:
+                if taken >= SUGGESTIONS_PER_DECK:
+                    break
+                k = _key(row["card_name"])
+                if k in in_deck[deck["deck_id"]]:
+                    continue
+                note(k, row["card_name"], deck)
+                taken += 1
+        # Un exemplaire par deck qui la réclame, moins ceux restés libres.
+        for k, line in lines.items():
+            free = max(0, owned.get(k, 0) - used.get(k, 0))
+            line["to_buy"] = len(line["decks"]) - free
 
         lands = _lands(session, {line["card_name"] for line in lines.values()})
 
@@ -193,7 +181,6 @@ def compute_buylist(user_id: int, kind: str = "missing", top: int = TOP_DEFAULT)
 
     result.sort(key=lambda r: (-r["popularity"], r["card_name"]))
     return {
-        "kind": kind,
         "total": len(result),
         "cards": result[:top],
         "decks_analyzed": len(decks),
