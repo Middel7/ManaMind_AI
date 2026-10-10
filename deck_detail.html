@@ -35,6 +35,15 @@
   /* Badge cliquable : « a acquerir » mene a l'offre Cardmarket de la carte */
   .badge--link { text-decoration: none; cursor: pointer; }
   .badge--link:hover { filter: brightness(1.25); }
+
+  /* Le bracket se lit comme les autres chiffres du bandeau, mais il se
+     corrige : le crayon et le survol disent qu'on peut cliquer dessus. */
+  .deck-bracket { align-self: center; color: var(--text); }
+  .deck-bracket svg { width: 1em; height: 1em; color: var(--text-3); }
+  .deck-bracket:hover svg, .deck-bracket:focus-visible svg { color: var(--accent); }
+  /* Les cartes qui fondent le calcul tiennent en une phrase chacune : une
+     liste a puces etirerait la fenetre pour quelques noms. */
+  .bracket-why b { color: var(--text); font-weight: 500; }
 </style>
 </head>
 <body>
@@ -114,6 +123,11 @@
             <span class="muted small">terrains</span></span>
           <span class="hero__stat"><b>${MM.fmt.eur(deck.value_eur, { compact: true })}</b>
             <span class="muted small">de valeur</span></span>
+          ${deck.bracket ? `<button class="hero__stat deck-bracket" id="bracketStat"
+              title="Voir le détail du calcul ou choisir le bracket vous-même">
+            <b>${deck.bracket.value}</b>
+            <span class="muted small">bracket ${deck.bracket.manual ? 'choisi' : 'calculé'}</span>
+            ${MM.icons.edit}</button>` : ''}
         </div>
         <div class="hero__actions">
           <a class="btn btn--primary" href="/decks/ameliorer?deck=${encodeURIComponent(deckId)}"
@@ -694,6 +708,85 @@
       button.disabled = false;
     }
   }
+
+  /* ── Bracket ──────────────────────────────────────────────────────────── */
+
+  const BRACKET_NAMES = {
+    1: 'Exhibition', 2: 'Core', 3: 'Upgraded', 4: 'Optimized', 5: 'cEDH',
+  };
+
+  /** Une ligne du detail : le critere, puis les cartes qui le declenchent. */
+  function bracketReason(label, names) {
+    if (!names || !names.length) return '';
+    return `<p class="small muted bracket-why">${label} (${MM.fmt.int(names.length)}) :
+      <b>${names.map(MM.esc).join(', ')}</b></p>`;
+  }
+
+  /** Detail du calcul et choix manuel : un clic sur un niveau l'enregistre. */
+  function openBracketDialog() {
+    const bracket = deck.bracket;
+    const reasons = [
+      bracketReason('Game Changers', bracket.game_changers),
+      bracketReason('Destruction massive de terrains', bracket.mass_land_denial),
+      bracketReason('Tours supplémentaires', bracket.extra_turns),
+    ].join('');
+
+    const dialog = MM.modal({
+      title: 'Bracket du deck',
+      body: `<div class="stack">
+        <p>Bracket calculé : <b class="accent">${bracket.computed}
+          · ${BRACKET_NAMES[bracket.computed]}</b></p>
+        ${reasons || `<p class="small muted">Aucun Game Changer, aucune destruction
+          massive de terrains, aucun tour supplémentaire.</p>`}
+        <p class="small muted">Le calcul donne un minimum. Il ne voit pas les combos
+          infinies à deux cartes, ni l'intention du deck : le bracket 1 et le 5 ne
+          se choisissent qu'à la main. Les tours supplémentaires ne comptent qu'à
+          partir de trois cartes.</p>
+        <div class="chips" role="group" aria-label="Choisir le bracket">
+          ${Object.entries(BRACKET_NAMES).map(([level, name]) => `
+            <button class="chip" data-bracket="${level}"
+                    aria-pressed="${bracket.value === Number(level)}">
+              ${level} · ${name}</button>`).join('')}
+        </div>
+      </div>`,
+      footer: `${bracket.manual ? `<button class="btn" data-reset>
+                  Revenir au bracket calculé</button>` : ''}
+               <button class="btn btn--primary" data-cancel>Fermer</button>`,
+    });
+
+    dialog.root.addEventListener('click', async (event) => {
+      if (event.target.closest('[data-cancel]')) return dialog.close();
+      const pick = event.target.closest('[data-bracket]');
+      const reset = event.target.closest('[data-reset]');
+      if (!pick && !reset) return;
+      const value = pick ? Number(pick.dataset.bracket) : null;
+      // Choisir le niveau que le calcul donne deja revient a s'y fier : rien
+      // a retenir, le deck suivra ses cartes si elles changent.
+      const manual = value === bracket.computed ? null : value;
+      MM.els('[data-bracket], [data-reset]', dialog.root)
+        .forEach((button) => { button.disabled = true; });
+      try {
+        const result = await MM.api.post(
+          `/api/v2/decks/${encodeURIComponent(deckId)}/bracket`, { bracket: manual });
+        deck.bracket = result.bracket;
+        renderHero();
+        dialog.close();
+        MM.toast.ok(result.bracket.manual
+          ? `Bracket ${result.bracket.value} retenu pour ce deck.`
+          : `Le deck reprend son bracket calculé (${result.bracket.value}).`);
+      } catch (err) {
+        MM.toast.error(err.message);
+        MM.els('[data-bracket], [data-reset]', dialog.root)
+          .forEach((button) => { button.disabled = false; });
+      }
+    });
+  }
+
+  // Le bandeau se redessine seul (renommage, courbe de reference) : l'ecoute
+  // reste sur son conteneur, qui ne change pas.
+  MM.el('#hero').addEventListener('click', (event) => {
+    if (event.target.closest('#bracketStat')) openBracketDialog();
+  });
 
   // Les reglages « dans le deck » des vignettes visent ce deck.
   MM.deckContext = { deck_id: deckId, commander: deck.commander };
