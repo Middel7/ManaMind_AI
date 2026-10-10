@@ -180,6 +180,10 @@
               ${MM.fmt.int(deck.card_count)} cartes ·
               <span class="${missing ? 'accent' : ''}">${percent} % en collection</span>
               ${missing ? `· ${MM.fmt.int(missing)} manquantes` : ''}
+              ${deck.bracket ? `· <span title="${deck.bracket.manual
+                  ? `Bracket choisi à la main (calcul : ${deck.bracket.computed})`
+                  : 'Bracket calculé d’après les cartes du deck'}">bracket ${
+                  deck.bracket.value}</span>` : ''}
             </p>
           </a>
           <div class="deck-tile__actions">

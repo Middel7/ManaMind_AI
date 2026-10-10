@@ -17,6 +17,7 @@ from manamind.auth import COOKIE_NAME, get_current_user
 from manamind.commander_curve import reference_for
 from manamind.commanders import MAX_COMMANDERS, join_commanders, split_commanders
 from manamind.db.engine import SessionLocal
+from manamind.deck_bracket import BRACKETS, bracket_summary, deck_flags, manual_brackets
 
 from ._shared import _json_response
 
@@ -141,6 +142,8 @@ def api_decks(request: Request) -> Response:
             WHERE d.user_id = :uid
             ORDER BY COALESCE(d.fetched_at, d.created_at) DESC NULLS LAST
         """), {"uid": user["id"]}).fetchall()
+        flags = deck_flags(session, user["id"])
+        manual = manual_brackets(session, user["id"])
 
     decks = []
     for row in rows:
@@ -160,6 +163,7 @@ def api_decks(request: Request) -> Response:
             "scryfall_id": row.scryfall_id,
             "image_small": row.image_small,
             "image_normal": row.image_normal,
+            "bracket": bracket_summary(flags.get(row.deck_id), manual.get(row.deck_id)),
         })
 
     # Le dernier deck choisi, pour que les ecrans d'analyse s'ouvrent dessus.
@@ -345,6 +349,12 @@ def api_deck_detail(deck_id: str, request: Request) -> Response:
             ORDER BY dc.card_name
         """), {"uid": user["id"], "did": deck_id}).fetchall()
 
+        flags = deck_flags(session, user["id"], deck_id).get(deck_id)
+        manual = session.execute(text("""
+            SELECT bracket FROM user_deck_bracket
+            WHERE user_id = :uid AND deck_id = :did
+        """), {"uid": user["id"], "did": deck_id}).scalar()
+
     cards = []
     total_value = 0.0
     owned_copies = 0
@@ -390,6 +400,7 @@ def api_deck_detail(deck_id: str, request: Request) -> Response:
             "owned_count": owned_copies,
             "owned_ratio": round(owned_copies / total_copies, 3) if total_copies else 0,
             "value_eur": round(total_value, 2),
+            "bracket": bracket_summary(flags, manual, detail=True),
         },
         "cards": cards,
     })
@@ -522,6 +533,50 @@ async def api_set_lead_commander(deck_id: str, request: Request) -> Response:
         session.commit()
 
     return _json_response({"ok": True, "lead_commander": match})
+
+
+@router.post("/api/v2/decks/{deck_id}/bracket")
+async def api_set_bracket(deck_id: str, request: Request) -> Response:
+    """Fixe à la main le bracket d'un deck, ou rend la main au calcul.
+
+    `bracket` vaut 1 à 5, ou null pour revenir au bracket calculé.
+    """
+    user = _user(request)
+    try:
+        body = await request.json()
+    except Exception:
+        return _json_response({"error": "Corps JSON invalide"}, status_code=400)
+
+    bracket = body.get("bracket")
+    if bracket is not None and (isinstance(bracket, bool) or bracket not in BRACKETS):
+        return _json_response(
+            {"error": "Le bracket doit être compris entre 1 et 5"}, status_code=400)
+
+    with SessionLocal() as session:
+        owned = session.execute(text("""
+            SELECT 1 FROM user_moxfield_decks
+            WHERE user_id = :uid AND deck_id = :did
+        """), {"uid": user["id"], "did": deck_id}).scalar()
+        if not owned:
+            return _json_response({"error": "Deck introuvable"}, status_code=404)
+
+        if bracket is None:
+            session.execute(text("""
+                DELETE FROM user_deck_bracket WHERE user_id = :uid AND deck_id = :did
+            """), {"uid": user["id"], "did": deck_id})
+        else:
+            session.execute(text("""
+                INSERT INTO user_deck_bracket (user_id, deck_id, bracket)
+                VALUES (:uid, :did, :bracket)
+                ON CONFLICT (user_id, deck_id) DO UPDATE
+                  SET bracket = EXCLUDED.bracket, updated_at = NOW()
+            """), {"uid": user["id"], "did": deck_id, "bracket": bracket})
+
+        flags = deck_flags(session, user["id"], deck_id).get(deck_id)
+        session.commit()
+
+    return _json_response({"ok": True,
+                           "bracket": bracket_summary(flags, bracket, detail=True)})
 
 
 @router.get("/api/v2/buylist")
