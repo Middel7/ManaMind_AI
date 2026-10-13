@@ -169,7 +169,10 @@ fix(prix): les cotes du changement de commandant survivent a la mise en ligne
 fix(alembic): les migrations ne touchent plus au catalogue partage
 ```
 
-**Pousser systématiquement après un commit**, sans redemander.
+**Livrer chaque développement par une PR**, sans redemander : branche
+`feat/*`, `fix/*` ou `design/*` depuis `main`, commit, `git push -u`, puis
+`gh pr create` vers `main`. Le merge revient au propriétaire du dépôt ; il
+déclenche la mise en ligne, migrations comprises.
 
 ---
 
