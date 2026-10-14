@@ -40,13 +40,34 @@
   .buylist.card-grid--sm .mtg-card__bottom { padding-top: var(--sp-1); gap: 0; }
   .buylist.card-grid--sm .mtg-card__actions .btn { padding-block: 2px; }
 
+  /* A 420 px, le titre et ses deux boutons ne tiennent plus sur une ligne :
+     les boutons passent dessous plutot que de deborder. */
+  .buylist-head { flex-wrap: wrap; }
+
+  /* La liste des decks peut en compter plusieurs dizaines : elle defile dans
+     la fenetre, et les boutons « tout cocher » restent visibles au-dessus. */
+  .buylist-decks { max-height: 50vh; overflow-y: auto; }
+  .buylist-decks .switch { width: 100%; min-width: 0; }
+
 </style>
 </head>
 <body>
 
 <div id="page">
   <div class="stack-2">
-    <h2 class="h2">Ma buylist</h2>
+    <!-- Les deux reglages de la liste elle-meme, en tete : ils changent ce qui
+         est calcule, la barre d'outils plus bas ne change que l'affichage. -->
+    <div class="between buylist-head">
+      <h2 class="h2">Ma buylist</h2>
+      <div class="cluster-2">
+        <button class="btn btn--sm" id="decksBtn"
+                title="Choisir les decks dont la buylist propose les cartes manquantes"
+          >Decks analysés <span class="chip__count" id="decksCount">…</span></button>
+        <button class="btn btn--sm btn--primary" id="pinBtn"
+                title="Ajouter une carte à la main : elle reste dans la liste jusqu'à ce que vous la retiriez"
+          >Ajouter une carte</button>
+      </div>
+    </div>
     <p class="muted small">
       Les cartes qui manquent à vos decks, d'après l'analyse de chacun d'eux :
       les plus jouées par son commandant, terrains exclus. Une carte que vous
@@ -88,6 +109,7 @@
   // retour, plutot qu'a chaque bascule entre les deux vues.
   let stale = true;
   let view = 'list';
+  let decksAnalyzed = 0;
 
   // Vue compacte : un reglage d'affichage, retenu par navigateur. Un stockage
   // indisponible laisse simplement la vue normale.
@@ -113,9 +135,19 @@
   async function loadList() {
     results.innerHTML = `<div class="card-grid">${MM.cardSkeletons(12)}</div>`;
     MM.el('#summary').textContent = '';
-    cards = (await MM.api.get('/api/v2/buylist')).cards;
+    const data = await MM.api.get('/api/v2/buylist');
+    cards = data.cards;
+    decksAnalyzed = data.decks_analyzed;
+    MM.el('#decksCount').textContent =
+      `${MM.fmt.int(data.decks_analyzed)}/${MM.fmt.int(data.decks_total)}`;
     resolved = await MM.resolveCards(cards.map((card) => card.card_name));
     stale = false;
+  }
+
+  /** Recalcule et affiche la liste, apres un reglage qui la change. */
+  async function refreshList() {
+    stale = true;
+    await show('list');
   }
 
   function renderSummary() {
@@ -134,6 +166,13 @@
 
   function renderList() {
     renderSummary();
+    if (!cards.length && !decksAnalyzed) {
+      results.innerHTML = MM.empty({
+        icon: 'decks', title: 'Aucun deck analysé',
+        text: 'Choisissez dans « Decks analysés » les decks dont la buylist doit '
+          + 'proposer les cartes manquantes, ou ajoutez une carte à la main.' });
+      return;
+    }
     if (!cards.length) {
       results.innerHTML = MM.empty({
         icon: 'check', title: 'Rien à acheter',
@@ -151,15 +190,25 @@
           text: 'part des decks de ce commandant qui jouent la carte, la plus haute parmi vos commandants.' },
         { icon: 'eye', strong: 'Masquer :',
           text: 'ne plus recommander la carte pour les decks indiqués ; « Cartes masquées » permet de la remettre.' },
+        ...(cards.some((card) => card.pinned) ? [{ icon: 'plus', strong: 'Ajoutée :',
+          text: 'carte ajoutée à la main ; elle reste en tête de liste jusqu\'à ce que vous la retiriez.' }] : []),
       ])}
       <div class="card-grid buylist ${compact ? 'card-grid--sm' : ''}"
            style="margin-top:var(--sp-4)">${cards.map((card) => {
         const decks = card.decks.map((deck) =>
           `${deck.commander} (${MM.fmt.pct(deck.inclusion_rate, 0)})`).join('\n');
+        // Une carte ajoutee a la main que l'analyse ne reclame pas n'a ni
+        // popularite ni commandant a montrer.
+        const why = card.decks.length
+          ? ` · ${MM.fmt.pct(card.popularity, 0)}
+              · <span title="${MM.esc(decks)}">${commandersText(card.decks)}</span>`
+          : ' · ajoutée à la main';
         return MM.cardTile({
           ...(resolved[card.card_name] || {}),
           card_name: card.card_name,
         }, {
+          ...(card.pinned ? { flag: 'Ajoutée',
+            flagTitle: 'Ajoutée à la main : elle reste jusqu\'à ce que vous la retiriez' } : {}),
           // Aucun deck ni collection a regler ici : on regarde quoi acheter.
           context: null,
           // En vue compacte, l'achat et la vente cedent la place : la vue sert
@@ -171,10 +220,13 @@
           // En vue compacte, la ligne « quantite · popularite · commandants »
           // prenait jusqu'a cinq lignes sous une vignette de 116 px : elle s'y
           // efface, la vue normale et l'export la gardent.
-          note: compact ? '' : `<b class="accent">× ${MM.fmt.int(card.to_buy)}</b>
-                 · ${MM.fmt.pct(card.popularity, 0)}
-                 · <span title="${MM.esc(decks)}">${commandersText(card.decks)}</span>`,
-          actions: [{
+          note: compact ? '' : `<b class="accent">× ${MM.fmt.int(card.to_buy)}</b>${why}`,
+          // Une carte ajoutee se retire ; « Masquer » ne viserait que les
+          // decks qui la reclament, et elle resterait affichee.
+          actions: card.pinned ? [{
+            label: 'Retirer', act: 'unpin', variant: 'ghost',
+            title: `Retirer ${card.card_name} de la buylist`,
+          }] : [{
             label: 'Masquer', act: 'hide', variant: 'ghost',
             title: `Ne plus recommander ${card.card_name} pour `
               + card.decks.map((deck) => deck.commander).join(', '),
@@ -253,7 +305,9 @@
       '',
     ];
     cards.forEach((card) => {
-      lines.push(`// ${card.decks.map((deck) => deck.commander).join(' · ')}`);
+      lines.push(card.decks.length
+        ? `// ${card.decks.map((deck) => deck.commander).join(' · ')}`
+        : '// ajoutée à la main');
       lines.push(`${card.to_buy} ${card.card_name}`);
     });
     // Fins de ligne Windows : le Bloc-notes et Cardmarket les lisent toutes.
@@ -301,6 +355,23 @@
       return;
     }
 
+    const unpin = event.target.closest('[data-act="unpin"]');
+    if (unpin) {
+      const name = unpin.dataset.card;
+      unpin.disabled = true;
+      try {
+        await MM.api.del('/api/v2/buylist/pinned?card_name=' + encodeURIComponent(name));
+        MM.toast.ok(`${name} est retirée de la buylist.`);
+        // Recalculee plutot que retiree de la grille : l'analyse peut
+        // reclamer la carte, qui reprend alors sa place parmi les autres.
+        await refreshList();
+      } catch (err) {
+        MM.toast.error(err.message);
+        unpin.disabled = false;
+      }
+      return;
+    }
+
     const restore = event.target.closest('[data-restore]');
     if (restore) {
       restore.disabled = true;
@@ -317,6 +388,112 @@
       }
     }
   });
+
+  /* ── Decks analyses ─────────────────────────────────────────────── */
+
+  async function openDecksDialog() {
+    let decks;
+    try {
+      decks = (await MM.api.get('/api/v2/buylist/decks')).decks || [];
+    } catch (err) {
+      MM.toast.error(err.message);
+      return;
+    }
+
+    const dialog = MM.modal({
+      title: 'Decks analysés',
+      body: decks.length ? `<div class="stack">
+        <p class="small muted">La buylist propose les cartes qui manquent aux decks
+          cochés. Les cartes d'un deck décoché restent comptées comme prises dans
+          votre collection. Un nouveau deck est analysé d'office.</p>
+        <div class="cluster-2">
+          <button class="btn btn--sm btn--ghost" data-all="1">Tout cocher</button>
+          <button class="btn btn--sm btn--ghost" data-all="0">Tout décocher</button>
+        </div>
+        <div class="stack buylist-decks">${decks
+          .slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', 'fr'))
+          .map((deck) => `
+          <label class="switch">
+            <input type="checkbox" value="${MM.esc(deck.deck_id)}"
+                   ${deck.included ? 'checked' : ''}>
+            <span class="switch__track"></span>
+            <span class="truncate">
+              <span class="strong">${MM.esc(deck.name)}</span>
+              ${deck.commander && deck.commander !== deck.name
+                ? `<span class="dim xs" style="display:block">${MM.esc(deck.commander)}</span>`
+                : ''}
+            </span>
+          </label>`).join('')}</div>
+      </div>` : MM.empty({
+        icon: 'decks', title: 'Aucun deck à analyser',
+        text: 'Seuls les decks dont le commandant est connu peuvent être analysés.' }),
+      footer: decks.length ? `<button class="btn" data-cancel>Annuler</button>
+               <button class="btn btn--primary" data-save>Enregistrer</button>` : '',
+    });
+
+    dialog.root.addEventListener('click', async (event) => {
+      if (event.target.closest('[data-cancel]')) return dialog.close();
+      const all = event.target.closest('[data-all]');
+      if (all) {
+        MM.els('.buylist-decks input', dialog.root)
+          .forEach((box) => { box.checked = all.dataset.all === '1'; });
+        return;
+      }
+      const save = event.target.closest('[data-save]');
+      if (!save) return;
+      const excluded = MM.els('.buylist-decks input', dialog.root)
+        .filter((box) => !box.checked).map((box) => box.value);
+      save.disabled = true;
+      try {
+        await MM.api.put('/api/v2/buylist/decks', { excluded });
+        dialog.close();
+        MM.toast.ok(`${MM.fmt.plural(decks.length - excluded.length, 'deck')} analysé`
+          + `${decks.length - excluded.length > 1 ? 's' : ''}.`);
+        await refreshList();
+      } catch (err) {
+        MM.toast.error(err.message);
+        save.disabled = false;
+      }
+    });
+  }
+
+  /* ── Ajouter une carte a la main ────────────────────────────────── */
+
+  function openPinDialog() {
+    const dialog = MM.modal({
+      title: 'Ajouter une carte',
+      body: `<div class="stack">
+        <p class="small muted">La carte reste en tête de la buylist, un exemplaire,
+          jusqu'à ce que vous la retiriez — même si vous la possédez déjà.</p>
+        <div class="field">
+          <label class="label" for="pinInput">Nom de la carte</label>
+          <input class="input" id="pinInput" type="text" autocomplete="off"
+                 placeholder="Rechercher une carte…">
+        </div>
+      </div>`,
+    });
+    const input = MM.el('#pinInput', dialog.root);
+
+    async function pin(name) {
+      input.disabled = true;
+      try {
+        const result = await MM.api.post('/api/v2/buylist/pinned', { card_name: name });
+        dialog.close();
+        MM.toast.ok(`${result.card_name} est ajoutée à la buylist.`);
+        await refreshList();
+      } catch (err) {
+        MM.toast.error(err.message);
+        input.disabled = false;
+        input.focus();
+      }
+    }
+
+    MM.autocomplete(input, (card) => pin(card.name || card.card_name));
+    input.focus();
+  }
+
+  MM.el('#decksBtn').addEventListener('click', openDecksDialog);
+  MM.el('#pinBtn').addEventListener('click', openPinDialog);
 
   await loadHidden();
   await show('list');
