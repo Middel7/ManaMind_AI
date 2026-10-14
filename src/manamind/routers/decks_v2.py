@@ -623,6 +623,59 @@ def api_buylist_restore(request: Request, card_name: str) -> Response:
                            "restored": restore_card(_user(request)["id"], card_name)})
 
 
+@router.get("/api/v2/buylist/decks")
+def api_buylist_decks(request: Request) -> Response:
+    """Decks de l'utilisateur, chacun inclus ou écarté de l'analyse."""
+    from manamind.buylist import list_decks
+
+    return _json_response({"decks": list_decks(_user(request)["id"])})
+
+
+@router.put("/api/v2/buylist/decks")
+async def api_buylist_set_decks(request: Request) -> Response:
+    """Fixe les decks écartés de l'analyse : `excluded` les liste tous."""
+    from manamind.buylist import set_excluded
+
+    user = _user(request)
+    try:
+        body = await request.json()
+    except Exception:
+        return _json_response({"error": "Corps JSON invalide"}, status_code=400)
+    excluded = body.get("excluded")
+    if not isinstance(excluded, list):
+        return _json_response({"error": "excluded doit être une liste"}, status_code=400)
+    count = set_excluded(user["id"], [str(d) for d in excluded if d])
+    return _json_response({"ok": True, "excluded": count})
+
+
+@router.post("/api/v2/buylist/pinned")
+async def api_buylist_pin(request: Request) -> Response:
+    """Ajoute une carte à la buylist, où elle reste jusqu'à son retrait."""
+    from manamind.buylist import pin_card
+
+    user = _user(request)
+    try:
+        body = await request.json()
+    except Exception:
+        return _json_response({"error": "Corps JSON invalide"}, status_code=400)
+    card_name = (body.get("card_name") or "").strip()
+    if not card_name:
+        return _json_response({"error": "Nom de carte manquant"}, status_code=400)
+    name = pin_card(user["id"], card_name)
+    if name is None:
+        return _json_response({"error": f"Carte inconnue : {card_name}"}, status_code=404)
+    return _json_response({"ok": True, "card_name": name})
+
+
+@router.delete("/api/v2/buylist/pinned")
+def api_buylist_unpin(request: Request, card_name: str) -> Response:
+    """Retire de la buylist une carte ajoutée à la main."""
+    from manamind.buylist import unpin_card
+
+    return _json_response({"ok": True,
+                           "removed": unpin_card(_user(request)["id"], card_name)})
+
+
 @router.get("/api/v2/hidden-moves")
 def api_hidden_moves(request: Request) -> Response:
     """Deplacements que l'utilisateur a ecartes, les plus recents d'abord."""
