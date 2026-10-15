@@ -279,6 +279,14 @@
   .strength[data-level="2"] span:nth-child(-n+2) { background: var(--accent); }
   .strength[data-level="3"] span:nth-child(-n+3) { background: var(--ok); }
 
+  /* ── Champ piege ────────────────────────────────────────────────────────── */
+
+  /* Hors ecran plutot que display:none : certains robots sautent les champs
+     masques, aucun ne calcule la position. Les valeurs nues sont celles de
+     .sr-only, que l'on ne peut reprendre ici sans exposer le champ aux
+     lecteurs d'ecran — aria-hidden les en ecarte deja. */
+  .auth__trap { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
   /* ── Montrer le mot de passe ────────────────────────────────────────────── */
 
   /* Le bouton se pose DANS le champ : un bouton a cote decalerait l'alignement
@@ -339,10 +347,15 @@
     <div id="formWrap">
       <div class="stack-2" style="margin-bottom:var(--sp-5)">
         <h2 class="h2">Créer mon compte</h2>
-        <p class="muted small">Une invitation valide est requise.</p>
+        <p class="muted small" id="formLead">Gratuit, sans engagement.</p>
       </div>
 
       <form class="stack" id="form" novalidate>
+        <!-- Champ piege : invisible et hors tabulation, seul un robot le remplit. -->
+        <div class="auth__trap" aria-hidden="true">
+          <label for="website">Site web</label>
+          <input id="website" type="text" tabindex="-1" autocomplete="off">
+        </div>
         <div class="field">
           <label class="label" for="displayName">Pseudo</label>
           <input class="input" id="displayName" type="text" maxlength="40"
@@ -372,6 +385,12 @@
         <button class="btn btn--primary btn--lg btn--block" type="submit" id="submit">
           Créer mon compte
         </button>
+
+        <p class="xs dim">
+          En créant un compte, vous acceptez la
+          <a href="/mentions-legales#confidentialite" style="color:var(--accent)">politique
+          de confidentialité</a>.
+        </p>
       </form>
 
       <p class="xs dim" style="margin-top:var(--sp-4)">
@@ -399,7 +418,7 @@
 
 <script src="/static/js/mm.js"></script>
 <script>
-(() => {
+(async () => {
   MM.el('#mark').innerHTML = MM.icons.sparkle;
   MM.el('#noInviteIcon').innerHTML = MM.icons.shield;
 
@@ -432,11 +451,22 @@
   });
 
   const token = new URLSearchParams(location.search).get('token') || '';
-  if (!token) {
+
+  // Sans invitation, le formulaire ne s'ouvre que si le serveur accepte les
+  // inscriptions libres. Faute de reponse, on suppose qu'il ne les accepte
+  // pas : le serveur refuserait de toute facon.
+  let options = {};
+  try {
+    const response = await fetch('/auth/options');
+    options = await response.json();
+  } catch { /* options vides : inscription sur invitation seulement */ }
+
+  if (!token && !options.registrations_open) {
     MM.el('#formWrap').hidden = true;
     MM.el('#noInvite').hidden = false;
     return;
   }
+  if (token) MM.el('#formLead').textContent = 'Votre invitation est prête à servir.';
 
   const password = MM.el('#password');
   const strength = MM.el('#strength');
@@ -456,6 +486,7 @@
     event.preventDefault();
     const payload = {
       token,
+      website: MM.el('#website').value,
       display_name: MM.el('#displayName').value.trim(),
       email: MM.el('#email').value.trim(),
       password: password.value,

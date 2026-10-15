@@ -95,6 +95,93 @@ def test_register_invalid_invitation(client: TestClient):
     )
 
 
+def test_auth_options_closed_by_default(client: TestClient, monkeypatch):
+    """Sans réglage, l'inscription reste sur invitation et l'e-mail inactif."""
+    monkeypatch.delenv("INSCRIPTIONS_OUVERTES", raising=False)
+    monkeypatch.delenv("SMTP_HOST", raising=False)
+    r = client.get("/auth/options")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["registrations_open"] is False
+    assert data["mail_enabled"] is False
+
+
+def test_register_honeypot_creates_nothing(client: TestClient, monkeypatch):
+    """Le champ piège rempli : réponse polie, aucun compte, aucun cookie."""
+    import manamind.auth as auth
+
+    def _boom(*_args, **_kwargs):
+        raise AssertionError("aucun compte ne doit être créé")
+
+    monkeypatch.setattr(auth, "register_open", _boom)
+    monkeypatch.setattr(auth, "register_with_invitation", _boom)
+    r = client.post("/auth/register", json={
+        "email": "robot@test.com", "password": "password123", "website": "http://spam",
+    })
+    assert r.status_code == 200
+    assert "mm_token" not in r.headers.get("set-cookie", "")
+
+
+def test_register_open_without_invitation(client: TestClient, monkeypatch):
+    """Inscriptions ouvertes : un compte se crée sans jeton et la session s'ouvre."""
+    import manamind.auth as auth
+
+    monkeypatch.setenv("INSCRIPTIONS_OUVERTES", "true")
+    monkeypatch.setattr(auth, "register_open", lambda email, pw, dn: (4242, dn or "nouveau"))
+    try:
+        r = client.post("/auth/register", json={
+            "email": "nouveau@test.com", "password": "password123",
+        })
+        assert r.status_code == 200, r.text
+        assert "mm_token" in r.headers.get("set-cookie", "")
+    finally:
+        # Le client est partagé par toute la session de tests : le cookie d'un
+        # compte fictif ferait échouer les tests « sans session » qui suivent.
+        client.cookies.clear()
+
+
+def test_forgot_password_without_mail(client: TestClient, monkeypatch):
+    """Sans SMTP, la demande est refusée clairement plutôt que promise."""
+    monkeypatch.delenv("SMTP_HOST", raising=False)
+    r = client.post("/auth/password/forgot", json={"email": "someone@test.com"})
+    assert r.status_code == 503
+
+
+def test_forgot_password_does_not_reveal_accounts(client: TestClient, monkeypatch):
+    """Adresse inconnue : même réponse qu'une adresse inscrite, aucun envoi."""
+    import manamind.auth as auth
+    import manamind.mail as mail
+
+    monkeypatch.setenv("SMTP_HOST", "smtp.test")
+    monkeypatch.setenv("MAIL_FROM", "test@test.com")
+    monkeypatch.setattr(auth, "create_password_reset", lambda email: None)
+    sent = []
+    monkeypatch.setattr(mail, "send_mail", lambda *a: sent.append(a) or True)
+    r = client.post("/auth/password/forgot", json={"email": "inconnu@test.com"})
+    assert r.status_code == 200
+    assert r.json()["ok"] is True
+    assert sent == []
+
+
+def test_reset_password_requires_token_and_length(client: TestClient):
+    r = client.post("/auth/password/reset", json={"password": "password123"})
+    assert r.status_code == 400
+    r = client.post("/auth/password/reset", json={"token": "abc", "password": "court"})
+    assert r.status_code == 400
+
+
+def test_delete_account_requires_auth(client: TestClient):
+    r = client.request("DELETE", "/api/profile", json={"confirm_email": "a@b.c"})
+    assert r.status_code == 401
+
+
+def test_public_pages_are_served(client: TestClient):
+    for path in ("/mentions-legales", "/mot-de-passe", "/register", "/login"):
+        r = client.get(path)
+        assert r.status_code == 200, path
+        assert "EDHREC" not in r.text
+
+
 def test_admin_endpoint_requires_auth(client: TestClient):
     """POST /api/engine/start sans auth → 401."""
     r = client.post("/api/engine/start")

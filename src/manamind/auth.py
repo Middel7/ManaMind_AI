@@ -4,7 +4,9 @@ JWT dans cookie httpOnly + hash bcrypt
 """
 from __future__ import annotations
 
+import hashlib
 import os
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -28,6 +30,35 @@ ALGORITHM  = os.environ.get("JWT_ALGORITHM", "HS256")
 EXPIRE_DAYS = int(os.environ.get("JWT_EXPIRE_DAYS", "7"))
 
 COOKIE_NAME = "mm_token"
+
+# Durée de validité d'un lien de réinitialisation du mot de passe. Une heure
+# suffit à ouvrir sa boîte de réception ; au-delà, un lien oublié dans un
+# e-mail reste une porte ouverte.
+RESET_EXPIRE_MINUTES = 60
+
+# Plafond de comptes quand l'inscription est libre. La base de production est
+# partagée avec un autre projet : un robot qui créerait des comptes en boucle
+# la remplirait pour les deux. Le plafond se relève dans le .env.
+_DEFAULT_MAX_USERS = 200
+
+
+# ── Ouverture des inscriptions ────────────────────────────────────────────────
+
+def registrations_open() -> bool:
+    """Vrai si l'on peut créer un compte sans lien d'invitation.
+
+    Lu à chaque appel, et non au chargement du module : refermer les
+    inscriptions ne demande qu'une ligne dans le .env et un redémarrage du
+    conteneur, sans nouvelle image.
+    """
+    return os.environ.get("INSCRIPTIONS_OUVERTES", "").lower() in ("1", "true", "oui", "yes")
+
+
+def max_users() -> int:
+    try:
+        return int(os.environ.get("MAX_COMPTES", _DEFAULT_MAX_USERS))
+    except ValueError:
+        return _DEFAULT_MAX_USERS
 
 
 # ── Mot de passe ──────────────────────────────────────────────────────────────
@@ -227,3 +258,116 @@ def register_with_invitation(token: str, email: str, password: str, display_name
         sess.commit()
 
     return user_id, dn
+
+
+def register_open(email: str, password: str, display_name: str | None = None) -> tuple[int, str]:
+    """Crée un compte sans invitation, quand les inscriptions sont ouvertes.
+
+    Retourne (user_id, display_name). Lève HTTPException si les inscriptions
+    sont fermées, si le plafond de comptes est atteint ou si l'adresse est
+    déjà prise.
+    """
+    if not registrations_open():
+        raise HTTPException(status_code=400, detail="Lien d'invitation manquant")
+
+    pw_hash = hash_password(password)
+    dn = display_name or email.split("@")[0]
+
+    with SessionLocal() as sess:
+        count = sess.execute(text("SELECT count(*) FROM users")).scalar_one()
+        if count >= max_users():
+            raise HTTPException(
+                status_code=403,
+                detail="Les inscriptions sont momentanément complètes. Revenez un peu plus tard.",
+            )
+
+        existing = sess.execute(
+            text("SELECT id FROM users WHERE LOWER(email) = LOWER(:email)"),
+            {"email": email},
+        ).fetchone()
+        if existing is not None:
+            raise HTTPException(status_code=400, detail="Cet email est déjà utilisé")
+
+        user_id = sess.execute(
+            text("""
+                INSERT INTO users (email, password_hash, display_name, role)
+                VALUES (:email, :pw, :name, 'user')
+                RETURNING id
+            """),
+            {"email": email, "pw": pw_hash, "name": dn},
+        ).scalar_one()
+        sess.commit()
+
+    return user_id, dn
+
+
+# ── Mot de passe oublié ───────────────────────────────────────────────────────
+
+def _hash_reset_token(token: str) -> str:
+    """Empreinte stockée à la place du jeton.
+
+    Le jeton vaut un mot de passe pendant une heure : la base n'en garde que
+    l'empreinte, si bien qu'une copie de la table ne permet de réinitialiser
+    aucun compte. SHA-256 suffit ici, le jeton étant tiré au hasard sur 256 bits.
+    """
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def create_password_reset(email: str) -> tuple[str, str] | None:
+    """Prépare une réinitialisation pour `email`.
+
+    Retourne (jeton, adresse du compte), ou None si aucun compte actif ne
+    porte cette adresse. Les demandes précédentes encore valides sont
+    annulées : seul le dernier lien envoyé fonctionne.
+    """
+    user = get_user_by_email(email)
+    if user is None or not user["is_active"]:
+        return None
+
+    token = secrets.token_urlsafe(32)
+    with SessionLocal() as sess:
+        sess.execute(
+            text("DELETE FROM password_resets WHERE user_id = :uid AND used_at IS NULL"),
+            {"uid": user["id"]},
+        )
+        sess.execute(
+            text("""
+                INSERT INTO password_resets (token_hash, user_id, expires_at)
+                VALUES (:h, :uid, NOW() + make_interval(mins => :minutes))
+            """),
+            {"h": _hash_reset_token(token), "uid": user["id"], "minutes": RESET_EXPIRE_MINUTES},
+        )
+        sess.commit()
+    return token, user["email"]
+
+
+def consume_password_reset(token: str, new_password: str) -> int:
+    """Remplace le mot de passe du compte désigné par `token`.
+
+    Le jeton est consommé dans la même transaction que la mise à jour : un
+    lien ne sert qu'une fois, même cliqué deux fois de suite. Retourne l'id
+    du compte, ou lève HTTPException si le lien est invalide ou expiré.
+    """
+    with SessionLocal() as sess:
+        row = sess.execute(
+            text("""
+                UPDATE password_resets
+                SET used_at = NOW()
+                WHERE token_hash = :h
+                  AND used_at IS NULL
+                  AND expires_at > NOW()
+                RETURNING user_id
+            """),
+            {"h": _hash_reset_token(token)},
+        ).fetchone()
+        if row is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Ce lien n'est plus valable. Demandez-en un nouveau.",
+            )
+        sess.execute(
+            text("UPDATE users SET password_hash = :pw WHERE id = :id AND is_active"),
+            {"pw": hash_password(new_password), "id": row.user_id},
+        )
+        sess.commit()
+    return row.user_id

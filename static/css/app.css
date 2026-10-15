@@ -232,6 +232,16 @@ button.nav__item { width: 100%; }
 
 .sidebar__foot { margin-top: auto; padding-top: var(--sp-4); }
 
+/* Les mentions legales doivent rester joignables depuis chaque page, sans
+   prendre la place d'une entree de navigation : un lien discret sous le
+   profil suffit. */
+.sidebar__legal {
+  display: block;
+  padding: var(--sp-2) var(--sp-3) 0;
+  transition: color var(--dur-fast) var(--ease);
+}
+.sidebar__legal:hover { color: var(--text-2); }
+
 .user-chip {
   display: flex;
   align-items: center;

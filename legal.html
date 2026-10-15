@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ManaMind — Mentions légales et confidentialité</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#08080C">
+<link rel="icon" href="/static/img/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/app.css">
+<style>
+  /* Page publique, lisible sans compte : elle ne passe pas par MM.boot et n'a
+     ni barre laterale ni onglets. Une colonne de texte suffit, a la largeur
+     d'une ligne confortable. */
+  .legal {
+    max-width: 72ch;
+    margin: 0 auto;
+    padding: var(--sp-10) var(--sp-6) var(--sp-16);
+  }
+  @media (max-width: 420px) {
+    .legal { padding: var(--sp-6) var(--sp-4) var(--sp-12); }
+  }
+
+  .legal__brand { display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-10); }
+
+  /* Un titre de section par obligation legale : l'oeil doit pouvoir sauter
+     directement a l'hebergeur ou aux droits sans tout relire. */
+  .legal h2 {
+    margin: var(--sp-10) 0 var(--sp-3);
+    padding-top: var(--sp-6);
+    border-top: 1px solid var(--line);
+  }
+  .legal h3 { margin: var(--sp-6) 0 var(--sp-2); }
+  .legal p, .legal li { color: var(--text-2); line-height: var(--leading-normal); }
+  .legal p { margin: 0 0 var(--sp-3); }
+  .legal ul { margin: 0 0 var(--sp-3); padding-left: var(--sp-5); }
+  .legal li { margin-bottom: var(--sp-1); }
+  .legal a { color: var(--accent); }
+  .legal strong { color: var(--text); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<main class="legal">
+  <a class="legal__brand" href="/">
+    <span class="brand__mark" id="mark"></span>
+    <span class="brand__name">ManaMind</span>
+  </a>
+
+  <h1 class="h1">Mentions légales et confidentialité</h1>
+  <p class="small dim" style="margin-top:var(--sp-2)">Dernière mise à jour : 15 octobre 2026</p>
+
+  <h2 class="h3">Éditeur du site</h2>
+  <p>
+    ManaMind (<strong>manamind.eu</strong>) est un site personnel et non commercial,
+    édité par un particulier à titre non professionnel. Conformément à l'article
+    6-III-2 de la loi n° 2004-575 du 21 juin 2004 pour la confiance dans
+    l'économie numérique, l'éditeur a choisi de ne pas publier son identité ;
+    elle est connue de l'hébergeur ci-dessous.
+  </p>
+  <p>Contact : <span id="contact">par l'intermédiaire de l'hébergeur.</span></p>
+
+  <h2 class="h3">Hébergement</h2>
+  <p>
+    Hetzner Online GmbH, Industriestr. 25, 91710 Gunzenhausen, Allemagne —
+    téléphone : +49 9831 505-0 — <a href="https://www.hetzner.com" rel="noopener">hetzner.com</a>.
+    Les données du site sont stockées sur des serveurs situés dans l'Union européenne.
+  </p>
+
+  <h2 class="h3">Propriété intellectuelle</h2>
+  <p>
+    ManaMind n'est ni produit, ni approuvé, ni soutenu par Wizards of the Coast.
+    Magic: The Gathering, ses noms de cartes, ses symboles de mana et ses
+    illustrations sont la propriété de Wizards of the Coast LLC et de leurs
+    artistes respectifs. Les images et données de cartes proviennent de
+    <a href="https://scryfall.com" rel="noopener">Scryfall</a>.
+  </p>
+
+  <h2 class="h3" id="confidentialite">Politique de confidentialité</h2>
+
+  <h3 class="h4">Données collectées</h3>
+  <ul>
+    <li><strong>Compte</strong> : adresse e-mail, pseudo, mot de passe (stocké
+      uniquement sous forme chiffrée irréversible, jamais en clair), dates de
+      création et de dernière connexion.</li>
+    <li><strong>Contenu</strong> : votre collection de cartes, vos decks, vos
+      préférences d'affichage et les avis que vous envoyez depuis le site.</li>
+    <li><strong>Technique</strong> : adresse IP et requêtes, conservées dans les
+      journaux du serveur pour sa sécurité et pour limiter les abus.</li>
+  </ul>
+  <p>Aucune donnée n'est vendue, louée ni utilisée à des fins publicitaires.</p>
+
+  <h3 class="h4">Finalité et base légale</h3>
+  <p>
+    Ces données servent uniquement à faire fonctionner le service que vous
+    utilisez : vous identifier, conserver votre collection et vos decks, vous
+    proposer des recommandations. Leur traitement repose sur l'exécution du
+    service que vous demandez en créant un compte (article 6.1.b du RGPD), et,
+    pour les journaux techniques, sur l'intérêt légitime à sécuriser le site
+    (article 6.1.f).
+  </p>
+
+  <h3 class="h4">Cookies</h3>
+  <p>
+    Le site dépose un seul cookie, <strong>mm_token</strong>, qui maintient votre
+    session ouverte pendant sept jours. Il est strictement nécessaire au
+    fonctionnement du service et ne requiert donc pas de consentement. Aucun
+    cookie de mesure d'audience ou de publicité n'est utilisé.
+  </p>
+
+  <h3 class="h4">Services tiers</h3>
+  <p>Pour afficher les pages, votre navigateur contacte directement :</p>
+  <ul>
+    <li><strong>Scryfall</strong> (États-Unis), qui fournit les images des cartes ;</li>
+    <li><strong>Google Fonts</strong> (Google, États-Unis), qui fournit les polices de caractères.</li>
+  </ul>
+  <p>
+    Ces services reçoivent votre adresse IP lors du chargement, comme pour toute
+    ressource web. Aucune autre donnée ne leur est transmise. Lorsque l'envoi
+    d'e-mails est activé, votre adresse est transmise au prestataire d'envoi au
+    seul moment d'un message de réinitialisation du mot de passe.
+  </p>
+
+  <h3 class="h4">Durée de conservation</h3>
+  <p>
+    Les données du compte sont conservées tant que le compte existe. À sa
+    suppression, elles sont effacées immédiatement de la base, puis disparaissent
+    des sauvegardes au bout de sept jours. Les journaux techniques sont conservés
+    au plus un an.
+  </p>
+
+  <h3 class="h4">Vos droits</h3>
+  <p>
+    Vous disposez d'un droit d'accès, de rectification, d'effacement, de
+    limitation, d'opposition et de portabilité sur vos données. Vous pouvez
+    <strong>supprimer votre compte vous-même</strong>, à tout moment, depuis la
+    page « Mon profil » : la collection, les decks et les préférences sont
+    effacés avec lui. Pour toute autre demande, écrivez au contact indiqué plus
+    haut.
+  </p>
+  <p>
+    Si vous estimez que vos droits ne sont pas respectés, vous pouvez adresser
+    une réclamation à la CNIL
+    (<a href="https://www.cnil.fr" rel="noopener">cnil.fr</a>).
+  </p>
+</main>
+
+<script src="/static/js/mm.js"></script>
+<script>
+(async () => {
+  MM.el('#mark').innerHTML = MM.icons.sparkle;
+  // L'adresse de contact vit dans le .env du serveur : la changer ne demande
+  // aucune modification de cette page.
+  try {
+    const options = await (await fetch('/auth/options')).json();
+    if (options.contact_email) {
+      const address = MM.esc(options.contact_email);
+      MM.el('#contact').innerHTML = `<a href="mailto:${address}">${address}</a>`;
+    }
+  } catch { /* le texte par defaut reste affiche */ }
+})();
+</script>
+</body>
+</html>

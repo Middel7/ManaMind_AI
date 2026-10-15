@@ -108,7 +108,9 @@
     post: (url, body) => request('POST', url, body ?? {}),
     put: (url, body) => request('PUT', url, body ?? {}),
     patch: (url, body) => request('PATCH', url, body ?? {}),
-    del: (url) => request('DELETE', url),
+    // Le corps reste facultatif : une suppression sensible y repete l'adresse
+    // du compte pour confirmation.
+    del: (url, body) => request('DELETE', url, body),
 
     /** Construit une querystring en omettant les valeurs vides. */
     qs(params) {
@@ -636,6 +638,7 @@
             <span class="xs dim">Voir mon profil</span>
           </span>
         </a>
+        <a class="sidebar__legal xs dim" href="/mentions-legales">Mentions légales</a>
       </div>`;
   }
 

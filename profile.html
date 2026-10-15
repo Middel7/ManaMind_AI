@@ -121,6 +121,15 @@
             </div>
             <button class="btn btn--sm btn--danger" id="clearCollection">Tout supprimer</button>
           </div>
+          <hr class="divider">
+          <div class="between">
+            <div>
+              <p class="strong small" style="color:var(--danger)">Supprimer mon compte</p>
+              <p class="xs dim">Efface le compte, la collection et les decks.
+                <a href="/mentions-legales#confidentialite" style="color:var(--accent)">Vos données</a></p>
+            </div>
+            <button class="btn btn--sm btn--danger" id="deleteAccount">Supprimer</button>
+          </div>
         </div>
       </div>
     </div>
@@ -330,6 +339,47 @@
       MM.toast.ok(`${MM.fmt.int(result.deleted)} lignes supprimées.`);
       setTimeout(() => location.reload(), 900);
     } catch (err) { MM.toast.error(err.message); }
+  });
+
+  // Suppression du compte : l'adresse est recopiee pour confirmer, comme dans
+  // l'administration. MM.confirm ne porte pas de champ, d'ou la modale nue.
+  MM.el('#deleteAccount').addEventListener('click', () => {
+    const dialog = MM.modal({
+      title: 'Supprimer mon compte ?',
+      body: `
+        <div class="stack">
+          <p class="muted">Votre compte, vos ${MM.esc(MM.fmt.plural(stats.copies, 'carte'))}
+            et vos ${MM.esc(MM.fmt.plural(stats.decks, 'deck'))} seront définitivement
+            effacés. Cette action est irréversible.</p>
+          <div class="field">
+            <label class="label" for="confirmEmail">Recopiez votre adresse e-mail pour confirmer</label>
+            <input class="input" id="confirmEmail" type="email" autocomplete="off"
+                   placeholder="${MM.esc(data.user.email || '')}">
+          </div>
+          <p class="small" id="deleteError" style="color:var(--danger)" hidden></p>
+        </div>`,
+      footer: `
+        <button class="btn" data-cancel>Annuler</button>
+        <button class="btn btn--danger" data-ok>Supprimer définitivement</button>`,
+    });
+    dialog.root.addEventListener('click', async (event) => {
+      if (event.target.closest('[data-cancel]')) { dialog.close(); return; }
+      const button = event.target.closest('[data-ok]');
+      if (!button) return;
+      button.disabled = true;
+      try {
+        await MM.api.del('/api/profile', {
+          confirm_email: dialog.root.querySelector('#confirmEmail').value.trim(),
+        });
+        sessionStorage.removeItem('_mm_user');
+        location.href = '/login';
+      } catch (err) {
+        const error = dialog.root.querySelector('#deleteError');
+        error.hidden = false;
+        error.textContent = err.message;
+        button.disabled = false;
+      }
+    });
   });
 })();
 </script>

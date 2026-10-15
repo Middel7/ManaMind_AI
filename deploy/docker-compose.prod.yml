@@ -45,6 +45,18 @@ services:
       DEBUG: "false"
       PORT: "8080"
       CORS_ORIGINS: ${CORS_ORIGINS:-https://ton-domaine.com}
+      # Ouverture du site : inscription sans invitation, plafond de comptes,
+      # adresse affichée dans les mentions légales. Fermé par défaut.
+      INSCRIPTIONS_OUVERTES: ${INSCRIPTIONS_OUVERTES:-false}
+      MAX_COMPTES: ${MAX_COMPTES:-200}
+      CONTACT_EMAIL: ${CONTACT_EMAIL:-}
+      # Envoi des liens « mot de passe oublié ». Sans SMTP_HOST, la page
+      # renvoie vers l'administrateur au lieu de promettre un e-mail.
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-}
     volumes:
       # Fichiers déposés par les utilisateurs et recommandations produites :
       # ils doivent survivre à un redéploiement.
