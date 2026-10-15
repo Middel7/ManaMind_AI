@@ -50,6 +50,35 @@ def test_partenaires_les_deux_sont_commandants():
     assert names == {"Krark, the Thumbless", "Sakashima of a Thousand Faces"}
 
 
+def test_paire_ecrite_avec_un_trait_devient_canonique():
+    """Moxfield écrit « A / B » : la paire doit rejoindre la forme « A & B »
+    de la table commanders, noms triés, sinon ses decks n'appartiennent à
+    aucun commandant connu."""
+    html = _page(_basic_cards(),
+                 commander="Joel, Resolute Survivor / Ellie, Brick Master")
+    deck = parse_deck_html(html, "abc123")
+
+    assert deck.commander == "Ellie, Brick Master & Joel, Resolute Survivor"
+    names = {c.name for c in deck.cards if c.is_commander}
+    assert names == {"Ellie, Brick Master", "Joel, Resolute Survivor"}
+
+
+def test_paire_au_meme_prenom_reste_une_paire():
+    """Le trait seul désigne deux cartes : l'heuristique des recto-verso, qui
+    convertit « & » en « // » sur un premier mot commun, ne doit pas jouer."""
+    html = _page(_basic_cards(), commander="Cecil, Redeemed Paladin / Cecil, Dark Knight")
+    deck = parse_deck_html(html, "abc123")
+
+    assert deck.commander == "Cecil, Dark Knight & Cecil, Redeemed Paladin"
+
+
+def test_recto_verso_garde_son_double_trait():
+    html = _page(_basic_cards(), commander="Eddie Brock // Venom, Lethal Protector")
+    deck = parse_deck_html(html, "abc123")
+
+    assert deck.commander == "Eddie Brock // Venom, Lethal Protector"
+
+
 def test_deck_incomplet_rejete():
     assert parse_deck_html(_page(_basic_cards(10)), "abc123") is None
 
