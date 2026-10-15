@@ -239,6 +239,13 @@ def _run_scrape(job_id: str, limit: int, headless: bool) -> None:
         stopped = flag.is_set()
         if stats.fetched > 0 and not stopped:
             _update_scrape_timing("recent", elapsed, stats.fetched)
+        if stats.fetched > 0:
+            # Date affichee par l'ecran d'administration. Notee a part de la
+            # moyenne de duree : un scrape interrompu a quand meme ramene des
+            # decks, il compte comme passage.
+            meta = _read_scrape_metadata()
+            meta.setdefault("recent", {})["last_run_at"] = datetime.now(timezone.utc).isoformat()
+            _write_scrape_metadata(meta)
 
         deleted = _enforce_deck_limit(engine, log_fn)
         _JOBS[job_id].update(
@@ -520,26 +527,47 @@ def stop_scrape(job_id: str, _user: dict = Depends(require_admin)):
 
 # ── Stats dashboard ──────────────────────────────────────────────────────────
 
+# Un commandant n'est « couvert » qu'a partir de ce nombre de decks en base :
+# en dessous, ses taux d'inclusion reposent sur trop peu d'exemples pour que
+# les recommandations soient fiables.
+COVERAGE_MIN_DECKS = 100
+
+
 def _compute_stats(engine) -> dict:
     meta = _read_ml_metadata()
+    recent = _read_scrape_metadata().get("recent", {})
     s: dict = {
         "bronze_decks": 0, "bronze_rows": 0, "bronze_unique_commanders": 0,
         "bronze_commanders": 0, "commanders_with_decks": 0,
+        "commanders_covered": 0, "coverage_min_decks": COVERAGE_MIN_DECKS,
         "pending_commanders": 0, "scraped_recent": 0,
+        # last_run_at n'existe que depuis qu'on le note ; avant, la moyenne de
+        # duree datait deja chaque scrape recent abouti.
+        "recent_last_run_at": recent.get("last_run_at") or recent.get("last_updated"),
         "ml_commanders": 0, "ml_cards_global": 0, "ml_stat_entries": 0,
         "ml_last_trained_at": meta.get("last_trained_at"),
     }
     with engine.connect() as conn:
         s["bronze_decks"] = conn.execute(text("SELECT COUNT(DISTINCT deck_id) FROM deck_cards")).scalar() or 0
         s["bronze_rows"]  = conn.execute(text("SELECT COUNT(*) FROM deck_cards")).scalar() or 0
-        s["bronze_unique_commanders"] = conn.execute(
-            text("SELECT COUNT(DISTINCT commander) FROM deck_cards WHERE commander IS NOT NULL")
-        ).scalar() or 0
         s["bronze_commanders"]  = conn.execute(text("SELECT COUNT(*) FROM commanders")).scalar() or 0
-        s["commanders_with_decks"] = conn.execute(text(
-            "SELECT COUNT(*) FROM commanders WHERE name IN "
-            "(SELECT DISTINCT commander FROM deck_cards WHERE commander IS NOT NULL)"
-        )).scalar() or 0
+        # Un seul passage sur deck_cards pour les trois compteurs : chaque
+        # COUNT(DISTINCT) y parcourt des dizaines de millions de lignes.
+        row = conn.execute(text("""
+            WITH d AS (
+                SELECT commander, COUNT(DISTINCT deck_id) AS cnt
+                FROM deck_cards WHERE commander IS NOT NULL GROUP BY commander
+            )
+            SELECT
+                (SELECT COUNT(*) FROM d)                         AS unique_names,
+                COUNT(d.commander)                               AS with_decks,
+                COUNT(d.commander) FILTER (WHERE d.cnt >= :min)  AS covered
+            FROM commanders c
+            LEFT JOIN d ON d.commander = c.name
+        """), {"min": COVERAGE_MIN_DECKS}).fetchone()
+        s["bronze_unique_commanders"] = row.unique_names or 0
+        s["commanders_with_decks"]    = row.with_decks or 0
+        s["commanders_covered"]       = row.covered or 0
         s["pending_commanders"] = conn.execute(
             text("SELECT COUNT(*) FROM commanders WHERE last_scraped_at IS NULL")
         ).scalar() or 0

@@ -89,12 +89,28 @@ def is_dfc_commander(raw: str) -> bool:
     return parts[0].lower() in _KNOWN_DFC_FRONTS
 
 
+# Un trait seul, entouré d'espaces : Moxfield sépare ainsi les deux commandants
+# d'une paire (« Joel, Resolute Survivor / Ellie, Brick Master »). Les deux
+# faces d'une carte recto-verso s'écrivent « // », que ce motif ne touche pas :
+# chaque trait y est collé à l'autre, jamais entouré d'espaces.
+_PAIR_SLASH = re.compile(r"\s+/\s+")
+
+
 def normalize_commander_sep(raw: str) -> str:
     """Normalise le séparateur :
+    - « A / B » (deux cartes distinctes) → paire canonique « A & B »
     - & → // pour les DFC
     - & reste pour les partners, mais les noms sont triés alphabétiquement
       pour garantir un ordre canonique indépendant du deckbuilder.
     """
+    if _PAIR_SLASH.search(raw):
+        # Le trait seul désigne toujours deux cartes : l'heuristique des
+        # recto-verso ne s'applique pas, elle prendrait « Cecil, Dark Knight /
+        # Cecil, Redeemed Paladin » pour une seule carte.
+        parts = [p.strip() for p in _PAIR_SLASH.split(raw, maxsplit=1)]
+        if all(parts) and not any("&" in p for p in parts):
+            return " & ".join(sorted(parts))
+        return " & ".join(parts)
     if "&" not in raw:
         return raw
     if is_dfc_commander(raw):

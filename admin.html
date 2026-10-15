@@ -406,7 +406,7 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
     <div class="stat-card accent-teal">
       <div class="stat-label">Commandants uniques</div>
       <div class="stat-val c-teal loading" id="statUniqueCmd">—</div>
-      <div class="stat-sub">dans deck_cards</div>
+      <div class="stat-sub">noms distincts dans deck_cards, paires rares comprises</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Lignes totales</div>
@@ -438,14 +438,14 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
       <div class="stat-sub">last_scraped_at IS NULL</div>
     </div>
     <div class="stat-card accent-green">
-      <div class="stat-label">Scrapés récemment</div>
-      <div class="stat-val c-green loading" id="statRecent">—</div>
-      <div class="stat-sub">dans les 7 derniers jours</div>
+      <div class="stat-label">Derniers decks récents</div>
+      <div class="stat-val c-green loading" id="statRecentRun">—</div>
+      <div class="stat-sub" id="statRecentRunSub">dernier scraping des decks récents</div>
     </div>
     <div class="stat-card" style="border-style:dashed; opacity:.7;">
       <div class="stat-label">Couverture</div>
       <div class="stat-val loading" id="statCoverage">—</div>
-      <div class="stat-sub">commandants avec ≥ 1 deck en base</div>
+      <div class="stat-sub" id="statCoverageSub">commandants avec ≥ 100 decks en base</div>
     </div>
   </div>
 
@@ -919,11 +919,25 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
       // Bronze — commanders
       setText('statCommanders', fmt(d.bronze_commanders),   true);
       setText('statPending',    fmt(d.pending_commanders),  true);
-      setText('statRecent',     fmt(d.scraped_recent),      true);
-      const cov = d.bronze_commanders
-        ? Math.round(d.commanders_with_decks / d.bronze_commanders * 100)
-        : 0;
-      setText('statCoverage', cov ? cov + ' %' : '—', true);
+      // La date seule, en grand : c'est elle qu'on vient chercher. L'heure et
+      // l'anciennete passent dessous.
+      if (d.recent_last_run_at) {
+        const at = new Date(d.recent_last_run_at);
+        const days = Math.floor((Date.now() - at) / 86400000);
+        setText('statRecentRun', at.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }), true);
+        setText('statRecentRunSub',
+          `à ${at.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} · `
+          + (days === 0 ? "aujourd'hui" : days === 1 ? 'hier' : `il y a ${days} jours`));
+      } else {
+        setText('statRecentRun', 'jamais', true);
+      }
+      // Couverture : part des commandants enregistres qui ont assez de decks
+      // pour des recommandations fiables, et non plus un seul deck.
+      const covered = d.commanders_covered ?? 0;
+      const cov = d.bronze_commanders ? Math.round(covered / d.bronze_commanders * 100) : 0;
+      setText('statCoverage', d.bronze_commanders ? cov + ' %' : '—', true);
+      setText('statCoverageSub',
+        `${fmt(covered)} / ${fmt(d.bronze_commanders)} commandants avec ≥ ${d.coverage_min_decks ?? 100} decks`);
 
       // Silver
       setText('statMlCmd',     fmt(d.ml_commanders),    true);
