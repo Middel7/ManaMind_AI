@@ -8,6 +8,12 @@ exemplaire possédé mais engagé dans un autre deck ne compte pas.
 Une carte utile à plusieurs decks tient sur une seule ligne, qui nomme tous les
 commandants concernés. La liste se classe par popularité : le taux d'inclusion
 le plus haut de la carte parmi ces commandants.
+
+L'utilisateur peut écarter des decks de l'analyse : ils ne proposent plus
+d'achats, mais leurs cartes restent engagées — un exemplaire rangé dans un deck
+écarté n'en devient pas libre pour autant. Il peut aussi ajouter des cartes à
+la main : elles restent en tête de liste, un exemplaire chacune, jusqu'à ce
+qu'il les retire, qu'il les possède ou non.
 """
 
 from __future__ import annotations
@@ -170,13 +176,99 @@ def restore_card(user_id: int, card_name: str) -> int:
     return result.rowcount
 
 
+def _excluded(session, user_id: int) -> set[str]:
+    """Decks que l'utilisateur a écartés de l'analyse."""
+    return {r.deck_id for r in session.execute(text("""
+        SELECT deck_id FROM user_buylist_excluded_decks WHERE user_id = :uid
+    """), {"uid": user_id})}
+
+
+def list_decks(user_id: int) -> list[dict]:
+    """Decks analysables, chacun marqué inclus ou écarté de l'analyse."""
+    with SessionLocal() as session:
+        decks = _load_decks(session, user_id)
+        excluded = _excluded(session, user_id)
+    return [{**deck, "included": deck["deck_id"] not in excluded} for deck in decks]
+
+
+def set_excluded(user_id: int, deck_ids: list[str]) -> int:
+    """Remplace les decks écartés de l'analyse. Renvoie leur nombre ; les decks
+    qui ne sont pas à l'utilisateur sont ignorés.
+
+    On retient les decks écartés plutôt que les inclus : un deck créé ou
+    importé ensuite entre ainsi dans l'analyse sans rien avoir à cocher.
+    """
+    with SessionLocal() as session:
+        owned = {r.deck_id for r in session.execute(text("""
+            SELECT deck_id FROM user_moxfield_decks
+            WHERE user_id = :uid AND deck_id = ANY(:ids)
+        """), {"uid": user_id, "ids": list(deck_ids)})}
+        session.execute(text("""
+            DELETE FROM user_buylist_excluded_decks WHERE user_id = :uid
+        """), {"uid": user_id})
+        for deck_id in owned:
+            session.execute(text("""
+                INSERT INTO user_buylist_excluded_decks (user_id, deck_id)
+                VALUES (:uid, :did)
+            """), {"uid": user_id, "did": deck_id})
+        session.commit()
+    return len(owned)
+
+
+def _pinned(session, user_id: int) -> list[dict]:
+    rows = session.execute(text("""
+        SELECT card_key, card_name FROM user_buylist_pinned
+        WHERE user_id = :uid
+        ORDER BY added_at DESC
+    """), {"uid": user_id}).fetchall()
+    return [{"key": r.card_key, "card_name": r.card_name} for r in rows]
+
+
+def pin_card(user_id: int, card_name: str) -> str | None:
+    """Ajoute une carte à la main. Renvoie son nom tel que le catalogue l'écrit,
+    ou None si le catalogue ne la connaît pas."""
+    with SessionLocal() as session:
+        # Le nom du catalogue, et non la saisie : c'est lui que l'affichage,
+        # l'export et la résolution des illustrations attendent.
+        name = session.execute(text("""
+            SELECT c.name FROM scryfall_cards c
+            WHERE c.normalized_name = mm_normalize_name(:n)
+               OR split_part(c.normalized_name, ' // ', 1) = mm_normalize_name(:n)
+            ORDER BY (c.normalized_name = mm_normalize_name(:n)) DESC, c.id
+            LIMIT 1
+        """), {"n": card_name}).scalar()
+        if name is None:
+            return None
+        session.execute(text("""
+            INSERT INTO user_buylist_pinned (user_id, card_key, card_name)
+            VALUES (:uid, :key, :name)
+            ON CONFLICT (user_id, card_key) DO NOTHING
+        """), {"uid": user_id, "key": _key(name), "name": name})
+        session.commit()
+    return name
+
+
+def unpin_card(user_id: int, card_name: str) -> int:
+    """Retire une carte ajoutée à la main."""
+    with SessionLocal() as session:
+        result = session.execute(text("""
+            DELETE FROM user_buylist_pinned WHERE user_id = :uid AND card_key = :key
+        """), {"uid": user_id, "key": _key(card_name)})
+        session.commit()
+    return result.rowcount
+
+
 def compute_buylist(user_id: int, top: int = TOP_DEFAULT) -> dict:
-    """Les `top` cartes à acheter pour compléter les decks de l'utilisateur."""
+    """Les `top` cartes à acheter pour compléter les decks de l'utilisateur,
+    précédées des cartes ajoutées à la main."""
     with SessionLocal() as session:
         decks = _load_decks(session, user_id)
         deck_cards = _load_deck_cards(session, user_id)
         owned = _owned(session, user_id)
         hidden = _hidden_pairs(session, user_id)
+        excluded = _excluded(session, user_id)
+        pinned = _pinned(session, user_id)
+        analyzed = [deck for deck in decks if deck["deck_id"] not in excluded]
 
         # Exemplaires déjà engagés dans les decks, par carte.
         used: dict[str, int] = {}
@@ -189,7 +281,9 @@ def compute_buylist(user_id: int, top: int = TOP_DEFAULT) -> dict:
                 keys.add(k)
             in_deck[deck["deck_id"]] = keys
 
-        freq = {d["deck_id"]: _cmd_freq_db(d["commander"]) for d in decks}
+        # Les decks écartés ont compté leurs exemplaires ci-dessus, mais ne
+        # proposent rien : leurs statistiques ne sont même pas chargées.
+        freq = {d["deck_id"]: _cmd_freq_db(d["commander"]) for d in analyzed}
 
         # Une entrée par carte : nom affiché, commandants concernés, popularité.
         lines: dict[str, dict] = {}
@@ -205,7 +299,7 @@ def compute_buylist(user_id: int, top: int = TOP_DEFAULT) -> dict:
             })
             line["popularity"] = max(line["popularity"], rate)
 
-        for deck in decks:
+        for deck in analyzed:
             ranked = sorted(freq[deck["deck_id"]].values(),
                             key=lambda r: -(r["inclusion_rate"] or 0))
             taken = 0
@@ -225,9 +319,10 @@ def compute_buylist(user_id: int, top: int = TOP_DEFAULT) -> dict:
 
         lands = _lands(session, {line["card_name"] for line in lines.values()})
 
+    pinned_keys = {pin["key"] for pin in pinned}
     result = []
     for k, line in lines.items():
-        if k in lands:
+        if k in lands or k in pinned_keys:
             continue
         to_buy = line["to_buy"]
         if to_buy <= 0:
@@ -239,11 +334,30 @@ def compute_buylist(user_id: int, top: int = TOP_DEFAULT) -> dict:
             "owned": owned.get(k, 0),
             "popularity": round(line["popularity"], 1),
             "decks": line["decks"],
+            "pinned": False,
+        })
+    result.sort(key=lambda r: (-r["popularity"], r["card_name"]))
+
+    # Les cartes ajoutées à la main échappent à tous les filtres : ni terrain,
+    # ni possession, ni limite `top` ne les retirent. Si l'analyse les réclame
+    # aussi, la ligne garde ses commandants et le compte d'exemplaires.
+    pins = []
+    for pin in pinned:
+        line = lines.get(pin["key"])
+        decks_for = sorted(line["decks"], key=lambda d: (-d["inclusion_rate"], d["name"])) \
+            if line else []
+        pins.append({
+            "card_name": pin["card_name"],
+            "to_buy": max(1, line["to_buy"]) if line else 1,
+            "owned": owned.get(pin["key"], 0),
+            "popularity": round(line["popularity"], 1) if line else None,
+            "decks": decks_for,
+            "pinned": True,
         })
 
-    result.sort(key=lambda r: (-r["popularity"], r["card_name"]))
     return {
-        "total": len(result),
-        "cards": result[:top],
-        "decks_analyzed": len(decks),
+        "total": len(result) + len(pins),
+        "cards": pins + result[:top],
+        "decks_analyzed": len(analyzed),
+        "decks_total": len(decks),
     }
