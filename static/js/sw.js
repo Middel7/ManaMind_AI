@@ -12,7 +12,8 @@
  * qu'un filet pour le hors-ligne.
  */
 
-const VERSION = 'mm-1';
+// mm-2 : l'embleme du logo rejoint le socle, pour la page hors-ligne.
+const VERSION = 'mm-2';
 const SHELL = `shell-${VERSION}`;
 
 // Le socle du front, pour que la page hors-ligne garde la charte meme sans
@@ -21,6 +22,7 @@ const SOCLE = [
   '/static/css/tokens.css',
   '/static/css/app.css',
   '/static/img/icon-192.png',
+  '/static/img/logo-emblem.webp',
 ];
 
 self.addEventListener('install', (event) => {
@@ -58,6 +60,7 @@ function pageHorsLigne() {
 <body>
 <div class="content">
   <div class="empty">
+    <img src="/static/img/logo-emblem.webp" alt="" width="64" height="64">
     <div class="stack-2" style="align-items:center">
       <p class="empty__title">Pas de connexion</p>
       <p class="empty__text">ManaMind lit votre collection et vos decks sur le
