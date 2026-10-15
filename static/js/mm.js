@@ -618,7 +618,8 @@
 
     return `
       <a class="brand" href="/">
-        <span class="brand__mark">${MM.icons.sparkle}</span>
+        <img class="brand__mark" src="/static/img/logo-emblem.webp" alt=""
+             width="34" height="34">
         <span class="brand__name">ManaMind</span>
       </a>
       <nav class="nav" aria-label="Navigation principale">${groups}</nav>

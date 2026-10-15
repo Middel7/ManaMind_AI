@@ -48,7 +48,7 @@
 
 <main class="legal">
   <a class="legal__brand" href="/">
-    <span class="brand__mark" id="mark"></span>
+    <img class="brand__mark" src="/static/img/logo-emblem.webp" alt="" width="34" height="34">
     <span class="brand__name">ManaMind</span>
   </a>
 
@@ -153,7 +153,6 @@
 <script src="/static/js/mm.js"></script>
 <script>
 (async () => {
-  MM.el('#mark').innerHTML = MM.icons.sparkle;
   // L'adresse de contact vit dans le .env du serveur : la changer ne demande
   // aucune modification de cette page.
   try {
