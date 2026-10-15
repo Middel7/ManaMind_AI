@@ -258,6 +258,44 @@ async def api_update_profile(request: Request) -> Response:
     return _json_response({"ok": True, "profile": _load_profile(user["id"])})
 
 
+@router.delete("/api/profile")
+async def api_delete_account(request: Request) -> Response:
+    """Supprime le compte de l'utilisateur connecté, et tout ce qui lui appartient.
+
+    C'est le droit à l'effacement que promet la politique de confidentialité :
+    il s'exerce depuis le profil, sans passer par l'administrateur. Les tables
+    user_* sont en ON DELETE CASCADE, la collection et les decks partent avec
+    le compte. L'adresse e-mail est redemandée, comme dans l'administration,
+    pour qu'un clic égaré ne suffise pas.
+    """
+    user = _user(request)
+    body = await request.json()
+    confirm = (body.get("confirm_email") or "").strip().lower()
+    if confirm != (user.get("email") or "").lower():
+        return _json_response(
+            {"error": "L'adresse saisie ne correspond pas à votre compte."}, status_code=400)
+
+    with SessionLocal() as session:
+        # Le dernier administrateur ne peut pas partir seul : le site resterait
+        # sans personne pour le gérer.
+        if user.get("role") == "admin":
+            others = session.execute(text("""
+                SELECT count(*) FROM users
+                WHERE role = 'admin' AND is_active AND id <> :uid
+            """), {"uid": user["id"]}).scalar_one()
+            if others == 0:
+                return _json_response(
+                    {"error": "Vous êtes le dernier administrateur : nommez-en un autre "
+                              "avant de supprimer votre compte."},
+                    status_code=400)
+        session.execute(text("DELETE FROM users WHERE id = :uid"), {"uid": user["id"]})
+        session.commit()
+
+    resp = _json_response({"ok": True})
+    resp.delete_cookie(key=COOKIE_NAME, path="/")
+    return resp
+
+
 @router.post("/api/profile/collection-checked")
 def api_mark_checked(request: Request) -> Response:
     """L'utilisateur declare sa collection a jour : remet le compteur a zero."""

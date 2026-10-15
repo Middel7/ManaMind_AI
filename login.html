@@ -355,7 +355,10 @@
                  placeholder="vous@exemple.com" autofocus>
         </div>
         <div class="field">
-          <label class="label" for="password">Mot de passe</label>
+          <div class="between">
+            <label class="label" for="password">Mot de passe</label>
+            <a class="xs" href="/mot-de-passe" style="color:var(--accent)">Mot de passe oublié ?</a>
+          </div>
           <input class="input" id="password" type="password" required
                  autocomplete="current-password" placeholder="••••••••">
         </div>
@@ -367,9 +370,12 @@
         </button>
       </form>
 
-      <p class="xs dim auth__foot">
+      <p class="xs dim auth__foot" id="foot">
         L'accès se fait sur invitation. Si vous avez reçu un lien d'invitation,
         ouvrez-le pour créer votre compte.
+      </p>
+      <p class="xs dim" style="margin:0">
+        <a href="/mentions-legales">Mentions légales et confidentialité</a>
       </p>
     </div>
 
@@ -413,6 +419,18 @@
     });
     champ.insertAdjacentElement('afterend', oeil);
   });
+
+  // Inscriptions ouvertes : le pied de carte invite a creer un compte au lieu
+  // d'expliquer le regime des invitations. Sans reponse, le texte d'origine
+  // reste en place.
+  fetch('/auth/options')
+    .then((response) => response.json())
+    .then((options) => {
+      if (!options.registrations_open) return;
+      MM.el('#foot').innerHTML = 'Pas encore de compte ? '
+        + '<a href="/register" style="color:var(--accent)">Créer un compte</a>';
+    })
+    .catch(() => {});
 
   const form = MM.el('#form');
   const error = MM.el('#error');

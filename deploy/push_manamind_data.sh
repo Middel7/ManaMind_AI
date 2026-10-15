@@ -48,7 +48,7 @@ MATERIALIZED_VIEW=card_min_price
 declare -a PROTECTED_TABLES=(
   users user_profiles user_collection user_deck_cards
   user_preferred_printings user_hidden_moves user_opened_sets
-  user_moxfield_decks invitations
+  user_moxfield_decks invitations password_resets
 )
 
 for published in "${PUBLISHED_TABLES[@]}"; do
