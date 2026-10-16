@@ -207,8 +207,11 @@
       // Les trois chargements sont indépendants : le prix de la carte et la
       // liste de vos decks n'ont pas à attendre la suggestion, ni l'inverse.
       const [data] = await Promise.all([
+        // Le seuil part au serveur : applique apres coup aux dix premiers,
+        // presque tous des commandants d'un seul deck, il vidait la liste.
         MM.api.get('/api/commander-suggest' + MM.api.qs({
           card: state.card.name, top: 10, mode: state.mode,
+          min_decks: state.mode === 'all' && state.significant ? MIN_DECKS : '',
         })),
         ensurePrice(),
         decksReady,
