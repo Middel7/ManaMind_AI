@@ -70,6 +70,19 @@ def load_allowed_commanders(user_id: int = 1) -> set[str]:
     return result
 
 
+def card_lookup_names(card_name: str) -> list[str]:
+    """Les écritures sous lesquelles une carte peut figurer dans les statistiques.
+
+    Les decks scrapés nomment une carte recto-verso par sa seule face avant
+    (« Wandering Archaic »), alors que le catalogue et l'autocomplétion donnent
+    le nom complet (« Wandering Archaic // Explore the Vastlands »). Chercher
+    l'un sans l'autre ne trouvait rien pour près de 2 800 cartes.
+    """
+    name = card_name.strip()
+    front = name.split(" // ")[0].strip()
+    return [name] if front == name else [name, front]
+
+
 def suggest_commanders(card_name: str, top_n: int = 3) -> list[dict]:
     """
     Retourne les `top_n` commandants qui jouent le plus souvent `card_name`,
@@ -89,16 +102,22 @@ def suggest_commanders(card_name: str, top_n: int = 3) -> list[dict]:
             _text("""
                 SELECT commander, inclusion_rate, decks_with_card, total_decks
                 FROM deck_stat_commander
-                WHERE card_name = :card
+                WHERE card_name = ANY(:names)
                 ORDER BY inclusion_rate DESC
             """),
-            {"card": card_name},
+            {"names": card_lookup_names(card_name)},
         ).fetchall()
 
+    seen: set[str] = set()
     for row in rows:
         cmd_norm = _normalize(row.commander)
         if cmd_norm not in allowed_norm:
             continue
+        # Les deux écritures peuvent coexister pour un même commandant : on
+        # garde la première, la plus haute puisque la liste est triée.
+        if cmd_norm in seen:
+            continue
+        seen.add(cmd_norm)
         commander_display = allowed_norm[cmd_norm]
         if _deck_contains_card(commander_display, card_norm):
             continue
