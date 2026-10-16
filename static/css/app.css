@@ -151,10 +151,10 @@ table { border-collapse: collapse; width: 100%; }
 }
 
 /* L'embleme du logo remplace la pastille doree : il porte deja l'or et les
-   cinq couleurs de mana, un fond ou une ombre en plus l'alourdiraient. 34 px,
-   la plus petite taille ou les cinq gemmes restent distinctes. */
+   cinq couleurs de mana, un fond ou une ombre en plus l'alourdiraient. 46 px :
+   a 34 px le logo paraissait trop petit, ses gemmes a peine distinctes. */
 .brand__mark {
-  width: 34px; height: 34px;
+  width: 46px; height: 46px;
   flex-shrink: 0;
   object-fit: contain;
 }
