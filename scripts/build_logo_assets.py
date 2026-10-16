@@ -76,8 +76,8 @@ def main() -> None:
 
     emblem = _emblem(trans, alpha)
 
-    # Interface : 96 px pour une marque affichée à 32 px, net sur écran dense.
-    emblem.resize((96, 96), Image.LANCZOS).save(OUT / "logo-emblem.webp", quality=90)
+    # Interface : 128 px pour une marque affichée à 46 px, nette sur écran dense.
+    emblem.resize((128, 128), Image.LANCZOS).save(OUT / "logo-emblem.webp", quality=90)
     emblem.resize((32, 32), Image.LANCZOS).save(OUT / "favicon-32.png", optimize=True)
 
     # Icônes : l'emblème du fond noir est le même dessin, mais ses bords
