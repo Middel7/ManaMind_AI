@@ -619,7 +619,7 @@
     return `
       <a class="brand" href="/">
         <img class="brand__mark" src="/static/img/logo-emblem.webp" alt=""
-             width="46" height="46">
+             width="62" height="62">
         <span class="brand__name">ManaMind</span>
       </a>
       <nav class="nav" aria-label="Navigation principale">${groups}</nav>
