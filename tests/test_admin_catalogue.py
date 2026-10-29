@@ -33,8 +33,13 @@ def test_arreter_exige_un_administrateur(client: TestClient):
     assert r.status_code in (401, 403), f"Attendu 401/403, obtenu {r.status_code}: {r.text}"
 
 
-def test_les_trois_actions_sont_declarees():
-    assert set(_actions()) == {"pull", "tokens", "import"}
+def test_les_actions_sont_declarees():
+    assert set(_actions()) == {"pull", "tokens", "import", "precons"}
+
+
+def test_la_mise_a_jour_des_precons_est_disponible_partout():
+    """Elle ne dépend que de MTGJSON : serveur compris, elle doit pouvoir partir."""
+    assert _actions()["precons"]["available"] is True
 
 
 def test_une_action_indisponible_dit_pourquoi():

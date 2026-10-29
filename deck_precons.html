@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>ManaMind — Decks préconstruits</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#08080C">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ManaMind">
+<link rel="icon" href="/static/img/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/app.css">
+<style>
+  /* Meme grille que Mes decks : un precon ajoute y retrouvera sa place, et
+     l'oeil reconnait la tuile d'un deck des cette page. */
+  .precons-page .precon-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--sp-4);
+  }
+  .precons-page .precon-grid > * { min-width: 0; }
+
+  /* Une annee par bloc : on cherche un precon par sa sortie (« celui de
+     l'an dernier ») autant que par son nom. */
+  .precons-page .precon-year { margin: var(--sp-8) 0 var(--sp-3); }
+  .precons-page .precon-year:first-child { margin-top: 0; }
+
+  /* L'illustration du commandant porte la couleur de la tuile, comme sur Mes
+     decks ; le voile garde le texte lisible sur une image claire. */
+  .precons-page .precon-tile {
+    position: relative;
+    display: flex; flex-direction: column;
+    min-height: 200px;
+    border-radius: var(--r-lg);
+    border: 1px solid var(--line);
+    overflow: hidden;
+    isolation: isolate;
+    transition: border-color var(--dur) var(--ease);
+  }
+  .precons-page .precon-tile:hover { border-color: var(--line-accent); }
+  .precons-page .precon-tile__art {
+    position: absolute; inset: 0; z-index: -2;
+    background-size: cover; background-position: center 26%;
+    opacity: 0.5;
+  }
+  .precons-page .precon-tile::after {
+    content: ""; position: absolute; inset: 0; z-index: -1;
+    background: linear-gradient(0deg, var(--bg-raised) 30%, rgba(14,14,21,0.45) 80%,
+                                rgba(14,14,21,0.2) 100%);
+  }
+  .precons-page .precon-tile__body {
+    margin-top: auto;
+    display: flex; flex-direction: column; gap: var(--sp-1);
+    padding: var(--sp-4) var(--sp-5);
+  }
+  .precons-page .precon-tile__foot {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: var(--sp-2); flex-wrap: wrap;
+    margin-top: var(--sp-3);
+  }
+</style>
+</head>
+<body>
+
+<div id="page" class="precons-page">
+  <div class="toolbar">
+    <div class="search toolbar__search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+           stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+      <input class="input" id="search" type="search"
+             placeholder="Rechercher un deck, un commandant ou une édition…">
+    </div>
+  </div>
+
+  <p class="small muted" style="margin-bottom:var(--sp-5)">
+    Les decks Commander vendus tout faits, avec leur liste officielle. Ajoutez le
+    vôtre en un clic au lieu de saisir ses cent cartes.
+  </p>
+
+  <div id="results">
+    <div class="precon-grid">
+      <div class="skeleton" style="height:200px"></div>
+      <div class="skeleton" style="height:200px"></div>
+      <div class="skeleton" style="height:200px"></div>
+      <div class="skeleton" style="height:200px"></div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/mm.js"></script>
+<script>
+(async () => {
+  const user = await MM.boot({ title: 'Decks préconstruits', nav: 'decks', back: '/decks' });
+  if (!user) return;
+
+  const state = { precons: [], search: '' };
+
+  try {
+    state.precons = (await MM.api.get('/api/precons')).precons;
+  } catch (err) {
+    MM.el('#results').innerHTML = MM.empty({
+      icon: 'warning', title: 'Chargement impossible', text: err.message });
+    return;
+  }
+
+  // Sans accents ni casse, comme la recherche de Mes decks.
+  const fold = (value) => String(value || '').normalize('NFD')
+    .replace(/[̀-ͯ]/g, '').toLowerCase();
+
+  function tile(precon) {
+    const art = precon.lead_scryfall_id ? MM.scryfallArt(precon.lead_scryfall_id) : null;
+    return `
+      <article class="precon-tile">
+        ${art ? `<div class="precon-tile__art" style="background-image:url('${MM.esc(art)}')"></div>` : ''}
+        <div class="precon-tile__body">
+          <p class="h3 truncate" title="${MM.esc(precon.name)}">${MM.esc(precon.name)}</p>
+          <p class="xs muted truncate" title="${MM.esc(precon.commander)}">
+            ${MM.esc(precon.commander)}</p>
+          <p class="xs dim truncate">
+            ${MM.img.pips(precon.colors)}
+            ${MM.esc(precon.set_name)} · ${MM.esc(MM.fmt.date(precon.release_date))}</p>
+          <div class="precon-tile__foot">
+            ${precon.added
+              ? '<span class="badge badge--ok">Déjà dans vos decks</span>'
+              : `<span class="xs dim">${MM.fmt.int(precon.card_count)} cartes</span>`}
+            <button class="btn btn--sm ${precon.added ? '' : 'btn--primary'}"
+                    data-add="${MM.esc(precon.id)}">
+              ${precon.added ? 'Ajouter encore' : 'Ajouter à mes decks'}</button>
+          </div>
+        </div>
+      </article>`;
+  }
+
+  function render() {
+    if (!state.precons.length) {
+      MM.el('#results').innerHTML = MM.empty({
+        icon: 'decks',
+        title: 'Aucun deck préconstruit pour le moment',
+        text: "La liste des decks préconstruits n'a pas encore été importée. "
+          + "L'administrateur peut la charger depuis l'écran d'administration, onglet Catalogue.",
+      });
+      return;
+    }
+
+    const term = fold(state.search);
+    const shown = state.precons.filter((p) => !term
+      || fold(p.name).includes(term) || fold(p.commander).includes(term)
+      || fold(p.set_name).includes(term) || fold(p.set_code).includes(term));
+
+    if (!shown.length) {
+      MM.el('#results').innerHTML = MM.empty({
+        icon: 'search', title: 'Aucun deck trouvé',
+        text: `Aucun deck préconstruit ne correspond à « ${state.search} ».` });
+      return;
+    }
+
+    // Les precons arrivent du plus recent au plus ancien : un bloc par annee.
+    const years = [];
+    shown.forEach((precon) => {
+      const year = (precon.release_date || '').slice(0, 4) || 'Sans date';
+      if (!years.length || years[years.length - 1].year !== year) years.push({ year, list: [] });
+      years[years.length - 1].list.push(precon);
+    });
+
+    MM.el('#results').innerHTML = years.map(({ year, list }) => `
+      <h2 class="h3 precon-year">${MM.esc(year)}
+        <span class="xs dim">${MM.fmt.plural(list.length, 'deck')}</span></h2>
+      <div class="precon-grid">${list.map(tile).join('')}</div>`).join('');
+  }
+
+  MM.el('#search').addEventListener('input', (event) => {
+    state.search = event.target.value.trim();
+    render();
+  });
+
+  MM.el('#results').addEventListener('click', (event) => {
+    const button = event.target.closest('[data-add]');
+    if (!button) return;
+    const precon = state.precons.find((p) => p.id === button.dataset.add);
+    if (precon) openAdd(precon);
+  });
+
+  function openAdd(precon) {
+    const dialog = MM.modal({
+      title: `Ajouter « ${precon.name} »`,
+      body: `
+        <div class="stack">
+          <p class="muted">Le deck rejoint vos decks avec ses
+            ${MM.fmt.int(precon.card_count)} cartes, autour de
+            ${MM.esc(precon.commander)}. Vous pourrez ensuite le modifier
+            comme n'importe quel deck.</p>
+          ${precon.added ? `<p class="small" style="color:var(--accent)">Ce deck est déjà
+            dans vos decks : l'ajouter encore en crée une seconde copie.</p>` : ''}
+          <label class="switch">
+            <input type="checkbox" id="toCollection" checked>
+            <span class="switch__track"></span>
+            <span class="small">J'ai ce deck en main : ajouter ses cartes à ma collection</span>
+          </label>
+          <p class="xs dim">Les cartes entrent dans votre collection avec leur édition
+            exacte, foils compris, et les jetons de la boîte sont notés comme mis de
+            côté pour ce deck.</p>
+          <p class="small" id="addError" style="color:var(--danger)" hidden></p>
+        </div>`,
+      footer: `
+        <button class="btn" data-cancel>Annuler</button>
+        <button class="btn btn--primary" data-ok>Ajouter à mes decks</button>`,
+    });
+
+    dialog.root.addEventListener('click', async (event) => {
+      if (event.target.closest('[data-cancel]')) { dialog.close(); return; }
+      const ok = event.target.closest('[data-ok]');
+      if (!ok) return;
+      ok.disabled = true;
+      ok.innerHTML = '<span class="spinner"></span> Ajout…';
+      try {
+        const result = await MM.api.post(`/api/precons/${encodeURIComponent(precon.id)}/add`, {
+          add_to_collection: dialog.root.querySelector('#toCollection').checked,
+        });
+        MM.toast.ok(result.collection_copies
+          ? `Deck ajouté, et ${MM.fmt.plural(result.collection_copies, 'carte')} dans votre collection.`
+          : 'Deck ajouté à vos decks.');
+        location.href = `/decks/${encodeURIComponent(result.deck_id)}`;
+      } catch (err) {
+        const error = dialog.root.querySelector('#addError');
+        error.hidden = false;
+        error.textContent = err.message;
+        ok.disabled = false;
+        ok.textContent = 'Ajouter à mes decks';
+      }
+    });
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
