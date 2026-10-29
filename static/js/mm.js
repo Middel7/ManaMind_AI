@@ -1090,13 +1090,18 @@
    *   note    {string}   mention de l'ecran (frequence, score, motif…)
    *   muted   {boolean}  vignette grisee
    *   market  {boolean}  proposer l'achat et la vente (vrai par defaut)
+   *   buylist {boolean|null} remplace « Vendre » par l'ajout a la buylist ;
+   *                       vrai si la carte y est deja. null (par defaut) garde
+   *                       « Vendre » : vendre une carte qu'on veut acquerir n'a
+   *                       pas de sens, l'ecran qui en propose le sait.
    *   commander {boolean} proposer la recherche de commandant (vrai par defaut ;
    *                       faux sur l'ecran qui la rend deja, ou le lien
    *                       ramenerait a la page ouverte)
    */
   MM.cardTile = function (item, options = {}) {
     const { context = 'collection', deckQty = null, actions = [],
-            note = '', muted = false, market = true, commander = true } = options;
+            note = '', muted = false, market = true, commander = true,
+            buylist = null } = options;
     const facts = cardFacts(item);
     const finish = MM.fmt.finish(item.finish);
 
@@ -1173,10 +1178,18 @@
                  href="${esc(MM.market.buy(facts.name))}"
                  title="Voir les offres d'achat de ${esc(facts.name)} sur Cardmarket"
                 >Acheter</a>
-              <a class="btn btn--sm" target="_blank" rel="noopener"
-                 href="${esc(MM.market.sell(facts.name))}"
-                 title="Proposer ${esc(facts.name)} à la vente sur RELIC-TRADE"
-                >Vendre</a>
+              ${buylist === null ? `
+                <a class="btn btn--sm" target="_blank" rel="noopener"
+                   href="${esc(MM.market.sell(facts.name))}"
+                   title="Proposer ${esc(facts.name)} à la vente sur RELIC-TRADE"
+                  >Vendre</a>` : `
+                <button class="btn btn--sm ${buylist ? 'is-done' : ''}" type="button"
+                        data-act="buylist" data-card="${esc(facts.name)}"
+                        aria-pressed="${buylist ? 'true' : 'false'}"
+                        title="${buylist
+                          ? `Retirer ${esc(facts.name)} de votre buylist`
+                          : `Ajouter ${esc(facts.name)} à votre buylist`}"
+                  >${buylist ? 'Dans ma buylist' : 'Ajouter à ma buylist'}</button>`}
             </span>` : ''}
 
           ${commander ? `

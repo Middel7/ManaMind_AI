@@ -648,6 +648,18 @@ async def api_buylist_set_decks(request: Request) -> Response:
     return _json_response({"ok": True, "excluded": count})
 
 
+@router.get("/api/v2/buylist/pinned")
+def api_buylist_pinned(request: Request) -> Response:
+    """Cartes ajoutées à la main à la buylist.
+
+    Lecture légère, sans recalcul de la buylist : l'écran d'analyse n'en a
+    besoin que pour marquer les cartes déjà ajoutées.
+    """
+    from manamind.buylist import list_pinned
+
+    return _json_response({"cards": list_pinned(_user(request)["id"])})
+
+
 @router.post("/api/v2/buylist/pinned")
 async def api_buylist_pin(request: Request) -> Response:
     """Ajoute une carte à la buylist, où elle reste jusqu'à son retrait."""
