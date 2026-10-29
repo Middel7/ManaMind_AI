@@ -1154,6 +1154,8 @@ def api_commander_suggest(
     card: str = Query(..., description="Nom de la carte à rechercher"),
     top: int = Query(default=3, ge=1, le=10),
     mode: str = Query(default="mine", description="'mine' = mes commandants, 'all' = tous"),
+    min_decks: int = Query(default=0, ge=0, le=10000,
+                           description="'all' : écarter les commandants ayant moins de decks"),
 ) -> JSONResponse:
     """
     mode='mine' : parmi les commandants de data/My_commanders.txt (comportement original)
@@ -1163,7 +1165,9 @@ def api_commander_suggest(
     des illustrations : elle a donc besoin de savoir qui demande.
     """
     from manamind.auth import COOKIE_NAME, get_current_user
-    from manamind.card_commander_matcher import suggest_commanders, load_allowed_commanders
+    from manamind.card_commander_matcher import (
+        card_lookup_names, load_allowed_commanders, suggest_commanders,
+    )
     from sqlalchemy import text as _text
 
     user = get_current_user(mm_token=request.cookies.get(COOKIE_NAME))
@@ -1203,7 +1207,21 @@ def api_commander_suggest(
     my_commanders = {_norm(c) for c in load_allowed_commanders()}
 
     with SessionLocal() as session:
+        # Une carte recto-verso figure dans les statistiques sous sa face avant
+        # seule : on la cherche sous ses deux noms, et un commandant qui aurait
+        # les deux ne garde que la ligne la mieux fournie (DISTINCT ON).
+        # Le seuil de decks s'applique ici, avant le LIMIT : filtré après coup
+        # dans la page, il vidait la liste, dont les premières places revenaient
+        # toujours à des commandants d'un seul deck à 100 %.
         rows = session.execute(_text("""
+            WITH dsc AS (
+                SELECT DISTINCT ON (commander)
+                       commander, inclusion_rate, decks_with_card, total_decks
+                FROM deck_stat_commander
+                WHERE card_name = ANY(:names)
+                  AND total_decks >= :min_decks
+                ORDER BY commander, decks_with_card DESC
+            )
             SELECT dsc.commander, dsc.inclusion_rate, dsc.decks_with_card, dsc.total_decks,
                    (
                      SELECT p2.image_normal
@@ -1226,12 +1244,11 @@ def api_commander_suggest(
                               p2.released_at DESC NULLS LAST, p2.id
                      LIMIT 1
                    ) AS image_url
-            FROM deck_stat_commander dsc
-            WHERE dsc.card_name = :card
-            GROUP BY dsc.commander, dsc.inclusion_rate, dsc.decks_with_card, dsc.total_decks
+            FROM dsc
             ORDER BY dsc.inclusion_rate DESC
             LIMIT :top
-        """), {"card": card, "top": top, "uid": user["id"]}).fetchall()
+        """), {"names": card_lookup_names(card), "top": top, "uid": user["id"],
+               "min_decks": min_decks}).fetchall()
 
     suggestions = []
     for row in rows:
