@@ -243,6 +243,7 @@ from manamind.routers.engine import router as engine_router
 from manamind.routers.feedback import router as feedback_router
 from manamind.routers.import_deck import router as import_router
 from manamind.routers.pages import router as pages_router
+from manamind.routers.precons import router as precons_router
 from manamind.routers.scrape import router as scrape_router
 
 app.include_router(admin_catalogue_router)
@@ -258,6 +259,7 @@ app.include_router(engine_router)
 app.include_router(feedback_router)
 app.include_router(import_router)
 app.include_router(pages_router)
+app.include_router(precons_router)
 app.include_router(scrape_router)
 
 

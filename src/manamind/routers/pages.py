@@ -101,6 +101,11 @@ def page_deck_analyze() -> FileResponse:
     return _page("deck_analyze.html")
 
 
+@router.get("/decks/precons")
+def page_deck_precons() -> FileResponse:
+    return _page("deck_precons.html")
+
+
 @router.get("/decks/{deck_id}")
 def page_deck_detail(deck_id: str) -> FileResponse:
     return _page("deck_detail.html")

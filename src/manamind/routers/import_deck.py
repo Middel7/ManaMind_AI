@@ -319,19 +319,26 @@ def _save_to_deck(user_id: int, commander: str, deck_name: str, entries) -> tupl
     # Sérialisation des cartes dans user_deck_cards. Le ou les commandants en
     # font partie : c'est ainsi que l'écran du deck les affiche, et qu'on peut
     # désigner le second d'une paire. Le deck compte alors bien ses 100 cartes.
-    cards: list[tuple[str, int]] = []
+    # Une ligne par nom : user_deck_cards n'en admet qu'une, et une liste qui
+    # cite deux fois la même carte (deux impressions d'un terrain de base)
+    # faisait échouer tout l'import sur la contrainte d'unicité.
+    per_name: dict[str, int] = {}
     for entry in entries:
         card_name = entry.canonical_name or entry.raw_name
         if not card_name:
             continue
-        cards.append((card_name, entry.quantity))
+        per_name[card_name] = per_name.get(card_name, 0) + entry.quantity
+    cards = list(per_name.items())
 
     imported = 0
     skipped = 0
     errors: list[str] = []
 
     try:
-        set_deck_cards(user_id=user_id, commander=commander, cards=cards)
+        # Le deck_id, et non le seul commandant : sans lui, set_deck_cards
+        # visait le plus ancien deck du même commandant, en écrasait les cartes
+        # et laissait vide le deck qu'on venait de créer.
+        set_deck_cards(user_id=user_id, commander=commander, cards=cards, deck_id=deck_id)
         imported = len(cards)
     except Exception as exc:
         errors.append(f"Error saving cards: {exc}")

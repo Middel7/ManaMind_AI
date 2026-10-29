@@ -26,6 +26,7 @@ import logging
 import os
 import shutil
 import subprocess
+import sys
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
@@ -75,7 +76,7 @@ def _mtgdb_python(depot: Path) -> Path | None:
     return None
 
 
-# ── Les trois actions ────────────────────────────────────────────────────────
+# ── Les actions ──────────────────────────────────────────────────────────────
 
 def _actions() -> dict[str, dict]:
     """Decrit les actions et dit, pour chacune, si cette machine sait la faire.
@@ -153,6 +154,24 @@ def _actions() -> dict[str, dict]:
         # Deux heures mesurees sur le poste ; quatre de plafond, pour qu'un
         # reseau lent ne fasse pas tuer un import aux trois quarts fait.
         "timeout": 4 * 3600,
+    }
+
+    # ── Decks preconstruits ──────────────────────────────────────────────────
+    # Disponible partout, serveur compris : il ne lui faut qu'un acces a
+    # MTGJSON, et le module voyage dans l'image (src/, pas scripts/).
+    actions["precons"] = {
+        "label": "Mettre à jour les decks préconstruits",
+        "description": "Télécharge depuis MTGJSON les decks Commander officiels qui "
+                       "manquent encore. Plusieurs minutes la première fois, quelques "
+                       "secondes ensuite.",
+        "available": True,
+        "reason": "",
+        "command": [sys.executable, "-m", "manamind.precons"],
+        "cwd": str(ROOT),
+        # Le module est lance hors du serveur : il lui faut trouver le paquet
+        # manamind, que server.py ajoute lui-meme a son chemin d'import.
+        "env": {"PYTHONPATH": str(ROOT / "src")},
+        "timeout": 3600,
     }
 
     return actions
