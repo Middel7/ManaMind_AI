@@ -26,3 +26,7 @@ def test_ajouter_une_carte_exige_une_session(client: TestClient):
 def test_retirer_une_carte_exige_une_session(client: TestClient):
     r = client.delete("/api/v2/buylist/pinned", params={"card_name": "Sol Ring"})
     assert r.status_code == 401, f"Attendu 401, obtenu {r.status_code}: {r.text}"
+
+
+def test_lire_les_cartes_ajoutees_exige_une_session(client):
+    assert client.get("/api/v2/buylist/pinned").status_code == 401

@@ -1360,7 +1360,8 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
 .mtg-card__actions { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
 .mtg-card__actions .btn,
 .mtg-card__market .btn { flex: 1; justify-content: center; }
-.mtg-card__actions .btn.is-done { border-color: var(--line-accent); color: var(--accent); }
+.mtg-card__actions .btn.is-done,
+.mtg-card__market .btn.is-done { border-color: var(--line-accent); color: var(--accent); }
 
 @media (max-width: 860px) {
   .card-grid { --card-min: 152px; }

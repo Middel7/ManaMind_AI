@@ -224,6 +224,13 @@ def _pinned(session, user_id: int) -> list[dict]:
     return [{"key": r.card_key, "card_name": r.card_name} for r in rows]
 
 
+def list_pinned(user_id: int) -> list[str]:
+    """Noms des cartes ajoutées à la main, pour qu'un écran sache lesquelles
+    il présente déjà comme étant dans la buylist."""
+    with SessionLocal() as session:
+        return [entry["card_name"] for entry in _pinned(session, user_id)]
+
+
 def pin_card(user_id: int, card_name: str) -> str | None:
     """Ajoute une carte à la main. Renvoie son nom tel que le catalogue l'écrit,
     ou None si le catalogue ne la connaît pas."""

@@ -529,10 +529,20 @@
 
   /** Vignette d'une carte proposee : le reglage « dans le deck » applique la
    *  suggestion, dans un sens comme dans l'autre. */
+  // Cartes deja ajoutees a la main a la buylist, en minuscules. Une carte
+  // proposee en ajout est une carte a acquerir : le bouton « Vendre » y cede la
+  // place a la buylist. Sans reponse, toutes s'affichent « a ajouter ».
+  const pinned = new Set();
+  try {
+    (await MM.api.get('/api/v2/buylist/pinned')).cards
+      .forEach((name) => pinned.add(name.toLowerCase()));
+  } catch { /* la buylist reste utilisable, son etat initial seul manque */ }
+
   const tile = (row, kind) => MM.cardTile(
     { ...(resolved[row.name] || {}), card_name: row.name },
     {
       context: canEdit ? 'deck' : null,
+      buylist: kind === 'add' ? pinned.has(row.name.toLowerCase()) : null,
       // Un ajout propose part de zero ; un retrait porte sur une carte du deck.
       deckQty: kind === 'add' ? 0 : 1,
       note: row.frequency
@@ -676,6 +686,36 @@
       MM.toast.ok(`${event.detail.card_name} ajoutée à ${deckInfo.name || 'votre deck'}.`);
     });
   }
+
+  // Ajout a la buylist, et retrait au second clic : une carte ajoutee par
+  // erreur se reprend sans quitter l'analyse.
+  MM.el('#panel-add').addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-act="buylist"]');
+    if (!button) return;
+    const name = button.dataset.card;
+    const inList = pinned.has(name.toLowerCase());
+    button.disabled = true;
+    try {
+      if (inList) {
+        await MM.api.del('/api/v2/buylist/pinned' + MM.api.qs({ card_name: name }));
+        pinned.delete(name.toLowerCase());
+        MM.toast.ok(`${name} retirée de votre buylist.`);
+      } else {
+        await MM.api.post('/api/v2/buylist/pinned', { card_name: name });
+        pinned.add(name.toLowerCase());
+        MM.toast.ok(`${name} ajoutée à votre buylist.`);
+      }
+      const now = !inList;
+      button.classList.toggle('is-done', now);
+      button.setAttribute('aria-pressed', String(now));
+      button.textContent = now ? 'Dans ma buylist' : 'Ajouter à ma buylist';
+      button.title = now ? `Retirer ${name} de votre buylist` : `Ajouter ${name} à votre buylist`;
+    } catch (err) {
+      MM.toast.error(err.message);
+    } finally {
+      button.disabled = false;
+    }
+  });
 
   MM.el('#tabs').addEventListener('click', (event) => {
     const chip = event.target.closest('.chip');
