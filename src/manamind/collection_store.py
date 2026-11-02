@@ -122,17 +122,37 @@ _ENRICH_SQL = """
 # coute une carte a acquerir n'est pas ce que vaut celle que l'on a.
 #
 # Une edition qui n'existe qu'en foil (les numerotees « 181z », par exemple)
-# se cote en foil, quelle que soit la finition enregistree : sa cote normale
-# n'existe pas, et la meilleure offre affichait alors 1 500 EUR pour une carte
-# dont la tendance est de 450.
+# n'a pas de tendance normale : sa tendance foil passe avant la meilleure
+# offre, qui affichait 1 500 EUR pour une carte dont la tendance est de 450.
+# La regle se lit dans les cotes seules : la colonne des finitions manque au
+# catalogue de production.
 _UNIT_PRICE_SQL = """
     COALESCE(
         CASE WHEN uc.finish <> 'nonfoil'
-               OR NOT ('nonfoil' = ANY(COALESCE(pd.finishes, ARRAY['nonfoil'])))
              THEN COALESCE(NULLIF(px.foil_trend, 0), NULLIF(px.foil_low, 0)) END,
-        NULLIF(px.trend_price, 0), NULLIF(px.low_price, 0),
+        NULLIF(px.trend_price, 0), NULLIF(px.foil_trend, 0),
+        NULLIF(px.low_price, 0), NULLIF(px.foil_low, 0),
         cm.price)
 """
+
+_FINISHES_COLUMN: bool | None = None
+
+
+def printing_finishes_sql(session) -> str:
+    """Expression SQL des finitions d'une impression ``p``.
+
+    La colonne ``finishes`` n'existe que dans le catalogue écrit par MTG-DB sur
+    le poste ; la base de production ne l'a pas, et la lire y faisait tomber
+    l'accueil et la collection en erreur. Sans elle, l'expression vaut NULL.
+    """
+    global _FINISHES_COLUMN
+    if _FINISHES_COLUMN is None:
+        _FINISHES_COLUMN = bool(session.execute(text("""
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'scryfall_card_printings' AND column_name = 'finishes'
+        """)).scalar())
+    return "p.finishes" if _FINISHES_COLUMN else "NULL::text[]"
+
 
 _RARITY_RANK_SQL = """
     CASE COALESCE(pd.rarity, pf.rarity)
@@ -859,9 +879,10 @@ def reassign_item(
 
             # Une finition que l'édition n'offre pas cède la place à la
             # sienne : un exemplaire non foil d'une édition toute foil n'existe
-            # pas, et sa cote se lirait dans le vide.
-            offered = session.execute(text("""
-                SELECT finishes FROM scryfall_card_printings WHERE id = :pid
+            # pas. Seul le catalogue du poste connaît les finitions.
+            offered = session.execute(text(f"""
+                SELECT {printing_finishes_sql(session)}
+                FROM scryfall_card_printings p WHERE p.id = :pid
             """), {"pid": target["pid"]}).scalar()
             if offered and target["finish"] not in offered:
                 target["finish"] = _clean_finish(offered[0])
