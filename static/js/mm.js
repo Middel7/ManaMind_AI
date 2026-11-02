@@ -388,7 +388,8 @@
     const titleId = `mmModalTitle${(modalSeq += 1)}`;
     const overlay = node(`
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="${titleId}">
-        <div class="modal__box ${wide ? 'modal__box--wide' : ''}" tabindex="-1">
+        <div class="modal__box ${wide === 'xl' ? 'modal__box--wide modal__box--xl'
+          : wide ? 'modal__box--wide' : ''}" tabindex="-1">
           <div class="modal__head">
             <h2 class="h3" id="${titleId}">${esc(title || '')}</h2>
             <button class="btn btn--ghost btn--icon" data-close aria-label="Fermer">
@@ -1300,7 +1301,7 @@
    */
   MM.cardDetail = async function (name, options = {}) {
     const dialog = MM.modal({
-      title: name, wide: true,
+      title: name, wide: 'xl',
       body: '<p class="muted">Chargement…</p>',
     });
 
