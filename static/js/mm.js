@@ -1000,17 +1000,31 @@
       input.setAttribute('aria-activedescendant', options[cursor].id);
     }
 
+    // Numero de la derniere recherche lancee. Les reponses n'arrivent pas
+    // dans l'ordre : celle d'un debut de saisie (« tor ») peut revenir apres
+    // celle du mot entier et la remplacer, montrant des cartes sans rapport
+    // avec ce qui est tape. Seule la derniere a le droit de s'afficher.
+    let lastQuery = 0;
+
     const search = debounce(async (term) => {
+      const query = (lastQuery += 1);
       try {
         const data = await MM.api.get(
           `/api/v2/cards/suggest?q=${encodeURIComponent(term)}&limit=8`);
+        if (query !== lastQuery || input.value.trim() !== term) return;
         open((data && data.cards) || []);
-      } catch { close(); }
+      } catch {
+        if (query === lastQuery) close();
+      }
     }, 180);
 
     input.addEventListener('input', () => {
       const term = input.value.trim();
-      if (term.length < minChars) return close();
+      if (term.length < minChars) {
+        // Une reponse encore en route ne doit pas rouvrir la liste.
+        lastQuery += 1;
+        return close();
+      }
       search(term);
     });
 

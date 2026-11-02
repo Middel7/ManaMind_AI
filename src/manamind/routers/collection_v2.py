@@ -207,6 +207,17 @@ def api_card_suggest(
     if len(term) < 2:
         return _json_response({"cards": []})
 
+    # Sous trois lettres, seul le début du nom anglais est cherché. L'index
+    # trigram des noms traduits ne sert qu'à partir de trois caractères : en
+    # deçà, « sa » parcourait les 408 000 noms imprimés et prenait plus de
+    # 40 secondes, pour ramener des cartes que rien ne reliait à la saisie.
+    short = len(term) < 3
+    translated = "" if short else """
+                UNION
+                SELECT DISTINCT card_id FROM scryfall_card_printings
+                WHERE (printed_name ILIKE :prefix OR printed_name ILIKE :prefix_alt)
+                  AND card_id IS NOT NULL"""
+
     with SessionLocal() as session:
         rows = session.execute(text("""
             -- Les deux branches passent par un index. ILIKE, et non
@@ -215,11 +226,7 @@ def api_card_suggest(
             -- printed_name qui repond, et il exige ILIKE (216 ms -> 30 ms).
             WITH matched AS (
                 SELECT id FROM scryfall_cards
-                WHERE name ILIKE :prefix OR name ILIKE :prefix_alt
-                UNION
-                SELECT DISTINCT card_id FROM scryfall_card_printings
-                WHERE (printed_name ILIKE :prefix OR printed_name ILIKE :prefix_alt)
-                  AND card_id IS NOT NULL
+                WHERE name ILIKE :prefix OR name ILIKE :prefix_alt""" + translated + """
             )
             SELECT c.id, c.name, c.type_line, c.mana_cost, c.mana_value,
                    c.color_identity, c.edhrec_rank, tr.printed_name,
@@ -279,10 +286,13 @@ def api_card_suggest(
             # « contient » et non « commence par » : un nom compose se cherche
             # aussi par son second mot — « isochronique » doit ramener
             # Sceptre isochronique.
-            "uid": user["id"], "prefix": f"%{term}%",
+            # Sous trois lettres, « commence par » seulement : « sa » contient
+            # trop de noms pour que « contient » apprenne quoi que ce soit.
+            "uid": user["id"], "prefix": f"{term}%" if short else f"%{term}%",
             # Scryfall ecrit « Aether », jamais « Æther » : sans cette variante,
             # taper le nom tel qu'il figure sur la carte ne trouvait rien.
-            "prefix_alt": f"%{_unligature(term)}%",
+            "prefix_alt": (f"{_unligature(term)}%" if short
+                           else f"%{_unligature(term)}%"),
             "starts": f"{term}%",
             "exact": term, "limit": limit,
         }).fetchall()
