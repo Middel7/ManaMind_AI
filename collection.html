@@ -415,12 +415,7 @@
             ? null : { href: '/collection/import', label: 'Importer ma collection' },
         });
       } else {
-        grid.insertAdjacentHTML('beforeend',
-          data.items.map((item) => MM.cardTile(item, {
-            context: 'collection',
-            actions: [{ label: 'Modifier', act: 'edit', variant: 'ghost',
-                        title: 'Édition, finition, langue et notes' }],
-          })).join(''));
+        grid.insertAdjacentHTML('beforeend', data.items.map(tile).join(''));
         cache = cache.concat(data.items);
       }
 
@@ -437,6 +432,38 @@
   }
 
   let cache = [];
+
+  /** Vignette d'une ligne de la collection. */
+  function tile(item) {
+    return MM.cardTile(item, {
+      context: 'collection',
+      actions: [{ label: 'Modifier', act: 'edit', variant: 'ghost',
+                  title: 'Édition, finition, langue et notes' }],
+    });
+  }
+
+  /** Une edition vient d'etre choisie pour une carte : seules ses vignettes
+   *  changent d'illustration. Les redessiner sur place garde la position de
+   *  lecture — recharger la liste ramenait tout en haut, loin de la carte. */
+  async function refreshCard(name) {
+    // Une carte a deux faces peut etre enregistree sous sa seule face avant.
+    const front = (value) => value.split(' // ')[0].toLowerCase();
+    try {
+      const data = await MM.api.get('/api/v2/collection'
+        + MM.api.qs({ search: front(name), limit: 500 }));
+      data.items
+        .filter((item) => front(item.card_name) === front(name))
+        .forEach((item) => {
+          const index = cache.findIndex((entry) => entry.id === item.id);
+          if (index < 0) return;
+          cache[index] = item;
+          const node = MM.el(`.mtg-card[data-id="${item.id}"]`, results);
+          if (node) node.outerHTML = tile(item);
+        });
+    } catch (err) {
+      MM.toast.error(err.message);
+    }
+  }
 
   function reload() {
     cache = [];
@@ -491,7 +518,7 @@
   document.addEventListener('mm:card-change', (event) => {
     // Une edition vient d'etre choisie : la vignette doit reprendre son
     // illustration et son code d'extension.
-    if (event.detail.scope === 'printing') return reload();
+    if (event.detail.scope === 'printing') return refreshCard(event.detail.card_name);
     if (event.detail.scope !== 'coll') return;
     const item = cache.find((entry) => entry.id === event.detail.id);
     if (item) {
