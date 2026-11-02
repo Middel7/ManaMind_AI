@@ -326,7 +326,7 @@
   });
 
   /** Analyse par popularité : le script serveur produit un CSV de recommandations. */
-  async function runPopular() {
+  async function runPopular({ replace = false } = {}) {
     showProgress('Analyse en cours', 'Comparaison avec les decks du même commandant.');
     try {
       const txt = await MM.api.get(
@@ -349,7 +349,9 @@
         commander: currentDeck.commander,
         scryfall_id: currentDeck.scryfall_id,
       }));
-      location.href = `/analyse?csv=${encodeURIComponent(data.recommendationsFile)}&algo=v1`;
+      const target = `/analyse?csv=${encodeURIComponent(data.recommendationsFile)}&algo=v1`;
+      if (replace) location.replace(target);
+      else location.href = target;
     } catch (err) {
       showError(err.message);
       MM.els('[data-analysis]').forEach((other) => { other.disabled = false; });
@@ -385,6 +387,25 @@
     } catch (err) {
       showError(err.message);
       MM.els('[data-analysis]').forEach((other) => { other.disabled = false; });
+    }
+  }
+
+  /* ── Lancement direct ─────────────────────────────────────────────────── */
+
+  // Venu d'un lien qui demande le resultat (« Dans quel commandant jouer
+  // cette carte ? »), on saute l'etape du choix. La page d'attente est
+  // remplacee par le resultat : le retour ramene a l'ecran d'origine, pas a
+  // un formulaire que l'utilisateur n'a jamais vu.
+  const params = new URLSearchParams(location.search);
+  if (params.get('run') === 'popular') {
+    params.delete('run');
+    const url = new URL(location.href);
+    url.search = params.toString();
+    history.replaceState(null, '', url);
+    if (currentDeck && currentDeck.deck_id === params.get('deck')
+        && !MM.commanderMissing(currentDeck)) {
+      MM.els('[data-analysis]').forEach((other) => { other.disabled = true; });
+      runPopular({ replace: true });
     }
   }
 })();

@@ -271,7 +271,7 @@
             const deckId = deckFor(entry.commander);
             const balise = deckId ? 'a' : 'article';
             const lien = deckId
-              ? ` href="/decks/analyse?deck=${encodeURIComponent(deckId)}"
+              ? ` href="/decks/analyse?deck=${encodeURIComponent(deckId)}&run=popular"
                   title="Analyser votre deck ${MM.esc(entry.commander)}"`
               : ' title="Vous ne jouez pas ce commandant : aucun deck à analyser"';
             return `
