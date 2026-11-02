@@ -1125,6 +1125,11 @@
     if (item.game_changer) {
       badges.push('<span class="badge badge--warn" title="Carte à fort impact">GC</span>');
     }
+    if (item.printing_unknown) {
+      badges.push(`<span class="badge badge--warn"
+        title="L'illustration montrée est celle d'une autre édition : ouvrez la fiche pour préciser la vôtre"
+        >Édition à préciser</span>`);
+    }
     if (options.flag) {
       badges.push(`<span class="badge badge--ok"
         ${options.flagTitle ? `title="${esc(options.flagTitle)}"` : ''}
@@ -1268,12 +1273,30 @@
   }, true);
 
   /** Squelettes de chargement pour une grille de cartes. */
+  /** Langues d'un exemplaire, avec les codes de Scryfall. */
+  const LANGUAGES = {
+    en: 'Anglais', fr: 'Français', de: 'Allemand', it: 'Italien',
+    es: 'Espagnol', pt: 'Portugais', ja: 'Japonais', ko: 'Coréen',
+    ru: 'Russe', zhs: 'Chinois simplifié', zht: 'Chinois traditionnel',
+  };
+  const FINISH_LABELS = { nonfoil: 'Non foil', foil: 'Foil', etched: 'Gravé' };
+  const CONDITIONS = ['NM', 'EX', 'GD', 'LP', 'PL', 'PO'];
+
   /**
-   * Fenetre de detail d'une carte : son texte, ce qu'on en possede, et toutes
-   * ses editions cotees. Ouverte depuis le titre d'une carte, sur n'importe
-   * quel ecran — d'ou le simple nom en entree.
+   * Fenetre de detail d'une carte : son texte, les exemplaires que l'on en
+   * possede, et toutes ses editions cotees. Ouverte depuis le titre d'une
+   * carte, sur n'importe quel ecran — d'ou le simple nom en entree.
+   *
+   * Deux choix d'edition y vivent, separes :
+   *   - l'edition d'un exemplaire, ce qu'on a dans ses boites — elle fait
+   *     l'illustration et la valeur de cet exemplaire dans la collection ;
+   *   - l'edition affichee, ce qu'on veut voir la ou la carte n'est pas un
+   *     exemplaire identifie : decks, analyses, buylist.
    *
    * @param {string} name
+   * @param {object} options
+   *   itemId {number} ligne de collection d'ou la fiche est ouverte : la
+   *     fiche s'ouvre alors sur le choix de l'edition de cet exemplaire
    */
   MM.cardDetail = async function (name, options = {}) {
     const dialog = MM.modal({
@@ -1282,190 +1305,370 @@
     });
 
     let data;
-    try {
+    async function load() {
       data = await MM.api.get(`/api/v2/cards/${encodeURIComponent(name)}/detail`);
+    }
+    try {
+      await load();
     } catch (error) {
       dialog.body.innerHTML = MM.empty({
         icon: 'warning', title: 'Carte introuvable', text: error.message });
       return;
     }
 
-    const card = data.card;
-    const printings = data.printings || [];
+    // Exemplaire dont on choisit l'edition, et combien de ses exemplaires
+    // changent. Sans lui, un clic sur une edition la retient pour l'affichage.
+    let picking = null;
+    let pickQty = 1;
+    function startPicking(id) {
+      const line = (data.items || []).find((entry) => entry.id === id);
+      picking = line ? id : null;
+      pickQty = line ? line.quantity : 1;
+    }
+    if (options.itemId) startPicking(options.itemId);
+
+    const editionKey = (set, number) => `${String(set || '').toUpperCase()}#${number || ''}`;
     // Prix de reference du projet : la tendance Cardmarket, la meilleure offre
-    // a defaut. L'edition la moins chere ainsi cotee ouvre la fiche et porte
-    // un repere dans la liste.
+    // a defaut. L'edition la moins chere ainsi cotee porte un repere.
     const refPrice = (p) => (p.trend_price > 0 ? p.trend_price
       : (p.low_price > 0 ? p.low_price : null));
-    const priced = printings.filter((p) => refPrice(p) != null);
-    const cheapest = priced.length
-      ? priced.reduce((best, p) => (refPrice(p) < refPrice(best) ? p : best))
-      : null;
 
-    // Ligne de collection a laquelle rattacher l'edition choisie : celle d'ou
-    // la fiche a ete ouverte, sinon la seule que l'on possede.
-    const items = data.items || [];
-    const target = items.find((line) => line.id === options.itemId)
-      || (items.length === 1 ? items[0] : null);
-    const current = target && target.scryfall_id;
+    function render() {
+      const card = data.card;
+      const printings = data.printings || [];
+      const items = data.items || [];
+      const preferred = data.preferred_printing || null;
+      const line = items.find((entry) => entry.id === picking) || null;
+      if (!line) picking = null;
 
-    // L'edition retenue pour cette carte, possedee ou non : c'est elle que
-    // montrent les autres ecrans, donc elle qui ouvre la fiche.
-    const preferred = data.preferred_printing || null;
-    const chosen = printings.find((p) => p.scryfall_id === (current || preferred));
-    // Faute de choix, une illustration Secret Lair ou Marvel ne represente pas
-    // la carte : elle n'ouvre la fiche que si la carte n'existe que la.
-    const usual = printings.filter((p) => !p.alt_art);
-    const usualCheapest = usual.filter((p) => refPrice(p) != null)
-      .reduce((best, p) => (!best || refPrice(p) < refPrice(best) ? p : best), null);
-    const shown = chosen || usualCheapest || usual[0] || cheapest || printings[0] || {};
+      const priced = printings.filter((p) => refPrice(p) != null);
+      const cheapest = priced.length
+        ? priced.reduce((best, p) => (refPrice(p) < refPrice(best) ? p : best))
+        : null;
 
-    const stats = [];
-    if (card.power != null) stats.push(`${esc(card.power)}/${esc(card.toughness)}`);
-    if (card.loyalty != null) stats.push(`Loyauté ${esc(card.loyalty)}`);
-    if (card.defense != null) stats.push(`Défense ${esc(card.defense)}`);
+      // Exemplaires par edition : une edition possedee dans une autre langue
+      // compte aussi, d'ou la cle extension + numero.
+      const owned = new Map();
+      items.forEach((entry) => {
+        if (!entry.scryfall_id) return;
+        const key = editionKey(entry.set_code, entry.collector_number);
+        owned.set(key, (owned.get(key) || 0) + entry.quantity);
+      });
+      const printingOf = (entry) => printings.find((p) =>
+        editionKey(p.set_code, p.collector_number)
+          === editionKey(entry.set_code, entry.collector_number));
 
-    const tags = [];
-    if (card.legal_commander) tags.push('<span class="badge">Peut être commandant</span>');
-    if (card.game_changer) tags.push('<span class="badge badge--warn">Game changer</span>');
-    if (card.popularity_rank) {
-      tags.push(`<span class="badge badge--info"
-        title="Rang de popularité dans les decks publics, du plus joué au moins joué"
-        >Popularité nº ${MM.fmt.int(card.popularity_rank)}</span>`);
+      // L'illustration de tete : l'exemplaire dont on choisit l'edition, sinon
+      // l'edition affichee, sinon la moins chere hors Secret Lair et Marvel —
+      // leur illustration ne represente pas la carte.
+      const usual = printings.filter((p) => !p.alt_art);
+      const usualCheapest = usual.filter((p) => refPrice(p) != null)
+        .reduce((best, p) => (!best || refPrice(p) < refPrice(best) ? p : best), null);
+      const chosen = printings.find((p) => p.scryfall_id === preferred);
+      const shown = (line && line.image_normal ? line : null)
+        || chosen || usualCheapest || usual[0] || cheapest || printings[0] || {};
+
+      const stats = [];
+      if (card.power != null) stats.push(`${esc(card.power)}/${esc(card.toughness)}`);
+      if (card.loyalty != null) stats.push(`Loyauté ${esc(card.loyalty)}`);
+      if (card.defense != null) stats.push(`Défense ${esc(card.defense)}`);
+
+      const tags = [];
+      if (card.legal_commander) tags.push('<span class="badge">Peut être commandant</span>');
+      if (card.game_changer) tags.push('<span class="badge badge--warn">Game changer</span>');
+      if (card.popularity_rank) {
+        tags.push(`<span class="badge badge--info"
+          title="Rang de popularité dans les decks publics, du plus joué au moins joué"
+          >Popularité nº ${MM.fmt.int(card.popularity_rank)}</span>`);
+      }
+
+      const choices = (values, current, labels) => values.map((value) => `
+        <option value="${esc(value)}" ${value === current ? 'selected' : ''}
+          >${esc(labels[value] || value)}</option>`).join('');
+
+      const copies = items.length ? `
+        <div class="card-detail__copies">
+          <p class="label">Vos exemplaires</p>
+          <div class="rows">
+            ${items.map((entry) => {
+              const printing = printingOf(entry);
+              // Seules les finitions de l'edition se proposent ; celle qui est
+              // enregistree reste, meme hors liste, pour ne pas la masquer.
+              const offered = printing ? printing.finishes : Object.keys(FINISH_LABELS);
+              const finishes = offered.includes(entry.finish)
+                ? offered : [entry.finish, ...offered];
+              const languages = entry.language in LANGUAGES
+                ? Object.keys(LANGUAGES) : [entry.language, ...Object.keys(LANGUAGES)];
+              return `
+              <div class="row ${entry.id === picking ? 'is-picking' : ''}" data-line="${entry.id}">
+                ${entry.image_small
+                  ? `<img class="row__thumb" src="${esc(entry.image_small)}" alt="">`
+                  : '<span class="row__thumb"></span>'}
+                <div class="row__main">
+                  <p class="row__title">${entry.scryfall_id
+                    ? `${esc(entry.set_name || entry.set_code)}
+                       <span class="dim">${esc(entry.set_code)}${entry.collector_number
+                         ? ` #${esc(entry.collector_number)}` : ''}</span>`
+                    : '<span class="badge badge--warn">Édition à préciser</span>'}</p>
+                  <div class="cluster card-detail__fields">
+                    <select class="select" data-field="finish" aria-label="Finition">
+                      ${choices(finishes, entry.finish, FINISH_LABELS)}</select>
+                    <select class="select" data-field="language" aria-label="Langue">
+                      ${choices(languages, entry.language, LANGUAGES)}</select>
+                    <select class="select" data-field="condition" aria-label="État">
+                      <option value="" ${entry.condition ? '' : 'selected'}>État non précisé</option>
+                      ${choices(CONDITIONS, entry.condition, {})}</select>
+                  </div>
+                </div>
+                <div class="row__aside">
+                  <span class="num">×${MM.fmt.int(entry.quantity)}</span>
+                  <span class="num strong">${entry.unit_price != null
+                    ? MM.fmt.eur(entry.unit_price) : '—'}</span>
+                  <button class="btn btn--sm ${entry.id === picking ? 'btn--primary' : ''}"
+                          type="button" data-change="${entry.id}">
+                    ${entry.id === picking ? 'Choisissez ci-dessous' : 'Changer l’édition'}</button>
+                </div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>` : '';
+
+      const guide = line ? `
+        <div class="card-detail__pick cluster">
+          <span class="small">Choisissez l’édition de
+            ${line.quantity > 1 ? `
+              <select class="select" data-pick-qty aria-label="Exemplaires concernés">
+                ${Array.from({ length: line.quantity }, (_, i) => i + 1).map((n) => `
+                  <option value="${n}" ${n === pickQty ? 'selected' : ''}>${n === line.quantity
+                    ? `vos ${MM.fmt.int(n)} exemplaires` : MM.fmt.plural(n, 'exemplaire')}</option>`)
+                  .join('')}
+              </select>` : 'votre exemplaire'}
+            ${line.scryfall_id ? `<span class="dim">— aujourd’hui ${esc(line.set_code)}${
+              line.collector_number ? ` #${esc(line.collector_number)}` : ''}</span>` : ''}</span>
+          <span class="grow"></span>
+          <button class="btn btn--sm btn--ghost" type="button" data-pick-cancel>Annuler</button>
+        </div>` : `
+        <p class="xs dim card-detail__hint">Un clic sur une édition la montre partout où cette
+          carte n’est pas un exemplaire de votre collection : decks, analyses, buylist.
+          ${preferred ? `<button class="btn btn--sm btn--ghost" type="button" data-pref-reset
+            >Revenir au choix automatique</button>` : ''}</p>`;
+
+      dialog.body.innerHTML = `
+        <div class="card-detail">
+          <div class="card-detail__art">
+            <img src="${esc(MM.img.card(shown) || '')}" alt="${esc(card.name)}">
+            <p class="xs dim">${shown.set_name
+              ? `${esc(shown.set_name)} · ${esc(shown.set_code || '')}` : ''}</p>
+          </div>
+
+          <div class="card-detail__info">
+            <div class="card-detail__head">
+              <p class="h3">${esc(card.name)}</p>
+              <span class="grow"></span>
+              ${MM.mana.cost(card.mana_cost)}
+            </div>
+            <p class="small dim">${MM.img.pips(card.color_identity)} ${esc(card.type_line)}
+              ${stats.length ? `· <span class="strong">${stats.join(' · ')}</span>` : ''}</p>
+
+            ${card.oracle_text
+              ? `<p class="card-detail__oracle">${esc(card.oracle_text).replace(/\n/g, '<br>')}</p>`
+              : ''}
+
+            ${tags.length ? `<div class="card-detail__tags">${tags.join('')}</div>` : ''}
+
+            <div class="card-detail__mine">
+              <span>${data.owned
+                ? `<span class="strong">${MM.fmt.plural(data.owned, 'exemplaire')}</span> en collection`
+                : '<span class="dim">Absente de votre collection</span>'}</span>
+              ${data.decks.length ? `<span class="dim">·</span>
+                <span>Jouée dans ${data.decks.map((d) =>
+                  `<a href="/decks/${encodeURIComponent(d.deck_id)}">${esc(d.name)}</a>`)
+                  .join(', ')}</span>` : ''}
+            </div>
+
+            <div class="card-detail__market">
+              <a class="btn btn--sm" target="_blank" rel="noopener"
+                 href="${esc(MM.market.buy(card.name))}">Acheter</a>
+              <a class="btn btn--sm" target="_blank" rel="noopener"
+                 href="${esc(MM.market.sell(card.name))}">Vendre</a>
+            </div>
+          </div>
+        </div>
+
+        ${copies}
+
+        <div class="card-detail__editions">
+          <p class="label">${MM.fmt.plural(printings.length, 'édition')}
+            ${priced.length < printings.length
+              ? `<span class="dim">· ${MM.fmt.int(printings.length - priced.length)} sans cote</span>`
+              : ''}</p>
+          ${guide}
+          <div class="card-grid card-grid--lg editions">
+            ${printings.map((p) => {
+              const count = owned.get(editionKey(p.set_code, p.collector_number)) || 0;
+              const marks = [];
+              if (count) marks.push(`<span class="badge badge--ok">possédée ×${MM.fmt.int(count)}</span>`);
+              if (p.scryfall_id === preferred) marks.push('<span class="badge badge--info">affichée</span>');
+              else if (p === cheapest && !count) {
+                marks.push('<span class="badge badge--info" title="Prix de référence du projet">moins chère</span>');
+              }
+              return `
+              <article class="mtg-card ${p === cheapest ? 'is-cheapest' : ''} ${count ? 'is-mine' : ''}"
+                       data-pick="${esc(p.scryfall_id)}"
+                       title="${line
+                         ? 'Enregistrer cette édition pour votre exemplaire'
+                         : 'Montrer cette carte dans cette édition sur les autres écrans'}">
+                <div class="mtg-card__frame">
+                  ${MM.img.frame({
+                    card_name: card.name,
+                    image_normal: p.image_normal, image_small: p.image_small,
+                  })}
+                </div>
+                <div class="mtg-card__foot">
+                  <span class="mtg-card__name" data-no-detail
+                        title="${esc(p.set_name || p.set_code || '')}"
+                    >${esc(p.set_name || p.set_code || '—')}</span>
+                  <span class="mtg-card__meta">
+                    <span>${esc(p.set_code || '')}${p.collector_number
+                      ? ` #${esc(p.collector_number)}` : ''}</span>
+                    <span class="dim">${esc(MM.fmt.rarity(p.rarity))}</span>
+                    ${refPrice(p) != null
+                      ? `<span class="mtg-card__price">${MM.fmt.eur(refPrice(p))}</span>`
+                      : '<span class="dim">non cotée</span>'}
+                  </span>
+                  <span class="mtg-card__meta">
+                    <span class="dim">${MM.fmt.date(p.released_at)}</span>
+                    ${(p.foil_trend || p.foil_low) != null
+                      ? `<span class="dim">foil ${MM.fmt.eur(p.foil_trend || p.foil_low)}</span>` : ''}
+                  </span>
+                  <span class="mtg-card__meta">
+                    <span class="cluster">${marks.join('')}</span>
+                    <button class="btn btn--sm btn--ghost" type="button"
+                            data-add="${esc(p.scryfall_id)}"
+                            title="Ajouter un exemplaire de cette édition à votre collection"
+                      >Ajouter</button>
+                  </span>
+                </div>
+              </article>`;
+            }).join('')}
+          </div>
+        </div>`;
     }
 
-    dialog.body.innerHTML = `
-      <div class="card-detail">
-        <div class="card-detail__art">
-          <img src="${esc(MM.img.card(shown) || '')}" alt="${esc(card.name)}">
-          <p class="xs dim">${shown.set_name
-            ? `${esc(shown.set_name)} · ${esc(shown.set_code || '')}` : ''}</p>
-        </div>
+    /** Redessine sans perdre la position de lecture : la liste des editions
+     *  defile a part, et la fenetre elle-meme peut defiler. */
+    function redraw() {
+      const grid = el('.editions', dialog.body);
+      const gridTop = grid ? grid.scrollTop : 0;
+      const bodyTop = dialog.body.scrollTop;
+      render();
+      const fresh = el('.editions', dialog.body);
+      if (fresh) fresh.scrollTop = gridTop;
+      dialog.body.scrollTop = bodyTop;
+    }
 
-        <div class="card-detail__info">
-          <div class="card-detail__head">
-            <p class="h3">${esc(card.name)}</p>
-            <span class="grow"></span>
-            ${MM.mana.cost(card.mana_cost)}
-          </div>
-          <p class="small dim">${MM.img.pips(card.color_identity)} ${esc(card.type_line)}
-            ${stats.length ? `· <span class="strong">${stats.join(' · ')}</span>` : ''}</p>
+    /** Relit la fiche apres un changement, et previent l'ecran en dessous. */
+    async function refresh() {
+      await load();
+      redraw();
+      document.dispatchEvent(new CustomEvent('mm:card-change', {
+        detail: { card_name: data.card.name, scope: 'printing', delta: 0, id: null },
+      }));
+    }
 
-          ${card.oracle_text
-            ? `<p class="card-detail__oracle">${esc(card.oracle_text).replace(/\n/g, '<br>')}</p>`
-            : ''}
+    render();
 
-          ${tags.length ? `<div class="card-detail__tags">${tags.join('')}</div>` : ''}
+    dialog.body.addEventListener('change', async (event) => {
+      const qty = event.target.closest('[data-pick-qty]');
+      if (qty) { pickQty = Number(qty.value); return; }
 
-          <div class="card-detail__mine">
-            <span>${data.owned
-              ? `<span class="strong">${MM.fmt.plural(data.owned, 'exemplaire')}</span> en collection`
-              : '<span class="dim">Absente de votre collection</span>'}</span>
-            ${data.decks.length ? `<span class="dim">·</span>
-              <span>Jouée dans ${data.decks.map((d) =>
-                `<a href="/decks/${encodeURIComponent(d.deck_id)}">${esc(d.name)}</a>`)
-                .join(', ')}</span>` : ''}
-          </div>
+      const field = event.target.closest('[data-field]');
+      if (!field) return;
+      const lineId = Number(field.closest('[data-line]').dataset.line);
+      field.disabled = true;
+      try {
+        const result = await MM.api.patch(`/api/v2/collection/items/${lineId}`,
+          { [field.dataset.field]: field.value });
+        MM.toast.ok(result.merged
+          ? 'Exemplaire regroupé avec ceux qui avaient déjà cette description.'
+          : 'Exemplaire mis à jour.');
+        if (picking === lineId) picking = result.id;
+        await refresh();
+      } catch (error) {
+        MM.toast.error(error.message);
+        field.disabled = false;
+      }
+    });
 
-          <div class="card-detail__market">
-            <a class="btn btn--sm" target="_blank" rel="noopener"
-               href="${esc(MM.market.buy(card.name))}">Acheter</a>
-            <a class="btn btn--sm" target="_blank" rel="noopener"
-               href="${esc(MM.market.sell(card.name))}">Vendre</a>
-          </div>
-        </div>
-      </div>
-
-      <div class="card-detail__editions">
-        <p class="label">${MM.fmt.plural(printings.length, 'édition')}
-          ${priced.length < printings.length
-            ? `<span class="dim">· ${MM.fmt.int(printings.length - priced.length)} sans cote</span>`
-            : ''}</p>
-        <div class="card-grid card-grid--lg editions">
-          ${printings.map((p) => `
-            <article class="mtg-card ${p === cheapest ? 'is-cheapest' : ''}
-                            ${p.scryfall_id === (current || preferred) ? 'is-mine' : ''}"
-                     data-pick="${esc(p.scryfall_id)}"
-                     title="${target
-                       ? 'Enregistrer cette édition comme celle que vous possédez'
-                       : 'Montrer cette carte dans cette édition partout'}">
-              <div class="mtg-card__frame">
-                ${MM.img.frame({
-                  card_name: card.name,
-                  image_normal: p.image_normal, image_small: p.image_small,
-                })}
-              </div>
-              <div class="mtg-card__foot">
-                <span class="mtg-card__name" data-no-detail
-                      title="${esc(p.set_name || p.set_code || '')}"
-                  >${esc(p.set_name || p.set_code || '—')}</span>
-                <span class="mtg-card__meta">
-                  <span>${esc(p.set_code || '')}${p.collector_number
-                    ? ` #${esc(p.collector_number)}` : ''}</span>
-                  <span class="dim">${esc(MM.fmt.rarity(p.rarity))}</span>
-                  ${refPrice(p) != null
-                    ? `<span class="mtg-card__price">${MM.fmt.eur(refPrice(p))}</span>`
-                    : '<span class="dim">non cotée</span>'}
-                </span>
-                <span class="mtg-card__meta">
-                  <span class="dim">${MM.fmt.date(p.released_at)}</span>
-                  ${(p.foil_trend || p.foil_low) != null
-                    ? `<span class="dim">foil ${MM.fmt.eur(p.foil_trend || p.foil_low)}</span>` : ''}
-                  ${p.scryfall_id === current
-                    ? '<span class="badge badge--ok">votre édition</span>'
-                    : (p.scryfall_id === preferred
-                      ? '<span class="badge badge--ok">édition retenue</span>'
-                      : (p === cheapest
-                        ? '<span class="badge badge--info" title="Prix de référence du projet">moins chère</span>'
-                        : ''))}
-                </span>
-              </div>
-            </article>`).join('')}
-        </div>
-      </div>`;
-
-    // Choisir une edition la retient pour cette carte : c'est elle que les
-    // ecrans montreront desormais, qu'on la possede ou non. Quand la fiche
-    // vise une ligne de collection, le meme geste dit aussi quelle edition on
-    // a dans ses boites.
     dialog.body.addEventListener('click', async (event) => {
+      const change = event.target.closest('[data-change]');
+      if (change) {
+        const id = Number(change.dataset.change);
+        if (picking === id) picking = null; else startPicking(id);
+        redraw();
+        const guide = el('.card-detail__pick', dialog.body);
+        if (guide) guide.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        return;
+      }
+
+      if (event.target.closest('[data-pick-cancel]')) {
+        picking = null;
+        redraw();
+        return;
+      }
+
+      if (event.target.closest('[data-pick-qty]')) return;
+
+      if (event.target.closest('[data-pref-reset]')) {
+        try {
+          await MM.api.del(`/api/v2/cards/${encodeURIComponent(data.card.name)}/printing`);
+          MM.toast.ok('L’édition affichée est de nouveau choisie automatiquement.');
+          await refresh();
+        } catch (error) { MM.toast.error(error.message); }
+        return;
+      }
+
+      const add = event.target.closest('[data-add]');
+      if (add) {
+        const printing = data.printings.find((p) => p.scryfall_id === add.dataset.add);
+        if (!printing) return;
+        add.disabled = true;
+        try {
+          await MM.api.post('/api/v2/collection/items', {
+            card_name: data.card.name, quantity: 1,
+            set_code: printing.set_code, collector_number: printing.collector_number,
+            // Une edition toute foil ne s'ajoute pas en non foil.
+            finish: printing.finishes.includes('nonfoil') ? 'nonfoil' : printing.finishes[0],
+          });
+          MM.toast.ok(`Exemplaire ${printing.set_code} ajouté à votre collection.`);
+          await refresh();
+        } catch (error) {
+          MM.toast.error(error.message);
+          add.disabled = false;
+        }
+        return;
+      }
+
       const picked = event.target.closest('[data-pick]');
       if (!picked) return;
       const printing = picked.dataset.pick;
       try {
-        await MM.api.post(
-          `/api/v2/cards/${encodeURIComponent(card.name)}/printing`,
-          { scryfall_id: printing });
-        if (target) {
-          await MM.api.post(`/api/v2/collection/items/${target.id}/printing`,
+        if (picking) {
+          await MM.api.post(`/api/v2/collection/items/${picking}/printing`,
+            { scryfall_id: printing, quantity: pickQty });
+          MM.toast.ok('Édition de l’exemplaire enregistrée.');
+          picking = null;
+        } else {
+          await MM.api.post(
+            `/api/v2/cards/${encodeURIComponent(data.card.name)}/printing`,
             { scryfall_id: printing });
+          MM.toast.ok('Édition affichée enregistrée.');
         }
-        els('.mtg-card.is-mine', dialog.body).forEach((node) => {
-          node.classList.remove('is-mine');
-          const flag = el('.badge--ok', node);
-          if (flag) flag.remove();
-        });
-        picked.classList.add('is-mine');
-        // Le repere se pose sur la derniere ligne d'informations, celle qui
-        // porte deja la date et la mention « moins chere ».
-        const lines = els('.mtg-card__meta', picked);
-        const foot = lines[lines.length - 1];
-        if (foot) {
-          const stale = el('.badge--info', foot);
-          if (stale) stale.remove();
-          foot.insertAdjacentHTML('beforeend',
-            `<span class="badge badge--ok">${target ? 'votre édition' : 'édition retenue'}</span>`);
-        }
-        MM.toast.ok('Édition enregistrée.');
-        document.dispatchEvent(new CustomEvent('mm:card-change', {
-          detail: { card_name: card.name, scope: 'printing', delta: 0,
-                    id: target ? target.id : null },
-        }));
+        await refresh();
       } catch (error) {
         MM.toast.error(error.message);
       }
     });
-
   };
 
   // L'illustration et le titre d'une carte ouvrent sa fiche, sur tous les

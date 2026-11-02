@@ -1097,6 +1097,41 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
 .card-detail__mine a { color: var(--accent); }
 
 .card-detail__editions { margin-top: var(--sp-5); }
+
+/* Exemplaires possedes, dans la fiche d'une carte : chacun a son edition, sa
+   finition, sa langue et son etat, qui se reglent sur sa ligne. */
+.card-detail__copies { margin-top: var(--sp-5); }
+.card-detail__copies .rows {
+  margin-top: var(--sp-2);
+  border: 1px solid var(--line); border-radius: var(--r-md);
+}
+/* Les reglages passent sous le titre sur un ecran etroit plutot que de
+   pousser la ligne hors de la fenetre. */
+.card-detail__copies .row { padding: var(--sp-2) var(--sp-3); flex-wrap: wrap; }
+.card-detail__copies .row.is-picking { background: var(--accent-wash); }
+.card-detail__copies .row__aside { flex-wrap: wrap; }
+/* Sous 200 px de place, le titre ne se tasse plus : le prix et le bouton
+   passent a la ligne. */
+.card-detail__copies .row__main { flex: 1 1 200px; }
+.card-detail__fields { margin-top: var(--sp-1); gap: var(--sp-2); }
+/* Trois menus tiennent sur une ligne : ils prennent la largeur de leur texte. */
+.card-detail__fields .select,
+.card-detail__pick .select {
+  width: auto;
+  padding-top: var(--sp-1); padding-bottom: var(--sp-1);
+  font-size: var(--text-xs);
+}
+.card-detail__pick .select { display: inline-block; margin: 0 var(--sp-1); }
+
+/* Le choix de l'edition d'un exemplaire est un mode : il se signale au-dessus
+   des editions, avec de quoi en sortir. */
+.card-detail__pick {
+  margin-top: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--line-accent); border-radius: var(--r-md);
+  background: var(--accent-wash);
+}
+.card-detail__hint { margin-top: var(--sp-1); }
 /* Une carte peut compter plus de cent editions : la grille defile pour elle. */
 .editions {
   margin-top: var(--sp-2);
@@ -1105,12 +1140,14 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
 }
 .editions .mtg-card__meta { justify-content: space-between; gap: var(--sp-2); }
 /* L'edition la moins chere fixe le prix de reference : elle se repere. */
-.editions .is-mine .mtg-card__frame {
-  outline: 2px solid var(--ok); outline-offset: 2px; border-radius: var(--r-md);
-}
 .editions [data-pick] { cursor: pointer; }
 .editions .is-cheapest .mtg-card__frame {
   outline: 2px solid var(--info); outline-offset: 2px; border-radius: var(--r-md);
+}
+/* Une edition possedee se signale avant la moins chere : la regle vient apres
+   pour l'emporter quand les deux se confondent. */
+.editions .is-mine .mtg-card__frame {
+  outline: 2px solid var(--ok); outline-offset: 2px; border-radius: var(--r-md);
 }
 
 /* Cout de mana, en jetons */
