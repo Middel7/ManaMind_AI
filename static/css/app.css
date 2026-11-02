@@ -1133,11 +1133,9 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
 }
 .card-detail__hint { margin-top: var(--sp-1); }
 /* Une carte peut compter plus de cent editions : la grille defile pour elle. */
-.editions {
-  margin-top: var(--sp-2);
-  max-height: 62vh; overflow-y: auto;
-  padding-right: var(--sp-2);
-}
+/* La liste ne defile pas d'elle-meme : imbriquee dans la modale qui defile
+   deja, elle donnait deux ascenseurs, et l'interieur capturait la molette. */
+.editions { margin-top: var(--sp-2); }
 .editions .mtg-card__meta { justify-content: space-between; gap: var(--sp-2); }
 /* L'edition la moins chere fixe le prix de reference : elle se repere. */
 .editions [data-pick] { cursor: pointer; }
@@ -1522,6 +1520,14 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
 }
 
 .modal__box--wide { width: min(920px, 100%); }
+
+/* La fiche d'une carte porte ses exemplaires et toutes ses editions : a
+   920 x 760, on n'en voyait qu'une rangee a la fois. */
+.modal__box--xl {
+  width: min(1280px, 100%);
+  max-height: 94vh;
+  max-height: 94dvh;
+}
 
 .modal__head {
   display: flex;
@@ -1952,10 +1958,6 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
   .modal__foot .btn { flex: 1; }
   .row { padding: var(--sp-3) var(--sp-4); }
   .panel__body { padding: var(--sp-4); }
-  /* La liste des editions defilait dans la modale, qui defile deja : deux
-     ascenseurs imbriques sur un ecran tactile, dont l'interieur capture le
-     geste. Ici, seule la modale defile. */
-  .editions { max-height: none; overflow-y: visible; padding-right: 0; }
 }
 
 @media (max-width: 420px) {
