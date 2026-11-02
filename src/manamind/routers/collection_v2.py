@@ -556,10 +556,12 @@ def api_card_detail(card_name: str, request: Request) -> Response:
             return _json_response({"error": "Carte inconnue"}, status_code=404)
 
         # Une edition par impression, avec sa derniere cote Cardmarket.
-        printings = session.execute(text("""
+        finishes_sql = store.printing_finishes_sql(session)
+        printings = session.execute(text(f"""
             SELECT p.scryfall_id, UPPER(p.set_code) AS set_code, p.collector_number,
                    p.rarity, p.image_small, p.image_normal, p.released_at,
-                   p.promo, p.full_art, p.artist, p.scryfall_uri, p.finishes,
+                   p.promo, p.full_art, p.artist, p.scryfall_uri,
+                   {finishes_sql} AS finishes,
                    ms.name AS set_name, ms.icon_svg_uri,
                    latest.low_price, latest.trend_price, latest.foil_low,
                    latest.foil_trend,
@@ -598,11 +600,10 @@ def api_card_detail(card_name: str, request: Request) -> Response:
                    -- cote de son edition dans sa finition.
                    COALESCE(
                        CASE WHEN uc.finish <> 'nonfoil'
-                              OR NOT ('nonfoil' = ANY(COALESCE(p.finishes,
-                                                               ARRAY['nonfoil'])))
                             THEN COALESCE(NULLIF(px.foil_trend, 0),
                                           NULLIF(px.foil_low, 0)) END,
-                       NULLIF(px.trend_price, 0), NULLIF(px.low_price, 0),
+                       NULLIF(px.trend_price, 0), NULLIF(px.foil_trend, 0),
+                       NULLIF(px.low_price, 0), NULLIF(px.foil_low, 0),
                        cm.price) AS unit_price
             FROM user_collection uc
             LEFT JOIN scryfall_card_printings p ON p.id = uc.printing_id
@@ -704,8 +705,9 @@ def api_card_detail(card_name: str, request: Request) -> Response:
                 "foil_trend": _num(r.foil_trend),
                 "alt_art": bool(r.alt_art),
                 # Finitions dans lesquelles l'édition existe : un exemplaire
-                # ne peut prendre que l'une d'elles.
-                "finishes": list(r.finishes or ["nonfoil"]),
+                # ne peut prendre que l'une d'elles. Sans la colonne, en
+                # production, les deux courantes restent proposées.
+                "finishes": list(r.finishes or ["nonfoil", "foil"]),
             }
             for r in printings
         ],
