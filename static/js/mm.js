@@ -565,10 +565,10 @@
         { key: 'import',
           label: 'Importer une liste de cartes pour ma collection ou une decklist',
           href: '/collection/import', icon: 'upload' },
-        { key: 'boosters', label: "Sélectionner les extensions que j'ai ouvertes",
-          href: '/collection/boosters', icon: 'booster' },
         { key: 'buylist', label: 'Ma buylist : les cartes à acheter pour mes decks',
           href: '/collection/buylist', icon: 'coin' },
+        { key: 'boosters', label: "Sélectionner les extensions que j'ai ouvertes",
+          href: '/collection/boosters', icon: 'booster' },
       ],
     },
     {
