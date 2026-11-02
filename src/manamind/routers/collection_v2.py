@@ -45,6 +45,7 @@ def api_list(
     sets: str = Query(""),
     finishes: str = Query(""),
     in_deck: str = Query(""),
+    edition: str = Query(""),
     sort: str = Query("name"),
     limit: int = Query(60, ge=1, le=500),
     offset: int = Query(0, ge=0),
@@ -59,6 +60,7 @@ def api_list(
         sets=_csv(sets),
         finishes=_csv(finishes),
         in_deck=in_deck,
+        edition=edition,
         sort=sort,
         limit=limit,
         offset=offset,
@@ -120,14 +122,22 @@ async def api_update(item_id: int, request: Request) -> Response:
 
 @router.post("/api/v2/collection/items/{item_id}/printing")
 async def api_set_printing(item_id: int, request: Request) -> Response:
-    """Designe l'edition possedee d'un exemplaire, par son identifiant Scryfall."""
+    """Désigne l'édition possédée d'exemplaires, par son identifiant Scryfall.
+
+    `quantity` ne change l'édition que d'une partie de la ligne, qui se scinde.
+    """
     user = _user(request)
     body = await request.json()
     scryfall_id = (body.get("scryfall_id") or "").strip()
     if not scryfall_id:
         return _json_response({"error": "scryfall_id requis"}, status_code=400)
+    quantity = body.get("quantity")
+    try:
+        quantity = int(quantity) if quantity is not None else None
+    except (TypeError, ValueError):
+        return _json_response({"error": "Quantité invalide"}, status_code=400)
 
-    result = store.set_item_printing(user["id"], item_id, scryfall_id)
+    result = store.set_item_printing(user["id"], item_id, scryfall_id, quantity)
     if result is None:
         return _json_response({"error": "Exemplaire ou édition introuvable"},
                               status_code=404)
@@ -136,11 +146,12 @@ async def api_set_printing(item_id: int, request: Request) -> Response:
 
 @router.post("/api/v2/cards/{card_name}/printing")
 async def api_set_preferred_printing(card_name: str, request: Request) -> Response:
-    """Retient l'edition a montrer pour une carte, possedee ou non.
+    """Retient l'édition à montrer pour une carte, là où l'on n'en a pas.
 
-    L'edition d'un exemplaire (route ci-dessus) dit ce que l'on a dans ses
-    boites ; celle-ci dit ce que l'on veut voir. Les deux se posent du meme
-    geste dans la fiche d'une carte que l'on possede.
+    L'édition d'un exemplaire (route ci-dessus) dit ce que l'on a dans ses
+    boîtes ; celle-ci dit ce que l'on veut voir sur les écrans où la carte
+    n'est pas un exemplaire identifié : decks, analyses, buylist. Les deux se
+    choisissent séparément dans la fiche d'une carte.
     """
     user = _user(request)
     body = await request.json()
@@ -548,7 +559,7 @@ def api_card_detail(card_name: str, request: Request) -> Response:
         printings = session.execute(text("""
             SELECT p.scryfall_id, UPPER(p.set_code) AS set_code, p.collector_number,
                    p.rarity, p.image_small, p.image_normal, p.released_at,
-                   p.promo, p.full_art, p.artist, p.scryfall_uri,
+                   p.promo, p.full_art, p.artist, p.scryfall_uri, p.finishes,
                    ms.name AS set_name, ms.icon_svg_uri,
                    latest.low_price, latest.trend_price, latest.foil_low,
                    latest.foil_trend,
@@ -580,9 +591,30 @@ def api_card_detail(card_name: str, request: Request) -> Response:
         # porte l'edition, pour pouvoir la changer.
         items = session.execute(text("""
             SELECT uc.id, uc.quantity, UPPER(uc.set_code) AS set_code,
-                   p.scryfall_id
+                   uc.collector_number, uc.finish, uc.language, uc.condition,
+                   p.scryfall_id, p.image_small, p.image_normal,
+                   ms.name AS set_name,
+                   -- Valeur de l'exemplaire, comme dans la collection : la
+                   -- cote de son edition dans sa finition.
+                   COALESCE(
+                       CASE WHEN uc.finish <> 'nonfoil'
+                              OR NOT ('nonfoil' = ANY(COALESCE(p.finishes,
+                                                               ARRAY['nonfoil'])))
+                            THEN COALESCE(NULLIF(px.foil_trend, 0),
+                                          NULLIF(px.foil_low, 0)) END,
+                       NULLIF(px.trend_price, 0), NULLIF(px.low_price, 0),
+                       cm.price) AS unit_price
             FROM user_collection uc
             LEFT JOIN scryfall_card_printings p ON p.id = uc.printing_id
+            LEFT JOIN scryfall_mtg_sets ms ON LOWER(ms.code) = LOWER(p.set_code)
+            LEFT JOIN LATERAL (
+                SELECT pge.trend_price, pge.low_price, pge.foil_trend, pge.foil_low
+                FROM cardmarket_price_guide_entries pge
+                WHERE pge.id_product = p.cardmarket_id
+                ORDER BY pge.captured_at DESC
+                LIMIT 1
+            ) px ON TRUE
+            LEFT JOIN card_min_price cm ON cm.card_id = uc.card_id
             WHERE uc.user_id = :uid
               AND split_part(mm_normalize_name(uc.card_name), ' // ', 1)
                 = split_part(mm_normalize_name(:name), ' // ', 1)
@@ -638,9 +670,16 @@ def api_card_detail(card_name: str, request: Request) -> Response:
         # L'edition que l'utilisateur veut voir pour cette carte, s'il en a
         # choisi une : elle prime sur l'illustration par defaut.
         "preferred_printing": preferred,
+        # Les exemplaires possédés, ligne par ligne : chacun a son édition,
+        # sa finition, sa langue et son état.
         "items": [
             {"id": r.id, "quantity": int(r.quantity or 0),
-             "set_code": r.set_code, "scryfall_id": r.scryfall_id}
+             "set_code": r.set_code, "set_name": r.set_name,
+             "collector_number": r.collector_number,
+             "finish": r.finish, "language": r.language,
+             "condition": r.condition, "scryfall_id": r.scryfall_id,
+             "image_small": r.image_small, "image_normal": r.image_normal,
+             "unit_price": _num(r.unit_price)}
             for r in items
         ],
         "decks": [{"deck_id": r.deck_id, "name": r.name} for r in decks],
@@ -664,6 +703,9 @@ def api_card_detail(card_name: str, request: Request) -> Response:
                 "foil_low": _num(r.foil_low),
                 "foil_trend": _num(r.foil_trend),
                 "alt_art": bool(r.alt_art),
+                # Finitions dans lesquelles l'édition existe : un exemplaire
+                # ne peut prendre que l'une d'elles.
+                "finishes": list(r.finishes or ["nonfoil"]),
             }
             for r in printings
         ],

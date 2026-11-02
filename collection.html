@@ -159,6 +159,14 @@
           <button class="chip" data-deck="no" aria-pressed="false">Inutilisée</button>
         </div>
       </div>
+      <div class="stack-2" id="editionFilter" hidden>
+        <span class="label">Édition</span>
+        <div class="chips">
+          <button class="chip" data-edition="unknown" aria-pressed="false"
+                  title="Exemplaires dont l'édition n'a jamais été renseignée">
+            À préciser <span class="chip__count" id="unknownCount"></span></button>
+        </div>
+      </div>
     </div>
     <div class="filter-row">
       <div class="stack-2 grow">
@@ -198,6 +206,7 @@
     colors: [], types: [], rarities: [], finishes: [],
     sets: params.get('set') ? [params.get('set')] : [],
     in_deck: params.get('in_deck') || '',
+    edition: params.get('edition') || '',
     offset: 0,
     total: 0,
     loading: false,
@@ -260,6 +269,13 @@
       setSelect.appendChild(option);
     });
     if (state.sets.length) setSelect.value = state.sets[0];
+
+    // Le filtre ne parait que s'il reste des editions a preciser.
+    if (facets.unknown_printing || state.edition) {
+      MM.el('#editionFilter').hidden = false;
+      MM.el('#unknownCount').textContent = MM.fmt.int(facets.unknown_printing);
+      MM.el('[data-edition]').setAttribute('aria-pressed', String(state.edition === 'unknown'));
+    }
   } catch (err) {
     MM.toast.error('Filtres indisponibles : ' + err.message);
   }
@@ -272,7 +288,10 @@
     const chip = event.target.closest('.chip');
     if (!chip) return;
 
-    if (chip.dataset.deck) {
+    if (chip.dataset.edition) {
+      state.edition = state.edition ? '' : chip.dataset.edition;
+      chip.setAttribute('aria-pressed', String(Boolean(state.edition)));
+    } else if (chip.dataset.deck) {
       const value = chip.dataset.deck;
       state.in_deck = state.in_deck === value ? '' : value;
       MM.els('#deckChips .chip').forEach((other) =>
@@ -294,7 +313,7 @@
 
   MM.el('#clearFilters').addEventListener('click', () => {
     state.colors = []; state.types = []; state.rarities = [];
-    state.finishes = []; state.sets = []; state.in_deck = '';
+    state.finishes = []; state.sets = []; state.in_deck = ''; state.edition = '';
     MM.els('.chip').forEach((chip) => chip.setAttribute('aria-pressed', 'false'));
     MM.el('#setSelect').value = '';
     reload();
@@ -377,7 +396,8 @@
 
   function activeFilterCount() {
     return state.colors.length + state.types.length + state.rarities.length
-      + state.finishes.length + state.sets.length + (state.in_deck ? 1 : 0);
+      + state.finishes.length + state.sets.length + (state.in_deck ? 1 : 0)
+      + (state.edition ? 1 : 0);
   }
 
   async function load({ reset = false } = {}) {
@@ -393,6 +413,7 @@
       search: state.search, sort: state.sort,
       colors: state.colors, types: state.types, rarities: state.rarities,
       finishes: state.finishes, sets: state.sets, in_deck: state.in_deck,
+      edition: state.edition,
       limit: PAGE_SIZE, offset: state.offset,
     });
 
@@ -442,24 +463,51 @@
     });
   }
 
-  /** Une edition vient d'etre choisie pour une carte : seules ses vignettes
-   *  changent d'illustration. Les redessiner sur place garde la position de
-   *  lecture — recharger la liste ramenait tout en haut, loin de la carte. */
+  /** Les exemplaires d'une carte viennent de changer dans sa fiche : edition,
+   *  finition, langue, ligne scindee ou fusionnee. Seules ses vignettes sont
+   *  redessinees, sur place : recharger la liste ramenait tout en haut, loin
+   *  de la carte. Une ligne nee d'une scission se range apres ses soeurs. */
   async function refreshCard(name) {
     // Une carte a deux faces peut etre enregistree sous sa seule face avant.
     const front = (value) => value.split(' // ')[0].toLowerCase();
+    const shown = cache.filter((entry) => front(entry.card_name) === front(name));
+    if (!shown.length) return;
     try {
       const data = await MM.api.get('/api/v2/collection'
         + MM.api.qs({ search: front(name), limit: 500 }));
-      data.items
-        .filter((item) => front(item.card_name) === front(name))
-        .forEach((item) => {
-          const index = cache.findIndex((entry) => entry.id === item.id);
-          if (index < 0) return;
-          cache[index] = item;
-          const node = MM.el(`.mtg-card[data-id="${item.id}"]`, results);
-          if (node) node.outerHTML = tile(item);
+      const fresh = data.items.filter((item) => front(item.card_name) === front(name));
+      const freshIds = new Set(fresh.map((item) => item.id));
+
+      // Lignes disparues : fusionnees dans une autre, ou retirees.
+      shown.filter((entry) => !freshIds.has(entry.id)).forEach((entry) => {
+        const node = MM.el(`.mtg-card[data-id="${entry.id}"]`, results);
+        if (node) node.remove();
+        cache = cache.filter((other) => other !== entry);
+        state.total -= 1;
+      });
+
+      // Les lignes deja affichees d'abord : la reponse ne suit pas l'ordre de
+      // la grille, et une ligne nouvelle a besoin d'une voisine ou se ranger.
+      let anchor = null;
+      const added = [];
+      fresh.forEach((item) => {
+        const index = cache.findIndex((entry) => entry.id === item.id);
+        const node = MM.el(`.mtg-card[data-id="${item.id}"]`, results);
+        if (index < 0 || !node) { added.push(item); return; }
+        cache[index] = item;
+        node.outerHTML = tile(item);
+        anchor = MM.el(`.mtg-card[data-id="${item.id}"]`, results);
+      });
+      if (anchor) {
+        added.forEach((item) => {
+          const at = cache.findIndex((entry) => entry.id === Number(anchor.dataset.id));
+          cache.splice(at + 1, 0, item);
+          anchor.insertAdjacentHTML('afterend', tile(item));
+          anchor = anchor.nextElementSibling;
+          state.total += 1;
         });
+      }
+      updateSummary();
     } catch (err) {
       MM.toast.error(err.message);
     }
@@ -474,6 +522,7 @@
       search: state.search,
       sort: state.sort === 'value' ? '' : state.sort,
       in_deck: state.in_deck,
+      edition: state.edition,
       set: state.sets[0] || '',
     }).slice(1);
     history.replaceState(null, '', url);
@@ -561,6 +610,9 @@
               ${item.artist ? `<p class="xs dim">Illustration : ${MM.esc(item.artist)}</p>` : ''}
             </div>
 
+            <button class="btn btn--sm" type="button" data-editions>
+              Changer l’édition, la finition ou la langue</button>
+
             <hr class="divider">
 
             <div class="grid-3">
@@ -620,16 +672,32 @@
         <button class="btn btn--primary" data-save>Enregistrer</button>`,
     });
 
+    // Chaque exemplaire se regle dans la fiche de la carte, ou il peut aussi
+    // etre separe des autres pour recevoir sa propre edition.
+    MM.el('[data-editions]', modal.root).addEventListener('click', () => {
+      modal.close();
+      MM.cardDetail(item.card_name, { itemId: item.id });
+    });
+
     MM.el('[data-save]', modal.root).addEventListener('click', async (event) => {
       event.target.disabled = true;
       const payload = {
         quantity: Number(MM.el('#dQty', modal.root).value),
-        condition: MM.el('#dCond', modal.root).value || null,
         location: MM.el('#dLoc', modal.root).value || null,
         note: MM.el('#dNote', modal.root).value || null,
       };
+      // L'etat ne part que s'il change : vide, il s'efface, et il peut faire
+      // rejoindre a l'exemplaire une ligne deja decrite ainsi.
+      const condition = MM.el('#dCond', modal.root).value;
+      if (condition !== (item.condition || '')) payload.condition = condition;
       try {
         const result = await MM.api.patch(`/api/v2/collection/items/${item.id}`, payload);
+        if (result.merged) {
+          MM.toast.ok('Exemplaire regroupé avec ceux qui avaient déjà cette description.');
+          modal.close();
+          refreshCard(item.card_name);
+          return;
+        }
         if (result.deleted) {
           cardNode.remove();
           cache = cache.filter((entry) => entry.id !== item.id);

@@ -55,18 +55,15 @@ SORTS = {
 
 # Bloc SQL commun : resout impression, carte, prix et extension d'un exemplaire.
 _ENRICH_SQL = """
-    -- Impression exacte de l'exemplaire (renseignee a l'ajout)
-    LEFT JOIN scryfall_card_printings pd
-           ON pd.id = uc.printing_id
-          AND pd.set_code NOT ILIKE 'sl%'
-          AND LOWER(pd.set_code) NOT IN ('mar', 'lmar', 'pza', 'tle')
+    -- Impression exacte de l'exemplaire. Elle fait foi pour tout ce qui le
+    -- decrit — illustration, extension, rarete, prix —, Secret Lair compris :
+    -- l'ecart de ces editions ne vaut que pour une illustration choisie par
+    -- defaut, pas pour la carte que l'on a dans sa boite.
+    LEFT JOIN scryfall_card_printings pd ON pd.id = uc.printing_id
 
-    -- Repli : impression illustrative, quand l'edition n'est pas connue — ou
-    -- quand celle qui est enregistree porte une illustration hors sujet (voir
-    -- plus haut), ou encore quand elle n'a pas d'image du tout. Ce dernier cas
-    -- laissait la vignette vide alors qu'une autre impression de la meme carte
-    -- en portait une : le catalogue connait des impressions sans image, et
-    -- l'exemplaire possede pointait justement l'une d'elles.
+    -- Repli : impression illustrative, quand l'edition n'est pas connue, ou
+    -- quand celle qui est enregistree n'a pas d'image : le catalogue connait
+    -- des impressions sans image, et la vignette restait alors vide.
     LEFT JOIN LATERAL (
         SELECT p.id, p.scryfall_id, p.set_code, p.collector_number, p.rarity,
                p.image_small, p.image_normal, p.scryfall_uri, p.artist,
@@ -86,10 +83,11 @@ _ENRICH_SQL = """
 
     LEFT JOIN scryfall_cards sc ON sc.id = uc.card_id
 
-    -- Edition retenue par l'utilisateur pour cette carte : c'est elle qu'il
-    -- veut voir, meme lorsque l'exemplaire possede en enregistre une autre.
-    -- Seule l'illustration la suit — l'extension, la rarete et le prix
-    -- continuent de decrire l'exemplaire qui est dans la boite.
+    -- Edition retenue par l'utilisateur pour cette carte. Elle ne sert qu'a
+    -- l'exemplaire dont l'edition n'est pas connue : un exemplaire identifie
+    -- montre toujours la sienne. Elle l'emportait autrefois, et deux
+    -- exemplaires de deux editions montraient la meme illustration sous deux
+    -- codes d'extension differents.
     LEFT JOIN LATERAL (
         SELECT p.image_small, p.image_normal
         FROM user_preferred_printings pref
@@ -99,18 +97,41 @@ _ENRICH_SQL = """
                 COALESCE(sc.normalized_name, mm_normalize_name(uc.card_name)), ' // ', 1)
     ) pp ON TRUE
 
-    -- Prix de reference du projet : la tendance Cardmarket de l'edition la
-    -- moins chere, precalcule par la vue card_min_price. Il ne depend ni de
-    -- l'edition possedee ni de la finition.
+    -- Cote de l'exemplaire : le dernier releve Cardmarket de son edition.
+    -- Les impressions etrangeres ont leur propre produit Cardmarket.
+    LEFT JOIN LATERAL (
+        SELECT pge.trend_price, pge.low_price, pge.foil_trend, pge.foil_low
+        FROM cardmarket_price_guide_entries pge
+        WHERE pge.id_product = pd.cardmarket_id
+        ORDER BY pge.captured_at DESC
+        LIMIT 1
+    ) px ON TRUE
+
+    -- Repli : la tendance de l'edition la moins chere, precalculee par la vue
+    -- card_min_price — pour un exemplaire d'edition inconnue ou non cotee.
     LEFT JOIN card_min_price cm ON cm.card_id = uc.card_id
 
     LEFT JOIN scryfall_mtg_sets st
            ON UPPER(st.code) = UPPER(COALESCE(pd.set_code, pf.set_code, uc.set_code))
 """
 
-# Prix unitaire : tendance Cardmarket de l'edition la moins chere.
+# Valeur d'un exemplaire : la tendance de son edition, dans sa finition — la
+# cote foil pour un foil ou un etched, la meilleure offre a defaut de
+# tendance. Faute de cote pour l'edition, celle de l'edition la moins chere.
+# Les ecrans d'achat (buylist, analyses) gardent ce dernier prix : ce que
+# coute une carte a acquerir n'est pas ce que vaut celle que l'on a.
+#
+# Une edition qui n'existe qu'en foil (les numerotees « 181z », par exemple)
+# se cote en foil, quelle que soit la finition enregistree : sa cote normale
+# n'existe pas, et la meilleure offre affichait alors 1 500 EUR pour une carte
+# dont la tendance est de 450.
 _UNIT_PRICE_SQL = """
-    cm.price
+    COALESCE(
+        CASE WHEN uc.finish <> 'nonfoil'
+               OR NOT ('nonfoil' = ANY(COALESCE(pd.finishes, ARRAY['nonfoil'])))
+             THEN COALESCE(NULLIF(px.foil_trend, 0), NULLIF(px.foil_low, 0)) END,
+        NULLIF(px.trend_price, 0), NULLIF(px.low_price, 0),
+        cm.price)
 """
 
 _RARITY_RANK_SQL = """
@@ -163,6 +184,9 @@ def _row_to_item(row: Any) -> dict:
         "location": row.location,
         "note": row.note,
         "scryfall_id": row.scryfall_id,
+        # Edition non renseignee : l'illustration et le code montres sont
+        # alors ceux d'une impression choisie par defaut, pas de l'exemplaire.
+        "printing_unknown": bool(getattr(row, "printing_unknown", False)),
         "scryfall_uri": row.scryfall_uri,
         "rarity": row.rarity,
         "artist": row.artist,
@@ -215,13 +239,20 @@ def list_items(
     sets: list[str] | None = None,
     finishes: list[str] | None = None,
     in_deck: str = "",
+    edition: str = "",
     sort: str = "name",
     limit: int = 60,
     offset: int = 0,
 ) -> dict:
-    """Liste paginee des exemplaires, avec filtres et usage en deck."""
+    """Liste paginee des exemplaires, avec filtres et usage en deck.
+
+    edition="unknown" ne garde que les exemplaires dont l'edition reste a
+    preciser.
+    """
     where = ["uc.user_id = :uid"]
     params: dict[str, Any] = {"uid": user_id}
+    if edition == "unknown":
+        where.append("uc.printing_id IS NULL")
 
     if search:
         # Le nom stocke est l'anglais : sans la seconde branche, chercher
@@ -283,13 +314,14 @@ def list_items(
     query = f"""
         SELECT uc.id, uc.card_name, uc.quantity, uc.finish, uc.language,
                uc.condition, uc.location, uc.note, uc.added_at, uc.updated_at,
+               (uc.printing_id IS NULL)                           AS printing_unknown,
                COALESCE(pd.scryfall_id, pf.scryfall_id)           AS scryfall_id,
                UPPER(COALESCE(pd.set_code, pf.set_code, uc.set_code)) AS set_code,
                COALESCE(pd.collector_number, pf.collector_number,
                         uc.collector_number)                       AS collector_number,
                COALESCE(pd.rarity, pf.rarity)                     AS rarity,
-               COALESCE(pp.image_small, pd.image_small, pf.image_small)   AS image_small,
-               COALESCE(pp.image_normal, pd.image_normal, pf.image_normal) AS image_normal,
+               COALESCE(pd.image_small, pp.image_small, pf.image_small)   AS image_small,
+               COALESCE(pd.image_normal, pp.image_normal, pf.image_normal) AS image_normal,
                COALESCE(pd.scryfall_uri, pf.scryfall_uri)         AS scryfall_uri,
                COALESCE(pd.artist, pf.artist)                     AS artist,
                st.name                                            AS set_name,
@@ -368,6 +400,11 @@ def facets(user_id: int) -> dict:
             WHERE user_id = :uid GROUP BY 1
         """), {"uid": user_id}).fetchall()
 
+        unknown = session.execute(text("""
+            SELECT COUNT(*) FROM user_collection
+            WHERE user_id = :uid AND printing_id IS NULL
+        """), {"uid": user_id}).scalar()
+
         colors = session.execute(text(enriched + """
             SELECT c.color, COUNT(*) AS n
             FROM enriched e
@@ -397,6 +434,7 @@ def facets(user_id: int) -> dict:
         "finishes": [{"value": r.finish, "count": r.n} for r in finishes],
         "colors": [{"value": r.color, "count": r.n} for r in colors],
         "types": [{"value": r.label, "count": r.n} for r in types],
+        "unknown_printing": unknown or 0,
     }
 
 
@@ -469,7 +507,7 @@ def _compute_stats(user_id: int) -> dict:
         top = session.execute(text(f"""
             SELECT uc.card_name, uc.quantity, uc.finish,
                    UPPER(COALESCE(pd.set_code, pf.set_code, uc.set_code)) AS set_code,
-                   COALESCE(pp.image_normal, pd.image_normal, pf.image_normal) AS image_normal,
+                   COALESCE(pd.image_normal, pp.image_normal, pf.image_normal) AS image_normal,
                    COALESCE(pd.scryfall_id, pf.scryfall_id)        AS scryfall_id,
                    {_UNIT_PRICE_SQL} AS unit_price
             FROM user_collection uc
@@ -526,13 +564,14 @@ def dormant_items(user_id: int, limit: int = 24) -> list[dict]:
         )
         SELECT uc.id, uc.card_name, uc.quantity, uc.finish, uc.language,
                uc.condition, uc.location, uc.note, uc.added_at, uc.updated_at,
+               (uc.printing_id IS NULL)                           AS printing_unknown,
                COALESCE(pd.scryfall_id, pf.scryfall_id)        AS scryfall_id,
                UPPER(COALESCE(pd.set_code, pf.set_code, uc.set_code)) AS set_code,
                COALESCE(pd.collector_number, pf.collector_number,
                         uc.collector_number)                    AS collector_number,
                COALESCE(pd.rarity, pf.rarity)                  AS rarity,
-               COALESCE(pp.image_small, pd.image_small, pf.image_small)   AS image_small,
-               COALESCE(pp.image_normal, pd.image_normal, pf.image_normal) AS image_normal,
+               COALESCE(pd.image_small, pp.image_small, pf.image_small)   AS image_small,
+               COALESCE(pd.image_normal, pp.image_normal, pf.image_normal) AS image_normal,
                COALESCE(pd.scryfall_uri, pf.scryfall_uri)      AS scryfall_uri,
                COALESCE(pd.artist, pf.artist)                  AS artist,
                st.name AS set_name, st.icon_svg_uri AS set_icon,
@@ -558,11 +597,15 @@ def dormant_items(user_id: int, limit: int = 24) -> list[dict]:
 # ── Ecriture ──────────────────────────────────────────────────────────────────
 
 def _resolve_printing(session: Any, name: str, set_code: str | None,
-                      collector_number: str | None) -> dict:
+                      collector_number: str | None, *, guess: bool = True) -> dict:
     """Identifie l'impression et la carte d'un exemplaire.
 
     Materialiser card_id / printing_id des l'ajout evite de resoudre le nom a
     chaque lecture de la collection.
+
+    guess=False : sans extension, l'edition n'est pas devinee. Choisir la plus
+    recente faisait passer pour possedee une edition que personne n'avait
+    designee ; l'exemplaire reste « edition a preciser ».
     """
     if set_code and collector_number:
         row = session.execute(text("""
@@ -587,6 +630,13 @@ def _resolve_printing(session: Any, name: str, set_code: str | None,
     # Le nom peut ne citer que la face avant d'une carte recto-verso. Une
     # édition qui n'offre que des cartes d'art (ALTR, AMOM…) ne donne rien :
     # on retente alors sans elle, pour trouver la vraie carte.
+    if not set_code and not guess:
+        return {
+            "printing_id": None, "scryfall_id": None,
+            "card_id": _resolve_card_id(session, name),
+            "set_code": None, "collector_number": collector_number,
+        }
+
     art_set = bool(set_code) and bool(session.execute(text("""
         SELECT 1 FROM scryfall_mtg_sets
         WHERE LOWER(code) = LOWER(:set) AND set_type = 'memorabilia'
@@ -619,7 +669,16 @@ def _resolve_printing(session: Any, name: str, set_code: str | None,
         }
 
     # Carte connue mais sans impression anglaise exploitable : on garde la carte
-    card_id = session.execute(text("""
+    return {
+        "printing_id": None, "card_id": _resolve_card_id(session, name), "scryfall_id": None,
+        "set_code": set_code.upper() if set_code else None,
+        "collector_number": collector_number,
+    }
+
+
+def _resolve_card_id(session: Any, name: str) -> int | None:
+    """La carte designee par un nom, sans s'occuper de l'edition."""
+    return session.execute(text("""
         SELECT sc.id FROM scryfall_cards sc
         WHERE (sc.normalized_name = mm_normalize_name(:name)
                OR split_part(sc.normalized_name, ' // ', 1) = mm_normalize_name(:name))
@@ -630,12 +689,6 @@ def _resolve_printing(session: Any, name: str, set_code: str | None,
                  (sc.type_line NOT ILIKE '%Token%') DESC, sc.id
         LIMIT 1
     """), {"name": name}).scalar()
-
-    return {
-        "printing_id": None, "card_id": card_id, "scryfall_id": None,
-        "set_code": set_code.upper() if set_code else None,
-        "collector_number": collector_number,
-    }
 
 
 def add_item(
@@ -665,12 +718,20 @@ def add_item(
         card_id = None
         printing_id = None
         if resolve:
-            found = _resolve_printing(session, card_name, set_code, collector_number)
+            found = _resolve_printing(session, card_name, set_code, collector_number,
+                                      guess=False)
             scryfall_id = found["scryfall_id"]
             card_id = found["card_id"]
             printing_id = found["printing_id"]
             set_code = found["set_code"]
             collector_number = found["collector_number"]
+            # Un exemplaire etranger prend l'impression de sa langue, quand
+            # l'edition en a une.
+            if printing_id and language != DEFAULT_LANGUAGE:
+                localized = _localized_printing(session, printing_id, language)
+                if localized is not None:
+                    printing_id = localized.id
+                    scryfall_id = localized.scryfall_id
 
         row = session.execute(text("""
             INSERT INTO user_collection (
@@ -707,36 +768,181 @@ def add_item(
             "set_code": set_code, "finish": finish}
 
 
-def set_item_printing(user_id: int, item_id: int, scryfall_id: str) -> dict | None:
-    """Fixe l'edition possedee d'un exemplaire.
+def _localized_printing(session: Any, printing_id: int, language: str) -> Any:
+    """L'impression de meme extension et meme numero, dans une autre langue.
 
-    L'affichage de la collection suit printing_id quand il est renseigne : c'est
-    ce qui fait paraitre l'illustration et le code d'extension de l'edition que
-    l'on possede reellement, et non d'une impression choisie par defaut.
+    Scryfall decrit chaque langue comme une impression a part, avec son
+    illustration et son produit Cardmarket. None si la langue n'existe pas
+    pour cette edition : l'exemplaire garde alors l'impression anglaise.
+    """
+    return session.execute(text("""
+        SELECT loc.id, loc.card_id, UPPER(loc.set_code) AS set_code,
+               loc.collector_number, loc.scryfall_id
+        FROM scryfall_card_printings base
+        JOIN scryfall_card_printings loc
+          ON loc.card_id = base.card_id
+         AND LOWER(loc.set_code) = LOWER(base.set_code)
+         AND loc.collector_number = base.collector_number
+         AND loc.lang = :lang
+        WHERE base.id = :pid
+        LIMIT 1
+    """), {"pid": printing_id, "lang": language}).fetchone()
+
+
+def reassign_item(
+    user_id: int,
+    item_id: int,
+    *,
+    scryfall_id: str | None = None,
+    finish: str | None = None,
+    language: str | None = None,
+    condition: str | None = None,
+    quantity: int | None = None,
+) -> dict | None:
+    """Change l'édition, la finition, la langue ou l'état d'exemplaires.
+
+    `quantity` limite le changement à une partie de la ligne : deux Sol Ring
+    enregistrés ensemble peuvent ainsi recevoir chacun leur édition. La ligne
+    se scinde, et les exemplaires déplacés rejoignent la ligne qui porte déjà
+    la même description, s'il en existe une — la contrainte d'unicité de la
+    collection faisait autrefois échouer le changement au lieu de fusionner.
+
+    `condition` vide efface l'état. Renvoie la ligne qui porte désormais les
+    exemplaires déplacés, ou None si l'exemplaire ou l'édition est inconnu.
     """
     with SessionLocal() as session:
-        printing = session.execute(text("""
-            SELECT id, card_id, UPPER(set_code) AS set_code, collector_number, scryfall_id
-            FROM scryfall_card_printings WHERE scryfall_id = :sid
-        """), {"sid": scryfall_id}).fetchone()
-        if printing is None:
+        row = session.execute(text("""
+            SELECT id, card_name, quantity, set_code, collector_number, finish,
+                   language, condition, location, note, card_id, printing_id,
+                   scryfall_id
+            FROM user_collection
+            WHERE id = :id AND user_id = :uid
+            FOR UPDATE
+        """), {"id": item_id, "uid": user_id}).fetchone()
+        if row is None:
             return None
 
-        row = session.execute(text("""
-            UPDATE user_collection
-               SET printing_id = :pid, card_id = COALESCE(card_id, :cid),
-                   set_code = :set_code, collector_number = :num,
-                   scryfall_id = :sid, updated_at = NOW()
-             WHERE id = :id AND user_id = :uid
-         RETURNING id, card_name, set_code
-        """), {"pid": printing.id, "cid": printing.card_id,
-               "set_code": printing.set_code, "num": printing.collector_number,
-               "sid": printing.scryfall_id, "id": item_id, "uid": user_id}).fetchone()
+        target = {
+            "set": row.set_code, "num": row.collector_number,
+            "pid": row.printing_id, "sid": row.scryfall_id, "cid": row.card_id,
+            "finish": row.finish, "lang": row.language, "cond": row.condition,
+        }
+
+        def take(printing: Any) -> None:
+            target.update(set=printing.set_code, num=printing.collector_number,
+                          pid=printing.id, sid=printing.scryfall_id,
+                          cid=printing.card_id or target["cid"])
+
+        if scryfall_id:
+            printing = session.execute(text("""
+                SELECT id, card_id, UPPER(set_code) AS set_code, collector_number,
+                       scryfall_id
+                FROM scryfall_card_printings WHERE scryfall_id = :sid
+            """), {"sid": scryfall_id}).fetchone()
+            if printing is None:
+                return None
+            take(printing)
+        if finish is not None:
+            target["finish"] = _clean_finish(finish)
+        if language is not None:
+            target["lang"] = (language or DEFAULT_LANGUAGE).strip().lower()[:8]
+        if condition is not None:
+            target["cond"] = condition.strip().upper() or None
+            if target["cond"] not in CONDITIONS:
+                target["cond"] = None
+
+        # L'impression suit la langue de l'exemplaire, quand elle existe.
+        if target["pid"]:
+            localized = _localized_printing(session, target["pid"], target["lang"])
+            if localized is not None:
+                take(localized)
+
+            # Une finition que l'édition n'offre pas cède la place à la
+            # sienne : un exemplaire non foil d'une édition toute foil n'existe
+            # pas, et sa cote se lirait dans le vide.
+            offered = session.execute(text("""
+                SELECT finishes FROM scryfall_card_printings WHERE id = :pid
+            """), {"pid": target["pid"]}).scalar()
+            if offered and target["finish"] not in offered:
+                target["finish"] = _clean_finish(offered[0])
+
+        moved = row.quantity if quantity is None else max(1, min(int(quantity), row.quantity))
+        whole = moved == row.quantity
+        params = {**target, "uid": user_id, "id": row.id, "name": row.card_name,
+                  "moved": moved}
+
+        other = session.execute(text("""
+            SELECT id FROM user_collection
+            WHERE user_id = :uid AND id <> :id
+              AND LOWER(TRIM(card_name)) = LOWER(TRIM(:name))
+              AND COALESCE(set_code, '') = COALESCE(:set, '')
+              AND COALESCE(collector_number, '') = COALESCE(:num, '')
+              AND finish = :finish AND language = :lang
+              AND COALESCE(condition, '') = COALESCE(:cond, '')
+        """), params).scalar()
+
+        if other is not None:
+            session.execute(text("""
+                UPDATE user_collection
+                   SET quantity = quantity + :moved, updated_at = NOW(),
+                       printing_id = COALESCE(printing_id, :pid),
+                       scryfall_id = COALESCE(scryfall_id, :sid),
+                       card_id = COALESCE(card_id, :cid)
+                 WHERE id = :other
+            """), {**params, "other": other})
+            result_id = other
+        elif whole:
+            session.execute(text("""
+                UPDATE user_collection
+                   SET set_code = :set, collector_number = :num,
+                       printing_id = :pid, scryfall_id = :sid, card_id = :cid,
+                       finish = :finish, language = :lang, condition = :cond,
+                       updated_at = NOW()
+                 WHERE id = :id
+            """), params)
+            result_id = row.id
+        else:
+            result_id = session.execute(text("""
+                INSERT INTO user_collection (
+                    user_id, card_name, quantity, set_code, collector_number,
+                    finish, language, condition, location, note, scryfall_id,
+                    card_id, printing_id, raw_line, added_at, updated_at
+                ) VALUES (
+                    :uid, :name, :moved, :set, :num, :finish, :lang, :cond,
+                    :loc, :note, :sid, :cid, :pid, :raw, NOW(), NOW()
+                )
+                RETURNING id
+            """), {**params, "loc": row.location, "note": row.note,
+                   "raw": f"{moved} {row.card_name}"}).scalar()
+
+        # Ce qui reste de la ligne d'origine, quand elle n'a pas été reprise
+        # telle quelle.
+        if result_id != row.id:
+            if whole:
+                session.execute(text("DELETE FROM user_collection WHERE id = :id"),
+                                {"id": row.id})
+            else:
+                session.execute(text("""
+                    UPDATE user_collection SET quantity = quantity - :moved,
+                           updated_at = NOW()
+                    WHERE id = :id
+                """), params)
+
+        result = session.execute(text("""
+            SELECT id, card_name, quantity, set_code FROM user_collection WHERE id = :id
+        """), {"id": result_id}).fetchone()
         session.commit()
 
-    if row is None:
-        return None
-    return {"id": row.id, "card_name": row.card_name, "set_code": row.set_code}
+    invalidate_stats(user_id)
+    return {"id": result.id, "card_name": result.card_name,
+            "quantity": result.quantity, "set_code": result.set_code,
+            "merged": other is not None}
+
+
+def set_item_printing(user_id: int, item_id: int, scryfall_id: str,
+                      quantity: int | None = None) -> dict | None:
+    """Fixe l'édition possédée d'exemplaires (voir reassign_item)."""
+    return reassign_item(user_id, item_id, scryfall_id=scryfall_id, quantity=quantity)
 
 
 # Cle d'une carte dans les preferences d'edition : son nom normalise, replie
@@ -795,19 +1001,42 @@ def clear_preferred_printing(user_id: int, card_name: str) -> bool:
 
 
 def update_item(user_id: int, item_id: int, **fields: Any) -> dict | None:
-    """Met a jour un exemplaire. quantity <= 0 le supprime."""
-    allowed = {"quantity", "condition", "location", "note", "finish", "language"}
-    updates = {k: v for k, v in fields.items() if k in allowed and v is not None}
-    if not updates:
+    """Met à jour un exemplaire. quantity <= 0 le supprime.
+
+    Finition, langue et état changent la description de l'exemplaire : ils
+    passent par reassign_item, qui fusionne avec une ligne déjà identique. La
+    quantité s'applique alors en écart, pour ne pas écraser celle de la ligne
+    rejointe.
+    """
+    identity = {k: fields[k] for k in ("finish", "language", "condition")
+                if fields.get(k) is not None}
+    updates = {k: v for k, v in fields.items()
+               if k in ("quantity", "location", "note") and v is not None}
+    if not identity and not updates:
         return None
+
+    merged = False
+    if identity:
+        with SessionLocal() as session:
+            before = session.execute(text("""
+                SELECT quantity FROM user_collection WHERE id = :id AND user_id = :uid
+            """), {"id": item_id, "uid": user_id}).scalar()
+        moved = reassign_item(user_id, item_id, **identity)
+        if moved is None:
+            return None
+        merged = moved["merged"]
+        if moved["id"] != item_id and "quantity" in updates:
+            updates["quantity"] = moved["quantity"] + int(updates["quantity"]) - int(before)
+        item_id = moved["id"]
+        if not updates:
+            return {"id": item_id, "card_name": moved["card_name"],
+                    "quantity": moved["quantity"], "merged": merged}
 
     if "quantity" in updates:
         updates["quantity"] = int(updates["quantity"])
         if updates["quantity"] <= 0:
             delete_item(user_id, item_id)
             return {"deleted": True, "id": item_id}
-    if "finish" in updates:
-        updates["finish"] = _clean_finish(updates["finish"])
 
     assignments = ", ".join(f"{k} = :{k}" for k in updates)
     params = {**updates, "uid": user_id, "id": item_id}
@@ -822,7 +1051,8 @@ def update_item(user_id: int, item_id: int, **fields: Any) -> dict | None:
     invalidate_stats(user_id)
     if row is None:
         return None
-    return {"id": row.id, "card_name": row.card_name, "quantity": row.quantity}
+    return {"id": row.id, "card_name": row.card_name, "quantity": row.quantity,
+            "merged": merged}
 
 
 def delete_item(user_id: int, item_id: int) -> bool:
