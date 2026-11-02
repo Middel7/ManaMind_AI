@@ -194,13 +194,18 @@
       commander: deckInfo.commander, reference: manaReference, average: true });
   }
 
-  if (deckInfo.deck_id) {
-    // Les resultats d'analyse ne portent pas la liste du deck : on la relit
-    // pour en tirer la courbe et la repartition, sans bloquer l'affichage.
-    MM.api.get(`/api/v2/decks/${encodeURIComponent(deckInfo.deck_id)}`)
+  // Les resultats d'analyse ne portent pas la liste du deck : on la relit
+  // pour en tirer la courbe et la repartition, et la quantite de depart des
+  // reglages. Relue apres chaque changement, la courbe suit les ajouts.
+  let deckLoad = Promise.resolve();
+  function loadDeckCards() {
+    if (!deckInfo.deck_id) return deckLoad;
+    deckLoad = MM.api.get(`/api/v2/decks/${encodeURIComponent(deckInfo.deck_id)}`)
       .then((data) => { deckCards = data.cards || []; renderMana(); })
       .catch(() => {});
+    return deckLoad;
   }
+  loadDeckCards();
 
   MM.mana.reference(deckInfo.commander).then((reference) => {
     if (!reference) return;
@@ -538,13 +543,23 @@
       .forEach((name) => pinned.add(name.toLowerCase()));
   } catch { /* la buylist reste utilisable, son etat initial seul manque */ }
 
+  // Chaque reglage part de la quantite reelle du deck : un retrait de terrain
+  // de base porte souvent sur plus d'un exemplaire.
+  const inDeck = (name) => {
+    const line = (deckCards || []).find((entry) =>
+      entry.card_name.toLowerCase() === name.toLowerCase());
+    return line ? line.quantity : 0;
+  };
+  await deckLoad;
+
   const tile = (row, kind) => MM.cardTile(
     { ...(resolved[row.name] || {}), card_name: row.name },
     {
       context: canEdit ? 'deck' : null,
       buylist: kind === 'add' ? pinned.has(row.name.toLowerCase()) : null,
-      // Un ajout propose part de zero ; un retrait porte sur une carte du deck.
-      deckQty: kind === 'add' ? 0 : 1,
+      // Un retrait porte sur une carte du deck : au moins un exemplaire, meme
+      // si le contenu du deck n'a pas pu etre lu.
+      deckQty: kind === 'add' ? inDeck(row.name) : Math.max(1, inDeck(row.name)),
       note: row.frequency
         ? `${MM.esc(row.frequency)} % des decks`
         : (row.score ? `score ${MM.esc(row.score)}` : ''),
@@ -591,6 +606,9 @@
           <button class="chip" data-tab="cut" aria-pressed="false">
             Cartes à retirer <span class="chip__count" id="countCut">${removals.length}</span></button>
         </div>
+        ${canEdit ? `
+          <button class="btn btn--primary btn--sm" id="addCard" type="button">
+            Ajouter ou retirer une carte</button>` : ''}
         <div class="toolbar__spacer"></div>
         <div class="chips" id="priceFilter">
           ${CAPS.map((cap) => `
@@ -607,11 +625,6 @@
                   title="Masquer les terrains">Sans les terrains</button>
         </div>
       </div>
-      ${canEdit ? `
-        <div style="margin-bottom:var(--sp-5)">
-          <button class="btn btn--primary" id="addCard" type="button">
-            Ajouter une autre carte au deck</button>
-        </div>` : ''}
       <div id="panel-add"></div>
       <div id="panel-cut" hidden></div>
     </div>`;
@@ -651,39 +664,28 @@
   });
 
   if (canEdit) {
-    // L'analyse ne porte pas le contenu du deck : ses quantites se lisent a la
-    // premiere ouverture de la fenetre, pour qu'une carte deja presente n'y
-    // affiche pas un zero trompeur.
-    let deckCards = null;
-    async function loadDeckCards() {
-      if (deckCards || !deckInfo.deck_id) return;
-      try {
-        const data = await MM.api.get(
-          `/api/v2/decks/${encodeURIComponent(deckInfo.deck_id)}`);
-        deckCards = data.cards || [];
-      } catch { deckCards = []; }
-    }
-
     MM.el('#addCard').addEventListener('click', () => {
-      // Meme fenetre que sur la fiche du deck : elle reste ouverte pour
-      // enchainer les ajouts.
+      // Meme fenetre que sur la fiche du deck, qui reste ouverte pour
+      // enchainer : une carte deja presente y affiche sa quantite, et le
+      // « − » la retire.
       MM.addCardDialog({
-        deckQty: (name) => {
-          const line = (deckCards || []).find((entry) =>
-            entry.card_name.toLowerCase() === name.toLowerCase());
-          return line ? line.quantity : 0;
-        },
+        title: 'Ajouter ou retirer une carte',
+        deckQty: inDeck,
+        ready: () => deckLoad,
+        basics: true,
       });
-      loadDeckCards();
     });
 
     document.addEventListener('mm:card-change', (event) => {
       if (event.detail.scope !== 'deck') return;
       // Le deck vient de changer : ses quantites sont relues pour la suite.
-      deckCards = null;
       loadDeckCards();
-      if (event.detail.delta < 0) return;
-      MM.toast.ok(`${event.detail.card_name} ajoutée à ${deckInfo.name || 'votre deck'}.`);
+      const deckName = deckInfo.name || 'votre deck';
+      if (event.detail.delta < 0) {
+        MM.toast.ok(`${event.detail.card_name} retirée de ${deckName}.`);
+      } else {
+        MM.toast.ok(`${event.detail.card_name} ajoutée à ${deckName}.`);
+      }
     });
   }
 

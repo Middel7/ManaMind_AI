@@ -1516,14 +1516,29 @@
    *   title   {string} titre de la fenetre
    *   deckQty {(name:string)=>number} exemplaires deja dans le deck, pour que
    *     le reglage d'une carte deja presente ne reparte pas d'un zero trompeur
+   *   ready   {()=>Promise} attendue avant d'afficher des quantites : le
+   *     contenu du deck peut arriver apres l'ouverture de la fenetre
+   *   basics  {boolean} proposer d'emblee les terrains de base, qu'on ajoute
+   *     et retire par dizaines sans avoir a les chercher
    * @returns {object} la fenetre { root, body, close }
    */
+  /** Les terrains de base, Wastes compris pour les decks incolores. */
+  const BASIC_LANDS = ['Plains', 'Island', 'Swamp', 'Mountain', 'Forest', 'Wastes'];
+
   MM.addCardDialog = function ({ title = 'Ajouter une carte au deck',
-                                 deckQty = () => 0 } = {}) {
+                                 deckQty = () => 0,
+                                 ready = () => Promise.resolve(),
+                                 basics = false } = {}) {
     const dialog = MM.modal({
       title,
       wide: true,
       body: `<div class="stack">
+               ${basics ? `
+                 <div class="stack-2">
+                   <p class="label">Terrains de base</p>
+                   <div id="mmBasics" class="card-grid card-grid--sm">
+                     ${MM.cardSkeletons(BASIC_LANDS.length)}</div>
+                 </div>` : ''}
                <div class="field">
                  <label class="label" for="mmAddCard">Nom de la carte</label>
                  <input class="input" id="mmAddCard" type="text" autocomplete="off"
@@ -1537,6 +1552,18 @@
     const input = el('#mmAddCard', dialog.root);
     const host = el('#mmAddResults', dialog.root);
 
+    if (basics) {
+      const basicHost = el('#mmBasics', dialog.root);
+      Promise.all([MM.resolveCards(BASIC_LANDS), ready()])
+        .then(([resolved]) => {
+          basicHost.innerHTML = BASIC_LANDS.map((name) => MM.cardTile(
+            { ...(resolved[name] || {}), card_name: name },
+            { context: 'deck', deckQty: deckQty(name), market: false,
+              commander: false })).join('');
+        })
+        .catch(() => { basicHost.innerHTML = ''; });
+    }
+
     async function search() {
       const term = input.value.trim();
       if (term.length < 2) {
@@ -1545,8 +1572,10 @@
       }
       host.innerHTML = `<div class="card-grid">${MM.cardSkeletons(8)}</div>`;
       try {
-        const data = await MM.api.get(
-          `/api/v2/cards/suggest?q=${encodeURIComponent(term)}&limit=20`);
+        const [data] = await Promise.all([
+          MM.api.get(`/api/v2/cards/suggest?q=${encodeURIComponent(term)}&limit=20`),
+          ready(),
+        ]);
         const found = data.cards || [];
         if (!found.length) {
           host.innerHTML = MM.empty({
