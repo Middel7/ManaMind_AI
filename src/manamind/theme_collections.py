@@ -282,6 +282,22 @@ def _declared(session, collection_id: int) -> set[tuple[str, str]]:
     """), {"id": collection_id})}
 
 
+def _local_names(session, card_ids: list[int], language: str) -> dict[int, str]:
+    """Nom imprimé de chaque carte dans la langue de la collection.
+
+    Une collection en français se cherche sous « Faucheuse du Vol d'Argent de
+    lune », pas seulement sous « Reaper of Flight Moonsilver ».
+    """
+    if language == "en" or not card_ids:
+        return {}
+    return {r.card_id: r.printed_name for r in session.execute(text("""
+        SELECT DISTINCT ON (card_id) card_id, printed_name
+        FROM scryfall_card_printings
+        WHERE card_id = ANY(:ids) AND lang = :lang AND printed_name IS NOT NULL
+        ORDER BY card_id, released_at DESC NULLS LAST
+    """), {"ids": card_ids, "lang": language})}
+
+
 def _num(value) -> float | None:
     return None if value is None else round(float(value), 2)
 
@@ -364,6 +380,9 @@ def evaluate(session, user_id: int, definition: dict, collection_id: int | None 
     if definition.get("by_illustration"):
         for card in cards.values():
             card["editions"] = merge_by_illustration(card["editions"])
+    local = _local_names(session, list(cards), definition["language"])
+    for card in cards.values():
+        card["local_name"] = local.get(card["card_id"])
 
     total = owned = 0
     value_owned = cost_missing = 0.0

@@ -61,14 +61,20 @@
   let pinned = new Set();
 
   const priceOf = (edition) => edition.price || 0;
+  // Recherche sans accents ni casse : « faucheuse du vol d'argent » trouve
+  // « Faucheuse du Vol d'Argent de lune ».
+  const fold = (value) => String(value || '').normalize('NFD')
+    .replace(/[̀-ͯ]/g, '').toLowerCase();
 
-  /** Les cartes de l'onglet courant, filtrees et triees. */
+  /** Les cartes de l'onglet courant, filtrees et triees. Une carte se trouve
+   *  sous son nom anglais comme sous son nom dans la langue de la collection. */
   function visibleCards() {
     const owned = state.tab === 'owned';
-    const needle = state.search.trim().toLowerCase();
+    const needle = fold(state.search.trim());
     const cards = [];
     data.cards.forEach((card) => {
-      if (needle && !card.name.toLowerCase().includes(needle)) return;
+      if (needle && !fold(card.name).includes(needle)
+        && !fold(card.local_name).includes(needle)) return;
       // Une case par illustration porte toutes ses editions : le filtre par
       // extension la garde des qu'une d'elles en est.
       const editions = card.editions.filter((e) => e.owned === owned
@@ -183,7 +189,9 @@
       <section class="theme-card">
         <div class="between">
           <div class="stack-2" style="gap:2px">
-            <h3 class="h4">${MM.esc(card.name)}</h3>
+            <h3 class="h4">${MM.esc(card.local_name || card.name)}</h3>
+            ${card.local_name && card.local_name !== card.name
+              ? `<span class="xs dim">${MM.esc(card.name)}</span>` : ''}
             <span class="xs dim num">${MM.fmt.plural(card.owned_count, unit)}
               possédée${card.owned_count > 1 ? 's' : ''} sur ${MM.fmt.int(total)}</span>
           </div>
@@ -313,10 +321,10 @@
     const list = MM.el('#cards');
     if (!cards.length) {
       list.innerHTML = MM.empty({ icon: 'collection',
-        title: state.tab === 'owned' ? 'Aucune édition possédée' : 'Rien ne manque',
+        title: state.tab === 'owned' ? `Aucune ${MMThemes.unit(data)} possédée` : 'Rien ne manque',
         text: state.tab === 'owned'
-          ? 'Aucune édition de cette collection ne se trouve dans votre collection, ou les filtres les écartent.'
-          : 'Vous possédez toutes les éditions de cette collection, ou les filtres les écartent.' });
+          ? `Aucune ${MMThemes.unit(data)} de cette collection ne se trouve dans votre collection, ou les filtres les écartent.`
+          : `Vous possédez toutes les ${MMThemes.unit(data)}s de cette collection, ou les filtres les écartent.` });
       return;
     }
     list.innerHTML = cards.slice(0, state.shown).map(block).join('')
