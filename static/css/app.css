@@ -1136,6 +1136,11 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
 /* La liste ne defile pas d'elle-meme : imbriquee dans la modale qui defile
    deja, elle donnait deux ascenseurs, et l'interieur capturait la molette. */
 .editions { margin-top: var(--sp-2); }
+/* Les editions d'une meme illustration se lisent comme un bloc : son titre
+   colle a sa grille, l'air separe les blocs entre eux. */
+.editions__toggle { margin-bottom: var(--sp-3); }
+.editions__group + .editions__group { margin-top: var(--sp-5); }
+.editions__group > p { margin-bottom: var(--sp-2); }
 /* Editeur de collection a theme : une ligne par critere. Le champ de valeur
    prend la place restante, et passe sous le critere quand la ligne manque de
    largeur plutot que d'ecraser ses listes de choix. */

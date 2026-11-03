@@ -69,8 +69,10 @@
     const cards = [];
     data.cards.forEach((card) => {
       if (needle && !card.name.toLowerCase().includes(needle)) return;
+      // Une case par illustration porte toutes ses editions : le filtre par
+      // extension la garde des qu'une d'elles en est.
       const editions = card.editions.filter((e) => e.owned === owned
-        && (!state.set || e.set_code === state.set)
+        && (!state.set || (e.editions || [e]).some((x) => x.set_code === state.set))
         && (!state.rarity || e.rarity === state.rarity));
       if (!editions.length) return;
       if (state.sort === 'value') editions.sort((a, b) => priceOf(b) - priceOf(a));
@@ -123,6 +125,7 @@
               : '<span class="dim">non cotée</span>'}
           </span>
           ${marks.length ? `<span class="mtg-card__meta"><span class="cluster">${marks.join('')}</span></span>` : ''}
+          ${sameArt(edition)}
           <span class="mtg-card__bottom">
             <span class="mtg-card__market">
               <a class="btn btn--sm" target="_blank" rel="noopener"
@@ -141,25 +144,38 @@
       </article>`;
   }
 
+  /** Les autres editions qui reprennent l'illustration de la case, quand la
+   *  collection compte par illustration. */
+  function sameArt(edition) {
+    const others = (edition.editions || []).filter((x) => x.set_code !== edition.set_code
+      || x.collector_number !== edition.collector_number);
+    if (!others.length) return '';
+    const list = others.map((x) => `${x.set_code} #${x.collector_number}`).join(', ');
+    return `<span class="mtg-card__meta"><span class="xs dim truncate"
+      title="Même illustration : ${MM.esc(others.map((x) => `${x.set_name || x.set_code} #${x.collector_number}`).join(', '))}"
+      >Aussi ${MM.esc(list)}</span></span>`;
+  }
+
   function block(card) {
     const total = card.editions.length;
+    const unit = MMThemes.unit(data);
     const actions = [];
     // « Toutes possedees » ne se propose que pour une carte deja entamee : une
     // carte absente de la collection n'a rien a completer.
     if (card.marked) {
       actions.push(`<button class="btn btn--sm btn--ghost" data-unmark="${card.card_id}"
-        title="Revenir au décompte réel des éditions possédées">Annuler « toutes possédées »</button>`);
+        title="Revenir au décompte réel des ${unit}s possédées">Annuler « toutes possédées »</button>`);
     } else if (card.any_copy && card.owned_count < total) {
       actions.push(`<button class="btn btn--sm" data-mark="${card.card_id}"
-        title="Compter toutes les éditions de cette carte comme possédées, dans cette collection seulement"
-        >Je possède toutes les éditions</button>`);
+        title="Compter toutes les ${unit}s de cette carte comme possédées, dans cette collection seulement"
+        >Je possède toutes les ${unit}s</button>`);
     }
     return `
       <section class="theme-card">
         <div class="between">
           <div class="stack-2" style="gap:2px">
             <h3 class="h4">${MM.esc(card.name)}</h3>
-            <span class="xs dim num">${MM.fmt.plural(card.owned_count, 'édition')}
+            <span class="xs dim num">${MM.fmt.plural(card.owned_count, unit)}
               possédée${card.owned_count > 1 ? 's' : ''} sur ${MM.fmt.int(total)}</span>
           </div>
           <div class="cluster-2">${actions.join('')}</div>
@@ -172,13 +188,15 @@
     const s = data.stats;
     const pct = s && s.editions ? (s.owned / s.editions) * 100 : 0;
     const complete = data.cards.filter((card) => card.owned_count === card.editions.length).length;
+    const unit = MMThemes.unit(data);
     const language = (MM.languages.find(([code]) => code === data.language) || [, data.language])[1];
     head.innerHTML = `
       <div class="stack">
         <div class="between">
           <div class="stack-2" style="gap:2px">
             <h2 class="h2">${MM.esc(data.name)}</h2>
-            <span class="small muted">Éditions en ${MM.esc(language.toLowerCase())}</span>
+            <span class="small muted">Éditions en ${MM.esc(language.toLowerCase())}${data.by_illustration
+              ? ', comptées par illustration' : ''}</span>
           </div>
           <div class="cluster-2">
             <button class="btn btn--sm" id="editBtn" type="button">Modifier</button>
@@ -191,23 +209,23 @@
           <div class="stat">
             <span class="stat__value num">${MM.fmt.pct(pct)}</span>
             <span class="stat__label">Progression</span>
-            <span class="stat__note num">${MM.fmt.int(s.owned)} / ${MM.fmt.plural(s.editions, 'édition')}</span>
+            <span class="stat__note num">${MM.fmt.int(s.owned)} / ${MM.fmt.plural(s.editions, unit)}</span>
             <div class="progress"><div class="progress__bar" style="width:${pct.toFixed(1)}%"></div></div>
           </div>
           <div class="stat">
             <span class="stat__value num">${MM.fmt.int(complete)} / ${MM.fmt.int(s.cards)}</span>
             <span class="stat__label">Cartes complètes</span>
-            <span class="stat__note">toutes leurs éditions possédées</span>
+            <span class="stat__note">toutes leurs ${unit}s possédées</span>
           </div>
           <div class="stat">
             <span class="stat__value num">${MM.fmt.eur(s.value_owned)}</span>
             <span class="stat__label">Valeur possédée</span>
-            <span class="stat__note">une fois par édition, au trend Cardmarket</span>
+            <span class="stat__note">une fois par ${unit}, au trend Cardmarket</span>
           </div>
           <div class="stat">
             <span class="stat__value num">${MM.fmt.eur(s.cost_missing)}</span>
             <span class="stat__label">Coût des manquantes</span>
-            <span class="stat__note">une fois par édition, au trend Cardmarket</span>
+            <span class="stat__note">une fois par ${unit}, au trend Cardmarket</span>
           </div>
         </div>` : ''}
       </div>`;

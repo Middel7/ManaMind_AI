@@ -135,23 +135,39 @@ _UNIT_PRICE_SQL = """
         cm.price)
 """
 
-_FINISHES_COLUMN: bool | None = None
+_PRINTING_COLUMNS: dict[str, bool] = {}
+
+
+def _printing_column(session, column: str, fallback: str) -> str:
+    """``p.<column>`` si le catalogue a la colonne, sinon ``fallback``.
+
+    La production lit une copie du catalogue faite à la main depuis la base
+    partagée : une colonne neuve de MTG-DB n'y arrive qu'à la copie suivante.
+    La lire avant faisait tomber l'accueil et la collection en erreur.
+    """
+    if column not in _PRINTING_COLUMNS:
+        _PRINTING_COLUMNS[column] = bool(session.execute(text("""
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'scryfall_card_printings' AND column_name = :column
+        """), {"column": column}).scalar())
+    return f"p.{column}" if _PRINTING_COLUMNS[column] else fallback
 
 
 def printing_finishes_sql(session) -> str:
-    """Expression SQL des finitions d'une impression ``p``.
+    """Expression SQL des finitions d'une impression ``p``, NULL sans la colonne."""
+    return _printing_column(session, "finishes", "NULL::text[]")
 
-    La colonne ``finishes`` n'existe que dans le catalogue écrit par MTG-DB sur
-    le poste ; la base de production ne l'a pas, et la lire y faisait tomber
-    l'accueil et la collection en erreur. Sans elle, l'expression vaut NULL.
+
+def printing_illustration_sql(session) -> str:
+    """Expression SQL de l'illustration d'une impression ``p``, en texte.
+
+    Deux impressions qui réutilisent la même image partagent cet identifiant,
+    quelles que soient leur édition, leur langue ou leur finition. Sur une
+    carte recto verso, c'est l'illustration du recto. NULL veut dire
+    « inconnue » : une telle impression ne se regroupe avec aucune autre.
     """
-    global _FINISHES_COLUMN
-    if _FINISHES_COLUMN is None:
-        _FINISHES_COLUMN = bool(session.execute(text("""
-            SELECT 1 FROM information_schema.columns
-            WHERE table_name = 'scryfall_card_printings' AND column_name = 'finishes'
-        """)).scalar())
-    return "p.finishes" if _FINISHES_COLUMN else "NULL::text[]"
+    return _printing_column(session, "illustration_id", "NULL::text") + (
+        "::text" if _PRINTING_COLUMNS["illustration_id"] else "")
 
 
 _RARITY_RANK_SQL = """

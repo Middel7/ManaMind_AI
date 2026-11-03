@@ -914,8 +914,8 @@ wheels = [
 
 [[package]]
 name = "mtgdb"
-version = "0.1.0"
-source = { git = "https://github.com/Middel7/MTG-DB.git#f2cdac36f3b00b627588c321295ad33b7812c453" }
+version = "0.3.0"
+source = { git = "https://github.com/Middel7/MTG-DB.git#bb4508703feeac52f95b6ed8f32031dc6e834444" }
 dependencies = [
     { name = "alembic" },
     { name = "httpx" },

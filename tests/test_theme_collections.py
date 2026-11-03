@@ -4,7 +4,9 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
-from manamind.theme_collections import CriteriaError, build_where, clean_definition
+from manamind import collection_store
+from manamind.theme_collections import (
+    CriteriaError, build_where, clean_definition, merge_by_illustration)
 
 
 def test_les_criteres_se_combinent_par_et():
@@ -69,6 +71,7 @@ def test_definition_nettoyee():
     assert definition["name"] == "Les anges"
     assert definition["language"] == "fr"
     assert definition["include_alt"] is False
+    assert definition["by_illustration"] is False
     with pytest.raises(CriteriaError):
         clean_definition({"name": "", "criteria": [{"field": "type", "value": "Angel"}]})
     with pytest.raises(CriteriaError):
@@ -93,3 +96,104 @@ def test_routes_fermees_sans_session(client: TestClient, method, url):
 def test_pages_servies(client: TestClient):
     assert client.get("/collection/themes").status_code == 200
     assert client.get("/collection/themes/3").status_code == 200
+
+
+# ── Regroupement par illustration ────────────────────────────────────────────
+# Impressions anglaises de Scalding Tarn relevées dans le catalogue le
+# 2026-11-03, dans l'ordre de la collection (date décroissante) : extension,
+# numéro, illustration. Les prix sont fixés pour le test : seul leur ordre compte.
+_ZEN_ART = "68e3496e-d1f3-44d8-b524-4215608456a8"  # Philip Straub
+_TARN = [
+    ("SPG", "112", "4ad18651-5efb-4246-b01d-96d5ce4d77c6", 60.0),  # Adam Paquette
+    ("SPG", "117", "5aeb3e95-f608-479a-a9d3-2c7e4e7fc7bc", 55.0),  # Marco Gorlei
+    ("MH2", "254", _ZEN_ART, 22.0),
+    ("MH2", "439", _ZEN_ART, 30.0),
+    ("MH2", "478", _ZEN_ART, 25.0),
+    ("PMH2", "254s", _ZEN_ART, None),
+    ("ZNE", "7", "713eff05-bea9-467a-a74c-797797d2968e", 70.0),  # Jonas De Ro
+    ("SLU", "2", "44dea293-671b-4d21-bc5a-e44e45424e8a", 45.0),  # Adam Paquette
+    ("MM3", "244", _ZEN_ART, 24.0),
+    ("EXP", "22", "7bfd995b-d460-4bb0-83b6-ec64e5536c3f", 150.0),  # Ryan Yee
+    ("ZEN", "223", _ZEN_ART, 28.0),
+]
+
+
+def _edition(set_code, number, art, price, copies=0, declared=False):
+    return {"set_code": set_code, "collector_number": number, "set_name": set_code,
+            "illustration_id": art, "price": price, "copies": copies,
+            "declared": declared, "owned": bool(copies) or declared}
+
+
+def test_une_illustration_reunit_ses_editions():
+    merged = merge_by_illustration([_edition(*row) for row in _TARN])
+    # Onze éditions, six illustrations : celle de Zendikar couvre cinq extensions.
+    assert len(merged) == 6
+    zen = next(m for m in merged if m["illustration_id"] == _ZEN_ART)
+    assert [(e["set_code"], e["collector_number"]) for e in zen["editions"]] == [
+        ("MH2", "254"), ("MH2", "439"), ("MH2", "478"), ("PMH2", "254s"),
+        ("MM3", "244"), ("ZEN", "223")]
+    # La case garde la place de sa première édition, et se montre sous la
+    # moins chère, celle qu'on achèterait.
+    assert [m["set_code"] for m in merged] == ["SPG", "SPG", "MH2", "ZNE", "SLU", "EXP"]
+    assert (zen["set_code"], zen["collector_number"], zen["price"]) == ("MH2", "254", 22.0)
+
+
+def test_meme_artiste_ne_veut_pas_dire_meme_illustration():
+    # Adam Paquette signe SPG 112 et SLU 2 : deux images, deux cases.
+    merged = merge_by_illustration([_edition(*row) for row in _TARN])
+    paquette = [m for m in merged if (m["set_code"], m["collector_number"])
+                in {("SPG", "112"), ("SLU", "2")}]
+    assert len(paquette) == 2
+    assert all(len(m["editions"]) == 1 for m in paquette)
+
+
+def test_une_edition_possedee_suffit_a_son_illustration():
+    rows = [_edition(*row, copies=2 if row[:2] == ("ZEN", "223") else 0) for row in _TARN]
+    merged = merge_by_illustration(rows)
+    zen = next(m for m in merged if m["illustration_id"] == _ZEN_ART)
+    assert zen["owned"] and zen["copies"] == 2
+    # Montrée sous l'édition possédée, pas sous la moins chère.
+    assert (zen["set_code"], zen["collector_number"]) == ("ZEN", "223")
+    assert sum(m["owned"] for m in merged) == 1
+
+
+def test_la_case_vise_l_edition_declaree():
+    # « Annuler possédée » doit retirer la déclaration là où elle a été faite.
+    rows = [_edition(*row, declared=row[:2] == ("MM3", "244")) for row in _TARN]
+    zen = next(m for m in merge_by_illustration(rows) if m["illustration_id"] == _ZEN_ART)
+    assert zen["declared"] and zen["owned"]
+    assert (zen["set_code"], zen["collector_number"]) == ("MM3", "244")
+
+
+def test_une_illustration_inconnue_ne_regroupe_rien():
+    # Island TRC 9999 et SLD 255 n'ont pas d'illustration_id au catalogue ;
+    # TRK 320 et 562 partagent la même image.
+    islands = [
+        _edition("TRK", "562", "a08d4ecd-659a-4d26-8c5e-6f97e56469fa", 0.5),
+        _edition("TRC", "9999", None, None),
+        _edition("TRK", "320", "a08d4ecd-659a-4d26-8c5e-6f97e56469fa", 0.3),
+        _edition("SLD", "255", None, 4.0),
+    ]
+    merged = merge_by_illustration(islands)
+    assert [len(m["editions"]) for m in merged] == [2, 1, 1]
+    assert [m["set_code"] for m in merged] == ["TRK", "TRC", "SLD"]
+
+
+class _Session:
+    """Répond à la seule question posée : la colonne existe-t-elle ?"""
+
+    def __init__(self, present):
+        self.present = present
+
+    def execute(self, *_args, **_kwargs):
+        return self
+
+    def scalar(self):
+        return 1 if self.present else None
+
+
+@pytest.mark.parametrize("present,expected", [
+    (True, "p.illustration_id::text"), (False, "NULL::text")])
+def test_illustration_lue_seulement_si_la_colonne_existe(monkeypatch, present, expected):
+    monkeypatch.setattr(collection_store, "_PRINTING_COLUMNS", {})
+    assert collection_store.printing_illustration_sql(_Session(present)) == expected

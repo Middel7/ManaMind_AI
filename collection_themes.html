@@ -78,7 +78,7 @@
         ${art ? `<span class="deck-chip__art" style="background-image:url('${MM.esc(art)}')"></span>` : ''}
         <span class="deck-chip__name truncate">${MM.esc(entry.name)}</span>
         <span class="deck-chip__meta num">
-          ${MM.fmt.int(s.owned)} / ${MM.fmt.plural(s.editions, 'édition')} · ${MM.fmt.pct(pct)}</span>
+          ${MM.fmt.int(s.owned)} / ${MM.fmt.plural(s.editions, MMThemes.unit(entry))} · ${MM.fmt.pct(pct)}</span>
         <div class="progress"><div class="progress__bar" style="width:${pct.toFixed(1)}%"></div></div>
         <span class="deck-chip__meta num">
           ${MM.fmt.eur(s.value_owned)} possédés · ${MM.fmt.eur(s.cost_missing)} manquants</span>
