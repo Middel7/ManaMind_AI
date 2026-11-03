@@ -96,9 +96,16 @@
     // Une edition possedee par un exemplaire, ou par « toutes possedees »,
     // n'a rien a declarer : seul ce qui a ete declare ici se reprend ici.
     const editionKey = `data-set="${MM.esc(edition.set_code)}" data-num="${MM.esc(edition.collector_number)}"`;
+    // Compte par illustration : la tuile montre l'edition la plus ancienne mais
+    // achete la moins chere. Annuler retire chaque edition declaree de l'image.
+    const buyOther = edition.buy_set_code && (edition.buy_set_code !== edition.set_code
+      || edition.buy_collector_number !== edition.collector_number);
+    const buyLabel = `${edition.buy_set_code} #${edition.buy_collector_number}`;
+    const declaredKeys = JSON.stringify((edition.editions || [edition])
+      .filter((x) => x.declared).map((x) => [x.set_code, x.collector_number]));
     let own = '';
     if (edition.declared && !edition.copies && !card.marked) {
-      own = `<button class="btn btn--sm btn--ghost btn--block" type="button" data-unown ${editionKey}
+      own = `<button class="btn btn--sm btn--ghost btn--block" type="button" data-unown="${MM.esc(declaredKeys)}"
                title="Revenir sur la déclaration : l'édition repasse dans « Recherchées »"
                >Annuler « possédée »</button>`;
     } else if (!edition.owned) {
@@ -121,7 +128,8 @@
             <span>${MM.esc(edition.set_code)}${edition.collector_number
               ? ` #${MM.esc(edition.collector_number)}` : ''}</span>
             ${edition.price != null
-              ? `<span class="mtg-card__price">${MM.fmt.eur(edition.price)}</span>`
+              ? `<span class="mtg-card__price" ${buyOther ? `title="Prix de ${MM.esc(buyLabel)}, l'édition la moins chère de cette illustration"` : ''}
+                  >${buyOther ? 'dès ' : ''}${MM.fmt.eur(edition.price)}</span>`
               : '<span class="dim">non cotée</span>'}
           </span>
           ${marks.length ? `<span class="mtg-card__meta"><span class="cluster">${marks.join('')}</span></span>` : ''}
@@ -130,7 +138,8 @@
             <span class="mtg-card__market">
               <a class="btn btn--sm" target="_blank" rel="noopener"
                  href="${MM.esc(MM.market.buyEdition(edition.cardmarket_id, card.name))}"
-                 title="Voir les offres de cette édition sur Cardmarket">Acheter</a>
+                 title="${buyOther ? `Voir les offres de ${MM.esc(buyLabel)}, l'édition la moins chère de cette illustration, sur Cardmarket`
+                   : 'Voir les offres de cette édition sur Cardmarket'}">Acheter</a>
               ${edition.owned ? '' : `
               <button class="btn btn--sm ${inBuylist ? 'is-done' : ''}" type="button"
                       data-buy="${MM.esc(card.name)}" aria-pressed="${inBuylist}"
@@ -399,9 +408,13 @@
     if (own) {
       own.disabled = true;
       try {
-        await MM.api.post(`/api/v2/themes/${id}/editions`, {
-          set_code: own.dataset.set, collector_number: own.dataset.num,
-          owned: own.hasAttribute('data-own') });
+        const keys = own.hasAttribute('data-own')
+          ? [[own.dataset.set, own.dataset.num]]
+          : JSON.parse(own.dataset.unown);
+        for (const [set, num] of keys) {
+          await MM.api.post(`/api/v2/themes/${id}/editions`, {
+            set_code: set, collector_number: num, owned: own.hasAttribute('data-own') });
+        }
         await load();
       } catch (err) { MM.toast.error(err.message); own.disabled = false; }
       return;
