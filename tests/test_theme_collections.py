@@ -83,6 +83,7 @@ def test_definition_nettoyee():
     ("post", "/api/v2/themes/preview"),
     ("delete", "/api/v2/themes/1"),
     ("post", "/api/v2/themes/1/buylist"),
+    ("post", "/api/v2/themes/1/editions"),
 ])
 def test_routes_fermees_sans_session(client: TestClient, method, url):
     response = getattr(client, method)(url)

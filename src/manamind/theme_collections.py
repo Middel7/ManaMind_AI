@@ -201,7 +201,7 @@ def _editions(session, definition: dict) -> list[dict]:
           AND p.set_code NOT ILIKE 'sl%%'
           AND LOWER(p.set_code) NOT IN {_ALT_SETS!r}"""
     rows = session.execute(text(f"""
-        SELECT p.id AS printing_id, p.scryfall_id::text AS scryfall_id,
+        SELECT p.id AS printing_id, p.scryfall_id::text AS scryfall_id, p.cardmarket_id,
                c.id AS card_id, c.name, UPPER(p.set_code) AS set_code,
                p.collector_number, p.rarity, p.released_at,
                COALESCE(loc.image_small, p.image_small) AS image_small,
@@ -267,6 +267,14 @@ def _marked(session, collection_id: int) -> set[int]:
     """), {"id": collection_id})}
 
 
+def _declared(session, collection_id: int) -> set[tuple[str, str]]:
+    """Éditions déclarées possédées une à une, dans cette collection."""
+    return {(r.set_code, r.collector_number) for r in session.execute(text("""
+        SELECT set_code, collector_number FROM theme_collection_owned
+        WHERE collection_id = :id
+    """), {"id": collection_id})}
+
+
 def _num(value) -> float | None:
     return None if value is None else round(float(value), 2)
 
@@ -276,6 +284,7 @@ def evaluate(session, user_id: int, definition: dict, collection_id: int | None 
     editions = _editions(session, definition)
     owned_copies = _owned_copies(session, user_id, definition["language"])
     marked = _marked(session, collection_id) if collection_id else set()
+    declared = _declared(session, collection_id) if collection_id else set()
 
     cards: dict[int, dict] = {}
     for e in editions:
@@ -290,7 +299,10 @@ def evaluate(session, user_id: int, definition: dict, collection_id: int | None 
             if e["released_at"] else None,
             "image_small": e["image_small"], "image_normal": e["image_normal"],
             "price": _num(e["price"]), "copies": copies,
-            "owned": bool(copies) or card["marked"],
+            "cardmarket_id": e["cardmarket_id"],
+            "declared": (e["set_code"], e["collector_number"]) in declared,
+            "owned": bool(copies) or card["marked"]
+                     or (e["set_code"], e["collector_number"]) in declared,
         })
 
     total = owned = 0
@@ -298,7 +310,7 @@ def evaluate(session, user_id: int, definition: dict, collection_id: int | None 
     cover = None
     for card in cards.values():
         card["owned_count"] = sum(1 for e in card["editions"] if e["owned"])
-        card["any_copy"] = any(e["copies"] for e in card["editions"])
+        card["any_copy"] = any(e["copies"] or e["declared"] for e in card["editions"])
         for e in card["editions"]:
             total += 1
             if e["owned"]:
@@ -429,5 +441,27 @@ def set_complete(user_id: int, collection_id: int, card_id: int, complete: bool)
                 DELETE FROM theme_collection_complete
                 WHERE collection_id = :id AND card_id = :card
             """), {"id": collection_id, "card": card_id})
+        session.commit()
+        return True
+
+
+def set_edition_owned(user_id: int, collection_id: int, set_code: str,
+                      collector_number: str, owned: bool) -> bool:
+    """Déclare, ou non, une édition possédée dans cette collection seulement."""
+    params = {"id": collection_id, "set": set_code.strip().upper(),
+              "num": collector_number.strip()}
+    with SessionLocal() as session:
+        if get(session, user_id, collection_id) is None:
+            return False
+        if owned:
+            session.execute(text("""
+                INSERT INTO theme_collection_owned (collection_id, set_code, collector_number)
+                VALUES (:id, :set, :num) ON CONFLICT DO NOTHING
+            """), params)
+        else:
+            session.execute(text("""
+                DELETE FROM theme_collection_owned
+                WHERE collection_id = :id AND set_code = :set AND collector_number = :num
+            """), params)
         session.commit()
         return True
