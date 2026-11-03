@@ -25,6 +25,9 @@
   .theme-page .theme-card { padding-top: var(--sp-4); border-top: 1px solid var(--line); }
   .theme-page .theme-card:first-child { border-top: 0; padding-top: 0; }
   .theme-page .theme-card .card-grid { margin-top: var(--sp-3); }
+  /* Chaque edition porte ses trois gestes : les petites vignettes n'avaient
+     pas la largeur de deux boutons cote a cote. */
+  .theme-page .theme-card .card-grid { --card-min: 156px; }
   /* Les filtres partagent la ligne ; sur telephone ils passent a la ligne. */
   .theme-page .theme-filters { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
   .theme-page .theme-filters .input { flex: 1 1 200px; width: auto; min-width: 0; }
@@ -53,6 +56,9 @@
 
   const state = { tab: 'owned', search: '', set: '', rarity: '', sort: 'value', shown: PAGE };
   let data = null;
+  // Cartes deja dans la buylist : leur bouton le dit, et un second clic les
+  // en retire.
+  let pinned = new Set();
 
   const priceOf = (edition) => edition.price || 0;
 
@@ -81,7 +87,22 @@
     if (edition.copies) {
       marks.push(`<span class="badge badge--ok">possédée ×${MM.fmt.int(edition.copies)}</span>`);
     } else if (edition.owned) {
-      marks.push('<span class="badge badge--info" title="Toutes les éditions déclarées possédées">déclarée</span>');
+      marks.push(`<span class="badge badge--info" title="${card.marked
+        ? 'Toutes les éditions déclarées possédées' : 'Édition déclarée possédée'}">déclarée</span>`);
+    }
+    const inBuylist = pinned.has(card.name.toLowerCase());
+    // Une edition possedee par un exemplaire, ou par « toutes possedees »,
+    // n'a rien a declarer : seul ce qui a ete declare ici se reprend ici.
+    const editionKey = `data-set="${MM.esc(edition.set_code)}" data-num="${MM.esc(edition.collector_number)}"`;
+    let own = '';
+    if (edition.declared && !edition.copies && !card.marked) {
+      own = `<button class="btn btn--sm btn--ghost btn--block" type="button" data-unown ${editionKey}
+               title="Revenir sur la déclaration : l'édition repasse dans « Recherchées »"
+               >Annuler « possédée »</button>`;
+    } else if (!edition.owned) {
+      own = `<button class="btn btn--sm btn--block" type="button" data-own ${editionKey}
+               title="Compter cette édition comme possédée, dans cette collection seulement"
+               >Possédée</button>`;
     }
     return `
       <article class="mtg-card" data-name="${MM.esc(card.name)}"
@@ -102,6 +123,20 @@
               : '<span class="dim">non cotée</span>'}
           </span>
           ${marks.length ? `<span class="mtg-card__meta"><span class="cluster">${marks.join('')}</span></span>` : ''}
+          <span class="mtg-card__bottom">
+            <span class="mtg-card__market">
+              <a class="btn btn--sm" target="_blank" rel="noopener"
+                 href="${MM.esc(MM.market.buyEdition(edition.cardmarket_id, card.name))}"
+                 title="Voir les offres de cette édition sur Cardmarket">Acheter</a>
+              ${edition.owned ? '' : `
+              <button class="btn btn--sm ${inBuylist ? 'is-done' : ''}" type="button"
+                      data-buy="${MM.esc(card.name)}" aria-pressed="${inBuylist}"
+                      title="${inBuylist ? 'Retirer cette carte de ma buylist'
+                        : "Ajouter cette carte à ma buylist : elle retient la carte, pas l'édition"}"
+                >${inBuylist ? 'En buylist' : 'Buylist'}</button>`}
+            </span>
+            ${own}
+          </span>
         </div>
       </article>`;
   }
@@ -119,10 +154,6 @@
         title="Compter toutes les éditions de cette carte comme possédées, dans cette collection seulement"
         >Je possède toutes les éditions</button>`);
     }
-    if (state.tab === 'wanted') {
-      actions.push(`<button class="btn btn--sm" data-buy="${MM.esc(card.name)}"
-        title="Ajouter cette carte à ma buylist">Buylist</button>`);
-    }
     return `
       <section class="theme-card">
         <div class="between">
@@ -133,7 +164,7 @@
           </div>
           <div class="cluster-2">${actions.join('')}</div>
         </div>
-        <div class="card-grid card-grid--sm">${card.shown.map((e) => tile(card, e)).join('')}</div>
+        <div class="card-grid">${card.shown.map((e) => tile(card, e)).join('')}</div>
       </section>`;
   }
 
@@ -278,14 +309,25 @@
     renderList();
   }
 
+  async function loadPinned() {
+    try {
+      const list = (await MM.api.get('/api/v2/buylist/pinned')).cards || [];
+      pinned = new Set(list.map((name) => name.toLowerCase()));
+    } catch { pinned = new Set(); }
+  }
+
+  /** Recharge la collection. Un reglage fait sur une carte ne doit pas
+   *  ramener la page tout en haut, loin de la carte. */
   async function load() {
     if (!data) {
-      results.innerHTML = `<div class="card-grid card-grid--sm">${MM.cardSkeletons(12)}</div>`;
+      results.innerHTML = `<div class="card-grid">${MM.cardSkeletons(12)}</div>`;
     }
+    const scroll = window.scrollY;
     try {
-      data = await MM.api.get(`/api/v2/themes/${id}`);
+      [data] = await Promise.all([MM.api.get(`/api/v2/themes/${id}`), loadPinned()]);
       MM.el('title').textContent = `ManaMind — ${data.name}`;
       render();
+      window.scrollTo(0, scroll);
     } catch (err) {
       head.innerHTML = '';
       results.innerHTML = MM.empty({ icon: 'collection', title: 'Collection introuvable',
@@ -335,17 +377,35 @@
       } catch (err) { MM.toast.error(err.message); mark.disabled = false; }
       return;
     }
+    const own = target.closest('[data-own], [data-unown]');
+    if (own) {
+      own.disabled = true;
+      try {
+        await MM.api.post(`/api/v2/themes/${id}/editions`, {
+          set_code: own.dataset.set, collector_number: own.dataset.num,
+          owned: own.hasAttribute('data-own') });
+        await load();
+      } catch (err) { MM.toast.error(err.message); own.disabled = false; }
+      return;
+    }
     const buy = target.closest('[data-buy], #buyAll');
     if (buy) {
       buy.disabled = true;
       try {
-        const body = buy.dataset.buy
-          ? { names: [buy.dataset.buy] }
-          : { names: visibleCards().map((card) => card.name) };
-        const result = await MM.api.post(`/api/v2/themes/${id}/buylist`, body);
-        MM.toast.ok(`${MM.fmt.plural(result.added, 'carte')} dans votre buylist.`);
-      } catch (err) { MM.toast.error(err.message); }
-      buy.disabled = false;
+        if (buy.dataset.buy && pinned.has(buy.dataset.buy.toLowerCase())) {
+          await MM.api.del('/api/v2/buylist/pinned'
+            + MM.api.qs({ card_name: buy.dataset.buy }));
+          MM.toast.ok(`${buy.dataset.buy} retirée de votre buylist.`);
+        } else {
+          const body = buy.dataset.buy
+            ? { names: [buy.dataset.buy] }
+            : { names: visibleCards().map((card) => card.name) };
+          const result = await MM.api.post(`/api/v2/themes/${id}/buylist`, body);
+          MM.toast.ok(`${MM.fmt.plural(result.added, 'carte')} dans votre buylist.`);
+        }
+        await loadPinned();
+        renderList();
+      } catch (err) { MM.toast.error(err.message); buy.disabled = false; }
     }
   });
 

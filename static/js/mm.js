@@ -1063,6 +1063,12 @@
     buy: (name) =>
       'https://www.cardmarket.com/fr/Magic/Products/Search?searchString='
       + encodeURIComponent(name || ''),
+
+    /** Cardmarket : la fiche d'une edition precise, par son numero de produit
+     *  — le lien que Scryfall emploie. Sans numero, la recherche par nom. */
+    buyEdition: (productId, name) => (productId
+      ? `https://www.cardmarket.com/fr/Magic/Products?idProduct=${encodeURIComponent(productId)}`
+      : MM.market.buy(name)),
   };
 
   /* ══ Rendu de cartes ═══════════════════════════════════════════════════ */

@@ -139,6 +139,22 @@ def api_unmark_complete(collection_id: int, card_id: int, request: Request) -> R
     return _json_response({"ok": True})
 
 
+@router.post("/api/v2/themes/{collection_id}/editions")
+async def api_edition_owned(collection_id: int, request: Request) -> Response:
+    """Déclare une édition possédée, ou revient sur la déclaration, dans cette
+    collection seulement."""
+    user = _admin(request)
+    body = await _body(request)
+    set_code = str(body.get("set_code") or "")
+    number = str(body.get("collector_number") or "")
+    if not set_code.strip() or not number.strip():
+        return _bad("Édition incomplète")
+    if not themes.set_edition_owned(user["id"], collection_id, set_code, number,
+                                    bool(body.get("owned"))):
+        return _missing()
+    return _json_response({"ok": True})
+
+
 @router.post("/api/v2/themes/{collection_id}/buylist")
 async def api_to_buylist(collection_id: int, request: Request) -> Response:
     """Ajoute à la buylist les cartes nommées, ou toutes celles qui manquent.
