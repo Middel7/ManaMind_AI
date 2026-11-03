@@ -144,7 +144,7 @@ async def api_set_printing(item_id: int, request: Request) -> Response:
     return _json_response({"ok": True, **result})
 
 
-@router.post("/api/v2/cards/{card_name}/printing")
+@router.post("/api/v2/cards/{card_name:path}/printing")
 async def api_set_preferred_printing(card_name: str, request: Request) -> Response:
     """Retient l'édition à montrer pour une carte, là où l'on n'en a pas.
 
@@ -165,7 +165,7 @@ async def api_set_preferred_printing(card_name: str, request: Request) -> Respon
     return _json_response({"ok": True, **result})
 
 
-@router.delete("/api/v2/cards/{card_name}/printing")
+@router.delete("/api/v2/cards/{card_name:path}/printing")
 def api_clear_preferred_printing(card_name: str, request: Request) -> Response:
     """Rend le choix de l'edition a l'heuristique par defaut."""
     user = _user(request)
@@ -525,7 +525,7 @@ async def api_cards_resolve(request: Request) -> Response:
     return _json_response({"cards": cards})
 
 
-@router.get("/api/v2/cards/{card_name}/detail")
+@router.get("/api/v2/cards/{card_name:path}/detail")
 def api_card_detail(card_name: str, request: Request) -> Response:
     """Fiche complete d'une carte : texte, editions cotees, et ce qu'on en fait.
 
@@ -714,7 +714,7 @@ def api_card_detail(card_name: str, request: Request) -> Response:
     })
 
 
-@router.get("/api/v2/cards/{card_name}/printings")
+@router.get("/api/v2/cards/{card_name:path}/printings")
 def api_card_printings(
     card_name: str,
     request: Request,
