@@ -122,7 +122,7 @@
    */
   function editor({ initial = null, onSaved } = {}) {
     const start = initial || { name: '', language: 'en', include_alt: false,
-                               criteria: [{ field: 'type', value: '' }] };
+                               by_illustration: false, criteria: [{ field: 'type', value: '' }] };
     const dialog = MM.modal({
       title: initial ? 'Modifier la collection' : 'Nouvelle collection à thème',
       wide: true,
@@ -146,6 +146,12 @@
             <span class="switch__track"></span>
             <span class="small">Inclure les éditions numériques, Secret Lair, Marvel Universe,
               Tortues Ninja et Avatar Eternal</span>
+          </label>
+          <label class="switch">
+            <input type="checkbox" id="thArt" ${start.by_illustration ? 'checked' : ''}>
+            <span class="switch__track"></span>
+            <span class="small">Compter par illustration : les éditions d'une carte qui
+              reprennent la même image ne font qu'une case, possédée dès que l'une l'est</span>
           </label>
           <div class="panel"><div class="panel__body stack-2" id="thPreview">
             <p class="small muted">L'aperçu compte les cartes et les éditions trouvées.</p>
@@ -173,6 +179,7 @@
       name: MM.el('#thName', root).value.trim(),
       language: MM.el('#thLang', root).value,
       include_alt: MM.el('#thAlt', root).checked,
+      by_illustration: MM.el('#thArt', root).checked,
       criteria: MM.els('.theme-crit', list).map(readRow),
     });
 
@@ -205,7 +212,7 @@
         const s = data.stats;
         host.innerHTML = `
           <p class="small"><span class="strong">${MM.fmt.plural(s.cards, 'carte')}</span>,
-            ${MM.fmt.plural(s.editions, 'édition')} · vous en possédez
+            ${MM.fmt.plural(s.editions, unit(definition()))} · vous en possédez
             <span class="strong">${MM.fmt.int(s.owned)}</span></p>
           ${data.sample.length ? `<div class="card-grid card-grid--sm">${data.sample.map((e) => `
             <article class="mtg-card mtg-card--flat" data-name="${esc(e.name)}">
@@ -237,5 +244,10 @@
     });
   }
 
-  window.MMThemes = { editor };
+  /** Ce que compte une collection : ses editions, ou ses illustrations quand
+   *  les editions d'une meme image n'y font qu'une case. */
+  const unit = (definition) => (definition && definition.by_illustration
+    ? 'illustration' : 'édition');
+
+  window.MMThemes = { editor, unit };
 })();

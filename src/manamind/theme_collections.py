@@ -15,6 +15,10 @@ choisit aussi l'illustration, quand le catalogue a une image dans cette langue. 
 toutes les éditions d'une carte : ce choix ne vaut que pour la collection où il
 le fait, et ne touche pas à sa vraie collection.
 
+Une collection peut aussi compter par illustration : les éditions d'une carte
+qui reprennent la même image n'y font qu'une case, possédée dès que l'une
+d'elles l'est. Une édition dont l'illustration est inconnue reste seule.
+
 Les critères se combinent par « et » ; chacun peut être inversé (« sauf »).
 Ils ne lisent que des colonnes présentes dans la base de production : le
 catalogue du poste en a davantage (les finitions d'une impression, par
@@ -28,6 +32,7 @@ import re
 
 from sqlalchemy import text
 
+from .collection_store import printing_illustration_sql
 from .db.engine import SessionLocal
 
 # Au-delà, la page deviendrait illisible et la requête coûteuse : une
@@ -188,7 +193,8 @@ def clean_definition(body: dict) -> dict:
     criteria = body.get("criteria") or []
     build_where(criteria)
     return {"name": name[:120], "language": language, "criteria": criteria,
-            "include_alt": bool(body.get("include_alt"))}
+            "include_alt": bool(body.get("include_alt")),
+            "by_illustration": bool(body.get("by_illustration"))}
 
 
 # ── Évaluation ────────────────────────────────────────────────────────────────
@@ -206,7 +212,8 @@ def _editions(session, definition: dict) -> list[dict]:
                p.collector_number, p.rarity, p.released_at,
                COALESCE(loc.image_small, p.image_small) AS image_small,
                COALESCE(loc.image_normal, p.image_normal) AS image_normal,
-               st.name AS set_name, {_PRICE_SQL} AS price
+               st.name AS set_name, {_PRICE_SQL} AS price,
+               {printing_illustration_sql(session)} AS illustration_id
         FROM scryfall_card_printings p
         JOIN scryfall_cards c ON c.id = p.card_id
         LEFT JOIN scryfall_mtg_sets st ON LOWER(st.code) = LOWER(p.set_code)
@@ -279,8 +286,49 @@ def _num(value) -> float | None:
     return None if value is None else round(float(value), 2)
 
 
+def merge_by_illustration(editions: list[dict]) -> list[dict]:
+    """Fond en une case les éditions d'une carte qui partagent une illustration.
+
+    La case garde l'ordre de la première édition de son illustration. Elle est
+    possédée dès qu'une de ses éditions l'est, et en porte les exemplaires.
+    Elle se montre sous l'édition qui la fait posséder — c'est elle qu'un
+    « Annuler » doit viser —, sinon sous la moins chère, celle qu'on achèterait.
+    ``editions`` liste toutes les éditions de l'illustration. Sans
+    ``illustration_id``, l'illustration est inconnue : l'édition reste seule.
+    """
+    groups: list[list[dict]] = []
+    by_id: dict[str, list[dict]] = {}
+    for edition in editions:
+        key = edition.get("illustration_id")
+        if key and key in by_id:
+            by_id[key].append(edition)
+            continue
+        groups.append([edition])
+        if key:
+            by_id[key] = groups[-1]
+
+    merged = []
+    for group in groups:
+        lead = (next((e for e in group if e["declared"]), None)
+                or next((e for e in group if e["copies"]), None)
+                or min(group, key=lambda e: (e["price"] is None, e["price"] or 0)))
+        merged.append({
+            **lead,
+            "copies": sum(e["copies"] for e in group),
+            "declared": any(e["declared"] for e in group),
+            "owned": any(e["owned"] for e in group),
+            "editions": [{"set_code": e["set_code"], "set_name": e["set_name"],
+                          "collector_number": e["collector_number"]} for e in group],
+        })
+    return merged
+
+
 def evaluate(session, user_id: int, definition: dict, collection_id: int | None = None) -> dict:
-    """Les éditions de la collection, groupées par carte, avec leur possession."""
+    """Les éditions de la collection, groupées par carte, avec leur possession.
+
+    Une collection qui compte par illustration fond ensuite les éditions de
+    chaque carte qui partagent une image (voir ``merge_by_illustration``).
+    """
     editions = _editions(session, definition)
     owned_copies = _owned_copies(session, user_id, definition["language"])
     marked = _marked(session, collection_id) if collection_id else set()
@@ -303,7 +351,11 @@ def evaluate(session, user_id: int, definition: dict, collection_id: int | None 
             "declared": (e["set_code"], e["collector_number"]) in declared,
             "owned": bool(copies) or card["marked"]
                      or (e["set_code"], e["collector_number"]) in declared,
+            "illustration_id": e["illustration_id"],
         })
+    if definition.get("by_illustration"):
+        for card in cards.values():
+            card["editions"] = merge_by_illustration(card["editions"])
 
     total = owned = 0
     value_owned = cost_missing = 0.0
@@ -344,12 +396,13 @@ def _definition(row) -> dict:
     if isinstance(criteria, str):
         criteria = json.loads(criteria)
     return {"id": row.id, "name": row.name, "language": row.language,
-            "criteria": criteria, "include_alt": row.include_alt}
+            "criteria": criteria, "include_alt": row.include_alt,
+            "by_illustration": row.by_illustration}
 
 
 def get(session, user_id: int, collection_id: int) -> dict | None:
     row = session.execute(text("""
-        SELECT id, name, language, criteria, include_alt
+        SELECT id, name, language, criteria, include_alt, by_illustration
         FROM theme_collections WHERE id = :id AND user_id = :uid
     """), {"id": collection_id, "uid": user_id}).fetchone()
     return _definition(row) if row else None
@@ -358,7 +411,7 @@ def get(session, user_id: int, collection_id: int) -> dict | None:
 def list_collections(user_id: int) -> list[dict]:
     with SessionLocal() as session:
         rows = session.execute(text("""
-            SELECT id, name, language, criteria, include_alt
+            SELECT id, name, language, criteria, include_alt, by_illustration
             FROM theme_collections WHERE user_id = :uid ORDER BY LOWER(name)
         """), {"uid": user_id}).fetchall()
         result = []
@@ -383,8 +436,10 @@ def preview(user_id: int, definition: dict) -> dict:
 def create(user_id: int, definition: dict) -> int:
     with SessionLocal() as session:
         new_id = session.execute(text("""
-            INSERT INTO theme_collections (user_id, name, language, criteria, include_alt)
-            VALUES (:uid, :name, :language, CAST(:criteria AS jsonb), :include_alt)
+            INSERT INTO theme_collections (user_id, name, language, criteria, include_alt,
+                                           by_illustration)
+            VALUES (:uid, :name, :language, CAST(:criteria AS jsonb), :include_alt,
+                    :by_illustration)
             RETURNING id
         """), {"uid": user_id, **definition,
                "criteria": json.dumps(definition["criteria"], ensure_ascii=False)}).scalar()
@@ -397,7 +452,8 @@ def update(user_id: int, collection_id: int, definition: dict) -> bool:
         done = session.execute(text("""
             UPDATE theme_collections
             SET name = :name, language = :language, criteria = CAST(:criteria AS jsonb),
-                include_alt = :include_alt, updated_at = NOW()
+                include_alt = :include_alt, by_illustration = :by_illustration,
+                updated_at = NOW()
             WHERE id = :id AND user_id = :uid
         """), {"id": collection_id, "uid": user_id, **definition,
                "criteria": json.dumps(definition["criteria"], ensure_ascii=False)}).rowcount
@@ -422,7 +478,8 @@ def duplicate(user_id: int, collection_id: int) -> int | None:
     copy_name = re.sub(r"\s*\(copie\)$", "", source["name"]) + " (copie)"
     return create(user_id, {"name": copy_name, "language": source["language"],
                             "criteria": source["criteria"],
-                            "include_alt": source["include_alt"]})
+                            "include_alt": source["include_alt"],
+                            "by_illustration": source["by_illustration"]})
 
 
 def set_complete(user_id: int, collection_id: int, card_id: int, complete: bool) -> bool:

@@ -557,11 +557,13 @@ def api_card_detail(card_name: str, request: Request) -> Response:
 
         # Une edition par impression, avec sa derniere cote Cardmarket.
         finishes_sql = store.printing_finishes_sql(session)
+        illustration_sql = store.printing_illustration_sql(session)
         printings = session.execute(text(f"""
             SELECT p.scryfall_id, UPPER(p.set_code) AS set_code, p.collector_number,
                    p.rarity, p.image_small, p.image_normal, p.released_at,
                    p.promo, p.full_art, p.artist, p.scryfall_uri,
                    {finishes_sql} AS finishes,
+                   {illustration_sql} AS illustration_id,
                    ms.name AS set_name, ms.icon_svg_uri,
                    latest.low_price, latest.trend_price, latest.foil_low,
                    latest.foil_trend,
@@ -708,6 +710,9 @@ def api_card_detail(card_name: str, request: Request) -> Response:
                 # ne peut prendre que l'une d'elles. Sans la colonne, en
                 # production, les deux courantes restent proposées.
                 "finishes": list(r.finishes or ["nonfoil", "foil"]),
+                # Le visuel lui-même : les éditions qui le partagent se
+                # regroupent. Absent, l'édition reste seule.
+                "illustration_id": r.illustration_id,
             }
             for r in printings
         ],
