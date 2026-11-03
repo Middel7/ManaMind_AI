@@ -1592,8 +1592,9 @@
 
     /** La grille des editions. Celles qui reprennent la meme illustration se
      *  suivent sous un titre commun : choisir entre elles, c'est choisir un
-     *  cadre, une finition ou un prix, pas une image. Une edition dont
-     *  l'illustration est inconnue reste seule. */
+     *  cadre, une finition ou un prix, pas une image. Les illustrations
+     *  propres a une seule edition passent en tete, a la demande de
+     *  l'utilisateur. Une edition dont l'illustration est inconnue reste seule. */
     function editionsHtml(printings, tile) {
       const groups = MM.illustrationGroups(printings);
       const shared = groups.filter((group) => group.length > 1);
@@ -1613,6 +1614,12 @@
       return `
         <div class="editions">
           ${toggle}
+          ${single.length ? `
+            <section class="editions__group">
+              <p class="small"><span class="strong">Illustration propre à une seule édition</span>
+                <span class="dim">· ${MM.fmt.plural(single.length, 'édition')}</span></p>
+              ${grid(single)}
+            </section>` : ''}
           ${shared.map((group) => `
             <section class="editions__group">
               <p class="small"><span class="strong">Même illustration</span>
@@ -1620,12 +1627,6 @@
                   artists(group) ? ` · ${esc(artists(group))}` : ''}</span></p>
               ${grid(group)}
             </section>`).join('')}
-          ${single.length ? `
-            <section class="editions__group">
-              <p class="small"><span class="strong">Illustration propre à une seule édition</span>
-                <span class="dim">· ${MM.fmt.plural(single.length, 'édition')}</span></p>
-              ${grid(single)}
-            </section>` : ''}
         </div>`;
     }
 
