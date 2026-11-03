@@ -302,6 +302,12 @@ def _num(value) -> float | None:
     return None if value is None else round(float(value), 2)
 
 
+# Ce qu'une case garde de chacune de ses éditions : de quoi la nommer, la
+# déclarer, et la montrer seule dans la fenêtre des boosters ouverts.
+_MEMBER_KEYS = ("set_code", "set_name", "collector_number", "declared", "rarity",
+                "released_at", "scryfall_id", "image_small", "image_normal")
+
+
 def merge_by_illustration(editions: list[dict]) -> list[dict]:
     """Fond en une case les éditions d'une carte qui partagent une illustration.
 
@@ -340,11 +346,54 @@ def merge_by_illustration(editions: list[dict]) -> list[dict]:
             "copies": sum(e["copies"] for e in group),
             "declared": any(e["declared"] for e in group),
             "owned": any(e["owned"] for e in group),
-            "editions": [{"set_code": e["set_code"], "set_name": e["set_name"],
-                          "collector_number": e["collector_number"],
-                          "declared": e["declared"]} for e in group],
+            "editions": [{key: e[key] for key in _MEMBER_KEYS} for e in group],
         })
     return merged
+
+
+def opened_wanted(cards: list[dict], opened: set[str]) -> list[dict]:
+    """Éditions communes et peu communes des extensions ouvertes qui manquent.
+
+    De quoi fouiller ses boîtes : une carte d'un booster ouvert a pu échapper
+    au tri. Une édition y figure quand sa case n'est pas possédée — dans une
+    collection comptée par illustration, posséder l'image dans une autre
+    édition suffit à l'écarter. Le résultat est rangé par extension, la plus
+    récente d'abord, et chaque carte par numéro.
+    """
+    opened = {code.upper() for code in opened}
+    by_set: dict[str, dict] = {}
+    for card in cards:
+        for entry in card["editions"]:
+            if entry["owned"]:
+                continue
+            for edition in entry.get("editions") or [entry]:
+                if (edition["set_code"] not in opened
+                        or edition["rarity"] not in ("common", "uncommon")):
+                    continue
+                group = by_set.setdefault(edition["set_code"], {
+                    "set_code": edition["set_code"], "set_name": edition["set_name"],
+                    "released_at": edition["released_at"], "cards": []})
+                group["cards"].append({
+                    "card_id": card["card_id"], "name": card["name"],
+                    "local_name": card.get("local_name"),
+                    **{key: edition[key] for key in ("collector_number", "rarity",
+                                                     "scryfall_id", "image_small",
+                                                     "image_normal")}})
+
+    def number(card):
+        digits = "".join(ch for ch in card["collector_number"] if ch.isdigit())
+        return (int(digits) if digits else 0, card["collector_number"])
+
+    for group in by_set.values():
+        group["cards"].sort(key=number)
+    return sorted(by_set.values(), key=lambda g: g["released_at"] or "", reverse=True)
+
+
+def opened_sets(session, user_id: int) -> set[str]:
+    """Extensions dont l'utilisateur a ouvert des boosters."""
+    return {r[0].upper() for r in session.execute(text("""
+        SELECT set_code FROM user_opened_sets WHERE user_id = :uid
+    """), {"uid": user_id})}
 
 
 def evaluate(session, user_id: int, definition: dict, collection_id: int | None = None) -> dict:
