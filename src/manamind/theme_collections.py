@@ -289,11 +289,13 @@ def _num(value) -> float | None:
 def merge_by_illustration(editions: list[dict]) -> list[dict]:
     """Fond en une case les éditions d'une carte qui partagent une illustration.
 
-    La case garde l'ordre de la première édition de son illustration. Elle est
-    possédée dès qu'une de ses éditions l'est, et en porte les exemplaires.
-    Elle se montre sous l'édition qui la fait posséder — c'est elle qu'un
-    « Annuler » doit viser —, sinon sous la moins chère, celle qu'on achèterait.
-    ``editions`` liste toutes les éditions de l'illustration. Sans
+    La case garde l'ordre de la première édition de son illustration. Elle se
+    montre sous l'édition la plus ancienne, celle qui a fait l'illustration,
+    mais prend le prix et le lien d'achat de la moins chère : c'est celle qu'on
+    achèterait, et le coût des manquantes reste réaliste. Elle est possédée dès
+    qu'une de ses éditions l'est, par un exemplaire ou une déclaration.
+    ``editions`` liste toutes les éditions de l'illustration, avec celles qui
+    sont déclarées : un « Annuler » doit toutes les viser. Sans
     ``illustration_id``, l'illustration est inconnue : l'édition reste seule.
     """
     groups: list[list[dict]] = []
@@ -309,16 +311,22 @@ def merge_by_illustration(editions: list[dict]) -> list[dict]:
 
     merged = []
     for group in groups:
-        lead = (next((e for e in group if e["declared"]), None)
-                or next((e for e in group if e["copies"]), None)
-                or min(group, key=lambda e: (e["price"] is None, e["price"] or 0)))
+        # Date ISO : l'ordre alphabétique est l'ordre chronologique. Sans date,
+        # l'édition passe après les autres.
+        oldest = min(group, key=lambda e: (e["released_at"] is None, e["released_at"] or ""))
+        cheapest = min(group, key=lambda e: (e["price"] is None, e["price"] or 0))
         merged.append({
-            **lead,
+            **oldest,
+            "price": cheapest["price"],
+            "cardmarket_id": cheapest["cardmarket_id"],
+            "buy_set_code": cheapest["set_code"],
+            "buy_collector_number": cheapest["collector_number"],
             "copies": sum(e["copies"] for e in group),
             "declared": any(e["declared"] for e in group),
             "owned": any(e["owned"] for e in group),
             "editions": [{"set_code": e["set_code"], "set_name": e["set_name"],
-                          "collector_number": e["collector_number"]} for e in group],
+                          "collector_number": e["collector_number"],
+                          "declared": e["declared"]} for e in group],
         })
     return merged
 
