@@ -20,14 +20,24 @@
   /* Le titre et ses trois boutons passent l'un sous l'autre a 420 px plutot
      que de deborder. */
   .theme-page .between { flex-wrap: wrap; gap: var(--sp-3); }
-  /* Les editions d'une carte forment un bloc : son nom en tete, et assez d'air
-     entre deux blocs pour qu'on ne lise pas une carte dans la suivante. */
-  .theme-page .theme-card { padding-top: var(--sp-4); border-top: 1px solid var(--line); }
-  .theme-page .theme-card:first-child { border-top: 0; padding-top: 0; }
-  .theme-page .theme-card .card-grid { margin-top: var(--sp-3); }
-  /* Chaque edition porte ses trois gestes : les petites vignettes n'avaient
-     pas la largeur de deux boutons cote a cote. */
-  .theme-page .theme-card .card-grid { --card-min: 156px; }
+  /* Les cartes se suivent sur la ligne : une carte a une ou deux tuiles
+     occupait toute la largeur et laissait un grand vide a sa droite. Chaque
+     bloc prend la largeur de ses tuiles, et l'ecart vertical, plus grand que
+     l'horizontal, garde chaque nom sur ses propres tuiles. */
+  .theme-page .theme-flow {
+    display: flex; flex-wrap: wrap; align-items: flex-start;
+    gap: var(--sp-8) var(--sp-6);
+  }
+  .theme-page .theme-card { flex: 0 1 auto; min-width: 0; max-width: 100%; }
+  /* Le titre suit la largeur des tuiles au lieu de l'imposer : un long nom
+     elargissait le bloc d'une tuile unique. */
+  .theme-page .theme-card__head { width: 0; min-width: 100%; }
+  .theme-page .theme-card .card-grid {
+    display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-top: var(--sp-3);
+  }
+  /* Chaque edition porte ses gestes : 156 px tiennent deux boutons cote a
+     cote, comme l'ancienne grille. */
+  .theme-page .theme-card .mtg-card { width: 156px; }
   /* Les filtres partagent la ligne ; sur telephone ils passent a la ligne. */
   .theme-page .theme-filters { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
   .theme-page .theme-filters .input { flex: 1 1 200px; width: auto; min-width: 0; }
@@ -166,20 +176,13 @@
   function block(card) {
     const total = card.editions.length;
     const unit = MMThemes.unit(data);
-    const actions = [];
-    // « Toutes possedees » ne se propose que pour une carte deja entamee : une
-    // carte absente de la collection n'a rien a completer.
-    if (card.marked) {
-      actions.push(`<button class="btn btn--sm btn--ghost" data-unmark="${card.card_id}"
-        title="Revenir au décompte réel des ${unit}s possédées">Annuler « toutes possédées »</button>`);
-    } else if (card.any_copy && card.owned_count < total) {
-      actions.push(`<button class="btn btn--sm" data-mark="${card.card_id}"
-        title="Compter toutes les ${unit}s de cette carte comme possédées, dans cette collection seulement"
-        >Je possède toutes les ${unit}s</button>`);
-    }
+    // « Toutes possedees » ne se propose plus ; une carte deja marquee garde
+    // de quoi revenir en arriere.
+    const undo = card.marked ? `<button class="btn btn--sm btn--ghost" data-unmark="${card.card_id}"
+        title="Revenir au décompte réel des ${unit}s possédées">Annuler « toutes possédées »</button>` : '';
     return `
       <section class="theme-card">
-        <div class="between">
+        <div class="theme-card__head">
           <div class="stack-2" style="gap:2px">
             <h3 class="h4">${MM.esc(card.local_name || card.name)}</h3>
             ${card.local_name && card.local_name !== card.name
@@ -187,8 +190,8 @@
             <span class="xs dim num">${MM.fmt.plural(card.owned_count, unit)}
               possédée${card.owned_count > 1 ? 's' : ''} sur ${MM.fmt.int(total)}${card.total
                 ? ` · ${MM.fmt.eur(card.total)} ${state.tab === 'owned' ? 'possédés' : 'à compléter'}` : ''}</span>
+            ${undo}
           </div>
-          <div class="cluster-2">${actions.join('')}</div>
         </div>
         <div class="card-grid">${card.shown.map((e) => tile(card, e)).join('')}</div>
       </section>`;
@@ -320,7 +323,7 @@
           : `Vous possédez toutes les ${MMThemes.unit(data)}s de cette collection, ou les filtres les écartent.` });
       return;
     }
-    list.innerHTML = cards.slice(0, state.shown).map(block).join('')
+    list.innerHTML = `<div class="theme-flow">${cards.slice(0, state.shown).map(block).join('')}</div>`
       + (cards.length > state.shown
         ? `<div class="center"><button class="btn" id="moreBtn" type="button">
              Afficher plus (${MM.fmt.plural(cards.length - state.shown, 'carte')} restantes)</button></div>`
