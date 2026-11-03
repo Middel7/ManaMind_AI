@@ -63,7 +63,7 @@ def page_collection_commanders() -> FileResponse:
     return _page("collection_commanders.html")
 
 
-@router.get("/collection/commandants/{commander}")
+@router.get("/collection/commandants/{commander:path}")
 def page_collection_commander_build(commander: str) -> FileResponse:
     return _page("collection_commander_build.html")
 

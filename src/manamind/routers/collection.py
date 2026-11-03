@@ -838,7 +838,7 @@ def _commander_images(session, names: list[str], user_id: int) -> dict[str, list
             for name, pieces in parts.items()}
 
 
-@router.get("/api/v2/commander-build/{commander}")
+@router.get("/api/v2/commander-build/{commander:path}")
 def api_commander_build(
     commander: str,
     request: Request,
@@ -1068,7 +1068,7 @@ def api_collection_list(
     return _json_response({"cards": result, "total": len(result)})
 
 
-@router.patch("/api/collection/{card_name}")
+@router.patch("/api/collection/{card_name:path}")
 async def api_collection_update(card_name: str, request: Request) -> JSONResponse:
     """Met à jour la quantité d'une carte dans la collection."""
     from manamind.auth import get_current_user, COOKIE_NAME
@@ -1101,7 +1101,7 @@ def api_collection_clear(request: Request) -> JSONResponse:
     return _json_response({"ok": True})
 
 
-@router.delete("/api/collection/{card_name}")
+@router.delete("/api/collection/{card_name:path}")
 def api_collection_delete(card_name: str, request: Request) -> JSONResponse:
     """Supprime une carte de la collection."""
     from manamind.auth import get_current_user, COOKIE_NAME
