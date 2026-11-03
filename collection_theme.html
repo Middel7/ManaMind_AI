@@ -36,6 +36,15 @@
   /* Le titre suit la largeur des tuiles au lieu de l'imposer : un long nom
      elargissait le bloc d'une tuile unique. */
   .theme-page .theme-card__head { width: 0; min-width: 100%; }
+  /* L'en-tete a toujours la meme hauteur : un nom sur une ligne ou deux, ou
+     sans nom anglais, decalait les visuels d'une meme rangee. */
+  .theme-page .theme-card__head h3 {
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+    overflow: hidden; min-height: 2lh;
+  }
+  .theme-page .theme-card__head .xs { min-height: 1lh; }
+  /* Sous les tuiles plutot que dans l'en-tete, pour ne pas decaler la rangee. */
+  .theme-page .theme-card > .btn { margin-top: var(--sp-3); }
   .theme-page .theme-card .card-grid {
     display: flex; flex-wrap: wrap; gap: var(--sp-5); margin-top: var(--sp-3);
   }
@@ -176,13 +185,13 @@
       <section class="theme-card" data-tiles="${card.shown.length}">
         <div class="theme-card__head">
           <div class="stack-2" style="gap:2px">
-            <h3 class="h4">${MM.esc(card.local_name || card.name)}</h3>
-            ${card.local_name && card.local_name !== card.name
-              ? `<span class="xs dim">${MM.esc(card.name)}</span>` : ''}
-            ${undo}
+            <h3 class="h4" title="${MM.esc(card.local_name || card.name)}">${MM.esc(card.local_name || card.name)}</h3>
+            <span class="xs dim truncate">${card.local_name && card.local_name !== card.name
+              ? MM.esc(card.name) : ''}</span>
           </div>
         </div>
         <div class="card-grid">${card.shown.map((e) => tile(card, e)).join('')}</div>
+        ${undo}
       </section>`;
   }
 
