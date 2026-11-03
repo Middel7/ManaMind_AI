@@ -84,8 +84,14 @@
       if (state.sort === 'value') editions.sort((a, b) => priceOf(b) - priceOf(a));
       cards.push({ ...card, shown: editions });
     });
+    // Une carte vaut la somme de ce que l'onglet en montre : ce qu'on possede
+    // d'elle, ou ce qu'il en coute de la completer. La tuile la plus chere
+    // passait seule, et une carte aux nombreuses illustrations bon marche
+    // finissait derriere une carte a une seule illustration un peu plus chere.
+    const total = (card) => card.shown.reduce((sum, edition) => sum + priceOf(edition), 0);
     if (state.sort === 'value') {
-      cards.sort((a, b) => priceOf(b.shown[0]) - priceOf(a.shown[0]));
+      cards.forEach((card) => { card.total = total(card); });
+      cards.sort((a, b) => b.total - a.total);
     }
     return cards;
   }
@@ -193,7 +199,8 @@
             ${card.local_name && card.local_name !== card.name
               ? `<span class="xs dim">${MM.esc(card.name)}</span>` : ''}
             <span class="xs dim num">${MM.fmt.plural(card.owned_count, unit)}
-              possédée${card.owned_count > 1 ? 's' : ''} sur ${MM.fmt.int(total)}</span>
+              possédée${card.owned_count > 1 ? 's' : ''} sur ${MM.fmt.int(total)}${card.total
+                ? ` · ${MM.fmt.eur(card.total)} ${state.tab === 'owned' ? 'possédés' : 'à compléter'}` : ''}</span>
           </div>
           <div class="cluster-2">${actions.join('')}</div>
         </div>
@@ -310,7 +317,7 @@
           ${[...rarities].filter(Boolean).map((r) => option(r, MM.fmt.rarity(r), state.rarity)).join('')}
         </select>
         <select class="select" id="fSort" aria-label="Tri">
-          ${option('value', 'Par valeur', state.sort)}
+          ${option('value', 'Par valeur totale', state.sort)}
           ${option('name', 'Par ordre alphabétique', state.sort)}
         </select>
       </div>`;
