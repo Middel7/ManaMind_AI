@@ -167,7 +167,6 @@
   }
 
   function block(card) {
-    const total = card.editions.length;
     const unit = MMThemes.unit(data);
     // « Toutes possedees » ne se propose plus ; une carte deja marquee garde
     // de quoi revenir en arriere.
@@ -180,9 +179,6 @@
             <h3 class="h4">${MM.esc(card.local_name || card.name)}</h3>
             ${card.local_name && card.local_name !== card.name
               ? `<span class="xs dim">${MM.esc(card.name)}</span>` : ''}
-            <span class="xs dim num">${MM.fmt.plural(card.owned_count, unit)}
-              possédée${card.owned_count > 1 ? 's' : ''} sur ${MM.fmt.int(total)}${card.total
-                ? ` · ${MM.fmt.eur(card.total)} ${state.tab === 'owned' ? 'possédés' : 'à compléter'}` : ''}</span>
             ${undo}
           </div>
         </div>
