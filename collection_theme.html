@@ -97,12 +97,11 @@
   }
 
   function tile(card, edition) {
+    // Une edition declaree possedee ne porte pas de mention : sous l'onglet
+    // « Possedees », elle l'est, et le bouton « Annuler » suffit a la reprendre.
     const marks = [];
     if (edition.copies) {
       marks.push(`<span class="badge badge--ok">possédée ×${MM.fmt.int(edition.copies)}</span>`);
-    } else if (edition.owned) {
-      marks.push(`<span class="badge badge--info" title="${card.marked
-        ? 'Toutes les éditions déclarées possédées' : 'Édition déclarée possédée'}">déclarée</span>`);
     }
     const inBuylist = pinned.has(card.name.toLowerCase());
     // Une edition possedee par un exemplaire, ou par « toutes possedees »,
@@ -145,7 +144,6 @@
               : '<span class="dim">non cotée</span>'}
           </span>
           ${marks.length ? `<span class="mtg-card__meta"><span class="cluster">${marks.join('')}</span></span>` : ''}
-          ${sameArt(edition)}
           <span class="mtg-card__bottom">
             <span class="mtg-card__market">
               <a class="btn btn--sm" target="_blank" rel="noopener"
@@ -163,18 +161,6 @@
           </span>
         </div>
       </article>`;
-  }
-
-  /** Les autres editions qui reprennent l'illustration de la case, quand la
-   *  collection compte par illustration. */
-  function sameArt(edition) {
-    const others = (edition.editions || []).filter((x) => x.set_code !== edition.set_code
-      || x.collector_number !== edition.collector_number);
-    if (!others.length) return '';
-    const list = others.map((x) => `${x.set_code} #${x.collector_number}`).join(', ');
-    return `<span class="mtg-card__meta"><span class="xs dim truncate"
-      title="Même illustration : ${MM.esc(others.map((x) => `${x.set_name || x.set_code} #${x.collector_number}`).join(', '))}"
-      >Aussi ${MM.esc(list)}</span></span>`;
   }
 
   function block(card) {
