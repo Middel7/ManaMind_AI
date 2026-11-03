@@ -97,12 +97,11 @@
   }
 
   function tile(card, edition) {
+    // Une edition declaree possedee ne porte pas de mention : sous l'onglet
+    // « Possedees », elle l'est, et le bouton « Annuler » suffit a la reprendre.
     const marks = [];
     if (edition.copies) {
       marks.push(`<span class="badge badge--ok">possédée ×${MM.fmt.int(edition.copies)}</span>`);
-    } else if (edition.owned) {
-      marks.push(`<span class="badge badge--info" title="${card.marked
-        ? 'Toutes les éditions déclarées possédées' : 'Édition déclarée possédée'}">déclarée</span>`);
     }
     const inBuylist = pinned.has(card.name.toLowerCase());
     // Une edition possedee par un exemplaire, ou par « toutes possedees »,
