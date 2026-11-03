@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>ManaMind — Mes collections à thème</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#08080C">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ManaMind">
+<link rel="icon" href="/static/img/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/app.css">
+<style>
+  /* Une collection se lit a sa couverture et a sa progression : la tuile de
+     deck du socle, un peu plus haute pour loger la barre et les deux montants. */
+  .themes .deck-chip { min-height: 168px; gap: var(--sp-1); }
+  .themes .deck-chip .progress { margin-top: var(--sp-1); }
+  /* Le squelette prend la hauteur de la tuile qu'il annonce. */
+  .themes .skeleton { min-height: 168px; }
+  /* Le titre et son bouton passent l'un sous l'autre a 420 px plutot que de
+     deborder. */
+  .themes-head { flex-wrap: wrap; gap: var(--sp-3); }
+</style>
+</head>
+<body>
+
+<div id="page">
+  <div class="stack-2">
+    <div class="between themes-head">
+      <h2 class="h2">Mes collections à thème</h2>
+      <button class="btn btn--primary btn--sm" id="newBtn" type="button">Nouvelle collection</button>
+    </div>
+    <p class="muted small">
+      Un objectif de collection défini par des critères : toutes les éditions des anges,
+      tout ce qui coûte 4… La liste se recalcule à chaque ouverture, et les cartes des
+      nouvelles extensions y entrent d'elles-mêmes.
+    </p>
+  </div>
+
+  <div id="results"></div>
+</div>
+
+<script src="/static/js/mm.js"></script>
+<script src="/static/js/themes.js"></script>
+<script>
+(async () => {
+  const user = await MM.boot({ title: 'Mes collections à thème', nav: 'themes' });
+  if (!user) return;
+
+  const results = MM.el('#results');
+
+  if (user.role !== 'admin') {
+    MM.el('#newBtn').hidden = true;
+    results.innerHTML = MM.empty({ icon: 'collection', title: 'Bientôt disponible',
+      text: 'Les collections à thème sont en essai.' });
+    return;
+  }
+
+  function chip(entry) {
+    const s = entry.stats;
+    if (!s) {
+      return `
+        <a class="deck-chip" href="/collection/themes/${entry.id}">
+          <span class="deck-chip__name truncate">${MM.esc(entry.name)}</span>
+          <span class="deck-chip__meta">${MM.esc(entry.error || '')}</span>
+        </a>`;
+    }
+    const art = s.cover ? MM.img.art(s.cover) : null;
+    const pct = s.editions ? (s.owned / s.editions) * 100 : 0;
+    return `
+      <a class="deck-chip" href="/collection/themes/${entry.id}">
+        ${art ? `<span class="deck-chip__art" style="background-image:url('${MM.esc(art)}')"></span>` : ''}
+        <span class="deck-chip__name truncate">${MM.esc(entry.name)}</span>
+        <span class="deck-chip__meta num">
+          ${MM.fmt.int(s.owned)} / ${MM.fmt.plural(s.editions, 'édition')} · ${MM.fmt.pct(pct)}</span>
+        <div class="progress"><div class="progress__bar" style="width:${pct.toFixed(1)}%"></div></div>
+        <span class="deck-chip__meta num">
+          ${MM.fmt.eur(s.value_owned)} possédés · ${MM.fmt.eur(s.cost_missing)} manquants</span>
+      </a>`;
+  }
+
+  async function load() {
+    results.innerHTML = `<div class="deck-strip themes">${
+      Array.from({ length: 4 }, () => '<div class="skeleton"></div>').join('')}</div>`;
+    try {
+      const data = await MM.api.get('/api/v2/themes');
+      results.innerHTML = data.collections.length
+        ? `<div class="deck-strip themes">${data.collections.map(chip).join('')}</div>`
+        : MM.empty({ icon: 'collection', title: 'Aucune collection à thème',
+            text: 'Créez-en une avec « Nouvelle collection » : un nom, une langue et des critères.' });
+    } catch (err) {
+      results.innerHTML = MM.empty({ icon: 'collection', title: 'Chargement impossible',
+        text: err.message });
+    }
+  }
+
+  MM.el('#newBtn').addEventListener('click', () => MMThemes.editor({
+    onSaved: (id) => { location.href = `/collection/themes/${id}`; },
+  }));
+
+  load();
+})();
+</script>
+</body>
+</html>

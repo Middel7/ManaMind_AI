@@ -245,6 +245,7 @@ from manamind.routers.import_deck import router as import_router
 from manamind.routers.pages import router as pages_router
 from manamind.routers.precons import router as precons_router
 from manamind.routers.scrape import router as scrape_router
+from manamind.routers.theme_collections import router as theme_collections_router
 
 app.include_router(admin_catalogue_router)
 app.include_router(admin_users_router)
@@ -261,6 +262,7 @@ app.include_router(import_router)
 app.include_router(pages_router)
 app.include_router(precons_router)
 app.include_router(scrape_router)
+app.include_router(theme_collections_router)
 
 
 # ── Route racine ─────────────────────────────────────────────────────────────

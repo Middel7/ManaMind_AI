@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>ManaMind — Collection à thème</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#08080C">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ManaMind">
+<link rel="icon" href="/static/img/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/app.css">
+<style>
+  /* Le titre et ses trois boutons passent l'un sous l'autre a 420 px plutot
+     que de deborder. */
+  .theme-page .between { flex-wrap: wrap; gap: var(--sp-3); }
+  /* Les editions d'une carte forment un bloc : son nom en tete, et assez d'air
+     entre deux blocs pour qu'on ne lise pas une carte dans la suivante. */
+  .theme-page .theme-card { padding-top: var(--sp-4); border-top: 1px solid var(--line); }
+  .theme-page .theme-card:first-child { border-top: 0; padding-top: 0; }
+  .theme-page .theme-card .card-grid { margin-top: var(--sp-3); }
+  /* Les filtres partagent la ligne ; sur telephone ils passent a la ligne. */
+  .theme-page .theme-filters { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+  .theme-page .theme-filters .input { flex: 1 1 200px; width: auto; min-width: 0; }
+  .theme-page .theme-filters .select { flex: 0 1 200px; width: auto; min-width: 0; }
+</style>
+</head>
+<body>
+
+<div id="page" class="theme-page">
+  <div id="head"></div>
+  <div id="results"></div>
+</div>
+
+<script src="/static/js/mm.js"></script>
+<script src="/static/js/themes.js"></script>
+<script>
+(async () => {
+  const user = await MM.boot({ title: 'Collection à thème', nav: 'themes',
+                               back: '/collection/themes' });
+  if (!user) return;
+
+  const id = Number(location.pathname.split('/').pop());
+  const head = MM.el('#head');
+  const results = MM.el('#results');
+  const PAGE = 40;
+
+  const state = { tab: 'owned', search: '', set: '', rarity: '', sort: 'value', shown: PAGE };
+  let data = null;
+
+  const priceOf = (edition) => edition.price || 0;
+
+  /** Les cartes de l'onglet courant, filtrees et triees. */
+  function visibleCards() {
+    const owned = state.tab === 'owned';
+    const needle = state.search.trim().toLowerCase();
+    const cards = [];
+    data.cards.forEach((card) => {
+      if (needle && !card.name.toLowerCase().includes(needle)) return;
+      const editions = card.editions.filter((e) => e.owned === owned
+        && (!state.set || e.set_code === state.set)
+        && (!state.rarity || e.rarity === state.rarity));
+      if (!editions.length) return;
+      if (state.sort === 'value') editions.sort((a, b) => priceOf(b) - priceOf(a));
+      cards.push({ ...card, shown: editions });
+    });
+    if (state.sort === 'value') {
+      cards.sort((a, b) => priceOf(b.shown[0]) - priceOf(a.shown[0]));
+    }
+    return cards;
+  }
+
+  function tile(card, edition) {
+    const marks = [];
+    if (edition.copies) {
+      marks.push(`<span class="badge badge--ok">possédée ×${MM.fmt.int(edition.copies)}</span>`);
+    } else if (edition.owned) {
+      marks.push('<span class="badge badge--info" title="Toutes les éditions déclarées possédées">déclarée</span>');
+    }
+    return `
+      <article class="mtg-card" data-name="${MM.esc(card.name)}"
+               title="${MM.esc(MM.fmt.rarity(edition.rarity))}">
+        <div class="mtg-card__frame" title="Voir ${MM.esc(card.name)} en grand">
+          ${MM.img.frame({ card_name: card.name, scryfall_id: edition.scryfall_id,
+                           image_normal: edition.image_normal, image_small: edition.image_small })}
+        </div>
+        <div class="mtg-card__foot">
+          <span class="mtg-card__name" data-no-detail
+                title="${MM.esc(edition.set_name || edition.set_code)}"
+            >${MM.esc(edition.set_name || edition.set_code)}</span>
+          <span class="mtg-card__meta">
+            <span>${MM.esc(edition.set_code)}${edition.collector_number
+              ? ` #${MM.esc(edition.collector_number)}` : ''}</span>
+            ${edition.price != null
+              ? `<span class="mtg-card__price">${MM.fmt.eur(edition.price)}</span>`
+              : '<span class="dim">non cotée</span>'}
+          </span>
+          ${marks.length ? `<span class="mtg-card__meta"><span class="cluster">${marks.join('')}</span></span>` : ''}
+        </div>
+      </article>`;
+  }
+
+  function block(card) {
+    const total = card.editions.length;
+    const actions = [];
+    // « Toutes possedees » ne se propose que pour une carte deja entamee : une
+    // carte absente de la collection n'a rien a completer.
+    if (card.marked) {
+      actions.push(`<button class="btn btn--sm btn--ghost" data-unmark="${card.card_id}"
+        title="Revenir au décompte réel des éditions possédées">Annuler « toutes possédées »</button>`);
+    } else if (card.any_copy && card.owned_count < total) {
+      actions.push(`<button class="btn btn--sm" data-mark="${card.card_id}"
+        title="Compter toutes les éditions de cette carte comme possédées, dans cette collection seulement"
+        >Je possède toutes les éditions</button>`);
+    }
+    if (state.tab === 'wanted') {
+      actions.push(`<button class="btn btn--sm" data-buy="${MM.esc(card.name)}"
+        title="Ajouter cette carte à ma buylist">Buylist</button>`);
+    }
+    return `
+      <section class="theme-card">
+        <div class="between">
+          <div class="stack-2" style="gap:2px">
+            <h3 class="h4">${MM.esc(card.name)}</h3>
+            <span class="xs dim num">${MM.fmt.plural(card.owned_count, 'édition')}
+              possédée${card.owned_count > 1 ? 's' : ''} sur ${MM.fmt.int(total)}</span>
+          </div>
+          <div class="cluster-2">${actions.join('')}</div>
+        </div>
+        <div class="card-grid card-grid--sm">${card.shown.map((e) => tile(card, e)).join('')}</div>
+      </section>`;
+  }
+
+  function renderHead() {
+    const s = data.stats;
+    const pct = s && s.editions ? (s.owned / s.editions) * 100 : 0;
+    const complete = data.cards.filter((card) => card.owned_count === card.editions.length).length;
+    const language = (MM.languages.find(([code]) => code === data.language) || [, data.language])[1];
+    head.innerHTML = `
+      <div class="stack">
+        <div class="between">
+          <div class="stack-2" style="gap:2px">
+            <h2 class="h2">${MM.esc(data.name)}</h2>
+            <span class="small muted">Éditions en ${MM.esc(language.toLowerCase())}</span>
+          </div>
+          <div class="cluster-2">
+            <button class="btn btn--sm" id="editBtn" type="button">Modifier</button>
+            <button class="btn btn--sm" id="dupBtn" type="button">Dupliquer</button>
+            <button class="btn btn--sm btn--danger" id="delBtn" type="button">Supprimer</button>
+          </div>
+        </div>
+        ${s ? `
+        <div class="stats">
+          <div class="stat">
+            <span class="stat__value num">${MM.fmt.pct(pct)}</span>
+            <span class="stat__label">Progression</span>
+            <span class="stat__note num">${MM.fmt.int(s.owned)} / ${MM.fmt.plural(s.editions, 'édition')}</span>
+            <div class="progress"><div class="progress__bar" style="width:${pct.toFixed(1)}%"></div></div>
+          </div>
+          <div class="stat">
+            <span class="stat__value num">${MM.fmt.int(complete)} / ${MM.fmt.int(s.cards)}</span>
+            <span class="stat__label">Cartes complètes</span>
+            <span class="stat__note">toutes leurs éditions possédées</span>
+          </div>
+          <div class="stat">
+            <span class="stat__value num">${MM.fmt.eur(s.value_owned)}</span>
+            <span class="stat__label">Valeur possédée</span>
+            <span class="stat__note">une fois par édition, au trend Cardmarket</span>
+          </div>
+          <div class="stat">
+            <span class="stat__value num">${MM.fmt.eur(s.cost_missing)}</span>
+            <span class="stat__label">Coût des manquantes</span>
+            <span class="stat__note">une fois par édition, au trend Cardmarket</span>
+          </div>
+        </div>` : ''}
+      </div>`;
+
+    MM.el('#editBtn').addEventListener('click', () => MMThemes.editor({
+      initial: data, onSaved: () => load(),
+    }));
+    MM.el('#dupBtn').addEventListener('click', async () => {
+      try {
+        const copy = await MM.api.post(`/api/v2/themes/${id}/duplicate`);
+        location.href = `/collection/themes/${copy.id}`;
+      } catch (err) { MM.toast.error(err.message); }
+    });
+    MM.el('#delBtn').addEventListener('click', async () => {
+      const ok = await MM.confirm({ title: 'Supprimer la collection',
+        text: `« ${data.name} » sera supprimée. Votre collection de cartes n'est pas touchée.`,
+        confirmLabel: 'Supprimer', danger: true });
+      if (!ok) return;
+      try {
+        await MM.api.del(`/api/v2/themes/${id}`);
+        location.href = '/collection/themes';
+      } catch (err) { MM.toast.error(err.message); }
+    });
+  }
+
+  function renderToolbar() {
+    const owned = data.cards.reduce((n, c) => n + c.editions.filter((e) => e.owned).length, 0);
+    const wanted = data.cards.reduce((n, c) => n + c.editions.filter((e) => !e.owned).length, 0);
+    const sets = new Map();
+    const rarities = new Set();
+    data.cards.forEach((card) => card.editions.forEach((e) => {
+      sets.set(e.set_code, e.set_name || e.set_code);
+      rarities.add(e.rarity);
+    }));
+    const option = (value, label, current) =>
+      `<option value="${MM.esc(value)}" ${value === current ? 'selected' : ''}>${MM.esc(label)}</option>`;
+    return `
+      <div class="toolbar">
+        <div class="chips" role="tablist">
+          <button class="chip" data-tab="owned" aria-pressed="${state.tab === 'owned'}">
+            Possédées <span class="chip__count">${MM.fmt.int(owned)}</span></button>
+          <button class="chip" data-tab="wanted" aria-pressed="${state.tab === 'wanted'}">
+            Recherchées <span class="chip__count">${MM.fmt.int(wanted)}</span></button>
+        </div>
+        ${state.tab === 'wanted' ? `
+        <div class="cluster-2">
+          <button class="btn btn--sm" id="buyAll" type="button"
+                  title="Ajouter à ma buylist chaque carte dont il manque au moins une édition"
+            >Tout envoyer dans la buylist</button>
+          <button class="btn btn--sm" id="exportBtn" type="button"
+                  title="Télécharger la liste des éditions manquantes : quantité, nom, extension et numéro"
+            >Exporter les manquantes (.txt)</button>
+        </div>` : ''}
+      </div>
+      <div class="theme-filters">
+        <input class="input" id="fSearch" type="search" placeholder="Rechercher une carte…"
+               value="${MM.esc(state.search)}">
+        <select class="select" id="fSet" aria-label="Extension">
+          ${option('', 'Toutes les extensions', state.set)}
+          ${[...sets].sort((a, b) => a[1].localeCompare(b[1]))
+            .map(([code, name]) => option(code, `${name} (${code})`, state.set)).join('')}
+        </select>
+        <select class="select" id="fRarity" aria-label="Rareté">
+          ${option('', 'Toutes les raretés', state.rarity)}
+          ${[...rarities].filter(Boolean).map((r) => option(r, MM.fmt.rarity(r), state.rarity)).join('')}
+        </select>
+        <select class="select" id="fSort" aria-label="Tri">
+          ${option('value', 'Par valeur', state.sort)}
+          ${option('name', 'Par ordre alphabétique', state.sort)}
+        </select>
+      </div>`;
+  }
+
+  function renderList() {
+    const cards = visibleCards();
+    const list = MM.el('#cards');
+    if (!cards.length) {
+      list.innerHTML = MM.empty({ icon: 'collection',
+        title: state.tab === 'owned' ? 'Aucune édition possédée' : 'Rien ne manque',
+        text: state.tab === 'owned'
+          ? 'Aucune édition de cette collection ne se trouve dans votre collection, ou les filtres les écartent.'
+          : 'Vous possédez toutes les éditions de cette collection, ou les filtres les écartent.' });
+      return;
+    }
+    list.innerHTML = cards.slice(0, state.shown).map(block).join('')
+      + (cards.length > state.shown
+        ? `<div class="center"><button class="btn" id="moreBtn" type="button">
+             Afficher plus (${MM.fmt.plural(cards.length - state.shown, 'carte')} restantes)</button></div>`
+        : '');
+  }
+
+  function render() {
+    renderHead();
+    if (data.error) {
+      results.innerHTML = MM.empty({ icon: 'collection', title: 'Critères à revoir', text: data.error });
+      return;
+    }
+    results.innerHTML = `<div class="stack">${renderToolbar()}<div class="stack" id="cards"></div></div>`;
+    renderList();
+  }
+
+  async function load() {
+    if (!data) {
+      results.innerHTML = `<div class="card-grid card-grid--sm">${MM.cardSkeletons(12)}</div>`;
+    }
+    try {
+      data = await MM.api.get(`/api/v2/themes/${id}`);
+      MM.el('title').textContent = `ManaMind — ${data.name}`;
+      render();
+    } catch (err) {
+      head.innerHTML = '';
+      results.innerHTML = MM.empty({ icon: 'collection', title: 'Collection introuvable',
+        text: err.message, action: { href: '/collection/themes', label: 'Mes collections à thème' } });
+    }
+  }
+
+  function exportWanted() {
+    const lines = [`// ${data.name} — éditions manquantes`, ''];
+    visibleCards().forEach((card) => card.shown.forEach((e) => {
+      lines.push(`1 ${card.name} (${e.set_code}) ${e.collector_number || ''}`.trim());
+    }));
+    // Fins de ligne Windows : le Bloc-notes et Cardmarket les lisent toutes.
+    const blob = new Blob([lines.join('\r\n') + '\r\n'], { type: 'text/plain;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${data.name.replace(/[^\p{L}\p{N}]+/gu, '-')}-manquantes.txt`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  }
+
+  results.addEventListener('click', async (event) => {
+    const target = event.target;
+    const tab = target.closest('[data-tab]');
+    if (tab) {
+      state.tab = tab.dataset.tab;
+      state.shown = PAGE;
+      render();
+      return;
+    }
+    if (target.closest('#moreBtn')) {
+      state.shown += PAGE;
+      renderList();
+      return;
+    }
+    if (target.closest('#exportBtn')) { exportWanted(); return; }
+    const mark = target.closest('[data-mark], [data-unmark]');
+    if (mark) {
+      mark.disabled = true;
+      const cardId = mark.dataset.mark || mark.dataset.unmark;
+      try {
+        if (mark.dataset.mark) await MM.api.post(`/api/v2/themes/${id}/complete/${cardId}`);
+        else await MM.api.del(`/api/v2/themes/${id}/complete/${cardId}`);
+        await load();
+      } catch (err) { MM.toast.error(err.message); mark.disabled = false; }
+      return;
+    }
+    const buy = target.closest('[data-buy], #buyAll');
+    if (buy) {
+      buy.disabled = true;
+      try {
+        const body = buy.dataset.buy
+          ? { names: [buy.dataset.buy] }
+          : { names: visibleCards().map((card) => card.name) };
+        const result = await MM.api.post(`/api/v2/themes/${id}/buylist`, body);
+        MM.toast.ok(`${MM.fmt.plural(result.added, 'carte')} dans votre buylist.`);
+      } catch (err) { MM.toast.error(err.message); }
+      buy.disabled = false;
+    }
+  });
+
+  results.addEventListener('input', MM.debounce((event) => {
+    if (event.target.id !== 'fSearch') return;
+    state.search = event.target.value;
+    state.shown = PAGE;
+    renderList();
+  }, 200));
+
+  results.addEventListener('change', (event) => {
+    const key = { fSet: 'set', fRarity: 'rarity', fSort: 'sort' }[event.target.id];
+    if (!key) return;
+    state[key] = event.target.value;
+    state.shown = PAGE;
+    renderList();
+  });
+
+  // Une edition ajoutee ou corrigee depuis la fiche d'une carte change ce qui
+  // est possede : la collection se recompte.
+  document.addEventListener('mm:card-change', () => load());
+
+  load();
+})();
+</script>
+</body>
+</html>

@@ -570,6 +570,9 @@
           href: '/collection/buylist', icon: 'coin' },
         { key: 'boosters', label: "Sélectionner les extensions que j'ai ouvertes",
           href: '/collection/boosters', icon: 'booster' },
+        // En essai : reserve a l'administrateur, comme ses donnees.
+        { key: 'themes', label: 'Mes collections à thème',
+          href: '/collection/themes', icon: 'collection', admin: true },
       ],
     },
     {
@@ -607,7 +610,8 @@
     const groups = NAV_GROUPS.map((group) => `
       <div class="nav__group">
         ${group.label ? `<div class="nav__label">${esc(group.label)}</div>` : ''}
-        ${group.items.map((item) => `
+        ${group.items.filter((item) => !item.admin || (user && user.role === 'admin'))
+          .map((item) => `
           <a class="nav__item" href="${item.href}"
              ${item.key === active ? 'aria-current="page"' : ''}>
             ${MM.icons[item.icon]}<span>${esc(item.label)}</span>
@@ -1280,6 +1284,8 @@
     es: 'Espagnol', pt: 'Portugais', ja: 'Japonais', ko: 'Coréen',
     ru: 'Russe', zhs: 'Chinois simplifié', zht: 'Chinois traditionnel',
   };
+  // Les collections a theme proposent les memes langues que les exemplaires.
+  MM.languages = Object.entries(LANGUAGES);
   const FINISH_LABELS = { nonfoil: 'Non foil', foil: 'Foil', etched: 'Gravé' };
   const CONDITIONS = ['NM', 'EX', 'GD', 'LP', 'PL', 'PO'];
 

@@ -47,6 +47,17 @@ def page_collection_buylist() -> FileResponse:
     return _page("collection_buylist.html")
 
 
+# Les pages se servent a tous ; leurs donnees ne repondent qu'a l'administrateur.
+@router.get("/collection/themes")
+def page_collection_themes() -> FileResponse:
+    return _page("collection_themes.html")
+
+
+@router.get("/collection/themes/{collection_id}")
+def page_collection_theme(collection_id: int) -> FileResponse:
+    return _page("collection_theme.html")
+
+
 @router.get("/collection/commandants")
 def page_collection_commanders() -> FileResponse:
     return _page("collection_commanders.html")
