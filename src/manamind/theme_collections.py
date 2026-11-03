@@ -5,9 +5,13 @@ Une collection à thème (« Les anges », « Tout ce qui coûte 4 ») réunit l
 critères sont enregistrés, pas sa liste, et chaque ouverture les réévalue — une
 extension qui sort avec de nouveaux anges les y fait entrer d'elle-même.
 
-Une édition est une impression dans la langue de la collection. Elle est
-possédée dès qu'un exemplaire de la collection de l'utilisateur la désigne,
-quelle que soit sa finition. L'utilisateur peut aussi déclarer qu'il possède
+Une édition est une extension et un numéro, quelle que soit la langue : le
+catalogue ne connaît pas toutes les impressions étrangères (aucune française
+pour Innistrad Remastered, par exemple), et les éditions d'une collection en
+français s'y réduisaient à celles qu'il connaissait. La langue de la
+collection décide de ce qui est possédé : une édition l'est dès qu'un
+exemplaire de cette langue la désigne, quelle que soit sa finition. Elle
+choisit aussi l'illustration, quand le catalogue a une image dans cette langue. L'utilisateur peut aussi déclarer qu'il possède
 toutes les éditions d'une carte : ce choix ne vaut que pour la collection où il
 le fait, et ne touche pas à sa vraie collection.
 
@@ -200,8 +204,9 @@ def _editions(session, definition: dict) -> list[dict]:
         SELECT p.id AS printing_id, p.scryfall_id::text AS scryfall_id,
                c.id AS card_id, c.name, UPPER(p.set_code) AS set_code,
                p.collector_number, p.rarity, p.released_at,
-               p.image_small, p.image_normal, st.name AS set_name,
-               {_PRICE_SQL} AS price
+               COALESCE(loc.image_small, p.image_small) AS image_small,
+               COALESCE(loc.image_normal, p.image_normal) AS image_normal,
+               st.name AS set_name, {_PRICE_SQL} AS price
         FROM scryfall_card_printings p
         JOIN scryfall_cards c ON c.id = p.card_id
         LEFT JOIN scryfall_mtg_sets st ON LOWER(st.code) = LOWER(p.set_code)
@@ -212,7 +217,19 @@ def _editions(session, definition: dict) -> list[dict]:
             ORDER BY pge.captured_at DESC
             LIMIT 1
         ) x ON TRUE
-        WHERE p.lang = :lang
+        -- Illustration dans la langue de la collection, si le catalogue en a
+        -- une vraie : une image « placeholder » n'est qu'un carton
+        -- « Localized Image Not Available ».
+        LEFT JOIN LATERAL (
+            SELECT q.image_small, q.image_normal
+            FROM scryfall_card_printings q
+            WHERE :lang <> 'en' AND q.card_id = p.card_id AND q.lang = :lang
+              AND q.set_code = p.set_code AND q.collector_number = p.collector_number
+              AND q.image_status IN ('highres_scan', 'lowres')
+              AND q.image_normal IS NOT NULL
+            LIMIT 1
+        ) loc ON TRUE
+        WHERE p.lang = 'en'
           -- Cartes d'art et jetons ne sont pas des cartes à collectionner ici.
           AND c.type_line NOT LIKE 'Card%%'
           AND c.type_line NOT ILIKE 'Token%%'
@@ -229,25 +246,19 @@ def _editions(session, definition: dict) -> list[dict]:
     return [dict(r) for r in rows]
 
 
-def _owned_copies(session, user_id: int, language: str) -> tuple[dict, dict]:
-    """Exemplaires possédés, par impression et par (extension, numéro).
-
-    La seconde clé rattrape les lignes dont l'impression n'est pas enregistrée,
-    à condition qu'elles soient dans la langue de la collection.
-    """
-    by_printing: dict[int, int] = {}
-    by_number: dict[tuple[str, str], int] = {}
-    for r in session.execute(text("""
-        SELECT printing_id, UPPER(set_code) AS set_code, collector_number,
-               language, quantity
-        FROM user_collection WHERE user_id = :uid
-    """), {"uid": user_id}):
-        if r.printing_id:
-            by_printing[r.printing_id] = by_printing.get(r.printing_id, 0) + r.quantity
-        elif r.set_code and r.collector_number and r.language == language:
-            key = (r.set_code, r.collector_number)
-            by_number[key] = by_number.get(key, 0) + r.quantity
-    return by_printing, by_number
+def _owned_copies(session, user_id: int, language: str) -> dict:
+    """Exemplaires possédés dans la langue de la collection, par (extension,
+    numéro). L'impression enregistrée donne l'édition ; à défaut, l'extension
+    et le numéro saisis."""
+    return {(r.set_code, r.collector_number): r.copies for r in session.execute(text("""
+        SELECT UPPER(COALESCE(p.set_code, uc.set_code)) AS set_code,
+               COALESCE(p.collector_number, uc.collector_number) AS collector_number,
+               SUM(uc.quantity) AS copies
+        FROM user_collection uc
+        LEFT JOIN scryfall_card_printings p ON p.id = uc.printing_id
+        WHERE uc.user_id = :uid AND uc.language = :lang
+        GROUP BY 1, 2
+    """), {"uid": user_id, "lang": language}) if r.set_code and r.collector_number}
 
 
 def _marked(session, collection_id: int) -> set[int]:
@@ -263,13 +274,12 @@ def _num(value) -> float | None:
 def evaluate(session, user_id: int, definition: dict, collection_id: int | None = None) -> dict:
     """Les éditions de la collection, groupées par carte, avec leur possession."""
     editions = _editions(session, definition)
-    by_printing, by_number = _owned_copies(session, user_id, definition["language"])
+    owned_copies = _owned_copies(session, user_id, definition["language"])
     marked = _marked(session, collection_id) if collection_id else set()
 
     cards: dict[int, dict] = {}
     for e in editions:
-        copies = by_printing.get(e["printing_id"]) or by_number.get(
-            (e["set_code"], e["collector_number"]), 0)
+        copies = owned_copies.get((e["set_code"], e["collector_number"]), 0)
         card = cards.setdefault(e["card_id"], {
             "card_id": e["card_id"], "name": e["name"],
             "marked": e["card_id"] in marked, "editions": []})
