@@ -20,14 +20,26 @@
   /* Le titre et ses trois boutons passent l'un sous l'autre a 420 px plutot
      que de deborder. */
   .theme-page .between { flex-wrap: wrap; gap: var(--sp-3); }
-  /* Les editions d'une carte forment un bloc : son nom en tete, et assez d'air
-     entre deux blocs pour qu'on ne lise pas une carte dans la suivante. */
-  .theme-page .theme-card { padding-top: var(--sp-4); border-top: 1px solid var(--line); }
-  .theme-page .theme-card:first-child { border-top: 0; padding-top: 0; }
-  .theme-page .theme-card .card-grid { margin-top: var(--sp-3); }
-  /* Chaque edition porte ses trois gestes : les petites vignettes n'avaient
-     pas la largeur de deux boutons cote a cote. */
-  .theme-page .theme-card .card-grid { --card-min: 156px; }
+  /* Grille dense : une colonne par tuile, chaque carte en couvre autant
+     qu'elle a de tuiles (fixe par layout()). En ligne simple, une carte trop
+     large pour la fin d'une rangee y laissait un trou ; « dense » y fait
+     remonter la premiere carte assez etroite pour le combler. Les tuiles
+     d'une carte gardent l'ecart des colonnes, pour tomber pile dessus.
+     156 px tiennent deux boutons cote a cote. */
+  .theme-page .theme-flow {
+    --tile: 156px;
+    display: grid; grid-template-columns: repeat(auto-fill, var(--tile));
+    grid-auto-flow: row dense; align-items: start;
+    gap: var(--sp-8) var(--sp-5);
+  }
+  .theme-page .theme-card { min-width: 0; }
+  /* Le titre suit la largeur des tuiles au lieu de l'imposer : un long nom
+     elargissait le bloc d'une tuile unique. */
+  .theme-page .theme-card__head { width: 0; min-width: 100%; }
+  .theme-page .theme-card .card-grid {
+    display: flex; flex-wrap: wrap; gap: var(--sp-5); margin-top: var(--sp-3);
+  }
+  .theme-page .theme-card .mtg-card { width: var(--tile); }
   /* Les filtres partagent la ligne ; sur telephone ils passent a la ligne. */
   .theme-page .theme-filters { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
   .theme-page .theme-filters .input { flex: 1 1 200px; width: auto; min-width: 0; }
@@ -104,26 +116,17 @@
       marks.push(`<span class="badge badge--ok">possédée ×${MM.fmt.int(edition.copies)}</span>`);
     }
     const inBuylist = pinned.has(card.name.toLowerCase());
-    // Une edition possedee par un exemplaire, ou par « toutes possedees »,
-    // n'a rien a declarer : seul ce qui a ete declare ici se reprend ici.
     const editionKey = `data-set="${MM.esc(edition.set_code)}" data-num="${MM.esc(edition.collector_number)}"`;
     // Compte par illustration : la tuile montre l'edition la plus ancienne mais
-    // achete la moins chere. Annuler retire chaque edition declaree de l'image.
+    // achete la moins chere.
     const buyOther = edition.buy_set_code && (edition.buy_set_code !== edition.set_code
       || edition.buy_collector_number !== edition.collector_number);
     const buyLabel = `${edition.buy_set_code} #${edition.buy_collector_number}`;
-    const declaredKeys = JSON.stringify((edition.editions || [edition])
-      .filter((x) => x.declared).map((x) => [x.set_code, x.collector_number]));
-    let own = '';
-    if (edition.declared && !edition.copies && !card.marked) {
-      own = `<button class="btn btn--sm btn--ghost btn--block" type="button" data-unown="${MM.esc(declaredKeys)}"
-               title="Revenir sur la déclaration : l'édition repasse dans « Recherchées »"
-               >Annuler « possédée »</button>`;
-    } else if (!edition.owned) {
-      own = `<button class="btn btn--sm btn--block" type="button" data-own ${editionKey}
+    // Une tuile possedee n'a plus de geste : ni achat, ni retour en arriere.
+    // Seule une tuile recherchee porte ses boutons.
+    const own = edition.owned ? '' : `<button class="btn btn--sm btn--block" type="button" data-own ${editionKey}
                title="Compter cette édition comme possédée, dans cette collection seulement"
                >Possédée</button>`;
-    }
     return `
       <article class="mtg-card" data-name="${MM.esc(card.name)}"
                title="${MM.esc(MM.fmt.rarity(edition.rarity))}">
@@ -144,21 +147,21 @@
               : '<span class="dim">non cotée</span>'}
           </span>
           ${marks.length ? `<span class="mtg-card__meta"><span class="cluster">${marks.join('')}</span></span>` : ''}
+          ${edition.owned ? '' : `
           <span class="mtg-card__bottom">
             <span class="mtg-card__market">
               <a class="btn btn--sm" target="_blank" rel="noopener"
                  href="${MM.esc(MM.market.buyEdition(edition.cardmarket_id, card.name))}"
                  title="${buyOther ? `Voir les offres de ${MM.esc(buyLabel)}, l'édition la moins chère de cette illustration, sur Cardmarket`
                    : 'Voir les offres de cette édition sur Cardmarket'}">Acheter</a>
-              ${edition.owned ? '' : `
               <button class="btn btn--sm ${inBuylist ? 'is-done' : ''}" type="button"
                       data-buy="${MM.esc(card.name)}" aria-pressed="${inBuylist}"
                       title="${inBuylist ? 'Retirer cette carte de ma buylist'
                         : "Ajouter cette carte à ma buylist : elle retient la carte, pas l'édition"}"
-                >${inBuylist ? 'En buylist' : 'Buylist'}</button>`}
+                >${inBuylist ? 'En buylist' : 'Buylist'}</button>
             </span>
             ${own}
-          </span>
+          </span>`}
         </div>
       </article>`;
   }
@@ -166,20 +169,13 @@
   function block(card) {
     const total = card.editions.length;
     const unit = MMThemes.unit(data);
-    const actions = [];
-    // « Toutes possedees » ne se propose que pour une carte deja entamee : une
-    // carte absente de la collection n'a rien a completer.
-    if (card.marked) {
-      actions.push(`<button class="btn btn--sm btn--ghost" data-unmark="${card.card_id}"
-        title="Revenir au décompte réel des ${unit}s possédées">Annuler « toutes possédées »</button>`);
-    } else if (card.any_copy && card.owned_count < total) {
-      actions.push(`<button class="btn btn--sm" data-mark="${card.card_id}"
-        title="Compter toutes les ${unit}s de cette carte comme possédées, dans cette collection seulement"
-        >Je possède toutes les ${unit}s</button>`);
-    }
+    // « Toutes possedees » ne se propose plus ; une carte deja marquee garde
+    // de quoi revenir en arriere.
+    const undo = card.marked ? `<button class="btn btn--sm btn--ghost" data-unmark="${card.card_id}"
+        title="Revenir au décompte réel des ${unit}s possédées">Annuler « toutes possédées »</button>` : '';
     return `
-      <section class="theme-card">
-        <div class="between">
+      <section class="theme-card" data-tiles="${card.shown.length}">
+        <div class="theme-card__head">
           <div class="stack-2" style="gap:2px">
             <h3 class="h4">${MM.esc(card.local_name || card.name)}</h3>
             ${card.local_name && card.local_name !== card.name
@@ -187,8 +183,8 @@
             <span class="xs dim num">${MM.fmt.plural(card.owned_count, unit)}
               possédée${card.owned_count > 1 ? 's' : ''} sur ${MM.fmt.int(total)}${card.total
                 ? ` · ${MM.fmt.eur(card.total)} ${state.tab === 'owned' ? 'possédés' : 'à compléter'}` : ''}</span>
+            ${undo}
           </div>
-          <div class="cluster-2">${actions.join('')}</div>
         </div>
         <div class="card-grid">${card.shown.map((e) => tile(card, e)).join('')}</div>
       </section>`;
@@ -320,12 +316,31 @@
           : `Vous possédez toutes les ${MMThemes.unit(data)}s de cette collection, ou les filtres les écartent.` });
       return;
     }
-    list.innerHTML = cards.slice(0, state.shown).map(block).join('')
+    list.innerHTML = `<div class="theme-flow">${cards.slice(0, state.shown).map(block).join('')}</div>`
       + (cards.length > state.shown
         ? `<div class="center"><button class="btn" id="moreBtn" type="button">
              Afficher plus (${MM.fmt.plural(cards.length - state.shown, 'carte')} restantes)</button></div>`
         : '');
+    layout();
   }
+
+  /** Fait couvrir a chaque carte autant de colonnes qu'elle a de tuiles, sans
+   *  depasser la largeur : une carte plus large que la page passe ses tuiles
+   *  a la ligne en son sein. */
+  function layout() {
+    const flow = MM.el('.theme-flow');
+    if (!flow) return;
+    // Compte tire de la largeur, pas des pistes : un empan reste d'une largeur
+    // precedente cree des colonnes implicites, que les pistes compteraient.
+    const style = getComputedStyle(flow);
+    const gap = parseFloat(style.columnGap) || 0;
+    const tile = parseFloat(style.getPropertyValue('--tile'));
+    const columns = Math.floor((flow.clientWidth + gap) / (tile + gap));
+    MM.els('.theme-card', flow).forEach((card) => {
+      card.style.gridColumn = `span ${Math.max(1, Math.min(Number(card.dataset.tiles), columns))}`;
+    });
+  }
+  window.addEventListener('resize', MM.debounce(layout, 100));
 
   function render() {
     renderHead();
@@ -405,17 +420,12 @@
       } catch (err) { MM.toast.error(err.message); mark.disabled = false; }
       return;
     }
-    const own = target.closest('[data-own], [data-unown]');
+    const own = target.closest('[data-own]');
     if (own) {
       own.disabled = true;
       try {
-        const keys = own.hasAttribute('data-own')
-          ? [[own.dataset.set, own.dataset.num]]
-          : JSON.parse(own.dataset.unown);
-        for (const [set, num] of keys) {
-          await MM.api.post(`/api/v2/themes/${id}/editions`, {
-            set_code: set, collector_number: num, owned: own.hasAttribute('data-own') });
-        }
+        await MM.api.post(`/api/v2/themes/${id}/editions`, {
+          set_code: own.dataset.set, collector_number: own.dataset.num, owned: true });
         await load();
       } catch (err) { MM.toast.error(err.message); own.disabled = false; }
       return;
