@@ -113,20 +113,29 @@ def _make_engine():
     return make_engine(db_url)
 
 
+def _append_log(job: dict, msg: str) -> None:
+    """Ajoute une ligne au journal d'un job, borné en mémoire.
+
+    `log_total` ne redescend jamais, lui : c'est lui qui dit à la page combien de
+    lignes sont nouvelles. Elle se fiait à la longueur de la liste, que la coupe
+    ramène de 1 000 à 800 : le journal se figeait à la millième ligne.
+    """
+    logs: list = job["log"]
+    logs.append({"ts": datetime.now().strftime("%H:%M:%S"), "msg": msg})
+    job["log_total"] += 1
+    if len(logs) > 1000:
+        del logs[:200]
+
+
 def _make_log_fn(job_id: str):
     """Retourne une fonction de log qui enregistre les messages structurés
     et met à jour le bloc `progress` du job en temps réel."""
     def log_fn(msg: str) -> None:
-        ts = datetime.now().strftime("%H:%M:%S")
         job = _JOBS.get(job_id)
         if job is None:
             return
 
-        logs: list = job["log"]
-        logs.append({"ts": ts, "msg": msg})
-        # Limiter la taille du log en mémoire
-        if len(logs) > 1000:
-            del logs[:200]
+        _append_log(job, msg)
 
         prog: dict = job["progress"]
 
@@ -172,6 +181,7 @@ def _new_job() -> dict:
     return {
         "status":   "running",
         "log":      [],
+        "log_total": 0,
         "progress": {
             "phase":            "Initialisation",
             "commander":        None,
@@ -699,13 +709,10 @@ def _run_ml_retrain(job_id: str, steps: list) -> None:
     job = _JOBS[job_id]
 
     def log_fn(msg: str) -> None:
-        ts = datetime.now().strftime("%H:%M:%S")
         j = _JOBS.get(job_id)
         if j is None:
             return
-        j["log"].append({"ts": ts, "msg": msg})
-        if len(j["log"]) > 1000:
-            del j["log"][:200]
+        _append_log(j, msg)
 
     scripts_dir = _os.path.normpath(
         _os.path.join(_os.path.dirname(__file__), "..", "..", "..", "scripts")
