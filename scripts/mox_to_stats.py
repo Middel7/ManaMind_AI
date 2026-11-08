@@ -20,6 +20,7 @@ import logging
 import sys
 import time
 from pathlib import Path
+from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -35,6 +36,7 @@ from sqlalchemy.orm import sessionmaker, Session  # noqa: E402
 
 from manamind import commander_curve  # noqa: E402
 from manamind.commanders import commander_keys  # noqa: E402
+from manamind.precons import card_key, commander_precons, deck_weights  # noqa: E402
 
 
 def _make_session(db_url: str) -> Session:
@@ -59,11 +61,11 @@ def project_commander(commander: str, session: object) -> dict:
 
     Retourne {"decks": int, "cards": int} ou {"decks": 0} si rien en base.
     """
-    row = session.execute(
-        text("SELECT COUNT(DISTINCT deck_id) FROM deck_cards WHERE commander = :cmd"),
+    deck_ids = session.execute(
+        text("SELECT DISTINCT deck_id FROM deck_cards WHERE commander = :cmd"),
         {"cmd": commander},
-    ).scalar()
-    total_decks = row or 0
+    ).scalars().all()
+    total_decks = len(deck_ids)
 
     # Purge systématique : les stats de ce commandant sont réécrites ci-dessous,
     # ou bien il n'a plus de decks / plus de cartes et elles doivent disparaître.
@@ -80,19 +82,32 @@ def project_commander(commander: str, session: object) -> dict:
         session.commit()
         return {"decks": 0, "cards": 0}
 
-    # Pour chaque carte (hors commandant), compter le nb de decks qui la jouent.
-    rows = session.execute(
+    # Pour chaque carte (hors commandant), les decks qui la jouent.
+    decks_by_card: dict[str, set[str]] = {}
+    deck_cards: dict[str, set[str]] = {deck_id: set() for deck_id in deck_ids}
+    for deck_id, card_name in session.execute(
         text("""
-            SELECT
-                card_name,
-                COUNT(DISTINCT deck_id) AS decks_with_card
+            SELECT DISTINCT deck_id, card_name
             FROM deck_cards
             WHERE commander = :cmd
               AND is_commander = false
-            GROUP BY card_name
         """),
         {"cmd": commander},
-    ).fetchall()
+    ):
+        decks_by_card.setdefault(card_name, set()).add(deck_id)
+        deck_cards[deck_id].add(card_key(card_name))
+
+    # Le taux d'inclusion pondère chaque deck par son écart au précon : une
+    # liste sortie de la boîte sans retouche ne compte presque pas. Le nombre
+    # de decks, lui, reste le compte brut.
+    weights = deck_weights(deck_cards, commander_precons(session, commander))
+    total_weight = sum(weights.values())
+
+    rows = [
+        SimpleNamespace(card_name=name, decks_with_card=len(decks),
+                        weight=sum(weights[d] for d in decks))
+        for name, decks in decks_by_card.items()
+    ]
 
     # Quelques decks publics listent leur commandant avec les autres cartes au
     # lieu de la zone de commandement : `is_commander` y est faux et il devient
@@ -114,7 +129,7 @@ def project_commander(commander: str, session: object) -> dict:
             "card_name": r.card_name,
             "decks_with_card": r.decks_with_card,
             "total_decks": total_decks,
-            "inclusion_rate": round(r.decks_with_card / total_decks * 100, 4),
+            "inclusion_rate": round(r.weight / total_weight * 100, 4),
         }
         for r in rows
     ]

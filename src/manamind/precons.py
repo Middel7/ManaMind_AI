@@ -25,7 +25,7 @@ from datetime import date
 from sqlalchemy import Row, text
 from sqlalchemy.orm import Session
 
-from manamind.commanders import MAX_COMMANDERS, join_commanders
+from manamind.commanders import MAX_COMMANDERS, join_commanders, split_commanders
 from manamind.db.engine import SessionLocal
 
 MTGJSON_API = "https://mtgjson.com/api/v5"
@@ -188,6 +188,78 @@ def refresh(*, force: bool = False, log: Callable[[str], None] = print) -> dict:
 
     log(f"Terminé : {done} decks importés, {len(failed)} en échec.")
     return {"published": len(wanted), "imported": done, "failed": failed}
+
+
+# ── Poids des decks dans les statistiques ────────────────────────────────────
+
+# Un deck sorti de sa boîte sans retouche publie la liste du précon : ses cartes
+# y gagnaient un taux d'inclusion qui disait ce que Wizards a mis dans la boîte,
+# pas ce que les joueurs choisissent. Chaque deck compte donc selon la part des
+# cartes du précon qu'il reprend.
+#
+# Jusqu'à PRECON_FREE, un deck retravaillé garde encore les terrains et les
+# classiques de la boîte : il compte plein. À partir de PRECON_COPY, c'est une
+# copie à peine retouchée : elle ne compte presque plus. Entre les deux, le
+# poids décroît en ligne droite. Il ne tombe jamais à zéro, pour qu'un
+# commandant qui n'a que des copies garde des statistiques.
+PRECON_FREE = 0.30
+PRECON_COPY = 0.70
+PRECON_MIN_WEIGHT = 0.10
+
+# Communs à tous les decks d'une couleur : ils ne disent rien du précon.
+_BASICS = {"plains", "island", "swamp", "mountain", "forest", "wastes"}
+_BASICS |= {f"snow-covered {name}" for name in _BASICS}
+
+
+def card_key(name: str) -> str:
+    """Le nom d'une carte tel qu'on le compare : face avant, en minuscules.
+
+    Les listes scrapées écrivent « Alive //Well », les précons « Dusk // Dawn » :
+    la face avant met tout le monde d'accord.
+    """
+    return (name or "").split("//")[0].strip().lower()
+
+
+def precon_weight(overlap: float) -> float:
+    """Le poids d'un deck qui reprend `overlap` (de 0 à 1) des cartes du précon."""
+    if overlap <= PRECON_FREE:
+        return 1.0
+    if overlap >= PRECON_COPY:
+        return PRECON_MIN_WEIGHT
+    progress = (overlap - PRECON_FREE) / (PRECON_COPY - PRECON_FREE)
+    return 1.0 - progress * (1.0 - PRECON_MIN_WEIGHT)
+
+
+def deck_weights(decks: dict[str, set[str]], precons: list[set[str]]) -> dict[str, float]:
+    """Le poids de chaque deck, d'après le précon dont il est le plus proche.
+
+    `decks` et `precons` portent des clés de cartes (`card_key`). Un commandant
+    peut avoir plusieurs précons (réimpression, édition collector) : c'est le
+    plus proche qui compte.
+    """
+    precons = [p for p in precons if p]
+    return {
+        deck_id: precon_weight(max((len(cards & p) / len(p) for p in precons), default=0.0))
+        for deck_id, cards in decks.items()
+    }
+
+
+def commander_precons(session: Session, commander: str) -> list[set[str]]:
+    """Les cartes de chaque précon de ce commandant, terrains de base exclus."""
+    wanted = {card_key(name) for name in split_commanders(commander)}
+    ids = [pid for pid, raw in session.execute(text("SELECT id, commander FROM precon_decks"))
+           if {card_key(name) for name in split_commanders(raw)} == wanted]
+    if not ids:
+        return []
+    cards: dict[str, set[str]] = defaultdict(set)
+    for pid, name in session.execute(text("""
+        SELECT precon_id, card_name FROM precon_deck_cards
+        WHERE zone = 'main' AND precon_id = ANY(:ids)
+    """), {"ids": ids}):
+        key = card_key(name)
+        if key not in _BASICS:
+            cards[pid].add(key)
+    return list(cards.values())
 
 
 # ── Ajout aux decks d'un joueur ──────────────────────────────────────────────
