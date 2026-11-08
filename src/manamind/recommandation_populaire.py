@@ -207,10 +207,10 @@ def save_recommendations(
             writer.writerow(["remove", card, "", cnt, round(rate, 1)])
 
 
-# Suggestions proposées par analyse : quelques-unes de plus que le strict
-# nécessaire, pour que l'utilisateur garde le choix après avoir écarté celles
-# qui ne collent pas à son deck.
-ADD_LIMIT = 42
+# Ajouts écrits dans le CSV : bien plus que les 42 que la page affiche. Ses
+# filtres (prix, incontournables, terrains) en écartent souvent la moitié ;
+# avec cette réserve, elle en montre encore 42 une fois filtrés.
+ADD_LIMIT = 200
 REMOVE_LIMIT = 24
 
 
