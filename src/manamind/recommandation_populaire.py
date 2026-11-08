@@ -199,8 +199,10 @@ def save_recommendations(
         writer.writerow(["Commander", commander or "unknown", "", "", ""])
         writer.writerow([])
         writer.writerow(["Additions", "", "", "", ""])
-        for card, cnt, _rate in additions:
-            writer.writerow(["add", card, cnt, "", ""])
+        # La page affiche la part des decks qui jouent la carte ; sans elle, elle
+        # retombait sur le nombre brut de decks, présenté comme un « score ».
+        for card, cnt, rate in additions:
+            writer.writerow(["add", card, "", cnt, round(rate, 1)])
         writer.writerow([])
         writer.writerow(["Removals", "", "", "", ""])
         for card, cnt, rate in removals:
