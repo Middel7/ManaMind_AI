@@ -201,9 +201,16 @@ def _unligature(term: str) -> str:
 def api_card_suggest(
     request: Request,
     q: str = Query("", min_length=0),
-    limit: int = Query(8, ge=1, le=20),
+    limit: int = Query(8, ge=1, le=60),
+    order: str = Query("relevance", pattern="^(relevance|popularity)$"),
 ) -> Response:
     """Autocompletion illustree : nom, impression par defaut et quantite possedee.
+
+    `order=popularity` classe par popularité dans les decks, sans remonter
+    d'abord les noms exacts : c'est l'ordre de l'écran qui montre toutes les
+    cartes répondant à une saisie, validée par Entrée. Les noms anglais y
+    passent avant les noms traduits : « bean » ramenait en tête Unclaimed
+    Territory, pour son nom allemand « Unbeanspruchtes Territorium ».
 
     /api/cards/autocomplete ne renvoie que des noms ; l'ajout rapide a besoin
     de la vignette pour que l'utilisateur reconnaisse la carte d'un coup d'oeil.
@@ -287,9 +294,12 @@ def api_card_suggest(
               AND c.type_line NOT LIKE 'Card%'
             -- Correspondance exacte d'abord, puis les noms qui commencent par
             -- le terme, puis ceux qui le contiennent ailleurs.
-            ORDER BY (c.name ILIKE :exact) DESC,
+            ORDER BY """ + ("""
+                     (c.name ILIKE :prefix OR c.name ILIKE :prefix_alt) DESC,"""
+                     if order == "popularity" else """
+                     (c.name ILIKE :exact) DESC,
                      (LOWER(tr.printed_name) = LOWER(:exact)) DESC,
-                     (c.name ILIKE :starts) DESC,
+                     (c.name ILIKE :starts) DESC,""") + """
                      c.edhrec_rank ASC NULLS LAST,
                      c.name
             LIMIT :limit
