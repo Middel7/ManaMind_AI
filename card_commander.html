@@ -118,6 +118,9 @@
 
   // Au moins 8 decks : en deçà, un taux de 100 % ne veut rien dire.
   const MIN_DECKS = 8;
+  // Ecran intermediaire : au-dela de 60 cartes, la saisie est trop vague pour
+  // qu'on y cherche a l'oeil ; mieux vaut taper une lettre de plus.
+  const MATCH_LIMIT = 60;
 
   /** Vos decks, indexés par nom de commandant, pour rendre une suggestion
    *  cliquable. Chargés une fois : la liste ne bouge pas pendant la visite. */
@@ -177,11 +180,73 @@
     }
   }
 
-  MM.autocomplete(MM.el('#cardInput'), (card) => {
+  function pick(card) {
     MM.el('#cardInput').value = card.name;
     state.card = card;
     load();
+  }
+
+  const completion = MM.autocomplete(MM.el('#cardInput'), pick);
+
+  // Entree sans proposition choisie : plutot que rien, toutes les cartes qui
+  // repondent a la saisie, pour choisir celle que l'on cherchait.
+  MM.el('#cardInput').addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' || event.defaultPrevented) return;
+    const term = MM.el('#cardInput').value.trim();
+    if (term.length < 2) return;
+    event.preventDefault();
+    completion.close();
+    showMatches(term);
   });
+
+  // Cartes de l'ecran intermediaire, par nom : « Dans quel commandant ? » y
+  // lance la recherche sur place au lieu de recharger la page.
+  let matches = new Map();
+
+  /** Ecran intermediaire : les cartes dont le nom contient la saisie, les
+   *  plus jouees dans les decks d'abord. */
+  async function showMatches(term) {
+    state.card = null;
+    results.innerHTML = `<div class="stack-2">
+      <h3 class="h3">Cartes correspondant à « ${MM.esc(term)} »</h3>
+      <div class="card-grid">${MM.cardSkeletons(8)}</div></div>`;
+    try {
+      const data = await MM.api.get('/api/v2/cards/suggest' + MM.api.qs({
+        q: term, limit: MATCH_LIMIT, order: 'popularity' }));
+      // Une autre saisie a pu etre validee pendant le chargement.
+      if (MM.el('#cardInput').value.trim() !== term) return;
+      const cards = data.cards || [];
+      matches = new Map(cards.map((card) => [card.name, card]));
+      if (!cards.length) {
+        results.innerHTML = MM.empty({
+          icon: 'search', title: 'Aucune carte trouvée',
+          text: `Aucun nom de carte ne contient « ${MM.esc(term)} ».` });
+        return;
+      }
+      results.innerHTML = `
+        <div class="stack-2">
+          <div class="between">
+            <h3 class="h3">Cartes correspondant à « ${MM.esc(term)} »</h3>
+            <span class="badge">${MM.fmt.int(cards.length)}${cards.length >= MATCH_LIMIT ? '+' : ''}</span>
+          </div>
+          <p class="muted small">Les plus jouées dans les decks d’abord. « Dans quel
+            commandant ? », sous une carte, lance la recherche.</p>
+          <div class="card-grid">
+            ${cards.map((card) => MM.cardTile(card, {
+              context: 'collection',
+              // Trouvee par un nom traduit : sans lui, rien ne dit pourquoi
+              // la carte repond a la saisie.
+              note: card.printed_name
+                && !card.name.toLowerCase().includes(term.toLowerCase())
+                ? MM.esc(card.printed_name) : '',
+            })).join('')}
+          </div>
+        </div>`;
+    } catch (err) {
+      results.innerHTML = MM.empty({
+        icon: 'warning', title: 'Recherche impossible', text: err.message });
+    }
+  }
 
   MM.els('[data-mode]').forEach((button) => {
     button.addEventListener('click', () => {
@@ -336,6 +401,15 @@
   }
 
   results.addEventListener('click', (event) => {
+    const chosen = event.target.closest('.mtg-card__commander');
+    const card = chosen && matches.get(chosen.closest('.mtg-card').dataset.name);
+    if (card) {
+      event.preventDefault();
+      matches = new Map();
+      pick(card);
+      return;
+    }
+
     const vignette = event.target.closest('[data-zoom]');
     if (vignette) {
       event.preventDefault();

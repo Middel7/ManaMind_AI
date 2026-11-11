@@ -965,6 +965,9 @@
     if (!input.hasAttribute('spellcheck')) input.setAttribute('spellcheck', 'false');
 
     function close() {
+      // Une recherche en attente ou en route ne doit pas rouvrir la liste
+      // refermee : Entree validee avant elle la laissait reparaitre.
+      lastQuery += 1;
       if (list) { list.remove(); list = null; }
       items = []; cursor = -1;
       input.setAttribute('aria-expanded', 'false');
@@ -1011,8 +1014,8 @@
     // avec ce qui est tape. Seule la derniere a le droit de s'afficher.
     let lastQuery = 0;
 
-    const search = debounce(async (term) => {
-      const query = (lastQuery += 1);
+    const search = debounce(async (term, query) => {
+      if (query !== lastQuery) return;
       try {
         const data = await MM.api.get(
           `/api/v2/cards/suggest?q=${encodeURIComponent(term)}&limit=8`);
@@ -1030,7 +1033,7 @@
         lastQuery += 1;
         return close();
       }
-      search(term);
+      search(term, (lastQuery += 1));
     });
 
     input.addEventListener('keydown', (event) => {
