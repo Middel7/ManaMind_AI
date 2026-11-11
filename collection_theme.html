@@ -49,6 +49,10 @@
     display: flex; flex-wrap: wrap; gap: var(--sp-5); margin-top: var(--sp-3);
   }
   .theme-page .theme-card .mtg-card { width: var(--tile); }
+  /* Fenetre des boosters ouverts, hors de .theme-page car posee sur le body :
+     une extension par bloc, assez d'air pour ne pas lire deux boites en une. */
+  .theme-opened { margin-top: var(--sp-5); }
+  .theme-opened > p { margin-bottom: var(--sp-2); }
   /* Les filtres partagent la ligne ; sur telephone ils passent a la ligne. */
   .theme-page .theme-filters { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
   .theme-page .theme-filters .input { flex: 1 1 200px; width: auto; min-width: 0; }
@@ -289,6 +293,9 @@
           <button class="btn btn--sm" id="exportBtn" type="button"
                   title="Télécharger la liste des éditions manquantes : quantité, nom, extension et numéro"
             >Exporter les manquantes (.txt)</button>
+          <button class="btn btn--sm" id="openedBtn" type="button"
+                  title="Les communes et peu communes qui manquent, dans les extensions dont vous avez ouvert des boosters"
+            >Dans mes boosters ouverts</button>
         </div>` : ''}
       </div>
       <div class="theme-filters">
@@ -383,6 +390,85 @@
     }
   }
 
+  /** Fenetre des boosters ouverts : les communes et peu communes qui manquent,
+   *  extension par extension, pour fouiller ses boites dans l'ordre. Une
+   *  carte retrouvee se declare possedee sur place ; la page se recharge a
+   *  la fermeture. */
+  function openedDialog() {
+    let changed = false;
+    const dialog = MM.modal({
+      title: 'Dans mes boosters ouverts', wide: 'xl',
+      body: `<div class="card-grid">${MM.cardSkeletons(8)}</div>`,
+      onClose: () => { if (changed) load(); },
+    });
+
+    const tile = (set, card) => `
+      <article class="mtg-card" data-name="${MM.esc(card.name)}">
+        <div class="mtg-card__frame" title="Voir ${MM.esc(card.name)} en grand">
+          ${MM.img.frame({ card_name: card.name, scryfall_id: card.scryfall_id,
+                           image_normal: card.image_normal, image_small: card.image_small })}
+        </div>
+        <div class="mtg-card__foot">
+          <span class="mtg-card__name" data-no-detail
+                title="${MM.esc(card.name)}">${MM.esc(card.local_name || card.name)}</span>
+          <span class="mtg-card__meta">
+            <span>${MM.esc(set.set_code)} #${MM.esc(card.collector_number)}</span>
+            <span class="dim">${MM.esc(MM.fmt.rarity(card.rarity))}</span>
+          </span>
+          <button class="btn btn--sm btn--block" type="button"
+                  data-opened-own data-set="${MM.esc(set.set_code)}" data-num="${MM.esc(card.collector_number)}"
+                  title="Compter cette édition comme possédée, dans cette collection seulement"
+            >Possédée</button>
+        </div>
+      </article>`;
+
+    // MM.fmt.plural n'accorde que le nom : l'adjectif suit a la main.
+    const opened = (n) => `${MM.fmt.plural(n, 'extension')} ouverte${n > 1 ? 's' : ''}`;
+
+    async function fill() {
+      try {
+        const result = await MM.api.get(`/api/v2/themes/${id}/opened`);
+        if (!result.opened) {
+          dialog.body.innerHTML = MM.empty({ icon: 'booster', title: 'Aucune extension ouverte',
+            text: "Indiquez les extensions dont vous avez ouvert des boosters : la liste s'y limite.",
+            action: { href: '/collection/boosters', label: 'Choisir mes extensions' } });
+          return;
+        }
+        if (!result.sets.length) {
+          dialog.body.innerHTML = MM.empty({ icon: 'collection', title: 'Rien à chercher',
+            text: `Aucune commune ni peu commune ne manque dans vos ${opened(result.opened)}.` });
+          return;
+        }
+        const total = result.sets.reduce((n, set) => n + set.cards.length, 0);
+        dialog.body.innerHTML = `
+          <p class="small muted">${MM.fmt.plural(total, 'carte')} à chercher dans
+            ${MM.fmt.plural(result.sets.length, 'extension')}, parmi vos
+            ${opened(result.opened)}.</p>
+          ${result.sets.map((set) => `
+            <section class="theme-opened">
+              <p class="small"><span class="strong">${MM.esc(set.set_name || set.set_code)}</span>
+                <span class="dim">· ${MM.esc(set.set_code)} · ${MM.fmt.plural(set.cards.length, 'carte')}</span></p>
+              <div class="card-grid">${set.cards.map((card) => tile(set, card)).join('')}</div>
+            </section>`).join('')}`;
+      } catch (err) {
+        dialog.body.innerHTML = MM.empty({ icon: 'warning', title: 'Chargement impossible', text: err.message });
+      }
+    }
+
+    dialog.body.addEventListener('click', async (event) => {
+      const own = event.target.closest('[data-opened-own]');
+      if (!own) return;
+      own.disabled = true;
+      try {
+        await MM.api.post(`/api/v2/themes/${id}/editions`, {
+          set_code: own.dataset.set, collector_number: own.dataset.num, owned: true });
+        changed = true;
+        await fill();
+      } catch (err) { MM.toast.error(err.message); own.disabled = false; }
+    });
+    fill();
+  }
+
   function exportWanted() {
     const lines = [`// ${data.name} — éditions manquantes`, ''];
     visibleCards().forEach((card) => card.shown.forEach((e) => {
@@ -414,6 +500,7 @@
       return;
     }
     if (target.closest('#exportBtn')) { exportWanted(); return; }
+    if (target.closest('#openedBtn')) { openedDialog(); return; }
     const mark = target.closest('[data-mark], [data-unmark]');
     if (mark) {
       mark.disabled = true;

@@ -92,6 +92,23 @@ def api_get(collection_id: int, request: Request) -> Response:
     return _json_response({**definition, **data})
 
 
+@router.get("/api/v2/themes/{collection_id}/opened")
+def api_opened(collection_id: int, request: Request) -> Response:
+    """Communes et peu communes manquantes des extensions ouvertes."""
+    user = _admin(request)
+    with SessionLocal() as session:
+        definition = themes.get(session, user["id"], collection_id)
+        if definition is None:
+            return _missing()
+        opened = themes.opened_sets(session, user["id"])
+        try:
+            data = themes.evaluate(session, user["id"], definition, collection_id)
+        except themes.CriteriaError as exc:
+            return _bad(str(exc))
+    return _json_response({"opened": len(opened),
+                           "sets": themes.opened_wanted(data["cards"], opened)})
+
+
 @router.put("/api/v2/themes/{collection_id}")
 async def api_update(collection_id: int, request: Request) -> Response:
     user = _admin(request)
