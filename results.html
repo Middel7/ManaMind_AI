@@ -505,6 +505,9 @@
     return labels.some((label) => section === label);
   };
 
+  // Le CSV porte une reserve d'ajouts : la page en montre ADD_SHOWN, pris
+  // parmi ceux qui passent les filtres, pour que filtrer ne vide pas l'onglet.
+  const ADD_SHOWN = 42;
   const commander = rows.find((row) => inSection(row, 'commander'));
   const additions = rows.filter((row) => inSection(row, 'add', 'addition'));
   const removals = rows.filter((row) => inSection(row, 'remove', 'removal', 'cut'));
@@ -521,7 +524,7 @@
 
   renderHero('Analyse fondée sur la popularité réelle des cartes', `
     <div class="hero__stats">
-      <span class="hero__stat"><b>${MM.fmt.int(additions.length)}</b>
+      <span class="hero__stat"><b>${MM.fmt.int(Math.min(ADD_SHOWN, additions.length))}</b>
         <span class="muted small">ajouts proposés</span></span>
       <span class="hero__stat"><b>${MM.fmt.int(removals.length)}</b>
         <span class="muted small">retraits proposés</span></span>
@@ -602,7 +605,7 @@
       <div class="toolbar">
         <div class="chips" id="tabs" role="tablist">
           <button class="chip" data-tab="add" aria-pressed="true">
-            Cartes à ajouter <span class="chip__count" id="countAdd">${additions.length}</span></button>
+            Cartes à ajouter <span class="chip__count" id="countAdd">${Math.min(ADD_SHOWN, additions.length)}</span></button>
           <button class="chip" data-tab="cut" aria-pressed="false">
             Cartes à retirer <span class="chip__count" id="countCut">${removals.length}</span></button>
         </div>
@@ -630,7 +633,7 @@
     </div>`;
 
   function renderPanels() {
-    const shownAdd = additions.filter(shown);
+    const shownAdd = additions.filter(shown).slice(0, ADD_SHOWN);
     const shownCut = removals.filter(underCap);
     MM.el('#countAdd').textContent = shownAdd.length;
     MM.el('#countCut').textContent = shownCut.length;

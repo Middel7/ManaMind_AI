@@ -3,9 +3,10 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
 from fastapi.testclient import TestClient
 
-from manamind.precons import parse_deck
+from manamind.precons import card_key, deck_weights, parse_deck, precon_weight
 
 
 def _card(name: str, *, count: int = 1, foil: bool = False, subtypes: list | None = None,
@@ -100,3 +101,26 @@ def test_import_texte_vise_le_deck_cree_et_regroupe_les_doublons(monkeypatch):
     assert errors == []
     assert calls["cards"]["deck_id"] == calls["save"]["deck_id"]
     assert dict(calls["cards"]["cards"]) == {"Forest": 15, "Sol Ring": 1}
+
+
+def test_un_deck_retravaille_compte_plein_une_copie_du_precon_presque_plus():
+    assert precon_weight(0.10) == 1.0
+    assert precon_weight(0.30) == 1.0
+    assert precon_weight(0.50) == pytest.approx(0.55)
+    assert precon_weight(0.70) == 0.10
+    assert precon_weight(1.00) == 0.10
+
+
+def test_un_deck_se_mesure_au_precon_dont_il_est_le_plus_proche():
+    boite = {card_key(n) for n in ("Sol Ring", "Isolated Chapel", "Dusk // Dawn", "Skullclamp")}
+    reimpression = {"sol ring", "nomad outpost"}
+    decks = {
+        "copie": {"sol ring", "isolated chapel", "dusk", "skullclamp"},
+        "perso": {"swords to plowshares", "smothering tithe"},
+        "reimp": {"sol ring", "nomad outpost"},
+    }
+
+    weights = deck_weights(decks, [boite, reimpression])
+
+    assert weights == {"copie": 0.10, "perso": 1.0, "reimp": 0.10}
+    assert deck_weights(decks, []) == {"copie": 1.0, "perso": 1.0, "reimp": 1.0}

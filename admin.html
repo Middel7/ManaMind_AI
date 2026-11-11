@@ -1247,8 +1247,11 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
         const d = await r.json();
 
         // Append new log entries incrementalement
+        // Le serveur ne garde que les dernieres lignes : seul log_total dit
+        // combien sont nouvelles, la longueur de la liste redescend a chaque coupe.
         const logs = d.log || [];
-        for (let i = seenLog; i < logs.length; i++) {
+        const total = d.log_total ?? logs.length;
+        for (let i = Math.max(0, logs.length - (total - seenLog)); i < logs.length; i++) {
           const entry = logs[i];
           const line = document.createElement('div');
           line.className = 'log-entry ' + _logClass(entry.msg || entry);
@@ -1257,8 +1260,11 @@ td.n-num { font-variant-numeric: tabular-nums; text-align: right; }
           line.innerHTML = ts ? `<span class="log-ts">${ts}</span>${esc(msg)}` : esc(msg);
           logEl.appendChild(line);
         }
-        if (logs.length > seenLog) {
-          seenLog = logs.length;
+        if (total > seenLog) {
+          seenLog = total;
+          // Un scrape de plusieurs heures depasse les 10 000 lignes : la page
+          // n'en garde pas plus que le serveur.
+          while (logEl.childElementCount > 1000) logEl.firstElementChild.remove();
           logEl.scrollTop = logEl.scrollHeight;
         }
 
