@@ -24,7 +24,8 @@ import json
 import logging
 import sys
 import time
-from collections import Counter, defaultdict
+import threading
+from collections import Counter, OrderedDict, defaultdict
 from dataclasses import dataclass, asdict, field
 from pathlib import Path
 from typing import Optional
@@ -46,14 +47,22 @@ from src.manamind.db.engine import SessionLocal  # noqa: E402
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 LOG_DIR = ROOT / "logs"
-LOG_DIR.mkdir(exist_ok=True)
 _h = logging.StreamHandler(sys.stdout)
 _h.stream = open(sys.stdout.fileno(), mode="w", encoding="utf-8", buffering=1, closefd=False)
+_handlers: list[logging.Handler] = [_h]
+# Le fichier de journal est un confort du poste de travail. Un dossier non
+# inscriptible (conteneur sans droits sur /app) empêchait tout le moteur de se
+# charger : le journal se replie alors sur la sortie standard seule.
+try:
+    LOG_DIR.mkdir(exist_ok=True)
+    _handlers.append(logging.FileHandler(LOG_DIR / "deck_improver.log", encoding="utf-8"))
+except OSError:
+    pass
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s  %(levelname)-8s  %(message)s",
     datefmt="%H:%M:%S",
-    handlers=[_h, logging.FileHandler(LOG_DIR / "deck_improver.log", encoding="utf-8")],
+    handlers=_handlers,
 )
 log = logging.getLogger(__name__)
 
@@ -163,6 +172,20 @@ class CutCandidate:
     reasons: list[str]
 
 
+@dataclass
+class CommanderStats:
+    """Les statistiques d'un commandant, lues en base à la demande."""
+    tfidf: dict[str, dict]             # carte → inclusion_rate, idf, tfidf_norm
+    known_cards: set[str]              # cartes jouées dans ses decks
+    cluster_profile: dict[int, float]  # cluster → part du méta, somme à 1
+
+
+# Commandants gardés en mémoire après lecture. Une analyse n'en lit qu'un, et
+# l'explication d'une carte relit le même juste après : quelques dizaines
+# suffisent, pour quelques Mo.
+_STATS_CACHE_SIZE = 64
+
+
 # ── Moteur principal ──────────────────────────────────────────────────────────
 
 class DeckImprovementEngine:
@@ -210,31 +233,28 @@ class DeckImprovementEngine:
             self.xgb_features = []
 
         # ── TF-IDF ───────────────────────────────────────────────────────────
-        # TODO: supprimer — remplacé par requête PostgreSQL sur deck_stat_commander
-        # tfidf_df = pd.read_csv(STATS_DIR / "commander_tfidf.csv", encoding="utf-8")
-        self.tfidf_lookup: dict[tuple[str, str], dict] = {}
+        # Les statistiques par commandant ne sont plus chargées d'un bloc : les
+        # 3,5 millions de couples commandant × carte occupaient 2,4 Go en objets
+        # Python, et le serveur en ligne (3,8 Go) tuait le processus au
+        # démarrage. Chaque analyse ne porte que sur un commandant : ses
+        # quelques milliers de lignes se lisent à la demande (index sur
+        # commander, quelques millisecondes), voir `_commander_stats`.
+        self._stats_cache: OrderedDict[str, CommanderStats] = OrderedDict()
+        self._stats_lock = threading.Lock()
+        # L'idf d'une carte ne dépend pas du commandant : deck_stat_global
+        # porte la même valeur, en une ligne par carte.
         self.card_idf: dict[str, float] = {}
-        self.cmd_known_cards: dict[str, set[str]] = {}
         try:
             with SessionLocal() as _s:
-                _tfidf_rows = _s.execute(text("""
-                    SELECT commander, card_name, inclusion_rate, idf, tfidf, tfidf_norm
-                    FROM deck_stat_commander
-                    WHERE tfidf_norm IS NOT NULL
-                """)).fetchall()
-            for _r in _tfidf_rows:
-                self.tfidf_lookup[(_r.commander, _r.card_name)] = {
-                    "inclusion_rate": float(_r.inclusion_rate or 0.0),
-                    "idf":            float(_r.idf or 0.0),
-                    "tfidf_norm":     float(_r.tfidf_norm or 0.0),
+                self.card_idf = {
+                    _r.card_name: float(_r.idf or 0.0)
+                    for _r in _s.execute(text(
+                        "SELECT card_name, idf FROM deck_stat_global WHERE idf IS NOT NULL"
+                    ))
                 }
-                # card_idf : on garde la première valeur rencontrée par carte
-                if _r.card_name not in self.card_idf:
-                    self.card_idf[_r.card_name] = float(_r.idf or 0.0)
-                self.cmd_known_cards.setdefault(_r.commander, set()).add(_r.card_name)
-        except Exception as _e_tfidf:
-            log.warning("  deck_stat_commander indisponible (%s) — tfidf_lookup vide", _e_tfidf)
-        log.info("  TF-IDF : %d paires", len(self.tfidf_lookup))
+        except Exception as _e_idf:
+            log.warning("  deck_stat_global indisponible (%s) — idf vides", _e_idf)
+        log.info("  IDF : %d cartes", len(self.card_idf))
 
         # ── Métadonnées cartes ────────────────────────────────────────────────
         # TODO: supprimer — remplacé par requêtes PostgreSQL sur deck_stat_global + cards
@@ -313,11 +333,6 @@ class DeckImprovementEngine:
                         self.card_cluster[row["card_name"]] = int(row["cluster_id"])
                 log.info("  Clusters : %d cartes clustérisées (CSV individuels)", len(self.card_cluster))
 
-        # Profil de clusters du commandant (poids = Σ tfidf_norm par cluster)
-        self.cmd_cluster_profile: dict[str, dict[int, float]] = (
-            self._build_cmd_cluster_profiles()
-        )
-
         # ── Tags → Cluster (Naive Bayes) ─────────────────────────────────────
         self._t2c_pivot, self._nb, self._mlb, self._nb_classes = self._build_tag_model()
         # Tags par carte (depuis DB card_tag_clusters)
@@ -378,18 +393,65 @@ class DeckImprovementEngine:
         except Exception as e:
             log.warning("  DB metadata indisponible : %s", e)
 
-    def _build_cmd_cluster_profiles(self) -> dict[str, dict[int, float]]:
-        """Construit les profils de clusters par commandant depuis self.tfidf_lookup (en DB)."""
-        result: dict[str, dict[int, float]] = {}
-        for (cmd, card_name), td in self.tfidf_lookup.items():
+    def _commander_stats(self, commander: str) -> CommanderStats:
+        """Les statistiques d'un commandant, lues en base au premier besoin.
+
+        Un commandant inconnu, ou une base injoignable, donne des statistiques
+        vides : l'analyse continue avec les autres signaux, comme avant quand
+        la table manquait au démarrage.
+        """
+        with self._stats_lock:
+            cached = self._stats_cache.get(commander)
+            if cached is not None:
+                self._stats_cache.move_to_end(commander)
+                return cached
+
+        tfidf: dict[str, dict] = {}
+        try:
+            with SessionLocal() as s:
+                for r in s.execute(text("""
+                    SELECT card_name, inclusion_rate, idf, tfidf_norm
+                    FROM deck_stat_commander
+                    WHERE commander = :cmd AND tfidf_norm IS NOT NULL
+                """), {"cmd": commander}):
+                    tfidf[r.card_name] = {
+                        "inclusion_rate": float(r.inclusion_rate or 0.0),
+                        "idf":            float(r.idf or 0.0),
+                        "tfidf_norm":     float(r.tfidf_norm or 0.0),
+                    }
+        except Exception as exc:
+            log.warning("  deck_stat_commander illisible pour %s (%s)", commander, exc)
+
+        # Profil de clusters du commandant (poids = Σ tfidf_norm par cluster)
+        weights: dict[int, float] = {}
+        for card_name, td in tfidf.items():
             cid = self.card_cluster.get(card_name)
             if cid is not None:
-                weights = result.setdefault(cmd, {})
-                weights[cid] = weights.get(cid, 0.0) + float(td.get("tfidf_norm", 0.0))
-        for cmd in result:
-            total = sum(result[cmd].values()) or 1.0
-            result[cmd] = {cid: w / total for cid, w in result[cmd].items()}
-        return result
+                weights[cid] = weights.get(cid, 0.0) + td["tfidf_norm"]
+        total = sum(weights.values()) or 1.0
+        stats = CommanderStats(
+            tfidf=tfidf,
+            known_cards=set(tfidf),
+            cluster_profile={cid: w / total for cid, w in weights.items()},
+        )
+
+        with self._stats_lock:
+            self._stats_cache[commander] = stats
+            while len(self._stats_cache) > _STATS_CACHE_SIZE:
+                self._stats_cache.popitem(last=False)
+        return stats
+
+    def tfidf(self, commander: str, card_name: str) -> dict:
+        """Les statistiques d'une carte chez ce commandant ({} si inconnue)."""
+        return self._commander_stats(commander).tfidf.get(card_name, {})
+
+    def cluster_profile(self, commander: str) -> dict[int, float]:
+        """La part de chaque cluster dans le méta de ce commandant."""
+        return self._commander_stats(commander).cluster_profile
+
+    def known_cards(self, commander: str) -> set[str]:
+        """Les cartes jouées dans les decks de ce commandant."""
+        return self._commander_stats(commander).known_cards
 
     def _build_tag_model(self):
         # ── Lecture depuis DB ─────────────────────────────────────────────────
@@ -445,13 +507,13 @@ class DeckImprovementEngine:
         cid = self.card_cluster.get(card_name)
         if cid is None:
             return 0.0
-        return self.cmd_cluster_profile.get(commander, {}).get(cid, 0.0)
+        return self.cluster_profile(commander).get(cid, 0.0)
 
     def _tag_score(self, card_name: str, commander: str) -> float:
         tags = self.card_tags.get(card_name, [])
         if not tags:
             return 0.0
-        cmd_weights = self.cmd_cluster_profile.get(commander, {})
+        cmd_weights = self.cluster_profile(commander)
         total = 0.0
         for tag in tags:
             if tag in self._t2c_pivot.index:
@@ -493,7 +555,7 @@ class DeckImprovementEngine:
 
     def _hybrid_score(self, card_name: str, commander: str) -> tuple[float, float, float]:
         """Retourne (hybrid_score, predicted_ir, cosine)."""
-        td = self.tfidf_lookup.get((commander, card_name), {})
+        td = self.tfidf(commander, card_name)
         tfidf_norm = td.get("tfidf_norm", 0.0)
         idf        = td.get("idf", self.card_idf.get(card_name, 0.0))
         cosine     = self._cosine_cmd(card_name, commander)
@@ -609,7 +671,7 @@ class DeckImprovementEngine:
         Retourne (cluster_summaries, distance_to_meta).
 
         Utilise commander_cluster_meta (clustering spécifique par commandant) si disponible.
-        Fallback sur cmd_cluster_profile (clusters globaux) sinon.
+        Fallback sur cluster_profile (clusters globaux) sinon.
         """
         cmd_meta = self._load_commander_cluster_meta(commander)
         if cmd_meta and decklist is not None:
@@ -701,7 +763,7 @@ class DeckImprovementEngine:
         self, commander: str, deck_profile: DeckProfile
     ) -> tuple[list[ClusterSummary], float]:
         """Fallback : gap analysis avec les clusters globaux (ancienne méthode)."""
-        meta = self.cmd_cluster_profile.get(commander, {})
+        meta = self.cluster_profile(commander)
         deck_dist = {
             cid: v["share"]
             for cid, v in deck_profile.cluster_distribution.items()
@@ -768,7 +830,7 @@ class DeckImprovementEngine:
 
         # Pool de candidats = cartes connues dans TF-IDF du commandant
         # + toutes les cartes dans card_index (si color_identity OK)
-        candidate_pool: set[str] = self.cmd_known_cards.get(commander, set()) - deck_set
+        candidate_pool: set[str] = self.known_cards(commander) - deck_set
 
         # Filtrer par compatibilité couleur si disponible
         cmd_col = self.cmd_colors.get(commander, frozenset())
@@ -834,7 +896,7 @@ class DeckImprovementEngine:
         self, card, commander, hybrid, ir, gap_bonus, cid, ann, profile
     ) -> str:
         parts = []
-        td = self.tfidf_lookup.get((commander, card), {})
+        td = self.tfidf(commander, card)
         real_ir = td.get("inclusion_rate", 0.0)
         if real_ir > 5:
             parts.append(f"jouée dans {real_ir:.0f}% des decks {commander}")
@@ -844,7 +906,7 @@ class DeckImprovementEngine:
                 f"appartient au cluster « {ann.get('name', '')} » ({family})"
             )
             deck_share = profile.cluster_distribution.get(cid, {}).get("share", 0.0)
-            meta_share = self.cmd_cluster_profile.get(commander, {}).get(cid, 0.0)
+            meta_share = self.cluster_profile(commander).get(cid, 0.0)
             if meta_share > 0.05:
                 parts.append(f"ce cluster représente {meta_share*100:.0f}% du méta {commander}")
             if gap_bonus > 0.3:
@@ -891,7 +953,7 @@ class DeckImprovementEngine:
 
             # Score de cohérence cluster = le cluster de la carte est-il présent dans le méta ?
             cid = self.card_cluster.get(card)
-            meta_weight = self.cmd_cluster_profile.get(commander, {}).get(cid or -1, 0.0)
+            meta_weight = self.cluster_profile(commander).get(cid or -1, 0.0)
             coherence = min(meta_weight * 5, 1.0)  # [0,1], plateau à 0.2 du méta
 
             cut_score = (
@@ -901,7 +963,7 @@ class DeckImprovementEngine:
             )
 
             reasons: list[str] = []
-            td = self.tfidf_lookup.get((commander, card), {})
+            td = self.tfidf(commander, card)
             real_ir = td.get("inclusion_rate", 0.0)
             if real_ir < 5 and real_ir > 0:
                 reasons.append(f"faible inclusion historique ({real_ir:.1f}%)")
@@ -975,7 +1037,7 @@ class DeckImprovementEngine:
                 if n in set(deck_profile.cluster_distribution)
             ]
 
-            td = self.tfidf_lookup.get((commander, add.card_name), {})
+            td = self.tfidf(commander, add.card_name)
             real_ir = td.get("inclusion_rate", 0.0)
 
             explanations.append({
@@ -987,7 +1049,7 @@ class DeckImprovementEngine:
                 "cluster_family":     add.cluster_family,
                 "cluster_mechanics":  mechanics,
                 "cluster_meta_share": round(
-                    self.cmd_cluster_profile.get(commander, {}).get(add.cluster_id or -1, 0.0) * 100, 1
+                    self.cluster_profile(commander).get(add.cluster_id or -1, 0.0) * 100, 1
                 ),
                 "cluster_gap_bonus":  add.cluster_gap_bonus,
                 "deck_synergy":       add.deck_synergy,
@@ -1286,7 +1348,7 @@ class DeckImprovementEngine:
         blocks = []
         for add in additions:
             ann = self.annotations.get(add.cluster_id or -1, {})
-            td = self.tfidf_lookup.get((commander, add.card_name), {})
+            td = self.tfidf(commander, add.card_name)
             real_ir = td.get("inclusion_rate", 0.0)
             neighbors = self.card_neighbors.get(add.card_name, [])[:3]
             block = (
