@@ -252,11 +252,16 @@
 
   async function checkEngine() {
     try {
-      const { ready } = await MM.api.get('/api/engine/status');
+      const { ready, failed } = await MM.api.get('/api/engine/status');
       if (ready) {
         badge.className = 'badge badge--ok';
         badge.textContent = 'Moteur prêt';
         iaButton.disabled = false;
+      } else if (failed) {
+        // Le chargement a echoue : attendre ne le fera pas aboutir.
+        badge.className = 'badge badge--danger';
+        badge.textContent = 'Moteur indisponible';
+        iaButton.disabled = true;
       } else {
         badge.className = 'badge badge--warn';
         badge.textContent = 'Moteur en cours de chargement…';
