@@ -28,15 +28,9 @@ def _engine_ready() -> bool:
 
 @router.get("/api/engine/status")
 def api_engine_status() -> JSONResponse:
-    """Retourne l'état de chargement du DeckImprovementEngine.
-
-    `failed` distingue un moteur qui se charge encore d'un moteur dont le
-    chargement a échoué : celui-là ne sera jamais prêt sans intervention.
-    """
-    import server
+    """Retourne l'état de chargement du DeckImprovementEngine."""
     ready = _engine_ready()
-    return _json_response({"ready": ready,
-                           "failed": not ready and server._deck_engine_error is not None})
+    return _json_response({"ready": ready})
 
 
 @router.post("/api/engine/start")

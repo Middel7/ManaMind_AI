@@ -213,28 +213,19 @@ app.add_middleware(SecurityHeadersMiddleware)
 # Lock global initialisé au niveau module (thread-safe, évite la race condition)
 _deck_engine = None
 _deck_engine_lock = _threading.Lock()
-# Raison du dernier échec de chargement. Sans elle, /api/engine/status
-# répondait « pas encore prêt » indéfiniment, et la page annonçait un moteur
-# « en cours de chargement » qui ne viendrait jamais.
-_deck_engine_error: str | None = None
 
 def _get_deck_engine():
     """Retourne le DeckImprovementEngine (préchargé au démarrage, thread-safe)."""
-    global _deck_engine, _deck_engine_error
+    global _deck_engine
     with _deck_engine_lock:
         if _deck_engine is None:
             import importlib.util, sys as _sys
-            try:
-                script_path = ROOT / "scripts" / "deck_improver.py"
-                spec = importlib.util.spec_from_file_location("deck_improver", script_path)
-                mod  = importlib.util.module_from_spec(spec)
-                _sys.modules["deck_improver"] = mod
-                spec.loader.exec_module(mod)
-                _deck_engine = mod.DeckImprovementEngine()
-                _deck_engine_error = None
-            except Exception as exc:
-                _deck_engine_error = str(exc) or type(exc).__name__
-                raise
+            script_path = ROOT / "scripts" / "deck_improver.py"
+            spec = importlib.util.spec_from_file_location("deck_improver", script_path)
+            mod  = importlib.util.module_from_spec(spec)
+            _sys.modules["deck_improver"] = mod
+            spec.loader.exec_module(mod)
+            _deck_engine = mod.DeckImprovementEngine()
     return _deck_engine
 
 

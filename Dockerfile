@@ -75,11 +75,9 @@ RUN groupadd -r manamind && useradd -r -g manamind -d /app -s /sbin/nologin mana
 # Copier le code source
 COPY --chown=manamind:manamind . .
 
-# Créer les répertoires nécessaires.
-# logs/ : le moteur IA y écrit son journal. /app appartient à root, et logs/
-# est exclu de l'image : sans ce dossier, le moteur ne se chargeait pas.
-RUN mkdir -p uploads outputs/recommendations data logs && \
-    chown -R manamind:manamind uploads outputs data logs
+# Créer les répertoires nécessaires
+RUN mkdir -p uploads outputs/recommendations data && \
+    chown -R manamind:manamind uploads outputs data
 
 USER manamind
 
