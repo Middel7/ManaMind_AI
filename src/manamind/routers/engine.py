@@ -134,7 +134,7 @@ async def api_deck_analyze(request: Request) -> JSONResponse:
                 "family":       v["family"],
                 "deck_share":   round(v["share"] * 100, 1),
                 "meta_share":   round(
-                    engine.cmd_cluster_profile.get(commander, {}).get(cid, 0.0) * 100, 1
+                    engine.cluster_profile(commander).get(cid, 0.0) * 100, 1
                 ),
             }
             for cid, v in sorted(
@@ -256,7 +256,7 @@ async def api_deck_explanation(
         card      = card.strip()
 
         # Recalculer les signaux pour cette carte
-        td        = engine.tfidf_lookup.get((commander, card), {})
+        td        = engine.tfidf(commander, card)
         tfidf_n   = td.get("tfidf_norm", 0.0)
         idf       = td.get("idf", engine.card_idf.get(card, 0.0))
         real_ir   = td.get("inclusion_rate", 0.0)
@@ -288,7 +288,7 @@ async def api_deck_explanation(
 
         if cid is not None and ann:
             family = engine.cluster_family.get(cid, "")
-            meta_w = engine.cmd_cluster_profile.get(commander, {}).get(cid, 0.0)
+            meta_w = engine.cluster_profile(commander).get(cid, 0.0)
             reasons.append(
                 f"Appartient au cluster « {ann.get('name','')} » ({family}) "
                 f"qui représente {meta_w*100:.0f}% du profil de {commander}."
