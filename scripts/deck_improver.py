@@ -46,22 +46,14 @@ from src.manamind.db.engine import SessionLocal  # noqa: E402
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 LOG_DIR = ROOT / "logs"
+LOG_DIR.mkdir(exist_ok=True)
 _h = logging.StreamHandler(sys.stdout)
 _h.stream = open(sys.stdout.fileno(), mode="w", encoding="utf-8", buffering=1, closefd=False)
-_handlers: list[logging.Handler] = [_h]
-# Le fichier de journal est un confort du poste de travail. Un dossier non
-# inscriptible (conteneur sans droits sur /app) empêchait tout le moteur de se
-# charger : le journal se replie alors sur la sortie standard seule.
-try:
-    LOG_DIR.mkdir(exist_ok=True)
-    _handlers.append(logging.FileHandler(LOG_DIR / "deck_improver.log", encoding="utf-8"))
-except OSError:
-    pass
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s  %(levelname)-8s  %(message)s",
     datefmt="%H:%M:%S",
-    handlers=_handlers,
+    handlers=[_h, logging.FileHandler(LOG_DIR / "deck_improver.log", encoding="utf-8")],
 )
 log = logging.getLogger(__name__)
 
