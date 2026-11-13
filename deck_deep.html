@@ -61,6 +61,30 @@
 
   /* L'interaction suit le classement sans en faire partie : un filet et un
      intertitre l'en detachent, sinon elle passait pour les rangs 16 a 18. */
+  /* La fenetre des cartes d'une categorie oppose deux listes : celles du deck
+     et celles qui lui manquent. Empilees, il fallait faire defiler l'une pour
+     voir l'autre ; cote a cote, sur presque toute la largeur de l'ecran, elles
+     se comparent d'un regard, trois cartes par rangee chacune. */
+  .modal__box.deep-modal { width: min(1840px, 100%); }
+  .deep-modal__cols {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--sp-6);
+    align-items: start;
+  }
+  .deep-modal__cols > * { min-width: 0; }
+  .deep-modal .card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+  /* Sous 1080 px, deux colonnes de trois cartes ecraseraient les vignettes :
+     les listes s'empilent de nouveau. */
+  @media (max-width: 1080px) {
+    .deep-modal__cols { grid-template-columns: minmax(0, 1fr); }
+  }
+  /* Au telephone, trois cartes par rangee ne laissaient plus lire le nom. */
+  @media (max-width: 720px) {
+    .deep-modal .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
   .deep-panel__always {
     margin-top: var(--sp-4);
     padding-top: var(--sp-4);
@@ -96,6 +120,13 @@
   try { deckInfo = JSON.parse(sessionStorage.getItem('mm_analysis_deck')) || {}; } catch {}
   if (deckInfo.deck_id !== deckId) deckInfo = {};
 
+  // Les resultats d'ou l'on vient, s'ils portent sur ce deck : le retour y
+  // ramene, cartes a ajouter comprises. Sans eux, pas de bouton — les
+  // resultats ne survivent pas a la session.
+  let backUrl = null;
+  try { backUrl = sessionStorage.getItem('mm_analysis_url'); } catch {}
+  if (!deckInfo.deck_id || !backUrl || !backUrl.startsWith('/analyse?')) backUrl = null;
+
   function renderHero(deck, stats) {
     const art = deckInfo.scryfall_id ? MM.scryfallArt(deckInfo.scryfall_id) : null;
     const eyebrow = MM.deckEyebrow(deck.commander, deck.name) || 'Analyse poussée';
@@ -110,6 +141,8 @@
           decks du même commandant.</p>
         ${stats || ''}
         <div class="hero__actions">
+          ${backUrl ? `<a class="btn btn--sm btn--primary" href="${MM.esc(backUrl)}">
+            Retour aux cartes à ajouter</a>` : ''}
           <a class="btn btn--sm" href="/decks/${encodeURIComponent(deck.deck_id)}">
             Ouvrir le deck</a>
           <a class="btn btn--sm btn--ghost" href="/decks/analyse">Nouvelle analyse</a>
@@ -242,11 +275,11 @@
   async function openCategory(row) {
     const dialog = MM.modal({
       title: row.category,
-      // La grande fenetre de la fiche carte : a 920 px, les vignettes pleine
-      // taille ne tenaient qu'a trois par rangee.
       wide: 'xl',
-      body: `<div class="card-grid">${MM.cardSkeletons(5)}</div>`,
+      body: `<div class="card-grid">${MM.cardSkeletons(6)}</div>`,
     });
+    // Elargie au-dela de la fiche carte : voir .deep-modal.
+    dialog.root.querySelector('.modal__box').classList.add('deep-modal');
 
     let resolved = {};
     try {
@@ -255,7 +288,7 @@
     } catch { /* les vignettes s'affichent sans image plutot que pas du tout */ }
 
     dialog.body.innerHTML = `
-      <div class="stack-6">
+      <div class="deep-modal__cols">
         <section class="stack-2">
           <h3 class="h4">Dans votre deck
             <span class="badge">${MM.fmt.int(row.cards.length)}</span></h3>
