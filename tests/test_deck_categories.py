@@ -4,7 +4,9 @@ from manamind.deck_categories import (
     CATEGORIES,
     card_categories,
     categorize,
+    curve_rows,
     is_basic_land,
+    lands_average,
     summarize,
 )
 
@@ -143,3 +145,42 @@ def test_resume_limite_et_sans_decks_similaires():
         "Pioche de cartes", "Production de mana",
         "Destruction ciblée", "Destruction de masse", "Contresorts"]
     assert summarize({"Carte 0": 1}, {}, 0, tags) == []
+
+
+def test_courbe_par_cout_et_cartes_manquantes():
+    profiles = {
+        "Sol Ring": (1.0, "Artifact"),
+        "Arcane Signet": (2.0, "Artifact"),
+        "Mind Stone": (2.0, "Artifact"),
+        "Craterhoof Behemoth": (8.0, "Creature — Beast"),
+        "Command Tower": (0.0, "Land"),
+        "Jwari Disruption // Jwari Ruins": (2.0, "Instant // Land"),
+    }
+    deck = {"Sol Ring": 1, "Mind Stone": 1, "Command Tower": 1,
+            "Craterhoof Behemoth": 1, "Jwari Disruption // Jwari Ruins": 1}
+    population = {"Sol Ring": 10, "Arcane Signet": 9, "Mind Stone": 2,
+                  "Command Tower": 10}
+
+    rows = curve_rows(deck, population, 10, profiles)
+
+    assert [row["bucket"] for row in rows] == list(range(8))
+    # Les terrains sont hors de la courbe ; un sort au verso terrain y reste.
+    assert rows[0]["cards"] == [] and rows[0]["missing"] == []
+    deux = rows[2]
+    assert [c["card_name"] for c in deux["cards"]] == [
+        "Jwari Disruption // Jwari Ruins", "Mind Stone"]
+    assert deux["missing"] == [{"card_name": "Arcane Signet", "rate": 90.0}]
+    # 7 et plus partagent la dernière barre.
+    assert rows[7]["cards"] == [{"card_name": "Craterhoof Behemoth", "rate": 0.0}]
+
+
+def test_moyenne_de_terrains_estimee():
+    profiles = {"Sol Ring": (1.0, "Artifact"), "Command Tower": (0.0, "Land")}
+    # 10 decks : 60 sorts par deck en moyenne (Sol Ring dans tous, et 59
+    # autres sorts), le reste des 99 cartes est en terrains.
+    population = {"Sol Ring": 10, "Command Tower": 10}
+    population.update({f"Sort {i}": 10 for i in range(59)})
+    assert lands_average(population, 10, profiles) == 39.0
+    # Deux commandants : une carte de moins dans le deck.
+    assert lands_average(population, 10, profiles, commanders=2) == 38.0
+    assert lands_average({}, 0, profiles) is None

@@ -905,17 +905,33 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
 
 /* Partagee par les resultats d'analyse (onglet) et /analyse/poussee. */
 
-/* Courbe a gauche, symboles et sources a droite : la meme lecture que le
-   bandeau des resultats, d'ou elle vient. */
+/* Trois colonnes : le titre a gauche, la courbe au milieu, symboles,
+   sources, terrains et cout moyen a droite. En ligne, le titre volait a la
+   courbe toute une rangee de hauteur. */
 .deep-mana {
   display: grid; gap: var(--sp-5) var(--sp-8); align-items: center;
-  grid-template-columns: minmax(0, 1fr) max-content;
+  grid-template-columns: minmax(180px, 0.55fr) minmax(0, 1.45fr) max-content;
 }
-.deep-mana .curve-block { max-width: none; }
+.deep-mana .curve-block { max-width: none; min-width: 0; }
 .deep-mana .mana-rows { margin-left: 0; }
+/* Sous 1400 px, trois colonnes ecrasaient la courbe : le titre passe au-dessus. */
+@media (max-width: 1400px) {
+  .deep-mana { grid-template-columns: minmax(0, 1fr) max-content; }
+  .deep-mana > :first-child { grid-column: 1 / -1; }
+}
 @media (max-width: 860px) {
   .deep-mana { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Chaque barre de la courbe ouvre les cartes de son cout : elle se signale
+   au survol, comme les lignes des categories. */
+.deep-mana .curve__bar[data-bucket] {
+  cursor: pointer;
+  border-radius: var(--r-sm);
+  transition: background var(--dur-fast) var(--ease);
+}
+.deep-mana .curve__bar[data-bucket]:hover { background: var(--surface); }
+.deep-mana .curve__bar[data-bucket]:hover .curve__label { color: var(--accent); }
 
 /* Les deux chiffres d'une ligne se lisent ensemble : celui du deck prime,
    la moyenne des autres decks reste en retrait. 68 px de .gap-row__delta ne

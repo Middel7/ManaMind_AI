@@ -42,8 +42,8 @@
       commandant.</p>`;
   const headMissing = () => `
     <h3 class="h4">Jouées ailleurs, absentes de votre deck</h3>
-    <p class="xs dim">Les cartes de cette catégorie les plus jouées par les decks
-      du même commandant, que votre deck ne contient pas.</p>`;
+    <p class="xs dim">Les plus jouées par les decks du même commandant, que votre
+      deck ne contient pas.</p>`;
 
   /** Grand ecran : une grille de six cartes par rangee, trois du deck a
    *  gauche, trois absentes a droite, placees rangee par rangee. */
@@ -194,27 +194,69 @@
     let cards = deckCards;
     let reference = null;
     let cmd = commander;
+    let landsAvg = null;     // terrains moyens des decks similaires (API)
+    let curveRows = null;    // cartes de chaque cout, une fois l'API revenue
+
+    // La courbe de reference vient d'une API, la moyenne de terrains d'une
+    // autre : les deux se fondent en une seule reference pour mm.js.
+    const mergedReference = () => {
+      if (!reference && landsAvg == null) return null;
+      return { ...(reference || {}), lands: landsAvg };
+    };
+
+    // La derniere barre reunit les couts de 7 et plus.
+    const costLabel = (bucket) => (bucket === 7 ? '7 mana et plus' : `${bucket} mana`);
 
     function renderMana() {
       const target = MM.el('#deepMana', host);
       if (!target || !cards || !cards.length) return;
+      const ref = mergedReference();
+      // Une courbe plus haute que dans le bandeau d'ou elle vient : c'est sa
+      // hauteur qui porte la comparaison aux decks du meme commandant.
       target.innerHTML = `
         <div class="panel">
-          <div class="panel__head">
+          <div class="panel__body deep-mana">
             <div class="stack-2">
               <h2 class="h3">Mana du deck</h2>
               <p class="xs dim">Courbe de mana, symboles, sources, terrains et coût moyen,
                 comparés aux decks du même commandant.</p>
+              <p class="xs dim">Cliquez sur une barre de la courbe pour voir les cartes
+                de ce coût.</p>
             </div>
-          </div>
-          <div class="panel__body">
-            <div class="deep-mana">
-              ${MM.mana.curve(cards, 112, { commander: cmd, reference, average: false })}
-              ${MM.mana.rows(cards, { commander: cmd, reference, average: true })}
-            </div>
+            ${MM.mana.curve(cards, 170, { commander: cmd, reference: ref, average: false })}
+            ${MM.mana.rows(cards, { commander: cmd, reference: ref, average: true })}
           </div>
         </div>`;
+      // Chaque barre ouvre les cartes de son cout : un bouton pour le clavier
+      // et les lecteurs d'ecran, sans changer le dessin de mm.js.
+      MM.els('.curve__bar[data-bucket]', target).forEach((bar) => {
+        const label = costLabel(Number(bar.dataset.bucket));
+        bar.setAttribute('role', 'button');
+        bar.tabIndex = 0;
+        bar.setAttribute('aria-label', `Voir les cartes à ${label}`);
+      });
     }
+
+    function openBucket(bucket) {
+      if (!curveRows || !curveRows[bucket]) return;
+      openCategory({
+        category: `Cartes à ${costLabel(bucket)}`,
+        ...curveRows[bucket],
+      });
+    }
+
+    const manaHost = MM.el('#deepMana', host);
+    manaHost.addEventListener('click', (event) => {
+      const bar = event.target.closest('.curve__bar[data-bucket]');
+      if (bar) openBucket(Number(bar.dataset.bucket));
+    });
+    manaHost.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      const bar = event.target.closest('.curve__bar[data-bucket]');
+      if (!bar) return;
+      event.preventDefault();
+      openBucket(Number(bar.dataset.bucket));
+    });
 
     const loadReference = () => {
       if (!cmd) return;
@@ -242,11 +284,13 @@
       return { setDeckCards() {} };
     }
     if (onData) onData(data);
+    curveRows = data.curve || null;
+    landsAvg = data.lands_avg == null ? null : data.lands_avg;
     if (!cmd && data.deck && data.deck.commander) {
       cmd = data.deck.commander;
       loadReference();
-      renderMana();
     }
+    renderMana();
 
     const rows = data.categories || [];
     categories.innerHTML = rows.length ? categoriesPanel(rows) : MM.empty({
