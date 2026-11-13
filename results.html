@@ -69,15 +69,6 @@
     .swap-row > :nth-child(4) { grid-column: 3; grid-row: 1 / 3; }
   }
 
-  /* Vignettes a la taille de « Ma collection » : les deux ecrans montrent des
-     cartes que l'on inspecte avant d'agir, ils doivent se ressembler. */
-
-  /* Courbe de mana et repartition des couleurs, dans le bandeau */
-
-  /* Colonne de droite : la courbe et les couleurs. Les actions sont passees a
-     gauche, sous le titre et les chiffres, ou elles se lisent en ligne. */
-
-
   /* Le titre mene au deck analyse : il garde l'allure d'un titre, et ne se
      revele lien qu'au survol, pour ne pas souligner tout le bandeau. */
   .results-hero__link {
@@ -86,14 +77,23 @@
     transition: color var(--dur-fast) var(--ease);
   }
   .results-hero__link:hover { color: var(--accent); }
+
+  /* Bandeau fin : la courbe, les symboles et les compteurs sont partis dans
+     l'onglet « Analyse poussee ». Il ne dit plus que le deck et le type
+     d'analyse, et porte les deux actions qui quittent la page. */
+  .results-hero .hero__body { padding-block: var(--sp-4); }
+  .results-hero .hero__title { font-size: var(--text-xl); }
+  /* Deux boutons tiennent cote a cote : empiles (le defaut de .hero__split),
+     ils rehaussaient le bandeau que l'on veut fin. */
+  .results-hero .hero__split .hero__actions { flex-direction: row; flex-wrap: wrap; }
 </style>
 </head>
 <body>
 
 <div id="page">
-  <section class="hero" id="hero">
+  <section class="hero results-hero" id="hero">
     <div class="hero__body">
-      <div class="skeleton skeleton--text" style="width:280px;height:32px"></div>
+      <div class="skeleton skeleton--text" style="width:280px;height:28px"></div>
     </div>
   </section>
   <div id="content">
@@ -102,6 +102,7 @@
 </div>
 
 <script src="/static/js/mm.js"></script>
+<script src="/static/js/deep.js"></script>
 <script>
 (async () => {
   const user = await MM.boot({
@@ -116,83 +117,207 @@
   let deckInfo = {};
   try { deckInfo = JSON.parse(sessionStorage.getItem('mm_analysis_deck')) || {}; } catch {}
 
-  /** Retient l'adresse des resultats affiches : l'analyse poussee y ramene
-   *  par son bouton de retour. Appelee seulement quand il y a un resultat. */
+  /** Retient l'adresse des resultats affiches : la page autonome de
+   *  l'analyse poussee y ramene. Appelee seulement quand il y a un resultat. */
   function rememberResults() {
     try { sessionStorage.setItem('mm_analysis_url', location.pathname + location.search); }
     catch { /* le bouton de retour ne s'affichera pas, rien d'autre */ }
   }
 
-  function renderHero(subtitle, stats) {
+  /* ── Bandeau ───────────────────────────────────────────────────────────── */
+
+  function renderHero(subtitle) {
     const art = deckInfo.scryfall_id ? MM.scryfallArt(deckInfo.scryfall_id) : null;
+    const eyebrow = MM.deckEyebrow(deckInfo.commander, deckInfo.name)
+      || (deckInfo.commander ? '' : 'Analyse');
+    const title = MM.esc(deckInfo.name || 'Résultats d’analyse');
     MM.el('#hero').innerHTML = `
       ${art ? `<div class="hero__art" style="background-image:url('${MM.esc(art)}')"></div>` : ''}
       <div class="hero__body">
-        <div class="hero__cols">
-          <div class="grow">
-            ${(() => { const sur = MM.deckEyebrow(deckInfo.commander, deckInfo.name)
-                        || (deckInfo.commander ? '' : 'Analyse');
-                      return sur ? `<p class="eyebrow">${MM.esc(sur)}</p>` : ''; })()}
+        <div class="hero__split">
+          <div class="grow stack-2" style="gap:2px">
+            ${eyebrow ? `<p class="eyebrow">${MM.esc(eyebrow)}</p>` : ''}
             <h2 class="hero__title">${deckInfo.deck_id
               ? `<a class="results-hero__link" href="/decks/${encodeURIComponent(deckInfo.deck_id)}"
-                   title="Ouvrir le deck">${MM.esc(deckInfo.name || "Résultats d’analyse")}</a>`
-              : MM.esc(deckInfo.name || "Résultats d’analyse")}</h2>
-            <p class="muted">${MM.esc(subtitle)}</p>
-            ${stats || ''}
-            <div class="hero__actions">
-              ${deckInfo.deck_id
-                ? `<a class="btn btn--sm" href="/decks/${encodeURIComponent(deckInfo.deck_id)}">
-                     Ouvrir le deck</a>
-                   <a class="btn btn--sm btn--outline"
-                      href="/analyse/poussee?deck=${encodeURIComponent(deckInfo.deck_id)}">
-                     Analyse poussée</a>` : ''}
-              <a class="btn btn--sm btn--ghost" href="/decks/analyse">Nouvelle analyse</a>
-            </div>
+                   title="Ouvrir le deck">${title}</a>`
+              : title}</h2>
+            <p class="muted small">${MM.esc(subtitle)}</p>
           </div>
-          <div id="manaCurve"></div>
-          <div id="manaRows"></div>
+          <div class="hero__actions">
+            ${deckInfo.deck_id
+              ? `<a class="btn btn--sm" href="/decks/${encodeURIComponent(deckInfo.deck_id)}">
+                   Ouvrir le deck</a>` : ''}
+            <a class="btn btn--sm btn--ghost" href="/decks/analyse">Nouvelle analyse</a>
+          </div>
         </div>
       </div>`;
-
-    renderMana();
   }
 
-  /* ── Mana du deck : courbe, besoins en symboles, sources ───────────────── */
-
-  let deckCards = null;
-  // Courbe moyenne des decks du meme commandant, quand elle est connue : elle
-  // vient completer la courbe du deck, jamais la retarder.
-  let manaReference = null;
-
-  function renderMana() {
-    const courbe = MM.el('#manaCurve');
-    if (!courbe || !deckCards) return;
-    // La courbe prend toute la hauteur du bandeau ; le cout moyen se range
-    // avec les autres donnees du deck, a droite.
-    courbe.innerHTML = MM.mana.curve(deckCards, 112, {
-      commander: deckInfo.commander, reference: manaReference, average: false });
-    MM.el('#manaRows').innerHTML = MM.mana.rows(deckCards, {
-      commander: deckInfo.commander, reference: manaReference, average: true });
-  }
+  /* ── Cartes du deck ────────────────────────────────────────────────────── */
 
   // Les resultats d'analyse ne portent pas la liste du deck : on la relit
-  // pour en tirer la courbe et la repartition, et la quantite de depart des
-  // reglages. Relue apres chaque changement, la courbe suit les ajouts.
+  // pour la quantite de depart des reglages, et pour le mana de l'analyse
+  // poussee. Relue apres chaque changement, le mana suit les ajouts.
+  let deckCards = null;
+  let deep = null;   // l'analyse poussee, une fois l'onglet ouvert
   let deckLoad = Promise.resolve();
   function loadDeckCards() {
     if (!deckInfo.deck_id) return deckLoad;
     deckLoad = MM.api.get(`/api/v2/decks/${encodeURIComponent(deckInfo.deck_id)}`)
-      .then((data) => { deckCards = data.cards || []; renderMana(); })
+      .then((data) => {
+        deckCards = data.cards || [];
+        if (deep) deep.setDeckCards(deckCards);
+      })
       .catch(() => {});
     return deckLoad;
   }
   loadDeckCards();
 
-  MM.mana.reference(deckInfo.commander).then((reference) => {
-    if (!reference) return;
-    manaReference = reference;
-    renderMana();
-  });
+  // Les analyses ouvertes sans contexte de deck (lien direct, session videe)
+  // n'ont pas de commandant : sans lui, impossible de modifier une liste.
+  const canEdit = Boolean(deckInfo.commander);
+  if (canEdit) MM.deckContext = deckInfo;   // cible des reglages « dans le deck »
+
+  // Chaque reglage part de la quantite reelle du deck : un retrait de terrain
+  // de base porte souvent sur plus d'un exemplaire.
+  const inDeck = (name) => {
+    const line = (deckCards || []).find((entry) =>
+      entry.card_name.toLowerCase() === name.toLowerCase());
+    return line ? line.quantity : 0;
+  };
+
+  /** Le bouton « Ajouter ou retirer une carte » et ce qu'il declenche. */
+  function wireEditing() {
+    if (!canEdit) return;
+    MM.el('#addCard').addEventListener('click', () => {
+      // Meme fenetre que sur la fiche du deck, qui reste ouverte pour
+      // enchainer : une carte deja presente y affiche sa quantite, et le
+      // « − » la retire.
+      MM.addCardDialog({
+        title: 'Ajouter ou retirer une carte',
+        deckQty: inDeck,
+        ready: () => deckLoad,
+        basics: true,
+      });
+    });
+
+    document.addEventListener('mm:card-change', (event) => {
+      if (event.detail.scope !== 'deck') return;
+      // Le deck vient de changer : ses quantites sont relues pour la suite.
+      loadDeckCards();
+      const deckName = deckInfo.name || 'votre deck';
+      if (event.detail.delta < 0) {
+        MM.toast.ok(`${event.detail.card_name} retirée de ${deckName}.`);
+      } else {
+        MM.toast.ok(`${event.detail.card_name} ajoutée à ${deckName}.`);
+      }
+    });
+  }
+
+  /* ── Onglets ───────────────────────────────────────────────────────────── */
+
+  // L'onglet ouvert se lit dans l'adresse : un rechargement y ramene, et le
+  // retour du navigateur ne fait pas quitter les resultats.
+  const TABS = [
+    { id: 'add', hash: 'ajouter', label: 'Cartes à ajouter', short: 'À ajouter' },
+    { id: 'cut', hash: 'retirer', label: 'Cartes à retirer', short: 'À retirer' },
+    { id: 'deep', hash: 'poussee', label: 'Analyse poussée', short: 'Analyse' },
+  ];
+
+  /**
+   * Monte les trois onglets dans #content.
+   * @param {object} o
+   *   counts   {add, cut}  chiffres portes par les deux premiers onglets
+   *   toolbar  {string}    filtres propres aux onglets de cartes (HTML)
+   *   deepBefore {string}  HTML pose en tete de l'analyse poussee
+   *   onTab    {(id)=>void} appele a chaque changement d'onglet
+   */
+  function mountTabs({ counts, toolbar = '', deepBefore = '', onTab = () => {} }) {
+    const editButton = canEdit ? `
+      <button class="btn btn--primary btn--sm" id="addCard" type="button">
+        Ajouter ou retirer une carte</button>` : '';
+    const hasToolbar = Boolean(editButton || toolbar);
+
+    content.innerHTML = `
+      <div class="stack-4">
+        <div class="view-tabs" role="tablist" aria-label="Résultats de l’analyse">
+          ${TABS.map((tab) => `
+            <button class="view-tab" role="tab" type="button" id="tab-${tab.id}"
+                    data-tab="${tab.id}" aria-controls="panel-${tab.id}"
+                    aria-selected="false" tabindex="-1" aria-label="${tab.label}">
+              <span class="view-tab__long">${tab.label}</span>
+              <span class="view-tab__short" aria-hidden="true">${tab.short}</span>
+              ${counts[tab.id] != null
+                ? `<span class="view-tab__count" id="count-${tab.id}">${MM.fmt.int(counts[tab.id])}</span>`
+                : ''}
+            </button>`).join('')}
+        </div>
+        ${hasToolbar ? `
+          <div class="toolbar results-toolbar" id="toolbar">
+            ${editButton}
+            <div class="toolbar__spacer"></div>
+            ${toolbar}
+          </div>` : ''}
+        ${TABS.map((tab) => `
+          <div role="tabpanel" id="panel-${tab.id}" aria-labelledby="tab-${tab.id}" hidden></div>`).join('')}
+      </div>`;
+
+    wireEditing();
+
+    const show = (id, { focus = false } = {}) => {
+      TABS.forEach((tab) => {
+        const selected = tab.id === id;
+        const button = MM.el(`#tab-${tab.id}`);
+        button.setAttribute('aria-selected', String(selected));
+        button.tabIndex = selected ? 0 : -1;
+        if (selected && focus) button.focus();
+        MM.el(`#panel-${tab.id}`).hidden = !selected;
+      });
+      if (hasToolbar) MM.el('#toolbar').hidden = id === 'deep';
+      const hash = TABS.find((tab) => tab.id === id).hash;
+      history.replaceState(null, '', `${location.pathname}${location.search}#${hash}`);
+
+      // L'analyse poussee ne se calcule qu'a la premiere ouverture : la
+      // plupart des visites s'en tiennent aux cartes a ajouter.
+      if (id === 'deep' && !deep && deckInfo.deck_id) {
+        deep = { setDeckCards() {} };   // garde contre un double chargement
+        MM.deepAnalysis(MM.el('#panel-deep'), {
+          deckId: deckInfo.deck_id,
+          commander: deckInfo.commander || null,
+          deckCards,
+          before: deepBefore,
+        }).then((instance) => {
+          deep = instance;
+          if (deckCards) deep.setDeckCards(deckCards);
+        });
+      } else if (id === 'deep' && !deckInfo.deck_id) {
+        MM.el('#panel-deep').innerHTML = deepBefore + MM.empty({
+          icon: 'box', title: 'Analyse poussée indisponible',
+          text: 'Elle porte sur un deck enregistré : relancez l’analyse depuis l’un de vos decks.',
+          action: { href: '/decks/analyse', label: 'Analyser un deck' },
+        });
+      }
+      onTab(id);
+    };
+
+    const tablist = MM.el('.view-tabs', content);
+    tablist.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-tab]');
+      if (button) show(button.dataset.tab);
+    });
+    // Fleches gauche et droite d'un onglet a l'autre, comme le veut le motif.
+    tablist.addEventListener('keydown', (event) => {
+      if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+      const current = TABS.findIndex((tab) =>
+        MM.el(`#tab-${tab.id}`).getAttribute('aria-selected') === 'true');
+      const step = event.key === 'ArrowRight' ? 1 : -1;
+      show(TABS[(current + step + TABS.length) % TABS.length].id, { focus: true });
+      event.preventDefault();
+    });
+
+    const fromHash = TABS.find((tab) => `#${tab.hash}` === location.hash);
+    show(fromHash ? fromHash.id : 'add');
+  }
 
   /* Cette page n'affiche que le resultat de la derniere analyse : arriver ici
      par un signet ou un rechargement ne montre rien. Plutot qu'un vide, on dit
@@ -265,22 +390,17 @@
     const coherence = Math.round((result.coherence || 0) * 100);
     const distance = Math.round((result.distance_meta || 0) * 100);
 
-    renderHero('Analyse par le moteur d\'intelligence artificielle', `
-      <div class="hero__stats">
-        <span class="hero__stat"><b>${score} / 100</b>
-          <span class="muted small">score du deck</span></span>
-        <span class="hero__stat"><b>${coherence} %</b>
-          <span class="muted small">cohérence interne</span></span>
-        <span class="hero__stat"><b>${distance} %</b>
-          <span class="muted small">écart à la méta</span></span>
-      </div>`);
+    renderHero('Analyse par le moteur d’intelligence artificielle');
 
-    const names = [
-      ...(result.top_additions || []).map((c) => c.card_name),
-      ...(result.top_cuts || []).map((c) => c.card_name),
-      ...(result.replacements || []).flatMap((r) => [r.cut_card, r.add_card]),
-    ].filter(Boolean);
-    const resolved = await MM.resolveCards(names);
+    const replacements = (result.replacements || []).slice(0, 20);
+    const additions = (result.top_additions || []).slice(0, 24);
+    const cuts = (result.top_cuts || []).slice(0, 24);
+
+    const resolved = await MM.resolveCards([
+      ...additions.map((c) => c.card_name),
+      ...cuts.map((c) => c.card_name),
+      ...replacements.flatMap((r) => [r.cut_card, r.add_card]),
+    ].filter(Boolean));
 
     const thumb = (name) => {
       const info = resolved[name] || {};
@@ -289,146 +409,116 @@
         : '<span class="swap-row__thumb"></span>';
     };
 
-    const gaps = (result.gap || []).slice(0, 10);
-    const curve = (result.profile && result.profile.mana_curve) || {};
-    const curveKeys = Object.keys(curve).sort((a, b) => Number(a) - Number(b));
-    const curveMax = Math.max(...curveKeys.map((k) => curve[k]), 1);
+    const iaGrid = (list, scoreOf) => `
+      <div class="card-grid">
+        ${list.map((card) => MM.cardTile(
+          { ...(resolved[card.card_name] || {}), card_name: card.card_name },
+          { context: null, note: `${(scoreOf(card) * 100).toFixed(0)} pts` })).join('')}
+      </div>`;
 
-    content.innerHTML = `
+    const gaps = (result.gap || []).slice(0, 10);
+
+    // Le score et les ecarts par famille sont propres au moteur : ils ouvrent
+    // l'analyse poussee, au-dessus du mana et des categories.
+    const deepBefore = `
       <div class="grid-2" style="align-items:start">
-        <div class="stack-6">
+        <div class="panel">
+          <div class="panel__head"><h2 class="h3">Score global</h2></div>
+          <div class="panel__body stack">
+            <div class="gauge">
+              <div class="gauge__ring" style="--value:${score}">
+                <span class="gauge__value">${score}</span>
+              </div>
+              <div class="stack-2">
+                <p class="small">Cohérence <strong>${coherence} %</strong></p>
+                <p class="small">Écart à la méta <strong>${distance} %</strong></p>
+                <p class="xs dim">Plus l'écart est faible, plus le deck ressemble
+                  à ce qui se joue habituellement.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        ${gaps.length ? `
+          <div class="panel">
+            <div class="panel__head">
+              <div class="stack-2">
+                <h2 class="h3">Écarts par famille</h2>
+                <p class="xs dim">Votre deck comparé à la moyenne des decks du
+                  même commandant.</p>
+              </div>
+            </div>
+            <div class="panel__body">
+              ${gaps.map((gap) => {
+                const deck = (gap.deck_share || 0) * 100;
+                const meta = (gap.meta_share || 0) * 100;
+                const max = Math.max(deck, meta, 1);
+                const delta = (gap.delta || 0) * 100;
+                return `
+                  <div class="gap-row">
+                    <span class="gap-row__label truncate"
+                          title="${MM.esc(gap.cluster_name)}">
+                      ${MM.esc(gap.cluster_name)}</span>
+                    <span class="gap-row__track">
+                      <span class="gap-row__meta" style="width:${(meta / max) * 100}%"></span>
+                      <span class="gap-row__deck" style="width:${(deck / max) * 100}%"></span>
+                    </span>
+                    <span class="gap-row__delta ${delta < 0 ? 'accent' : 'dim'}">
+                      ${delta > 0 ? '+' : ''}${delta.toFixed(1)} pt</span>
+                  </div>`;
+              }).join('')}
+              <p class="xs dim" style="margin-top:var(--sp-3)">
+                Barre claire : la méta. Barre dorée : votre deck.
+                Un écart négatif signale une famille sous-représentée chez vous.
+              </p>
+            </div>
+          </div>` : ''}
+      </div>`;
+
+    mountTabs({
+      counts: { add: additions.length + replacements.length, cut: cuts.length },
+      deepBefore,
+    });
+
+    MM.el('#panel-add').innerHTML = `
+      <div class="stack-6">
+        ${replacements.length ? `
           <div class="panel">
             <div class="panel__head">
               <h2 class="h3">Remplacements suggérés</h2>
-              <span class="badge">${(result.replacements || []).length}</span>
+              <span class="badge">${replacements.length}</span>
             </div>
             <div class="panel__body panel__body--flush">
-              ${(result.replacements || []).length ? (result.replacements || []).slice(0, 20)
-                .map((swap) => `
-                  <div class="swap-row">
-                    <span class="swap-row__side">
-                      ${thumb(swap.cut_card)}
-                      <span class="truncate small" style="color:var(--danger)">
-                        ${MM.esc(swap.cut_card)}</span>
-                    </span>
-                    <span class="swap-row__arrow accent"><span aria-hidden="true">→</span
-                      ><span class="sr-only">remplacée par</span></span>
-                    <span class="swap-row__side">
-                      ${thumb(swap.add_card)}
-                      <span class="truncate small accent">${MM.esc(swap.add_card)}</span>
-                    </span>
-                    <span class="xs dim num">+${(swap.gain_delta || 0).toFixed(0)}</span>
-                  </div>`).join('')
-                : '<p class="muted small" style="padding:var(--sp-5)">Aucun remplacement proposé.</p>'}
+              ${replacements.map((swap) => `
+                <div class="swap-row">
+                  <span class="swap-row__side">
+                    ${thumb(swap.cut_card)}
+                    <span class="truncate small" style="color:var(--danger)">
+                      ${MM.esc(swap.cut_card)}</span>
+                  </span>
+                  <span class="swap-row__arrow accent"><span aria-hidden="true">→</span
+                    ><span class="sr-only">remplacée par</span></span>
+                  <span class="swap-row__side">
+                    ${thumb(swap.add_card)}
+                    <span class="truncate small accent">${MM.esc(swap.add_card)}</span>
+                  </span>
+                  <span class="xs dim num">+${(swap.gain_delta || 0).toFixed(0)}</span>
+                </div>`).join('')}
             </div>
-          </div>
-
-          <div class="panel">
-            <div class="panel__head">
-              <h2 class="h3">Ajouts recommandés</h2>
-              <span class="badge">${(result.top_additions || []).length}</span>
-            </div>
-            <div class="panel__body">
-              <div class="card-grid card-grid--sm">
-                ${(result.top_additions || []).slice(0, 24).map((card) => MM.cardTile(
-                  { ...(resolved[card.card_name] || {}), card_name: card.card_name },
-                  { context: null,
-                    note: `${((card.addition_score || 0) * 100).toFixed(0)} pts` }
-                )).join('')}
-              </div>
-            </div>
-          </div>
-
-          <div class="panel">
-            <div class="panel__head">
-              <h2 class="h3">Retraits suggérés</h2>
-              <span class="badge">${(result.top_cuts || []).length}</span>
-            </div>
-            <div class="panel__body">
-              <div class="card-grid card-grid--sm">
-                ${(result.top_cuts || []).slice(0, 24).map((card) => MM.cardTile(
-                  { ...(resolved[card.card_name] || {}), card_name: card.card_name },
-                  { context: null,
-                    note: `${((card.cut_score || 0) * 100).toFixed(0)} pts` }
-                )).join('')}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="stack-6">
-          <div class="panel">
-            <div class="panel__head"><h2 class="h3">Score global</h2></div>
-            <div class="panel__body stack">
-              <div class="gauge">
-                <div class="gauge__ring" style="--value:${score}">
-                  <span class="gauge__value">${score}</span>
-                </div>
-                <div class="stack-2">
-                  <p class="small">Cohérence <strong>${coherence} %</strong></p>
-                  <p class="small">Écart à la méta <strong>${distance} %</strong></p>
-                  <p class="xs dim">Plus l'écart est faible, plus le deck ressemble
-                    à ce qui se joue habituellement.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          ${curveKeys.length ? `
-            <div class="panel">
-              <div class="panel__head"><h2 class="h3">Courbe de mana</h2></div>
-              <div class="panel__body">
-                <div class="curve">
-                  ${curveKeys.map((key) => `
-                    <span class="curve__bar" title="${curve[key]} cartes à ${key}">
-                      <span class="curve__fill"
-                            style="height:${(curve[key] / curveMax) * 60}px"></span>
-                      <span class="curve__label">${MM.esc(key)}</span>
-                    </span>`).join('')}
-                </div>
-              </div>
-            </div>` : ''}
-
-          ${gaps.length ? `
-            <div class="panel">
-              <div class="panel__head">
-                <div class="stack-2">
-                  <h2 class="h3">Écarts par famille</h2>
-                  <p class="xs dim">Votre deck comparé à la moyenne des decks du
-                    même commandant.</p>
-                </div>
-              </div>
-              <div class="panel__body">
-                ${gaps.map((gap) => {
-                  const deck = (gap.deck_share || 0) * 100;
-                  const meta = (gap.meta_share || 0) * 100;
-                  const max = Math.max(deck, meta, 1);
-                  const delta = (gap.delta || 0) * 100;
-                  return `
-                    <div class="gap-row">
-                      <span class="gap-row__label truncate"
-                            title="${MM.esc(gap.cluster_name)}">
-                        ${MM.esc(gap.cluster_name)}</span>
-                      <span class="gap-row__track">
-                        <span class="gap-row__meta" style="width:${(meta / max) * 100}%"></span>
-                        <span class="gap-row__deck" style="width:${(deck / max) * 100}%"></span>
-                      </span>
-                      <span class="gap-row__delta ${delta < 0 ? 'accent' : 'dim'}">
-                        ${delta > 0 ? '+' : ''}${delta.toFixed(1)} pt</span>
-                    </div>`;
-                }).join('')}
-                <p class="xs dim" style="margin-top:var(--sp-3)">
-                  Barre claire : la méta. Barre dorée : votre deck.
-                  Un écart négatif signale une famille sous-représentée chez vous.
-                </p>
-              </div>
-            </div>` : ''}
-        </div>
+          </div>` : ''}
+        <section class="stack-2">
+          <h2 class="h3">Ajouts recommandés</h2>
+          ${additions.length ? iaGrid(additions, (c) => c.addition_score || 0)
+            : '<p class="muted small">Aucun ajout proposé pour ce deck.</p>'}
+        </section>
       </div>`;
+
+    MM.el('#panel-cut').innerHTML = cuts.length
+      ? iaGrid(cuts, (c) => c.cut_score || 0)
+      : '<p class="muted small">Aucun retrait proposé pour ce deck.</p>';
     return;
   }
 
-  /* ═══ Analyse par popularité (CSV) ════════════════════════════════════ */
+  /* ═══ Analyse par popularite (CSV) ════════════════════════════════════ */
 
   const csv = params.get('csv');
   if (!csv) return fail("Aucune analyse n'a été lancée depuis cet onglet.");
@@ -481,8 +571,8 @@
       .filter((row) => row.name);
   }
 
-  // Le CSV mêle des en-têtes de section ("Additions", "Removals") et les lignes
-  // de données, dont la colonne Section vaut "add" ou "remove".
+  // Le CSV mele des en-tetes de section ("Additions", "Removals") et les lignes
+  // de donnees, dont la colonne Section vaut "add" ou "remove".
   const inSection = (row, ...labels) => {
     const section = row.section.trim().toLowerCase();
     return labels.some((label) => section === label);
@@ -505,21 +595,8 @@
     deckInfo.scryfall_id = resolved[commander.name].scryfall_id;
   }
 
-  renderHero('Analyse fondée sur la popularité réelle des cartes', `
-    <div class="hero__stats">
-      <span class="hero__stat"><b>${MM.fmt.int(Math.min(ADD_SHOWN, additions.length))}</b>
-        <span class="muted small">ajouts proposés</span></span>
-      <span class="hero__stat"><b>${MM.fmt.int(removals.length)}</b>
-        <span class="muted small">retraits proposés</span></span>
-    </div>`);
+  renderHero('Analyse fondée sur la popularité réelle des cartes');
 
-  // Les analyses ouvertes sans contexte de deck (lien direct, session vidée)
-  // n'ont pas de commandant : sans lui, impossible de modifier une liste.
-  const canEdit = Boolean(deckInfo.commander);
-  if (canEdit) MM.deckContext = deckInfo;   // cible des reglages « dans le deck »
-
-  /** Vignette d'une carte proposee : le reglage « dans le deck » applique la
-   *  suggestion, dans un sens comme dans l'autre. */
   // Cartes deja ajoutees a la main a la buylist, en minuscules. Une carte
   // proposee en ajout est une carte a acquerir : le bouton « Vendre » y cede la
   // place a la buylist. Sans reponse, toutes s'affichent « a ajouter ».
@@ -529,13 +606,6 @@
       .forEach((name) => pinned.add(name.toLowerCase()));
   } catch { /* la buylist reste utilisable, son etat initial seul manque */ }
 
-  // Chaque reglage part de la quantite reelle du deck : un retrait de terrain
-  // de base porte souvent sur plus d'un exemplaire.
-  const inDeck = (name) => {
-    const line = (deckCards || []).find((entry) =>
-      entry.card_name.toLowerCase() === name.toLowerCase());
-    return line ? line.quantity : 0;
-  };
   await deckLoad;
 
   const tile = (row, kind) => MM.cardTile(
@@ -555,7 +625,7 @@
     ? `<div class="card-grid">${list.map((row) => tile(row, kind)).join('')}</div>`
     : `<p class="muted small">${empty}</p>`;
 
-  // Plafond de prix, commun aux deux onglets. null = aucun filtre.
+  // Plafond de prix, commun aux deux onglets de cartes. null = aucun filtre.
   const CAPS = [null, 20, 10, 5];
   let priceCap = null;
 
@@ -582,44 +652,36 @@
     return true;
   };
 
-  // Les deux listes deviennent deux onglets plutot que deux panneaux empiles.
-  content.innerHTML = `
-    <div class="stack-2">
-      <div class="toolbar">
-        <div class="chips" id="tabs" role="tablist">
-          <button class="chip" data-tab="add" aria-pressed="true">
-            Cartes à ajouter <span class="chip__count" id="countAdd">${Math.min(ADD_SHOWN, additions.length)}</span></button>
-          <button class="chip" data-tab="cut" aria-pressed="false">
-            Cartes à retirer <span class="chip__count" id="countCut">${removals.length}</span></button>
-        </div>
-        ${canEdit ? `
-          <button class="btn btn--primary btn--sm" id="addCard" type="button">
-            Ajouter ou retirer une carte</button>` : ''}
-        <div class="toolbar__spacer"></div>
-        <div class="chips" id="priceFilter">
-          ${CAPS.map((cap) => `
-            <button class="chip" data-cap="${cap === null ? '' : cap}"
-                    aria-pressed="${cap === null}">
-              ${cap === null ? 'Tous les prix' : `${cap} € et moins`}</button>`).join('')}
-        </div>
-        <div class="chips" id="kindFilter">
-          <button class="chip" data-hide="staples" aria-pressed="false"
-                  title="Masquer les cartes jouées dans plus de ${STAPLE_RATE} % des decks,
-                         comme Sol Ring ou Arcane Signet">
-            Sans les incontournables</button>
-          <button class="chip" data-hide="lands" aria-pressed="false"
-                  title="Masquer les terrains">Sans les terrains</button>
-        </div>
+  mountTabs({
+    counts: { add: Math.min(ADD_SHOWN, additions.length), cut: removals.length },
+    toolbar: `
+      <div class="chips" id="priceFilter">
+        ${CAPS.map((cap) => `
+          <button class="chip" data-cap="${cap === null ? '' : cap}"
+                  aria-pressed="${cap === null}">
+            ${cap === null ? 'Tous les prix' : `${cap} € et moins`}</button>`).join('')}
       </div>
-      <div id="panel-add"></div>
-      <div id="panel-cut" hidden></div>
-    </div>`;
+      <div class="chips" id="kindFilter">
+        <button class="chip" data-hide="staples" aria-pressed="false"
+                title="Masquer les cartes jouées dans plus de ${STAPLE_RATE} % des decks,
+                       comme Sol Ring ou Arcane Signet">
+          Sans les incontournables</button>
+        <button class="chip" data-hide="lands" aria-pressed="false"
+                title="Masquer les terrains">Sans les terrains</button>
+      </div>`,
+    // Les filtres d'incontournables et de terrains ne portent que sur les
+    // ajouts : sur l'onglet des retraits, ils ne feraient rien.
+    onTab: (id) => {
+      const kind = MM.el('#kindFilter');
+      if (kind) kind.hidden = id !== 'add';
+    },
+  });
 
   function renderPanels() {
     const shownAdd = additions.filter(shown).slice(0, ADD_SHOWN);
     const shownCut = removals.filter(underCap);
-    MM.el('#countAdd').textContent = shownAdd.length;
-    MM.el('#countCut').textContent = shownCut.length;
+    MM.el('#count-add').textContent = MM.fmt.int(shownAdd.length);
+    MM.el('#count-cut').textContent = MM.fmt.int(shownCut.length);
     MM.el('#panel-add').innerHTML = grid(shownAdd, 'add', priceCap
       ? `Aucun ajout proposé à ${priceCap} € ou moins.`
       : 'Aucun ajout proposé pour ce deck.');
@@ -649,32 +711,6 @@
     renderPanels();
   });
 
-  if (canEdit) {
-    MM.el('#addCard').addEventListener('click', () => {
-      // Meme fenetre que sur la fiche du deck, qui reste ouverte pour
-      // enchainer : une carte deja presente y affiche sa quantite, et le
-      // « − » la retire.
-      MM.addCardDialog({
-        title: 'Ajouter ou retirer une carte',
-        deckQty: inDeck,
-        ready: () => deckLoad,
-        basics: true,
-      });
-    });
-
-    document.addEventListener('mm:card-change', (event) => {
-      if (event.detail.scope !== 'deck') return;
-      // Le deck vient de changer : ses quantites sont relues pour la suite.
-      loadDeckCards();
-      const deckName = deckInfo.name || 'votre deck';
-      if (event.detail.delta < 0) {
-        MM.toast.ok(`${event.detail.card_name} retirée de ${deckName}.`);
-      } else {
-        MM.toast.ok(`${event.detail.card_name} ajoutée à ${deckName}.`);
-      }
-    });
-  }
-
   // Ajout a la buylist, et retrait au second clic : une carte ajoutee par
   // erreur se reprend sans quitter l'analyse.
   MM.el('#panel-add').addEventListener('click', async (event) => {
@@ -703,15 +739,6 @@
     } finally {
       button.disabled = false;
     }
-  });
-
-  MM.el('#tabs').addEventListener('click', (event) => {
-    const chip = event.target.closest('.chip');
-    if (!chip) return;
-    MM.els('#tabs .chip').forEach((other) =>
-      other.setAttribute('aria-pressed', String(other === chip)));
-    MM.el('#panel-add').hidden = chip.dataset.tab !== 'add';
-    MM.el('#panel-cut').hidden = chip.dataset.tab !== 'cut';
   });
 })();
 </script>

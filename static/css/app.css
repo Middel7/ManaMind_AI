@@ -854,6 +854,136 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
   .gap-row__track { flex-basis: 100%; order: 3; }
 }
 
+/* ═══ Onglets de vue ═════════════════════════════════════════════════════ */
+
+/* Les vues d'un meme ecran — cartes a ajouter, a retirer, analyse poussee.
+   Des chips faisaient l'office d'onglets, mais se confondaient avec les
+   filtres poses a cote : un onglet se reconnait a son soulignement et a la
+   ligne qui court sous la rangee. Defile a l'horizontale plutot que de passer
+   a la ligne, ou l'on ne saurait plus lequel est actif. */
+.view-tabs {
+  display: flex; gap: var(--sp-1);
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto; scrollbar-width: none;
+}
+.view-tabs::-webkit-scrollbar { display: none; }
+.view-tab {
+  display: inline-flex; align-items: center; gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  margin-bottom: -1px;   /* le soulignement recouvre la ligne de la rangee */
+  background: none; border: 0;
+  border-bottom: 2px solid transparent;
+  font: inherit; font-size: var(--text-base); font-weight: 600;
+  color: var(--text-2); white-space: nowrap; cursor: pointer;
+  transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+.view-tab:hover { color: var(--text); }
+.view-tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+.view-tab__count {
+  font-size: var(--text-xs); font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  padding: 1px var(--sp-2); border-radius: var(--r-full);
+  background: var(--surface-2); color: var(--text-2);
+}
+.view-tab[aria-selected="true"] .view-tab__count { background: var(--accent); color: var(--bg); }
+
+/* Intitule court, pour le telephone : a 420 px, le troisieme onglet sortait
+   de l'ecran, et rien ne disait qu'il existait. Les onglets se partagent
+   alors la largeur, tous visibles. */
+.view-tab__short { display: none; }
+@media (max-width: 720px) {
+  .view-tab {
+    flex: 1 1 0; justify-content: center;
+    padding-inline: var(--sp-2);
+    font-size: var(--text-sm);
+  }
+  .view-tab__long { display: none; }
+  .view-tab__short { display: inline; }
+}
+
+/* ═══ Analyse poussee ════════════════════════════════════════════════════ */
+
+/* Partagee par les resultats d'analyse (onglet) et /analyse/poussee. */
+
+/* Courbe a gauche, symboles et sources a droite : la meme lecture que le
+   bandeau des resultats, d'ou elle vient. */
+.deep-mana {
+  display: grid; gap: var(--sp-5) var(--sp-8); align-items: center;
+  grid-template-columns: minmax(0, 1fr) max-content;
+}
+.deep-mana .curve-block { max-width: none; }
+.deep-mana .mana-rows { margin-left: 0; }
+@media (max-width: 860px) {
+  .deep-mana { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Les deux chiffres d'une ligne se lisent ensemble : celui du deck prime,
+   la moyenne des autres decks reste en retrait. 68 px de .gap-row__delta ne
+   tenaient pas « 46 / 31,2 » sans retour a la ligne. */
+.deep-panel .gap-row__delta { width: 84px; }
+
+/* Les noms de categorie sont plus longs que ceux des familles des
+   resultats : a 190 px, « Terrains et synergies de terrain » se coupait. */
+.deep-panel .gap-row__label { flex-basis: 250px; }
+
+/* La moyenne des decks similaires en trait, pas en barre : sous une barre
+   doree plus longue, une barre claire disparaissait, et avec elle la
+   moitie de la comparaison des que le deck depassait la moyenne. */
+.deep-panel .gap-row__tick {
+  position: absolute; top: 0; bottom: 0;
+  width: 2px; margin-left: -1px;   /* trait centre sur la valeur */
+  background: var(--text);
+}
+
+/* Chaque ligne ouvre les cartes de sa categorie : un bouton, pour le
+   clavier et les lecteurs d'ecran, qui garde pourtant l'allure d'une ligne
+   de tableau et ne se signale qu'au survol. */
+.deep-row {
+  width: 100%;
+  font: inherit; color: inherit; text-align: left;
+  background: none; border: 0;
+  padding-inline: var(--sp-2);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease);
+}
+.deep-row:hover { background: var(--surface); }
+.deep-row:hover .gap-row__label { color: var(--accent); }
+
+/* L'interaction suit le classement sans en faire partie : un filet et un
+   intertitre l'en detachent, sinon elle passait pour les rangs 16 a 18. */
+.deep-panel__always {
+  margin-top: var(--sp-4);
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--line);
+}
+
+/* La fenetre des cartes d'une categorie oppose deux listes : celles du deck
+   et celles qui lui manquent, cote a cote sur presque toute la largeur. */
+.modal__box.deep-modal { width: min(1840px, 100%); }
+
+/* Une seule grille pour les deux listes, et non deux grilles voisines :
+   chacune calculait la hauteur de ses rangees, et les boutons d'achat des
+   cartes absentes decalaient la colonne de droite d'une rangee a l'autre.
+   Ici, une rangee prend la hauteur de sa plus grande carte des deux cotes.
+   La piste centrale, vide, ajoute ses deux gouttieres entre les listes. */
+.deep-modal__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) 0 repeat(3, minmax(0, 1fr));
+  gap: var(--sp-4);
+}
+.deep-modal__grid > * { min-width: 0; }
+.deep-modal__deck { grid-column: 1 / 4; }
+.deep-modal__missing { grid-column: 5 / 8; }
+
+/* Sous 1080 px, six cartes par rangee ecraseraient les vignettes : les
+   listes s'empilent, chacune dans sa grille de trois. */
+.deep-modal .card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* Au telephone, trois cartes par rangee ne laissaient plus lire le nom. */
+@media (max-width: 720px) {
+  .deep-modal .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 /* ═══ Grille de cartes Magic ═════════════════════════════════════════════ */
 
 .card-grid {
