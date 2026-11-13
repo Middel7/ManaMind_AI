@@ -14,6 +14,7 @@ from fastapi.responses import Response
 from sqlalchemy import text
 
 from manamind.auth import COOKIE_NAME, get_current_user
+from manamind import deck_categories
 from manamind.commander_curve import reference_for
 from manamind.commanders import MAX_COMMANDERS, join_commanders, split_commanders
 from manamind.db.engine import SessionLocal
@@ -403,6 +404,47 @@ def api_deck_detail(deck_id: str, request: Request) -> Response:
             "bracket": bracket_summary(flags, manual, detail=True),
         },
         "cards": cards,
+    })
+
+
+@router.get("/api/v2/decks/{deck_id}/categories")
+def api_deck_categories(deck_id: str, request: Request) -> Response:
+    """Analyse poussée : les cartes du deck par catégorie, face aux decks similaires.
+
+    Les decks similaires sont les decks publics du même commandant. Un
+    commandant absent de la base publique n'est pas une erreur : la réponse
+    porte alors zéro deck et aucune catégorie, et la page le dit.
+    """
+    user = _user(request)
+
+    with SessionLocal() as session:
+        deck = session.execute(text("""
+            SELECT d.deck_id, d.name, d.commander
+            FROM user_moxfield_decks d
+            WHERE d.user_id = :uid AND d.deck_id = :did
+        """), {"uid": user["id"], "did": deck_id}).fetchone()
+
+        if deck is None:
+            return _json_response({"error": "Deck introuvable"}, status_code=404)
+
+        cards = session.execute(text("""
+            SELECT card_name, quantity FROM user_deck_cards
+            WHERE user_id = :uid AND deck_id = :did
+        """), {"uid": user["id"], "did": deck_id}).fetchall()
+
+        # La forme canonique — les deux noms d'une paire, rangés dans l'ordre —
+        # est celle sous laquelle les decks publics sont indexés.
+        commander = join_commanders(split_commanders(deck.commander))
+        result = deck_categories.analyze(
+            session, commander, [(row.card_name, row.quantity) for row in cards])
+
+    return _json_response({
+        "deck": {
+            "deck_id": deck.deck_id,
+            "name": deck.name or deck.commander,
+            "commander": deck.commander,
+        },
+        **result,
     })
 
 

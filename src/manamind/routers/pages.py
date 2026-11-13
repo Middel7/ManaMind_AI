@@ -134,6 +134,11 @@ def page_analysis() -> FileResponse:
     return _page("results.html")
 
 
+@router.get("/analyse/poussee")
+def page_analysis_deep() -> FileResponse:
+    return _page("deck_deep.html")
+
+
 @router.get("/profil")
 def page_profile() -> FileResponse:
     return _page("profile.html")

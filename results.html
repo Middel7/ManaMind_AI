@@ -37,35 +37,6 @@
     font-variant-numeric: tabular-nums;
   }
 
-  .gap-row { display: flex; align-items: center; gap: var(--sp-3); padding: 6px 0; }
-  /* 190 px demandes, pas imposes. Ces rangees vivent dans un panneau qui occupe
-     la moitie de la grille : sur tablette, ce panneau tombe a 326 px, et un
-     intitule inflexible ne laissait plus que 44 px a la barre — soit le seul
-     element qui porte la comparaison. Les deux se partagent maintenant le
-     manque, et l'intitule se coupe (il porte deja .truncate) plutot que
-     d'ecraser la barre. Au large, rien ne change : l'intitule retrouve ses
-     190 px et c'est la barre qui prend le surplus. */
-  .gap-row__label { flex: 0 1 190px; min-width: 0; font-size: var(--text-sm); }
-  .gap-row__track {
-    flex: 1 1 130px; min-width: 96px;
-    height: 16px; position: relative;
-    background: var(--surface); border-radius: var(--r-sm); overflow: hidden;
-  }
-  .gap-row__deck, .gap-row__meta { position: absolute; top: 0; bottom: 0; }
-  .gap-row__meta { background: var(--surface-3); }
-  .gap-row__deck { background: var(--accent); opacity: 0.85; }
-  .gap-row__delta { width: 68px; text-align: right; font-size: var(--text-xs);
-    font-variant-numeric: tabular-nums; flex-shrink: 0; }
-
-  /* L'intitule et l'ecart occupaient 258 px des 288 disponibles a 320 px : la
-     barre, qui porte toute la comparaison, se reduisait a un trait. Sur deux
-     lignes, le nom garde sa place et la barre la largeur entiere. */
-  @media (max-width: 680px) {
-    .gap-row { flex-wrap: wrap; gap: 2px var(--sp-3); padding: var(--sp-2) 0; }
-    .gap-row__label { width: auto; flex: 1; min-width: 0; }
-    .gap-row__track { flex-basis: 100%; order: 3; }
-  }
-
   .swap-row {
     display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr) auto;
     gap: var(--sp-3); align-items: center;
@@ -164,7 +135,10 @@
             <div class="hero__actions">
               ${deckInfo.deck_id
                 ? `<a class="btn btn--sm" href="/decks/${encodeURIComponent(deckInfo.deck_id)}">
-                     Ouvrir le deck</a>` : ''}
+                     Ouvrir le deck</a>
+                   <a class="btn btn--sm btn--outline"
+                      href="/analyse/poussee?deck=${encodeURIComponent(deckInfo.deck_id)}">
+                     Analyse poussée</a>` : ''}
               <a class="btn btn--sm btn--ghost" href="/decks/analyse">Nouvelle analyse</a>
             </div>
           </div>

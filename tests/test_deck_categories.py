@@ -1,0 +1,84 @@
+"""Tests de l'analyse poussée : catégories de tags et comparaison aux decks similaires."""
+
+from manamind.deck_categories import CATEGORIES, categorize, summarize
+
+
+def test_cinquante_categories_distinctes():
+    assert len(CATEGORIES) == 50
+    assert len(set(CATEGORIES)) == 50
+
+
+def test_tags_sans_role_hors_categorie():
+    # Cycles, curiosités de nom, règles, capacités trop générales, impressions.
+    for tag in ("cycle-rav-shockland", "alliteration", "namesake spell",
+                "errata", "activated ability", "oversized", "unique token",
+                "artwork series land"):
+        assert categorize(tag) is None, tag
+
+
+def test_tags_ranges_par_role():
+    attendu = {
+        "draw engine": "Pioche de cartes",
+        "mana rock": "Production de mana",
+        "land ramp": "Recherche de terrains",
+        "tutor-land-basic": "Recherche de terrains",
+        "tutor-to-hand": "Tuteurs",
+        "spot removal": "Retrait ciblé",
+        "sweeper": "Destruction de masse",
+        "flicker-creature": "Blink et arrivées",
+        "extra turn": "Tours et phases supplémentaires",
+        "alternate win condition": "Conditions de victoire",
+        "synergy-vehicle": "Véhicules",
+        "synergy-equipment": "Équipements",
+        "synergy-artifact": "Artefacts",
+        "synergy-saga": "Sagas",
+        "synergy-aura": "Auras",
+        "synergy-enchantment": "Enchantements",
+    }
+    for tag, categorie in attendu.items():
+        assert categorize(tag) == categorie, tag
+
+
+def test_faux_amis_ecartes():
+    # Sous-chaînes trompeuses : « draw » dans drawback, « ramp » dans trample,
+    # « extra » dans extract, « flip » dans coin flip, « hate- » qui combat x.
+    assert categorize("drawback") != "Pioche de cartes"
+    assert categorize("gives trample") != "Production de mana"
+    assert categorize("extract") is None
+    assert categorize("coin flip") == "Hasard, dés et pièces"
+    assert categorize("hate-graveyard") == "Anti-stratégies (hate)"
+    assert categorize("fetchable") == "Terrains et synergies de terrain"
+
+
+def test_resume_classe_selon_les_decks_similaires():
+    tags = {
+        "Sol Ring": ["mana rock", "fast mana"],
+        "Rhystic Study": ["draw engine"],
+        "Swords to Plowshares": ["spot removal"],
+        "Forest": ["fetchable", "cycle-lea-basic-land"],
+    }
+    deck = {"Sol Ring": 1, "Forest": 30}
+    # Sur 10 decks : 10 Sol Ring, 8 Rhystic Study, 5 Swords, 250 Forêts.
+    population = {"Sol Ring": 10, "Rhystic Study": 8,
+                  "Swords to Plowshares": 5, "Forest": 250}
+
+    rows = summarize(deck, population, 10, tags)
+
+    assert [row["category"] for row in rows] == [
+        "Terrains et synergies de terrain", "Production de mana",
+        "Pioche de cartes", "Retrait ciblé"]
+    terrains, mana, pioche, retrait = rows
+    assert terrains == {"category": "Terrains et synergies de terrain",
+                        "deck": 30, "similar": 25.0}
+    # Deux tags de la même catégorie ne comptent la carte qu'une fois.
+    assert mana["deck"] == 1 and mana["similar"] == 1.0
+    assert pioche["deck"] == 0 and pioche["similar"] == 0.8
+    assert retrait["similar"] == 0.5
+
+
+def test_resume_limite_et_sans_decks_similaires():
+    tags = {f"Carte {i}": [tag] for i, tag in enumerate(
+        ["mana rock", "draw engine", "spot removal", "sweeper"])}
+    population = {name: 1 for name in tags}
+    assert len(summarize({}, population, 1, tags, top=2)) == 2
+    assert summarize({"Carte 0": 1}, {}, 0, tags) == []
