@@ -43,6 +43,21 @@
     width: 2px; margin-left: -1px;   /* trait centre sur la valeur */
     background: var(--text);
   }
+
+  /* Chaque ligne ouvre les cartes de sa categorie : un bouton, pour le
+     clavier et les lecteurs d'ecran, qui garde pourtant l'allure d'une ligne
+     de tableau et ne se signale qu'au survol. */
+  .deep-panel .deep-row {
+    width: 100%;
+    font: inherit; color: inherit; text-align: left;
+    background: none; border: 0;
+    padding-inline: var(--sp-2);
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    transition: background var(--dur-fast) var(--ease);
+  }
+  .deep-panel .deep-row:hover { background: var(--surface); }
+  .deep-panel .deep-row:hover .gap-row__label { color: var(--accent); }
 </style>
 </head>
 <body>
@@ -152,10 +167,11 @@
         </div>
       </div>
       <div class="panel__body">
-        ${rows.map((row) => {
+        ${rows.map((row, index) => {
           const below = row.deck < row.similar;
           return `
-            <div class="gap-row">
+            <button class="gap-row deep-row" type="button" data-row="${index}"
+                    aria-label="Voir les cartes de la catégorie ${MM.esc(row.category)}">
               <span class="gap-row__label truncate" title="${MM.esc(row.category)}">
                 ${MM.esc(row.category)}</span>
               <span class="gap-row__track"
@@ -166,7 +182,7 @@
               <span class="gap-row__delta">
                 <b class="${below ? 'accent' : ''}">${MM.fmt.int(row.deck)}</b>
                 <span class="dim">/ ${MM.fmt.dec(row.similar, 1)}</span></span>
-            </div>`;
+            </button>`;
         }).join('')}
         <div class="legend" style="margin-top:var(--sp-4)">
           <span class="legend__item"><b>Barre dorée</b> votre deck</span>
@@ -176,10 +192,69 @@
         <p class="xs dim" style="margin-top:var(--sp-3)">
           Une carte compte dans chaque catégorie qu’elle touche : les totaux dépassent
           donc le nombre de cartes du deck. Le commandant et les terrains de base ne
-          sont pas comptés.
+          sont pas comptés. Cliquez sur une catégorie pour en voir les cartes.
         </p>
       </div>
     </div>`;
+
+  /* ── Cartes d'une categorie ─────────────────────────────────────────── */
+
+  // Part des decks similaires qui jouent la carte, au format court des
+  // resultats : la note partage sa ligne avec le prix, une phrase s'y
+  // etalait sur quatre lignes. Sous 1 %, un arrondi a zero laisserait croire
+  // que personne ne la joue.
+  const rateNote = (rate) => {
+    if (!rate) return 'aucun deck';
+    if (rate < 1) return '< 1 % des decks';
+    return `${MM.fmt.int(rate)} % des decks`;
+  };
+
+  // Les cartes du deck sont deja la : ni achat ni vente. Les absentes se
+  // proposent a l'achat. La recherche de commandant n'a rien a faire ici.
+  const tiles = (cards, resolved, market) => `
+    <div class="card-grid card-grid--sm">
+      ${cards.map((card) => MM.cardTile(
+        { ...(resolved[card.card_name] || {}), card_name: card.card_name },
+        { context: null, note: rateNote(card.rate), market, commander: false })).join('')}
+    </div>`;
+
+  async function openCategory(row) {
+    const dialog = MM.modal({
+      title: row.category,
+      wide: true,
+      body: `<div class="card-grid card-grid--sm">${MM.cardSkeletons(6)}</div>`,
+    });
+
+    let resolved = {};
+    try {
+      resolved = await MM.resolveCards(
+        [...row.cards, ...row.missing].map((card) => card.card_name));
+    } catch { /* les vignettes s'affichent sans image plutot que pas du tout */ }
+
+    dialog.body.innerHTML = `
+      <div class="stack-6">
+        <section class="stack-2">
+          <h3 class="h4">Dans votre deck
+            <span class="badge">${MM.fmt.int(row.cards.length)}</span></h3>
+          <p class="xs dim">De la moins jouée à la plus jouée par les decks du même
+            commandant.</p>
+          ${row.cards.length ? tiles(row.cards, resolved, false)
+            : '<p class="muted small">Aucune carte de votre deck dans cette catégorie.</p>'}
+        </section>
+        <section class="stack-2">
+          <h3 class="h4">Jouées ailleurs, absentes de votre deck</h3>
+          <p class="xs dim">Les cartes de cette catégorie les plus jouées par les decks
+            du même commandant, que votre deck ne contient pas.</p>
+          ${row.missing.length ? tiles(row.missing, resolved, true)
+            : '<p class="muted small">Votre deck contient déjà toutes les cartes de cette catégorie jouées ailleurs.</p>'}
+        </section>
+      </div>`;
+  }
+
+  content.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-row]');
+    if (button) openCategory(rows[Number(button.dataset.row)]);
+  });
 })();
 </script>
 </body>

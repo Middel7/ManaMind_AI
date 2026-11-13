@@ -75,12 +75,37 @@ def test_resume_classe_selon_les_decks_similaires():
         "Terrains et synergies de terrain", "Production de mana",
         "Pioche de cartes", "Retrait ciblé"]
     terrains, mana, pioche, retrait = rows
-    assert terrains == {"category": "Terrains et synergies de terrain",
-                        "deck": 30, "similar": 25.0}
+    assert (terrains["deck"], terrains["similar"]) == (30, 25.0)
     # Deux tags de la même catégorie ne comptent la carte qu'une fois.
     assert mana["deck"] == 1 and mana["similar"] == 1.0
     assert pioche["deck"] == 0 and pioche["similar"] == 0.8
     assert retrait["similar"] == 0.5
+
+
+def test_cartes_du_deck_et_cartes_manquantes():
+    tags = {
+        "Sol Ring": ["mana rock"],
+        "Arcane Signet": ["mana rock"],
+        "Mind Stone": ["mana rock"],
+        "Fellwar Stone": ["mana rock"],
+        "Bloodline Keeper // Lord of Lineage": ["repeatable creature tokens"],
+    }
+    # Le deck écrit la carte recto-verso par sa face avant, en minuscules.
+    deck = {"Sol Ring": 1, "Fellwar Stone": 1, "bloodline keeper": 1}
+    population = {"Sol Ring": 10, "Arcane Signet": 9, "Mind Stone": 4,
+                  "Bloodline Keeper // Lord of Lineage": 2}
+
+    rows = {row["category"]: row for row in summarize(deck, population, 10, tags)}
+
+    mana = rows["Production de mana"]
+    # Du moins joué ailleurs au plus joué ; Fellwar Stone n'est joué nulle part.
+    assert mana["cards"] == [{"card_name": "Fellwar Stone", "rate": 0.0},
+                             {"card_name": "Sol Ring", "rate": 100.0}]
+    # Les absentes, de la plus jouée à la moins jouée.
+    assert mana["missing"] == [{"card_name": "Arcane Signet", "rate": 90.0},
+                               {"card_name": "Mind Stone", "rate": 40.0}]
+    # La face avant suffit à reconnaître la carte du deck.
+    assert rows["Jetons"]["missing"] == []
 
 
 def test_resume_limite_et_sans_decks_similaires():

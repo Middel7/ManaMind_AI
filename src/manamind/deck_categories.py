@@ -29,6 +29,8 @@ from manamind.commanders import commander_keys, is_commander
 
 # Nombre de catégories montrées par l'analyse poussée.
 TOP = 15
+# Cartes jouées ailleurs et absentes du deck, proposées par catégorie.
+MISSING = 12
 
 # Tags qui décrivent la carte plutôt que son rôle : cycles de cartes, conception
 # et règles, univers et curiosités de nom. Testés avant les catégories, faute
@@ -218,14 +220,43 @@ def summarize(
     similar = per_category(population)
     mine = per_category(deck)
     ranked = sorted(similar.items(), key=lambda item: (-item[1], item[0]))[:top]
-    return [
-        {
+
+    # Le deck et les statistiques n'écrivent pas toujours un nom de la même
+    # façon : casse, ou face avant seule d'une carte recto-verso.
+    rate_by_key = {_key(name): count * 100 / total_decks
+                   for name, count in population.items()}
+    deck_keys = {_key(name) for name in deck}
+
+    def in_category(names, cat):
+        return [name for name in names if cat in card_categories(tags.get(name, []))]
+
+    rows = []
+    for cat, total in ranked:
+        # Les cartes du deck, de la moins jouée ailleurs à la plus jouée : les
+        # choix les plus personnels — ou les plus discutables — d'abord.
+        cards = sorted(
+            ({"card_name": name, "rate": round(rate_by_key.get(_key(name), 0.0), 1)}
+             for name in in_category(deck, cat)),
+            key=lambda card: (card["rate"], card["card_name"]))
+        # Ce que les autres jouent le plus dans cette catégorie, et pas ce deck.
+        missing = sorted(
+            ({"card_name": name, "rate": round(rate_by_key[_key(name)], 1)}
+             for name in in_category(population, cat)
+             if _key(name) not in deck_keys),
+            key=lambda card: (-card["rate"], card["card_name"]))[:MISSING]
+        rows.append({
             "category": cat,
             "deck": int(mine.get(cat, 0)),
             "similar": round(total / total_decks, 1),
-        }
-        for cat, total in ranked
-    ]
+            "cards": cards,
+            "missing": missing,
+        })
+    return rows
+
+
+def _key(name: str) -> str:
+    """Clé de rapprochement d'un nom : minuscules, face avant seule."""
+    return (name or "").strip().lower().split(" // ")[0]
 
 
 # Les noms sont d'abord réduits à leur liste distincte et normalisés une seule
