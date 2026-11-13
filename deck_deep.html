@@ -25,75 +25,6 @@
     transition: color var(--dur-fast) var(--ease);
   }
   .deep-hero__link:hover { color: var(--accent); }
-
-  /* Les deux chiffres d'une ligne se lisent ensemble : celui du deck prime,
-     la moyenne des autres decks reste en retrait. 68 px de .gap-row__delta ne
-     tenaient pas « 46 / 31,2 » sans retour a la ligne. */
-  .deep-panel .gap-row__delta { width: 84px; }
-
-  /* Les noms de categorie sont plus longs que ceux des familles des
-     resultats : a 190 px, « Terrains et synergies de terrain » se coupait. */
-  .deep-panel .gap-row__label { flex-basis: 250px; }
-
-  /* La moyenne des decks similaires en trait, pas en barre : sous une barre
-     doree plus longue, une barre claire disparaissait, et avec elle la
-     moitie de la comparaison des que le deck depassait la moyenne. */
-  .deep-panel .gap-row__tick {
-    position: absolute; top: 0; bottom: 0;
-    width: 2px; margin-left: -1px;   /* trait centre sur la valeur */
-    background: var(--text);
-  }
-
-  /* Chaque ligne ouvre les cartes de sa categorie : un bouton, pour le
-     clavier et les lecteurs d'ecran, qui garde pourtant l'allure d'une ligne
-     de tableau et ne se signale qu'au survol. */
-  .deep-panel .deep-row {
-    width: 100%;
-    font: inherit; color: inherit; text-align: left;
-    background: none; border: 0;
-    padding-inline: var(--sp-2);
-    border-radius: var(--r-sm);
-    cursor: pointer;
-    transition: background var(--dur-fast) var(--ease);
-  }
-  .deep-panel .deep-row:hover { background: var(--surface); }
-  .deep-panel .deep-row:hover .gap-row__label { color: var(--accent); }
-
-  /* L'interaction suit le classement sans en faire partie : un filet et un
-     intertitre l'en detachent, sinon elle passait pour les rangs 16 a 18. */
-  /* La fenetre des cartes d'une categorie oppose deux listes : celles du deck
-     et celles qui lui manquent. Empilees, il fallait faire defiler l'une pour
-     voir l'autre ; cote a cote, sur presque toute la largeur de l'ecran, elles
-     se comparent d'un regard, trois cartes par rangee chacune. */
-  .modal__box.deep-modal { width: min(1840px, 100%); }
-
-  /* Une seule grille pour les deux listes, et non deux grilles voisines :
-     chacune calculait la hauteur de ses rangees, et les boutons d'achat des
-     cartes absentes decalaient la colonne de droite d'une rangee a l'autre.
-     Ici, une rangee prend la hauteur de sa plus grande carte des deux cotes.
-     La piste centrale, vide, ajoute ses deux gouttieres entre les listes. */
-  .deep-modal__grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr)) 0 repeat(3, minmax(0, 1fr));
-    gap: var(--sp-4);
-  }
-  .deep-modal__grid > * { min-width: 0; }
-  .deep-modal__deck { grid-column: 1 / 4; }
-  .deep-modal__missing { grid-column: 5 / 8; }
-
-  /* Sous 1080 px, six cartes par rangee ecraseraient les vignettes : les
-     listes s'empilent, chacune dans sa grille de trois. */
-  .deep-modal .card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  /* Au telephone, trois cartes par rangee ne laissaient plus lire le nom. */
-  @media (max-width: 720px) {
-    .deep-modal .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  }
-
-  .deep-panel__always {
-    margin-top: var(--sp-4);
-    padding-top: var(--sp-4);
-    border-top: 1px solid var(--line);
-  }
 </style>
 </head>
 <body>
@@ -110,7 +41,11 @@
 </div>
 
 <script src="/static/js/mm.js"></script>
+<script src="/static/js/deep.js"></script>
 <script>
+/* Page autonome de l'analyse poussee, pour les liens deja partages : depuis
+   les resultats d'analyse, elle s'ouvre desormais dans leur troisieme onglet.
+   Le rendu vient de deep.js, commun aux deux. */
 (async () => {
   const user = await MM.boot({ title: 'Analyse poussée', nav: 'analyze' });
   if (!user) return;
@@ -125,8 +60,8 @@
   if (deckInfo.deck_id !== deckId) deckInfo = {};
 
   // Les resultats d'ou l'on vient, s'ils portent sur ce deck : le retour y
-  // ramene, cartes a ajouter comprises. Sans eux, pas de bouton — les
-  // resultats ne survivent pas a la session.
+  // ramene. Sans eux, pas de bouton — les resultats ne survivent pas a la
+  // session.
   let backUrl = null;
   try { backUrl = sessionStorage.getItem('mm_analysis_url'); } catch {}
   if (!deckInfo.deck_id || !backUrl || !backUrl.startsWith('/analyse?')) backUrl = null;
@@ -146,7 +81,7 @@
         ${stats || ''}
         <div class="hero__actions">
           ${backUrl ? `<a class="btn btn--sm btn--primary" href="${MM.esc(backUrl)}">
-            Retour aux cartes à ajouter</a>` : ''}
+            Retour aux résultats</a>` : ''}
           <a class="btn btn--sm" href="/decks/${encodeURIComponent(deck.deck_id)}">
             Ouvrir le deck</a>
           <a class="btn btn--sm btn--ghost" href="/decks/analyse">Nouvelle analyse</a>
@@ -165,198 +100,16 @@
     return;
   }
 
-  let data;
-  try {
-    data = await MM.api.get(`/api/v2/decks/${encodeURIComponent(deckId)}/categories`);
-  } catch (err) {
-    MM.el('#hero').hidden = true;
-    content.innerHTML = MM.empty({
-      icon: 'warning', title: 'Analyse indisponible', text: err.message,
-      action: { href: '/decks', label: 'Voir mes decks' },
-    });
-    return;
-  }
-
-  const rows = data.categories || [];
-  renderHero(data.deck, `
-    <div class="hero__stats">
-      <span class="hero__stat"><b>${MM.fmt.int(data.decks)}</b>
-        <span class="muted small">${data.decks > 1 ? 'decks similaires' : 'deck similaire'}</span></span>
-      <span class="hero__stat"><b>${MM.fmt.int(data.deck_cards)}</b>
-        <span class="muted small">cartes analysées, hors terrains de base</span></span>
-    </div>`);
-
-  if (!rows.length) {
-    content.innerHTML = MM.empty({
-      icon: 'box',
-      title: 'Aucun deck similaire connu',
-      text: 'Aucun deck public de ce commandant n’est encore en base : '
-        + 'il n’y a rien à quoi comparer ce deck.',
-      action: { href: `/decks/${encodeURIComponent(deckId)}`, label: 'Ouvrir le deck' },
-    });
-    return;
-  }
-
-  // Une seule echelle pour toutes les lignes : une barre se compare aussi a
-  // celles des autres categories, pas seulement a sa voisine.
-  const max = Math.max(1, ...rows.flatMap((row) => [row.deck, row.similar]));
-  const ranked = rows.filter((row) => !row.always).length;
-
-  // L'index de la ligne dans `rows` sert au clic : il est garde tel quel,
-  // meme une fois les deux groupes separes.
-  const rowHtml = (row, index) => {
-          const below = row.deck < row.similar;
-          return `
-            <button class="gap-row deep-row" type="button" data-row="${index}"
-                    aria-label="Voir les cartes de la catégorie ${MM.esc(row.category)}">
-              <span class="gap-row__label truncate" title="${MM.esc(row.category)}">
-                ${MM.esc(row.category)}</span>
-              <span class="gap-row__track"
-                    title="Votre deck : ${MM.fmt.int(row.deck)} — decks similaires : ${MM.fmt.dec(row.similar, 1)} en moyenne">
-                <span class="gap-row__deck" style="width:${(row.deck / max) * 100}%"></span>
-                <span class="gap-row__tick" style="left:${(row.similar / max) * 100}%"></span>
-              </span>
-              <span class="gap-row__delta">
-                <b class="${below ? 'accent' : ''}">${MM.fmt.int(row.deck)}</b>
-                <span class="dim">/ ${MM.fmt.dec(row.similar, 1)}</span></span>
-            </button>`;
-  };
-
-  content.innerHTML = `
-    <div class="panel deep-panel">
-      <div class="panel__head">
-        <div class="stack-2">
-          <h2 class="h3">Les ${ranked} catégories les plus jouées</h2>
-          <p class="xs dim">Classées selon les decks du même commandant. Pour chacune,
-            le nombre de cartes de votre deck, puis le nombre moyen de cartes par deck
-            chez les autres.</p>
-        </div>
-      </div>
-      <div class="panel__body">
-        ${rows.map((row, index) => (row.always ? '' : rowHtml(row, index))).join('')}
-        <div class="stack-2 deep-panel__always">
-          <h3 class="h4">Interaction</h3>
-          <p class="xs dim">Toujours affichée, quel que soit son rang : la capacité
-            du deck à répondre à ce que jouent les adversaires.</p>
-        </div>
-        ${rows.map((row, index) => (row.always ? rowHtml(row, index) : '')).join('')}
-        <div class="legend" style="margin-top:var(--sp-4)">
-          <span class="legend__item"><b>Barre dorée</b> votre deck</span>
-          <span class="legend__item"><b>Trait blanc</b> moyenne des decks similaires</span>
-          <span class="legend__item"><b class="accent">Chiffre doré</b> moins que la moyenne</span>
-        </div>
-        <p class="xs dim" style="margin-top:var(--sp-3)">
-          Une carte compte dans chaque catégorie qu’elle touche : les totaux dépassent
-          donc le nombre de cartes du deck. Le commandant et les terrains de base ne
-          sont pas comptés. Cliquez sur une catégorie pour en voir les cartes.
-        </p>
-      </div>
-    </div>`;
-
-  /* ── Cartes d'une categorie ─────────────────────────────────────────── */
-
-  // Part des decks similaires qui jouent la carte, au format court des
-  // resultats : la note partage sa ligne avec le prix, une phrase s'y
-  // etalait sur quatre lignes. Sous 1 %, un arrondi a zero laisserait croire
-  // que personne ne la joue.
-  const rateNote = (rate) => {
-    if (!rate) return 'aucun deck';
-    if (rate < 1) return '< 1 % des decks';
-    return `${MM.fmt.int(rate)} % des decks`;
-  };
-
-  // Les cartes du deck sont deja la : ni achat ni vente. Les absentes se
-  // proposent a l'achat. La recherche de commandant n'a rien a faire ici.
-  // Vignettes a la taille de « Ma collection » et des resultats : en format
-  // reduit, illustration et texte de la carte ne se lisaient plus.
-  const tile = (card, resolved, market) => MM.cardTile(
-    { ...(resolved[card.card_name] || {}), card_name: card.card_name },
-    { context: null, note: rateNote(card.rate), market, commander: false });
-
-  const tiles = (cards, resolved, market) => `
-    <div class="card-grid">
-      ${cards.map((card) => tile(card, resolved, market)).join('')}
-    </div>`;
-
-  const EMPTY_DECK = '<p class="muted small">Aucune carte de votre deck dans cette catégorie.</p>';
-  const EMPTY_MISSING = '<p class="muted small">Votre deck contient déjà toutes les cartes'
-    + ' de cette catégorie jouées ailleurs.</p>';
-
-  const headDeck = (row) => `
-    <h3 class="h4">Dans votre deck
-      <span class="badge">${MM.fmt.int(row.cards.length)}</span></h3>
-    <p class="xs dim">De la moins jouée à la plus jouée par les decks du même
-      commandant.</p>`;
-  const headMissing = () => `
-    <h3 class="h4">Jouées ailleurs, absentes de votre deck</h3>
-    <p class="xs dim">Les cartes de cette catégorie les plus jouées par les decks
-      du même commandant, que votre deck ne contient pas.</p>`;
-
-  /** Grand ecran : une grille de six cartes par rangee, trois du deck a
-   *  gauche, trois absentes a droite, placees rangee par rangee. */
-  function sideBySide(row, resolved) {
-    const place = (cards, firstColumn, market) => cards.map((card, i) => `
-      <div style="grid-column:${firstColumn + (i % 3)};grid-row:${2 + Math.floor(i / 3)}">
-        ${tile(card, resolved, market)}</div>`).join('');
-    return `
-      <div class="deep-modal__grid">
-        <div class="stack-2 deep-modal__deck" style="grid-row:1">${headDeck(row)}</div>
-        <div class="stack-2 deep-modal__missing" style="grid-row:1">${headMissing()}</div>
-        ${row.cards.length ? place(row.cards, 1, false)
-          : `<div class="deep-modal__deck" style="grid-row:2">${EMPTY_DECK}</div>`}
-        ${row.missing.length ? place(row.missing, 5, true)
-          : `<div class="deep-modal__missing" style="grid-row:2">${EMPTY_MISSING}</div>`}
-      </div>`;
-  }
-
-  /** Ecran etroit : les deux listes l'une sous l'autre. */
-  function stacked(row, resolved) {
-    return `
-      <div class="stack-6">
-        <section class="stack-2">${headDeck(row)}
-          ${row.cards.length ? tiles(row.cards, resolved, false) : EMPTY_DECK}</section>
-        <section class="stack-2">${headMissing()}
-          ${row.missing.length ? tiles(row.missing, resolved, true) : EMPTY_MISSING}</section>
-      </div>`;
-  }
-
-  const narrow = window.matchMedia('(max-width: 1080px)');
-
-  async function openCategory(row) {
-    // La fenetre peut se fermer avant la fin du chargement des cartes.
-    let closed = false;
-    let stopRender = null;
-    const dialog = MM.modal({
-      title: row.category,
-      wide: 'xl',
-      body: `<div class="card-grid">${MM.cardSkeletons(6)}</div>`,
-      onClose: () => { closed = true; if (stopRender) stopRender(); },
-    });
-    // Elargie au-dela de la fiche carte : voir .deep-modal.
-    dialog.root.querySelector('.modal__box').classList.add('deep-modal');
-
-    let resolved = {};
-    try {
-      resolved = await MM.resolveCards(
-        [...row.cards, ...row.missing].map((card) => card.card_name));
-    } catch { /* les vignettes s'affichent sans image plutot que pas du tout */ }
-
-    // La disposition suit la largeur, y compris si la fenetre du navigateur
-    // change de taille pendant que la fenetre est ouverte.
-    const render = () => {
-      dialog.body.innerHTML = narrow.matches
-        ? stacked(row, resolved) : sideBySide(row, resolved);
-    };
-    render();
-    if (!closed) {
-      narrow.addEventListener('change', render);
-      stopRender = () => narrow.removeEventListener('change', render);
-    }
-  }
-
-  content.addEventListener('click', (event) => {
-    const button = event.target.closest('[data-row]');
-    if (button) openCategory(rows[Number(button.dataset.row)]);
+  await MM.deepAnalysis(content, {
+    deckId,
+    commander: deckInfo.commander || null,
+    onData: (data) => renderHero(data.deck, `
+      <div class="hero__stats">
+        <span class="hero__stat"><b>${MM.fmt.int(data.decks)}</b>
+          <span class="muted small">${data.decks > 1 ? 'decks similaires' : 'deck similaire'}</span></span>
+        <span class="hero__stat"><b>${MM.fmt.int(data.deck_cards)}</b>
+          <span class="muted small">cartes analysées, hors terrains de base</span></span>
+      </div>`),
   });
 })();
 </script>
