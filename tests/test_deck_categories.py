@@ -1,6 +1,12 @@
 """Tests de l'analyse poussée : catégories de tags et comparaison aux decks similaires."""
 
-from manamind.deck_categories import CATEGORIES, categorize, is_basic_land, summarize
+from manamind.deck_categories import (
+    CATEGORIES,
+    card_categories,
+    categorize,
+    is_basic_land,
+    summarize,
+)
 
 
 def test_terrains_de_base_reconnus():
@@ -55,6 +61,19 @@ def test_faux_amis_ecartes():
     assert categorize("coin flip") == "Hasard, dés et pièces"
     assert categorize("hate-graveyard") == "Anti-stratégies (hate)"
     assert categorize("fetchable") == "Terrains et synergies de terrain"
+
+
+def test_destruction_ciblee_sans_faux_positifs():
+    # Koma : « saboteur » est un déclencheur de combat, pas une destruction.
+    koma = ["saboteur", "repeatable creature tokens", "rhystic"]
+    assert "Destruction ciblée" not in card_categories(koma)
+    assert "Évasion et combat" in card_categories(koma)
+    # Extinction Event : un balai, compté en masse et pas en ciblée.
+    extinction = ["removal-creature", "removal-exile", "sweeper-one-sided"]
+    assert card_categories(extinction) >= {"Destruction de masse"}
+    assert "Destruction ciblée" not in card_categories(extinction)
+    # Swords to Plowshares reste une destruction ciblée.
+    assert "Destruction ciblée" in card_categories(["spot removal", "removal-exile"])
 
 
 def test_resume_classe_selon_les_decks_similaires():

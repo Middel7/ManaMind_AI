@@ -102,9 +102,12 @@ _RULES = [
     ("Destruction de masse", r"sweeper|wrath|mass removal|multi removal"
         r"|board wipe|^mass(?! reanimation)"),
     ("Bounce et renvoi en main", r"bounce|tuck"),
-    ("Destruction ciblée", r"doom blade|banish|abrade|disintegrate|pacifism|o-ring"
-        r"|death-to-exile|frost armor|shrink|removal|disenchant"
-        r"|naturalize|saboteur|swap removal|deanimate"),
+    # Sans « deanimate self » (la carte cesse elle-même d'être une créature),
+    # « type removal » (retire un type) ni l'exil depuis la main ou le cimetière.
+    ("Destruction ciblée", r"doom blade|banish(?!-graveyard|-hand)|abrade"
+        r"|disintegrate|pacifism|o-ring|death-to-exile|frost armor|shrink"
+        r"|(?<!type )removal|disenchant|naturalize|swap removal"
+        r"|deanimate(?! self)"),
     ("Dégâts directs", r"burn|pinger|damage(?! prevention)|fight|bite"),
     ("Perte de vie et drain", r"poison|afflict|set life total|life divider"
         r"|deal with the devil|loses life|life loss|drain|blood artist"
@@ -121,7 +124,9 @@ _RULES = [
     ("Capacités conférées", r"^gives|^gains|grants|keyword"),
     ("Protection", r"protect|hexproof|indestructible|shroud|ward|regenerat|fog"
         r"|prevent|phasing|phase out"),
-    ("Évasion et combat", r"ninjutsu|exalted|raid|battalion|battle cry|enrage"
+    # « saboteur » : un effet quand la créature blesse un joueur au combat —
+    # rangé un temps en destruction, il y faisait entrer Koma, World-Eater.
+    ("Évasion et combat", r"saboteur|ninjutsu|exalted|raid|battalion|battle cry|enrage"
         r"|skulk|lure|marauder|daunt|stalking|provoke|outnumber|evasion"
         r"|unblockable|attack|combat|block|trample|menace|flying|strike"
         r"|vigilance|haste|landwalk|reach|deathtouch|defender|ninja|goad"),
@@ -193,8 +198,16 @@ def categorize(tag: str) -> str | None:
 
 
 def card_categories(tags: list[str]) -> set[str]:
-    """Les catégories que touche une carte, chacune une seule fois."""
-    return {cat for cat in map(categorize, tags) if cat}
+    """Les catégories que touche une carte, chacune une seule fois.
+
+    Les tags « removal-* » désignent tout retrait, ciblé ou non : un balai
+    comme Extinction Event les porte aussi. Une carte de destruction de masse
+    ne compte donc pas en destruction ciblée.
+    """
+    cats = {cat for cat in map(categorize, tags) if cat}
+    if "Destruction de masse" in cats:
+        cats.discard("Destruction ciblée")
+    return cats
 
 
 def summarize(
