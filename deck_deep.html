@@ -123,7 +123,7 @@
       <span class="hero__stat"><b>${MM.fmt.int(data.decks)}</b>
         <span class="muted small">${data.decks > 1 ? 'decks similaires' : 'deck similaire'}</span></span>
       <span class="hero__stat"><b>${MM.fmt.int(data.deck_cards)}</b>
-        <span class="muted small">cartes analysées</span></span>
+        <span class="muted small">cartes analysées, hors terrains de base</span></span>
     </div>`);
 
   if (!rows.length) {
@@ -175,7 +175,8 @@
         </div>
         <p class="xs dim" style="margin-top:var(--sp-3)">
           Une carte compte dans chaque catégorie qu’elle touche : les totaux dépassent
-          donc le nombre de cartes du deck. Le commandant n’est pas compté.
+          donc le nombre de cartes du deck. Le commandant et les terrains de base ne
+          sont pas comptés.
         </p>
       </div>
     </div>`;

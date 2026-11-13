@@ -1,6 +1,13 @@
 """Tests de l'analyse poussée : catégories de tags et comparaison aux decks similaires."""
 
-from manamind.deck_categories import CATEGORIES, categorize, summarize
+from manamind.deck_categories import CATEGORIES, categorize, is_basic_land, summarize
+
+
+def test_terrains_de_base_reconnus():
+    for name in ("Forest", "island", " Snow-Covered Swamp ", "Wastes"):
+        assert is_basic_land(name), name
+    for name in ("Breeding Pool", "Forest Bear", "Command Tower"):
+        assert not is_basic_land(name), name
 
 
 def test_cinquante_categories_distinctes():

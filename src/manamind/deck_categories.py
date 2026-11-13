@@ -12,8 +12,9 @@ n'entrent dans aucune catégorie.
 L'analyse poussée compare un deck aux decks publics du même commandant : pour
 chaque catégorie, le nombre de cartes du deck et le nombre moyen de cartes par
 deck chez les autres. Une carte compte une fois dans chaque catégorie qu'elle
-touche, quel que soit le nombre de ses tags dans cette catégorie, et autant de
-fois qu'elle a d'exemplaires — trente Îles pèsent trente cartes.
+touche, quel que soit le nombre de ses tags dans cette catégorie. Les terrains
+de base sont écartés des deux côtés : les statistiques des decks similaires ne
+disent pas en combien d'exemplaires ils sont joués.
 """
 
 from __future__ import annotations
@@ -251,17 +252,28 @@ FROM matched m
 JOIN scryfall_card_tags t ON t.card_id = m.id
 """
 
+# Les statistiques par commandant, et non les listes de `deck_cards` : le
+# serveur ne reçoit que ces agrégats, `deck_cards` y est vide. Elles disent
+# combien de decks jouent chaque carte, pas en combien d'exemplaires — d'où
+# l'exclusion des terrains de base, seules cartes jouées par dizaines.
 _POPULATION_SQL = """
-SELECT card_name, SUM(COALESCE(quantity, 1)) AS qty
-FROM deck_cards
-WHERE commander = :cmd AND is_commander = false
-  -- Quelques decks publics listent leur commandant parmi les autres cartes :
-  -- le drapeau ne suffit pas à l'écarter.
+SELECT card_name, decks_with_card, total_decks
+FROM deck_stat_commander
+WHERE commander = :cmd
+  -- Le commandant figure parfois parmi les cartes de ses propres decks.
   AND lower(btrim(card_name)) <> ALL(CAST(:cmd_keys AS TEXT[]))
-GROUP BY card_name
 """
 
-_TOTAL_SQL = "SELECT COUNT(DISTINCT deck_id) FROM deck_cards WHERE commander = :cmd"
+_BASIC_LANDS = {
+    name.lower()
+    for base in ("Plains", "Island", "Swamp", "Mountain", "Forest")
+    for name in (base, f"Snow-Covered {base}")
+} | {"wastes", "snow-covered wastes"}
+
+
+def is_basic_land(name: str) -> bool:
+    """Terrain de base : écarté des deux côtés de la comparaison."""
+    return (name or "").strip().lower() in _BASIC_LANDS
 
 
 def card_tags(session: Session, names: list[str]) -> dict[str, list[str]]:
@@ -277,25 +289,24 @@ def card_tags(session: Session, names: list[str]) -> dict[str, list[str]]:
 def population(session: Session, commander: str) -> tuple[dict[str, float], int]:
     """Les cartes des decks publics de ce commandant, et le nombre de ces decks."""
     params = {"cmd": commander, "cmd_keys": sorted(commander_keys(commander))}
-    total = session.execute(text(_TOTAL_SQL), params).scalar() or 0
-    if not total:
-        return {}, 0
-    cards = {
-        row.card_name: float(row.qty)
-        for row in session.execute(text(_POPULATION_SQL), params)
-    }
-    return cards, int(total)
+    cards: dict[str, float] = {}
+    total = 0
+    for row in session.execute(text(_POPULATION_SQL), params):
+        total = max(total, int(row.total_decks or 0))
+        if not is_basic_land(row.card_name):
+            cards[row.card_name] = float(row.decks_with_card or 0)
+    return cards, total
 
 
 def analyze(session: Session, commander: str, deck_cards: list[tuple[str, int]]) -> dict:
     """L'analyse poussée d'un deck : ses cartes par catégorie, face aux autres.
 
-    `deck_cards` est la liste (nom, quantité) du deck ; les commandants en sont
-    écartés ici, comme ils le sont des decks similaires.
+    `deck_cards` est la liste (nom, quantité) du deck ; les commandants et les
+    terrains de base en sont écartés ici, comme ils le sont des decks similaires.
     """
     deck: dict[str, int] = {}
     for name, qty in deck_cards:
-        if is_commander(commander, name):
+        if is_commander(commander, name) or is_basic_land(name):
             continue
         deck[name] = deck.get(name, 0) + int(qty or 0)
 
