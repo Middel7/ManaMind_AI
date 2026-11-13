@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<title>ManaMind — Analyse poussée</title>
+<title>ManaMind — Analyse du deck</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#08080C">
 <meta name="mobile-web-app-capable" content="yes">
@@ -47,7 +47,7 @@
    les resultats d'analyse, elle s'ouvre desormais dans leur troisieme onglet.
    Le rendu vient de deep.js, commun aux deux. */
 (async () => {
-  const user = await MM.boot({ title: 'Analyse poussée', nav: 'analyze' });
+  const user = await MM.boot({ title: 'Analyse du deck', nav: 'analyze' });
   if (!user) return;
 
   const deckId = new URLSearchParams(location.search).get('deck');
@@ -68,7 +68,7 @@
 
   function renderHero(deck, stats) {
     const art = deckInfo.scryfall_id ? MM.scryfallArt(deckInfo.scryfall_id) : null;
-    const eyebrow = MM.deckEyebrow(deck.commander, deck.name) || 'Analyse poussée';
+    const eyebrow = MM.deckEyebrow(deck.commander, deck.name) || 'Analyse';
     MM.el('#hero').innerHTML = `
       ${art ? `<div class="hero__art" style="background-image:url('${MM.esc(art)}')"></div>` : ''}
       <div class="hero__body">
@@ -94,7 +94,7 @@
     content.innerHTML = MM.empty({
       icon: 'warning',
       title: 'Aucun deck à analyser',
-      text: 'L’analyse poussée s’ouvre depuis les résultats d’une analyse de deck.',
+      text: 'Cette page s’ouvre depuis les résultats d’une analyse de deck.',
       action: { href: '/decks/analyse', label: 'Analyser un deck' },
     });
     return;

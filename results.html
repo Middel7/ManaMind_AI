@@ -243,10 +243,12 @@
 
   // L'onglet ouvert se lit dans l'adresse : un rechargement y ramene, et le
   // retour du navigateur ne fait pas quitter les resultats.
+  // L'analyse vient en premier, et s'ouvre d'emblee : elle dit ce que fait le
+  // deck avant que l'on choisisse quoi y ajouter ou en retirer.
   const TABS = [
+    { id: 'deep', hash: 'analyse', label: 'Analyse', short: 'Analyse' },
     { id: 'add', hash: 'ajouter', label: 'Cartes à ajouter', short: 'À ajouter' },
     { id: 'cut', hash: 'retirer', label: 'Cartes à retirer', short: 'À retirer' },
-    { id: 'deep', hash: 'poussee', label: 'Analyse poussée', short: 'Analyse' },
   ];
 
   /**
@@ -295,8 +297,7 @@
       const hash = TABS.find((tab) => tab.id === id).hash;
       history.replaceState(null, '', `${location.pathname}${location.search}#${hash}`);
 
-      // L'analyse poussee ne se calcule qu'a la premiere ouverture : la
-      // plupart des visites s'en tiennent aux cartes a ajouter.
+      // L'analyse ne se calcule qu'une fois, a sa premiere ouverture.
       if (id === 'deep' && !deep && deckInfo.deck_id) {
         deep = { setDeckCards() {} };   // garde contre un double chargement
         MM.deepAnalysis(MM.el('#panel-deep'), {
@@ -310,7 +311,7 @@
         });
       } else if (id === 'deep' && !deckInfo.deck_id) {
         MM.el('#panel-deep').innerHTML = deepBefore + MM.empty({
-          icon: 'box', title: 'Analyse poussée indisponible',
+          icon: 'box', title: 'Analyse indisponible',
           text: 'Elle porte sur un deck enregistré : relancez l’analyse depuis l’un de vos decks.',
           action: { href: '/decks/analyse', label: 'Analyser un deck' },
         });
@@ -333,8 +334,10 @@
       event.preventDefault();
     });
 
-    const fromHash = TABS.find((tab) => `#${tab.hash}` === location.hash);
-    show(fromHash ? fromHash.id : 'add');
+    // « #poussee » : l'ancien nom de l'onglet Analyse, encore dans des liens.
+    const hash = location.hash === '#poussee' ? '#analyse' : location.hash;
+    const fromHash = TABS.find((tab) => `#${tab.hash}` === hash);
+    show(fromHash ? fromHash.id : 'deep');
   }
 
   /* Cette page n'affiche que le resultat de la derniere analyse : arriver ici
