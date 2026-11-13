@@ -310,8 +310,16 @@ _STALE_QUERIES: dict[str, str] = {
             SELECT commander, COUNT(DISTINCT deck_id) AS cnt
             FROM deck_cards WHERE commander IS NOT NULL GROUP BY commander
         ) d ON d.commander = c.name
-        ORDER BY c.last_scraped_at ASC NULLS FIRST,
+        -- Un commandant que Moxfield ne trouve pas reste à 0 deck : sans ce
+        -- délai, il repasserait en tête à chaque lancement.
+        WHERE c.last_scraped_at IS NULL
+           OR c.last_scraped_at < now() - interval '7 days'
+        -- Seule l'absence de scrape passe avant le nombre de decks. Trier sur
+        -- la date elle-même la faisait primer : deux dates ne se départagent
+        -- presque jamais, et ce mode rejouait « pas récemment scrapés ».
+        ORDER BY (c.last_scraped_at IS NULL) DESC,
                  COALESCE(d.cnt, 0) ASC,
+                 c.last_scraped_at ASC,
                  c.rank ASC NULLS LAST
         LIMIT :n
     """,
