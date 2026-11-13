@@ -66,20 +66,24 @@
      voir l'autre ; cote a cote, sur presque toute la largeur de l'ecran, elles
      se comparent d'un regard, trois cartes par rangee chacune. */
   .modal__box.deep-modal { width: min(1840px, 100%); }
-  .deep-modal__cols {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--sp-6);
-    align-items: start;
-  }
-  .deep-modal__cols > * { min-width: 0; }
-  .deep-modal .card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
-  /* Sous 1080 px, deux colonnes de trois cartes ecraseraient les vignettes :
-     les listes s'empilent de nouveau. */
-  @media (max-width: 1080px) {
-    .deep-modal__cols { grid-template-columns: minmax(0, 1fr); }
+  /* Une seule grille pour les deux listes, et non deux grilles voisines :
+     chacune calculait la hauteur de ses rangees, et les boutons d'achat des
+     cartes absentes decalaient la colonne de droite d'une rangee a l'autre.
+     Ici, une rangee prend la hauteur de sa plus grande carte des deux cotes.
+     La piste centrale, vide, ajoute ses deux gouttieres entre les listes. */
+  .deep-modal__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) 0 repeat(3, minmax(0, 1fr));
+    gap: var(--sp-4);
   }
+  .deep-modal__grid > * { min-width: 0; }
+  .deep-modal__deck { grid-column: 1 / 4; }
+  .deep-modal__missing { grid-column: 5 / 8; }
+
+  /* Sous 1080 px, six cartes par rangee ecraseraient les vignettes : les
+     listes s'empilent, chacune dans sa grille de trois. */
+  .deep-modal .card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   /* Au telephone, trois cartes par rangee ne laissaient plus lire le nom. */
   @media (max-width: 720px) {
     .deep-modal .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -265,18 +269,68 @@
   // proposent a l'achat. La recherche de commandant n'a rien a faire ici.
   // Vignettes a la taille de « Ma collection » et des resultats : en format
   // reduit, illustration et texte de la carte ne se lisaient plus.
+  const tile = (card, resolved, market) => MM.cardTile(
+    { ...(resolved[card.card_name] || {}), card_name: card.card_name },
+    { context: null, note: rateNote(card.rate), market, commander: false });
+
   const tiles = (cards, resolved, market) => `
     <div class="card-grid">
-      ${cards.map((card) => MM.cardTile(
-        { ...(resolved[card.card_name] || {}), card_name: card.card_name },
-        { context: null, note: rateNote(card.rate), market, commander: false })).join('')}
+      ${cards.map((card) => tile(card, resolved, market)).join('')}
     </div>`;
 
+  const EMPTY_DECK = '<p class="muted small">Aucune carte de votre deck dans cette catégorie.</p>';
+  const EMPTY_MISSING = '<p class="muted small">Votre deck contient déjà toutes les cartes'
+    + ' de cette catégorie jouées ailleurs.</p>';
+
+  const headDeck = (row) => `
+    <h3 class="h4">Dans votre deck
+      <span class="badge">${MM.fmt.int(row.cards.length)}</span></h3>
+    <p class="xs dim">De la moins jouée à la plus jouée par les decks du même
+      commandant.</p>`;
+  const headMissing = () => `
+    <h3 class="h4">Jouées ailleurs, absentes de votre deck</h3>
+    <p class="xs dim">Les cartes de cette catégorie les plus jouées par les decks
+      du même commandant, que votre deck ne contient pas.</p>`;
+
+  /** Grand ecran : une grille de six cartes par rangee, trois du deck a
+   *  gauche, trois absentes a droite, placees rangee par rangee. */
+  function sideBySide(row, resolved) {
+    const place = (cards, firstColumn, market) => cards.map((card, i) => `
+      <div style="grid-column:${firstColumn + (i % 3)};grid-row:${2 + Math.floor(i / 3)}">
+        ${tile(card, resolved, market)}</div>`).join('');
+    return `
+      <div class="deep-modal__grid">
+        <div class="stack-2 deep-modal__deck" style="grid-row:1">${headDeck(row)}</div>
+        <div class="stack-2 deep-modal__missing" style="grid-row:1">${headMissing()}</div>
+        ${row.cards.length ? place(row.cards, 1, false)
+          : `<div class="deep-modal__deck" style="grid-row:2">${EMPTY_DECK}</div>`}
+        ${row.missing.length ? place(row.missing, 5, true)
+          : `<div class="deep-modal__missing" style="grid-row:2">${EMPTY_MISSING}</div>`}
+      </div>`;
+  }
+
+  /** Ecran etroit : les deux listes l'une sous l'autre. */
+  function stacked(row, resolved) {
+    return `
+      <div class="stack-6">
+        <section class="stack-2">${headDeck(row)}
+          ${row.cards.length ? tiles(row.cards, resolved, false) : EMPTY_DECK}</section>
+        <section class="stack-2">${headMissing()}
+          ${row.missing.length ? tiles(row.missing, resolved, true) : EMPTY_MISSING}</section>
+      </div>`;
+  }
+
+  const narrow = window.matchMedia('(max-width: 1080px)');
+
   async function openCategory(row) {
+    // La fenetre peut se fermer avant la fin du chargement des cartes.
+    let closed = false;
+    let stopRender = null;
     const dialog = MM.modal({
       title: row.category,
       wide: 'xl',
       body: `<div class="card-grid">${MM.cardSkeletons(6)}</div>`,
+      onClose: () => { closed = true; if (stopRender) stopRender(); },
     });
     // Elargie au-dela de la fiche carte : voir .deep-modal.
     dialog.root.querySelector('.modal__box').classList.add('deep-modal');
@@ -287,24 +341,17 @@
         [...row.cards, ...row.missing].map((card) => card.card_name));
     } catch { /* les vignettes s'affichent sans image plutot que pas du tout */ }
 
-    dialog.body.innerHTML = `
-      <div class="deep-modal__cols">
-        <section class="stack-2">
-          <h3 class="h4">Dans votre deck
-            <span class="badge">${MM.fmt.int(row.cards.length)}</span></h3>
-          <p class="xs dim">De la moins jouée à la plus jouée par les decks du même
-            commandant.</p>
-          ${row.cards.length ? tiles(row.cards, resolved, false)
-            : '<p class="muted small">Aucune carte de votre deck dans cette catégorie.</p>'}
-        </section>
-        <section class="stack-2">
-          <h3 class="h4">Jouées ailleurs, absentes de votre deck</h3>
-          <p class="xs dim">Les cartes de cette catégorie les plus jouées par les decks
-            du même commandant, que votre deck ne contient pas.</p>
-          ${row.missing.length ? tiles(row.missing, resolved, true)
-            : '<p class="muted small">Votre deck contient déjà toutes les cartes de cette catégorie jouées ailleurs.</p>'}
-        </section>
-      </div>`;
+    // La disposition suit la largeur, y compris si la fenetre du navigateur
+    // change de taille pendant que la fenetre est ouverte.
+    const render = () => {
+      dialog.body.innerHTML = narrow.matches
+        ? stacked(row, resolved) : sideBySide(row, resolved);
+    };
+    render();
+    if (!closed) {
+      narrow.addEventListener('change', render);
+      stopRender = () => narrow.removeEventListener('change', render);
+    }
   }
 
   content.addEventListener('click', (event) => {
