@@ -116,6 +116,13 @@
   let deckInfo = {};
   try { deckInfo = JSON.parse(sessionStorage.getItem('mm_analysis_deck')) || {}; } catch {}
 
+  /** Retient l'adresse des resultats affiches : l'analyse poussee y ramene
+   *  par son bouton de retour. Appelee seulement quand il y a un resultat. */
+  function rememberResults() {
+    try { sessionStorage.setItem('mm_analysis_url', location.pathname + location.search); }
+    catch { /* le bouton de retour ne s'affichera pas, rien d'autre */ }
+  }
+
   function renderHero(subtitle, stats) {
     const art = deckInfo.scryfall_id ? MM.scryfallArt(deckInfo.scryfall_id) : null;
     MM.el('#hero').innerHTML = `
@@ -252,6 +259,7 @@
       result = JSON.parse(sessionStorage.getItem('deckMentorResult'));
     } catch { result = null; }
     if (!result) return fail("Les résultats n'ont pas été trouvés. Relancez l'analyse.");
+    rememberResults();
 
     const score = Math.round((result.deck_score || 0) * 100);
     const coherence = Math.round((result.coherence || 0) * 100);
@@ -433,6 +441,7 @@
   } catch (err) {
     return fail(err.message);
   }
+  rememberResults();
 
   /** Le script de recommandation produit un CSV Section,Card Name,Score,Support,… */
   function parseCsv(text) {
