@@ -86,6 +86,28 @@
   /* Deux boutons tiennent cote a cote : empiles (le defaut de .hero__split),
      ils rehaussaient le bandeau que l'on veut fin. */
   .results-hero .hero__split .hero__actions { flex-direction: row; flex-wrap: wrap; }
+
+  /* Onglets a gauche, filtres a droite sur la meme ligne : une rangee de
+     moins entre le bandeau et les cartes. La ligne de base court sous les
+     deux ; le soulignement de l'onglet actif vient la recouvrir. */
+  .results-tabbar {
+    display: flex; align-items: flex-end; gap: var(--sp-4);
+    border-bottom: 1px solid var(--line);
+  }
+  .results-tabbar .view-tabs { border-bottom: 0; flex: 0 0 auto; }
+  .results-tabbar__filters {
+    margin-left: auto;
+    display: flex; flex-wrap: wrap; justify-content: flex-end;
+    gap: var(--sp-2) var(--sp-3);
+    padding-bottom: var(--sp-2);
+  }
+  /* Sous 1400 px, onglets et filtres ne tiennent plus ensemble : les filtres
+     passent sous la ligne des onglets, qui reprend sa propre bordure. */
+  @media (max-width: 1400px) {
+    .results-tabbar { flex-direction: column; align-items: stretch; gap: var(--sp-3); border-bottom: 0; }
+    .results-tabbar .view-tabs { border-bottom: 1px solid var(--line); }
+    .results-tabbar__filters { margin-left: 0; justify-content: flex-start; padding-bottom: 0; }
+  }
 </style>
 </head>
 <body>
@@ -126,7 +148,7 @@
 
   /* ── Bandeau ───────────────────────────────────────────────────────────── */
 
-  function renderHero(subtitle) {
+  function renderHero(subtitle, { edit = true } = {}) {
     const art = deckInfo.scryfall_id ? MM.scryfallArt(deckInfo.scryfall_id) : null;
     const eyebrow = MM.deckEyebrow(deckInfo.commander, deckInfo.name)
       || (deckInfo.commander ? '' : 'Analyse');
@@ -147,6 +169,9 @@
             ${deckInfo.deck_id
               ? `<a class="btn btn--sm" href="/decks/${encodeURIComponent(deckInfo.deck_id)}">
                    Ouvrir le deck</a>` : ''}
+            ${edit && canEdit ? `
+              <button class="btn btn--primary btn--sm" id="addCard" type="button">
+                Ajouter ou retirer une carte</button>` : ''}
             <a class="btn btn--sm btn--ghost" href="/decks/analyse">Nouvelle analyse</a>
           </div>
         </div>
@@ -228,18 +253,15 @@
    * Monte les trois onglets dans #content.
    * @param {object} o
    *   counts   {add, cut}  chiffres portes par les deux premiers onglets
-   *   toolbar  {string}    filtres propres aux onglets de cartes (HTML)
+   *   filters  {string}    filtres propres aux onglets de cartes (HTML), poses
+   *                        sur la ligne des onglets
    *   deepBefore {string}  HTML pose en tete de l'analyse poussee
    *   onTab    {(id)=>void} appele a chaque changement d'onglet
    */
-  function mountTabs({ counts, toolbar = '', deepBefore = '', onTab = () => {} }) {
-    const editButton = canEdit ? `
-      <button class="btn btn--primary btn--sm" id="addCard" type="button">
-        Ajouter ou retirer une carte</button>` : '';
-    const hasToolbar = Boolean(editButton || toolbar);
-
+  function mountTabs({ counts, filters = '', deepBefore = '', onTab = () => {} }) {
     content.innerHTML = `
       <div class="stack-4">
+        <div class="results-tabbar">
         <div class="view-tabs" role="tablist" aria-label="Résultats de l’analyse">
           ${TABS.map((tab) => `
             <button class="view-tab" role="tab" type="button" id="tab-${tab.id}"
@@ -252,12 +274,8 @@
                 : ''}
             </button>`).join('')}
         </div>
-        ${hasToolbar ? `
-          <div class="toolbar results-toolbar" id="toolbar">
-            ${editButton}
-            <div class="toolbar__spacer"></div>
-            ${toolbar}
-          </div>` : ''}
+        ${filters ? `<div class="results-tabbar__filters" id="filters">${filters}</div>` : ''}
+        </div>
         ${TABS.map((tab) => `
           <div role="tabpanel" id="panel-${tab.id}" aria-labelledby="tab-${tab.id}" hidden></div>`).join('')}
       </div>`;
@@ -273,7 +291,7 @@
         if (selected && focus) button.focus();
         MM.el(`#panel-${tab.id}`).hidden = !selected;
       });
-      if (hasToolbar) MM.el('#toolbar').hidden = id === 'deep';
+      if (filters) MM.el('#filters').hidden = id === 'deep';
       const hash = TABS.find((tab) => tab.id === id).hash;
       history.replaceState(null, '', `${location.pathname}${location.search}#${hash}`);
 
@@ -325,7 +343,7 @@
   function fail(message) {
     // Sans deck connu, le bandeau n'a ni illustration ni titre a porter : il ne
     // ferait qu'un grand rectangle vide au-dessus du message.
-    if (deckInfo.deck_id) renderHero('Analyse indisponible');
+    if (deckInfo.deck_id) renderHero('Analyse indisponible', { edit: false });
     else MM.el('#hero').hidden = true;
     content.innerHTML = `
       <div class="intro">
@@ -654,7 +672,7 @@
 
   mountTabs({
     counts: { add: Math.min(ADD_SHOWN, additions.length), cut: removals.length },
-    toolbar: `
+    filters: `
       <div class="chips" id="priceFilter">
         ${CAPS.map((cap) => `
           <button class="chip" data-cap="${cap === null ? '' : cap}"

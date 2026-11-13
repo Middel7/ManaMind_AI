@@ -1127,7 +1127,10 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
 .mtg-card__price { margin-left: auto; flex-shrink: 0; color: var(--text-2); font-variant-numeric: tabular-nums; }
 
 /* Vendre / acheter, sous la vignette */
-.mtg-card__market { display: flex; gap: 4px; margin-top: 6px; }
+/* Passe a la ligne quand la vignette est etroite : a 860 px, « Acheter » et
+   « Ajouter a ma buylist » cote a cote debordaient de la derniere carte de la
+   rangee, et la page entiere defilait a l'horizontale. */
+.mtg-card__market { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
 .mtg-card__market .btn { flex: 1; padding: 5px 6px; justify-content: center; }
 
 /* Actions au survol */
