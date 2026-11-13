@@ -230,8 +230,10 @@
 
   // Les cartes du deck sont deja la : ni achat ni vente. Les absentes se
   // proposent a l'achat. La recherche de commandant n'a rien a faire ici.
+  // Vignettes a la taille de « Ma collection » et des resultats : en format
+  // reduit, illustration et texte de la carte ne se lisaient plus.
   const tiles = (cards, resolved, market) => `
-    <div class="card-grid card-grid--sm">
+    <div class="card-grid">
       ${cards.map((card) => MM.cardTile(
         { ...(resolved[card.card_name] || {}), card_name: card.card_name },
         { context: null, note: rateNote(card.rate), market, commander: false })).join('')}
@@ -240,8 +242,10 @@
   async function openCategory(row) {
     const dialog = MM.modal({
       title: row.category,
-      wide: true,
-      body: `<div class="card-grid card-grid--sm">${MM.cardSkeletons(6)}</div>`,
+      // La grande fenetre de la fiche carte : a 920 px, les vignettes pleine
+      // taille ne tenaient qu'a trois par rangee.
+      wide: 'xl',
+      body: `<div class="card-grid">${MM.cardSkeletons(5)}</div>`,
     });
 
     let resolved = {};
