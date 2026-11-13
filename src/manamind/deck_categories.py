@@ -25,7 +25,7 @@ from functools import lru_cache
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from manamind.commanders import commander_keys, is_commander
+from manamind.commanders import commander_keys, is_commander, split_commanders
 
 # Nombre de catégories montrées par l'analyse poussée.
 TOP = 15
@@ -352,6 +352,124 @@ def population(session: Session, commander: str) -> tuple[dict[str, float], int]
     return cards, total
 
 
+# Coût et type de chaque carte nommée, pour la courbe : même rapprochement que
+# les tags, puis une seule fiche par nom — la carte jouable plutôt qu'un jeton
+# ou une carte d'art du même nom.
+_PROFILE_SQL = """
+WITH names AS (SELECT DISTINCT unnest(CAST(:names AS TEXT[])) AS n),
+keyed AS (SELECT n, mm_normalize_name(n) AS k FROM names),
+fronts AS (
+    SELECT id, split_part(normalized_name, ' // ', 1) AS f
+    FROM scryfall_cards
+    WHERE normalized_name LIKE '%% // %%'
+),
+matched AS (
+    SELECT k.n, c.id, 0 AS rank
+    FROM keyed k JOIN scryfall_cards c ON c.normalized_name = k.k
+    UNION
+    SELECT k.n, f.id, 1 AS rank
+    FROM keyed k JOIN fronts f ON f.f = k.k
+)
+SELECT DISTINCT ON (m.n) m.n AS card_name, c.mana_value, c.type_line
+FROM matched m
+JOIN scryfall_cards c ON c.id = m.id
+ORDER BY m.n, m.rank,
+         (c.type_line ILIKE '%%Token%%' OR c.type_line LIKE 'Card%%'),
+         c.id
+"""
+
+# Barres de la courbe, comme dans les pages : coûts 0 à 6, puis 7 et plus.
+BUCKETS = 8
+
+
+def card_profiles(session: Session, names: list[str]) -> dict[str, tuple[float | None, str]]:
+    """Coût de mana et ligne de type de chaque carte ; absente si inconnue."""
+    if not names:
+        return {}
+    return {
+        row.card_name: (
+            float(row.mana_value) if row.mana_value is not None else None,
+            row.type_line or "",
+        )
+        for row in session.execute(text(_PROFILE_SQL), {"names": sorted(set(names))})
+    }
+
+
+def is_land(type_line: str) -> bool:
+    """Terrain d'emblée : la face avant le dit, comme dans le compte des pages.
+
+    Un sort dont seul le verso est un terrain reste un sort.
+    """
+    return "land" in (type_line or "").split("//")[0].lower()
+
+
+def bucket_of(mana_value: float) -> int:
+    """La barre de la courbe où tombe un coût : 7 et plus partagent la dernière."""
+    return min(BUCKETS - 1, int(mana_value))
+
+
+def curve_rows(
+    deck: dict[str, int],
+    population: dict[str, float],
+    total_decks: int,
+    profiles: dict[str, tuple[float | None, str]],
+) -> list[dict]:
+    """Pour chaque coût de la courbe, les sorts du deck et ceux qui lui manquent.
+
+    Même lecture que les catégories : les cartes du deck de la moins jouée
+    ailleurs à la plus jouée, puis les sorts de ce coût les plus joués par les
+    decks similaires et absents du deck. Les terrains, hors de la courbe, n'y
+    figurent pas ; une carte au coût inconnu non plus.
+    """
+    def spell_bucket(name: str) -> int | None:
+        mana_value, type_line = profiles.get(name, (None, ""))
+        if mana_value is None or is_land(type_line):
+            return None
+        return bucket_of(mana_value)
+
+    rate_by_key = {
+        _key(name): (count * 100 / total_decks if total_decks else 0.0)
+        for name, count in population.items()
+    }
+    deck_keys = {_key(name) for name in deck}
+
+    rows = []
+    for bucket in range(BUCKETS):
+        cards = sorted(
+            ({"card_name": name, "rate": round(rate_by_key.get(_key(name), 0.0), 1)}
+             for name in deck if spell_bucket(name) == bucket),
+            key=lambda card: (card["rate"], card["card_name"]))
+        missing = sorted(
+            ({"card_name": name, "rate": round(rate_by_key[_key(name)], 1)}
+             for name in population
+             if spell_bucket(name) == bucket and _key(name) not in deck_keys),
+            key=lambda card: (-card["rate"], card["card_name"]))[:MISSING]
+        rows.append({"bucket": bucket, "cards": cards, "missing": missing})
+    return rows
+
+
+def lands_average(
+    population: dict[str, float],
+    total_decks: int,
+    profiles: dict[str, tuple[float | None, str]],
+    commanders: int = 1,
+) -> float | None:
+    """Nombre moyen de terrains d'un deck similaire, estimé.
+
+    Les statistiques ne disent pas combien de terrains de base joue chaque
+    deck. Mais hors terrains de base, un deck Commander ne joue chaque carte
+    qu'en un exemplaire : ce qui n'est pas un sort, sur les 100 cartes moins le
+    ou les commandants, est un terrain.
+    """
+    if total_decks <= 0:
+        return None
+    spells = sum(
+        count for name, count in population.items()
+        if not is_land(profiles.get(name, (None, ""))[1])
+    ) / total_decks
+    return round(max(0.0, 100 - commanders - spells), 1)
+
+
 def analyze(session: Session, commander: str, deck_cards: list[tuple[str, int]]) -> dict:
     """L'analyse poussée d'un deck : ses cartes par catégorie, face aux autres.
 
@@ -365,9 +483,14 @@ def analyze(session: Session, commander: str, deck_cards: list[tuple[str, int]])
         deck[name] = deck.get(name, 0) + int(qty or 0)
 
     pop, total = population(session, commander)
-    tags = card_tags(session, list(deck) + list(pop))
+    names = list(deck) + list(pop)
+    tags = card_tags(session, names)
+    profiles = card_profiles(session, names)
     return {
         "decks": total,
         "deck_cards": sum(deck.values()),
         "categories": summarize(deck, pop, total, tags),
+        "curve": curve_rows(deck, pop, total, profiles) if total else [],
+        "lands_avg": lands_average(
+            pop, total, profiles, commanders=max(1, len(split_commanders(commander)))),
     }

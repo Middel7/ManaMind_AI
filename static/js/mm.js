@@ -2047,7 +2047,7 @@
           + ` — ${Math.round(share)} % des sorts`
           + (refShare === null ? '' : `, contre ${Math.round(refShare)} % pour ce commandant`);
         return `
-        <span class="curve__bar" title="${esc(title)}">
+        <span class="curve__bar" data-bucket="${index}" title="${esc(title)}">
           <span class="curve__pct">${count ? `${Math.round(share)} %` : ''}</span>
           <span class="curve__track">
             <span class="curve__fill" style="height:${(share / scale) * 100}%"></span>
@@ -2154,6 +2154,19 @@
         </div>`;
     },
 
+    /** La comparaison du nombre de terrains a celui des decks du meme
+     *  commandant, au gabarit de celle du cout moyen. Seule l'analyse poussee
+     *  connait cette moyenne (`reference.lands`) : ailleurs, rien ne s'ajoute. */
+    landsRef(front, reference = null) {
+      if (!reference || reference.lands == null) return '';
+      const delta = front - reference.lands;
+      return `<span class="xs dim"
+        title="Moyenne estimée : sur les 100 cartes d’un deck, ce qui n’est pas un sort est un terrain">
+        <i class="curve-avg__key" aria-hidden="true"></i>
+        vs ${MM.fmt.dec(reference.lands, 1)} pour ce commandant
+        (${delta >= 0 ? '+' : '−'}${MM.fmt.dec(Math.abs(delta), 1)})</span>`;
+    },
+
     /** Symboles exiges, sources et terrains — la lecture des couleurs.
      *  `average: true` y ajoute le cout moyen, quand la courbe ne le porte
      *  plus elle-meme. */
@@ -2172,6 +2185,7 @@
             ${land.back ? `<span class="xs dim"
               title="Cartes dont seule la face arrière est un terrain"
               >+ ${land.back} au verso</span>` : ''}
+            ${MM.mana.landsRef(land.front, reference)}
           </div>
           ${average ? MM.mana.avgRow(list, commander, reference) : ''}
         </div>`;
