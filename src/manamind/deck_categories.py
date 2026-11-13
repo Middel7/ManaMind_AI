@@ -31,6 +31,10 @@ from manamind.commanders import commander_keys, is_commander
 TOP = 15
 # Cartes jouées ailleurs et absentes du deck, proposées par catégorie.
 MISSING = 12
+# L'interaction, montrée sous le classement quel que soit son rang : un deck
+# se juge aussi à sa capacité de répondre, même chez un commandant qui en joue
+# peu.
+ALWAYS = ("Destruction ciblée", "Destruction de masse", "Contresorts")
 
 # Tags qui décrivent la carte plutôt que son rôle : cycles de cartes, conception
 # et règles, univers et curiosités de nom. Testés avant les catégories, faute
@@ -98,7 +102,7 @@ _RULES = [
     ("Destruction de masse", r"sweeper|wrath|mass removal|multi removal"
         r"|board wipe|^mass(?! reanimation)"),
     ("Bounce et renvoi en main", r"bounce|tuck"),
-    ("Retrait ciblé", r"doom blade|banish|abrade|disintegrate|pacifism|o-ring"
+    ("Destruction ciblée", r"doom blade|banish|abrade|disintegrate|pacifism|o-ring"
         r"|death-to-exile|frost armor|shrink|removal|disenchant"
         r"|naturalize|saboteur|swap removal|deanimate"),
     ("Dégâts directs", r"burn|pinger|damage(?! prevention)|fight|bite"),
@@ -219,7 +223,12 @@ def summarize(
 
     similar = per_category(population)
     mine = per_category(deck)
-    ranked = sorted(similar.items(), key=lambda item: (-item[1], item[0]))[:top]
+    # Les catégories d'interaction se lisent toujours, à part : le classement
+    # se fait sans elles, puis elles le suivent, même à zéro.
+    ranked = sorted(
+        ((cat, total) for cat, total in similar.items() if cat not in ALWAYS),
+        key=lambda item: (-item[1], item[0]))[:top]
+    ranked += [(cat, similar.get(cat, 0.0)) for cat in ALWAYS]
 
     # Le deck et les statistiques n'écrivent pas toujours un nom de la même
     # façon : casse, ou face avant seule d'une carte recto-verso.
@@ -250,6 +259,7 @@ def summarize(
             "similar": round(total / total_decks, 1),
             "cards": cards,
             "missing": missing,
+            "always": cat in ALWAYS,
         })
     return rows
 

@@ -30,7 +30,7 @@ def test_tags_ranges_par_role():
         "land ramp": "Recherche de terrains",
         "tutor-land-basic": "Recherche de terrains",
         "tutor-to-hand": "Tuteurs",
-        "spot removal": "Retrait ciblé",
+        "spot removal": "Destruction ciblée",
         "sweeper": "Destruction de masse",
         "flicker-creature": "Blink et arrivées",
         "extra turn": "Tours et phases supplémentaires",
@@ -71,15 +71,20 @@ def test_resume_classe_selon_les_decks_similaires():
 
     rows = summarize(deck, population, 10, tags)
 
+    # Le classement, puis l'interaction toujours en dessous, même à zéro.
     assert [row["category"] for row in rows] == [
         "Terrains et synergies de terrain", "Production de mana",
-        "Pioche de cartes", "Retrait ciblé"]
-    terrains, mana, pioche, retrait = rows
+        "Pioche de cartes",
+        "Destruction ciblée", "Destruction de masse", "Contresorts"]
+    assert [row["always"] for row in rows] == [False] * 3 + [True] * 3
+    terrains, mana, pioche, retrait, masse, contresorts = rows
     assert (terrains["deck"], terrains["similar"]) == (30, 25.0)
     # Deux tags de la même catégorie ne comptent la carte qu'une fois.
     assert mana["deck"] == 1 and mana["similar"] == 1.0
     assert pioche["deck"] == 0 and pioche["similar"] == 0.8
     assert retrait["similar"] == 0.5
+    assert (masse["deck"], masse["similar"], masse["cards"]) == (0, 0.0, [])
+    assert contresorts["similar"] == 0.0
 
 
 def test_cartes_du_deck_et_cartes_manquantes():
@@ -112,5 +117,10 @@ def test_resume_limite_et_sans_decks_similaires():
     tags = {f"Carte {i}": [tag] for i, tag in enumerate(
         ["mana rock", "draw engine", "spot removal", "sweeper"])}
     population = {name: 1 for name in tags}
-    assert len(summarize({}, population, 1, tags, top=2)) == 2
+    # Les catégories d'interaction ne prennent pas de place dans le top : il
+    # garde ses deux catégories, et les trois suivent.
+    rows = summarize({}, population, 1, tags, top=2)
+    assert [row["category"] for row in rows] == [
+        "Pioche de cartes", "Production de mana",
+        "Destruction ciblée", "Destruction de masse", "Contresorts"]
     assert summarize({"Carte 0": 1}, {}, 0, tags) == []
