@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>ManaMind — Analyse poussée</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#08080C">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ManaMind">
+<link rel="icon" href="/static/img/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Marcellus&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/app.css">
+<style>
+  /* Le titre mene au deck analyse, comme sur les resultats : il garde
+     l'allure d'un titre et ne se revele lien qu'au survol. */
+  .deep-hero__link {
+    color: inherit;
+    text-decoration: none;
+    transition: color var(--dur-fast) var(--ease);
+  }
+  .deep-hero__link:hover { color: var(--accent); }
+
+  /* Les deux chiffres d'une ligne se lisent ensemble : celui du deck prime,
+     la moyenne des autres decks reste en retrait. 68 px de .gap-row__delta ne
+     tenaient pas « 46 / 31,2 » sans retour a la ligne. */
+  .deep-panel .gap-row__delta { width: 84px; }
+
+  /* Les noms de categorie sont plus longs que ceux des familles des
+     resultats : a 190 px, « Terrains et synergies de terrain » se coupait. */
+  .deep-panel .gap-row__label { flex-basis: 250px; }
+
+  /* La moyenne des decks similaires en trait, pas en barre : sous une barre
+     doree plus longue, une barre claire disparaissait, et avec elle la
+     moitie de la comparaison des que le deck depassait la moyenne. */
+  .deep-panel .gap-row__tick {
+    position: absolute; top: 0; bottom: 0;
+    width: 2px; margin-left: -1px;   /* trait centre sur la valeur */
+    background: var(--text);
+  }
+</style>
+</head>
+<body>
+
+<div id="page">
+  <section class="hero" id="hero">
+    <div class="hero__body">
+      <div class="skeleton skeleton--text" style="width:280px;height:32px"></div>
+    </div>
+  </section>
+  <div id="content">
+    <div class="center" style="padding:80px"><span class="spinner spinner--lg"></span></div>
+  </div>
+</div>
+
+<script src="/static/js/mm.js"></script>
+<script>
+(async () => {
+  const user = await MM.boot({ title: 'Analyse poussée', nav: 'analyze' });
+  if (!user) return;
+
+  const deckId = new URLSearchParams(location.search).get('deck');
+  const content = MM.el('#content');
+
+  // Le bandeau reprend l'illustration de la derniere analyse quand elle porte
+  // sur ce deck : l'API des categories ne la connait pas.
+  let deckInfo = {};
+  try { deckInfo = JSON.parse(sessionStorage.getItem('mm_analysis_deck')) || {}; } catch {}
+  if (deckInfo.deck_id !== deckId) deckInfo = {};
+
+  function renderHero(deck, stats) {
+    const art = deckInfo.scryfall_id ? MM.scryfallArt(deckInfo.scryfall_id) : null;
+    const eyebrow = MM.deckEyebrow(deck.commander, deck.name) || 'Analyse poussée';
+    MM.el('#hero').innerHTML = `
+      ${art ? `<div class="hero__art" style="background-image:url('${MM.esc(art)}')"></div>` : ''}
+      <div class="hero__body">
+        <p class="eyebrow">${MM.esc(eyebrow)}</p>
+        <h2 class="hero__title">
+          <a class="deep-hero__link" href="/decks/${encodeURIComponent(deck.deck_id)}"
+             title="Ouvrir le deck">${MM.esc(deck.name || 'Deck')}</a></h2>
+        <p class="muted">Ce que fait votre deck, catégorie par catégorie, face aux
+          decks du même commandant.</p>
+        ${stats || ''}
+        <div class="hero__actions">
+          <a class="btn btn--sm" href="/decks/${encodeURIComponent(deck.deck_id)}">
+            Ouvrir le deck</a>
+          <a class="btn btn--sm btn--ghost" href="/decks/analyse">Nouvelle analyse</a>
+        </div>
+      </div>`;
+  }
+
+  if (!deckId) {
+    MM.el('#hero').hidden = true;
+    content.innerHTML = MM.empty({
+      icon: 'warning',
+      title: 'Aucun deck à analyser',
+      text: 'L’analyse poussée s’ouvre depuis les résultats d’une analyse de deck.',
+      action: { href: '/decks/analyse', label: 'Analyser un deck' },
+    });
+    return;
+  }
+
+  let data;
+  try {
+    data = await MM.api.get(`/api/v2/decks/${encodeURIComponent(deckId)}/categories`);
+  } catch (err) {
+    MM.el('#hero').hidden = true;
+    content.innerHTML = MM.empty({
+      icon: 'warning', title: 'Analyse indisponible', text: err.message,
+      action: { href: '/decks', label: 'Voir mes decks' },
+    });
+    return;
+  }
+
+  const rows = data.categories || [];
+  renderHero(data.deck, `
+    <div class="hero__stats">
+      <span class="hero__stat"><b>${MM.fmt.int(data.decks)}</b>
+        <span class="muted small">${data.decks > 1 ? 'decks similaires' : 'deck similaire'}</span></span>
+      <span class="hero__stat"><b>${MM.fmt.int(data.deck_cards)}</b>
+        <span class="muted small">cartes analysées</span></span>
+    </div>`);
+
+  if (!rows.length) {
+    content.innerHTML = MM.empty({
+      icon: 'box',
+      title: 'Aucun deck similaire connu',
+      text: 'Aucun deck public de ce commandant n’est encore en base : '
+        + 'il n’y a rien à quoi comparer ce deck.',
+      action: { href: `/decks/${encodeURIComponent(deckId)}`, label: 'Ouvrir le deck' },
+    });
+    return;
+  }
+
+  // Une seule echelle pour toutes les lignes : une barre se compare aussi a
+  // celles des autres categories, pas seulement a sa voisine.
+  const max = Math.max(1, ...rows.flatMap((row) => [row.deck, row.similar]));
+
+  content.innerHTML = `
+    <div class="panel deep-panel">
+      <div class="panel__head">
+        <div class="stack-2">
+          <h2 class="h3">Les ${rows.length} catégories les plus jouées</h2>
+          <p class="xs dim">Classées selon les decks du même commandant. Pour chacune,
+            le nombre de cartes de votre deck, puis le nombre moyen de cartes par deck
+            chez les autres.</p>
+        </div>
+      </div>
+      <div class="panel__body">
+        ${rows.map((row) => {
+          const below = row.deck < row.similar;
+          return `
+            <div class="gap-row">
+              <span class="gap-row__label truncate" title="${MM.esc(row.category)}">
+                ${MM.esc(row.category)}</span>
+              <span class="gap-row__track"
+                    title="Votre deck : ${MM.fmt.int(row.deck)} — decks similaires : ${MM.fmt.dec(row.similar, 1)} en moyenne">
+                <span class="gap-row__deck" style="width:${(row.deck / max) * 100}%"></span>
+                <span class="gap-row__tick" style="left:${(row.similar / max) * 100}%"></span>
+              </span>
+              <span class="gap-row__delta">
+                <b class="${below ? 'accent' : ''}">${MM.fmt.int(row.deck)}</b>
+                <span class="dim">/ ${MM.fmt.dec(row.similar, 1)}</span></span>
+            </div>`;
+        }).join('')}
+        <div class="legend" style="margin-top:var(--sp-4)">
+          <span class="legend__item"><b>Barre dorée</b> votre deck</span>
+          <span class="legend__item"><b>Trait blanc</b> moyenne des decks similaires</span>
+          <span class="legend__item"><b class="accent">Chiffre doré</b> moins que la moyenne</span>
+        </div>
+        <p class="xs dim" style="margin-top:var(--sp-3)">
+          Une carte compte dans chaque catégorie qu’elle touche : les totaux dépassent
+          donc le nombre de cartes du deck. Le commandant n’est pas compté.
+        </p>
+      </div>
+    </div>`;
+})();
+</script>
+</body>
+</html>

@@ -819,6 +819,41 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
 .step__title { font-size: var(--text-sm); font-weight: 600; }
 .step__detail { font-size: var(--text-xs); color: var(--text-3); }
 
+/* ═══ Comparaison a une reference ════════════════════════════════════════ */
+
+/* Une ligne par famille ou categorie : la barre claire porte la reference
+   (decks du meme commandant), la barre doree le deck. Ne vivait que dans les
+   resultats d'analyse ; l'analyse poussee la reprend, d'ou sa place ici. */
+.gap-row { display: flex; align-items: center; gap: var(--sp-3); padding: 6px 0; }
+/* 190 px demandes, pas imposes. Ces rangees vivent dans un panneau qui occupe
+   la moitie de la grille : sur tablette, ce panneau tombe a 326 px, et un
+   intitule inflexible ne laissait plus que 44 px a la barre — soit le seul
+   element qui porte la comparaison. Les deux se partagent maintenant le
+   manque, et l'intitule se coupe (il porte deja .truncate) plutot que
+   d'ecraser la barre. Au large, rien ne change : l'intitule retrouve ses
+   190 px et c'est la barre qui prend le surplus. */
+.gap-row__label { flex: 0 1 190px; min-width: 0; font-size: var(--text-sm); }
+.gap-row__track {
+  flex: 1 1 130px; min-width: 96px;
+  height: 16px; position: relative;
+  background: var(--surface); border-radius: var(--r-sm); overflow: hidden;
+}
+.gap-row__deck, .gap-row__meta { position: absolute; top: 0; bottom: 0; }
+.gap-row__meta { background: var(--surface-3); }
+.gap-row__deck { background: var(--accent); opacity: 0.85; }
+/* Largeur fixe : les chiffres de toutes les lignes s'alignent en colonne. */
+.gap-row__delta { width: 68px; text-align: right; font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums; flex-shrink: 0; }
+
+/* L'intitule et l'ecart occupaient 258 px des 288 disponibles a 320 px : la
+   barre, qui porte toute la comparaison, se reduisait a un trait. Sur deux
+   lignes, le nom garde sa place et la barre la largeur entiere. */
+@media (max-width: 680px) {
+  .gap-row { flex-wrap: wrap; gap: 2px var(--sp-3); padding: var(--sp-2) 0; }
+  .gap-row__label { width: auto; flex: 1; min-width: 0; }
+  .gap-row__track { flex-basis: 100%; order: 3; }
+}
+
 /* ═══ Grille de cartes Magic ═════════════════════════════════════════════ */
 
 .card-grid {
