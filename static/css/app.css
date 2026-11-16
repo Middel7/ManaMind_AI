@@ -586,10 +586,20 @@ button.nav__item { width: 100%; }
 
 .input::placeholder, .textarea::placeholder { color: var(--text-3); }
 
+/* Or plein et halo franc : la bordure a 38 % et le halo a 13 % se perdaient
+   sur le fond sombre, et l'on ne voyait pas quel champ attendait la saisie. */
 .input:focus, .select:focus, .textarea:focus {
   outline: none;
-  border-color: var(--line-accent);
-  box-shadow: 0 0 0 3px var(--accent-wash);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+/* Un champ que la page vient de rendre a la saisie — apres l'ajout d'une
+   carte, par exemple — s'eclaire un instant : le curseur seul n'attire pas
+   le regard, qui est reste sur la carte cliquee. */
+.input--ready { animation: input-ready calc(var(--dur-slow) * 3) var(--ease-out); }
+@keyframes input-ready {
+  from { box-shadow: 0 0 0 8px var(--accent-glow); }
 }
 
 .textarea { resize: vertical; min-height: 120px; font-family: var(--font-mono); font-size: var(--text-sm); line-height: 1.6; }
