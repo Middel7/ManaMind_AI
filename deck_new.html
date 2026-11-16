@@ -666,6 +666,14 @@
     if (event.detail.scope !== 'deck' || !state.deck) return;
     await loadCards();
     render();
+    // Une carte ajoutee, on en cherche une autre : le champ se vide et reprend
+    // le curseur. Les resultats restent affiches, on peut encore y piocher.
+    // Un retrait, lui, ne deplace rien.
+    const search = MM.el('#cardSearch');
+    if (event.detail.delta > 0 && search) {
+      search.value = '';
+      search.focus();
+    }
   });
 
   if (resumeId) {
