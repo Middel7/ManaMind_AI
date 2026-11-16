@@ -673,6 +673,10 @@
     if (event.detail.delta > 0 && search) {
       search.value = '';
       search.focus();
+      // Un bref eclat signale ou l'on reprend la saisie (voir .input--ready).
+      search.classList.add('input--ready');
+      search.addEventListener('animationend',
+        () => search.classList.remove('input--ready'), { once: true });
     }
   });
 
