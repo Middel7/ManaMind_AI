@@ -667,6 +667,28 @@ button.nav__item { width: 100%; }
 .switch input:checked + .switch__track { background: var(--accent-wash); border-color: var(--line-accent); }
 .switch input:checked + .switch__track::after { transform: translateX(16px); background: var(--accent); }
 
+/* Choix exclusif entre deux ou trois etats, qui se lit comme un statut :
+   l'option retenue est pleine, les autres en retrait dans le meme rail. Des
+   chips cote a cote ne disaient pas qu'un seul etat vaut a la fois. */
+.segmented {
+  display: inline-flex; gap: 2px; padding: 3px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--line);
+  background: var(--bg-sunken);
+}
+.segmented__opt {
+  display: inline-flex; align-items: center; gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  border: 0; border-radius: var(--r-full);
+  background: none;
+  font: inherit; font-size: var(--text-sm); font-weight: 600;
+  color: var(--text-2); white-space: nowrap; cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.segmented__opt:hover { color: var(--text); }
+.segmented__opt[aria-checked="true"] { background: var(--accent); color: var(--bg); }
+.segmented__opt svg { width: 16px; height: 16px; flex-shrink: 0; }
+
 /* ── Autocompletion ──────────────────────────────────────────────────── */
 
 .autocomplete { position: relative; }

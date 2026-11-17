@@ -189,7 +189,7 @@
           <span class="checks__item" data-check>
             <span><b>Pour rester dans vos boîtes.</b> Les suggestions portent aussi
               sur des cartes que vous ne possédez pas : dans les cartes à ajouter,
-              le filtre <b>Mes cartes uniquement</b> ne garde que celles de votre
+              choisissez <b>Mes cartes</b> pour ne garder que celles de votre
               collection.</span></span>
         </div>
       </div>
@@ -353,7 +353,7 @@
         commander: currentDeck.commander,
         scryfall_id: currentDeck.scryfall_id,
       }));
-      // « Mes cartes uniquement » demande des l'arrivee (ancien chemin
+      // « Mes cartes » demande des l'arrivee (ancien chemin
       // « Ameliorer avec ma collection ») : le filtre suit jusqu'aux resultats.
       const collection = new URLSearchParams(location.search).get('collection') === '1'
         ? '&collection=1' : '';
