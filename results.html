@@ -680,7 +680,8 @@
     { key: 'all', label: 'Toutes', title: 'Toutes les cartes que vous possédez',
       test: () => true },
     { key: 'free', label: 'Libres',
-      title: 'Cartes que vous possédez et qu’aucun deck n’utilise',
+      title: 'Les cartes les plus jouées pour ce commandant que vous possédez et '
+        + 'qu’aucun deck n’utilise, au-delà des seules cartes de l’analyse',
       test: (info) => (info.owned || 0) > 0 && (info.free || 0) > 0 },
     { key: 'taken', label: 'Non libres',
       title: 'Cartes que vous possédez, mais dont tous les exemplaires sont déjà engagés dans un deck',
@@ -690,6 +691,36 @@
         + ' tenues pour acquises sans être saisies',
       test: (info) => !(info.owned > 0) && Boolean(info.opened) },
   ];
+
+  /* « Libres » ne se cherche pas parmi les 200 cartes de l'analyse : un
+     joueur qui a beaucoup de decks y a engage toutes ses cartes populaires, et
+     le filtre restait a zero. Comme l'ancien outil, il parcourt toutes les
+     cartes jouees avec ce commandant et garde, de la plus jouee a la moins
+     jouee, celles dont un exemplaire est libre. */
+  let freeRows = null;   // null tant que la liste n'est pas arrivee
+  let freeLoad = null;
+  function loadFree() {
+    if (freeLoad || !deckInfo.commander) return freeLoad;
+    freeLoad = MM.api.get('/api/collection-suggest'
+      + MM.api.qs({ top: 300, commander: deckInfo.commander }))
+      .then(async (data) => {
+        const list = (data.results || []).filter((card) => card.source !== 'opened_sets'
+          && (card.copies_owned || 0) > (card.copies_used || 0)
+          && !inDeck(card.card_name));
+        const unknown = list.map((card) => card.card_name).filter((name) => !resolved[name]);
+        if (unknown.length) Object.assign(resolved, await MM.resolveCards(unknown));
+        // Au format des lignes du CSV, pour passer par les memes filtres.
+        freeRows = list.map((card) => ({
+          name: card.card_name, frequency: (card.inclusion_rate || 0).toFixed(1) }));
+      })
+      .catch(() => { freeRows = []; })
+      .then(() => renderPanels());
+    return freeLoad;
+  }
+
+  /** Les cartes ou chercher une famille : la liste propre aux libres, ou
+   *  les cartes de l'analyse. */
+  const sourceFor = (kind) => (kind === 'free' ? (freeRows || []) : additions);
 
   /** Filtres d'affichage, sur les cartes a ajouter. `kind` force la famille
    *  de cartes possedees, pour en compter chacune. */
@@ -743,29 +774,42 @@
   });
 
   function renderPanels() {
-    const shownAdd = additions.filter((row) => shown(row)).slice(0, ADD_SHOWN);
+    const source = ownOnly ? sourceFor(ownKind) : additions;
+    const shownAdd = source.filter((row) => shown(row)).slice(0, ADD_SHOWN);
     const shownCut = removals.filter(underCap);
     MM.el('#count-add').textContent = MM.fmt.int(shownAdd.length);
     MM.el('#count-cut').textContent = MM.fmt.int(shownCut.length);
     // Chaque famille de cartes possedees dit combien elle en compte, avec
-    // les autres filtres appliques ; une famille vide ne se choisit pas.
+    // les autres filtres appliques ; une famille vide ne se choisit pas. Les
+    // libres, tant qu'elles se cherchent, restent au choix.
     OWN_KINDS.forEach((entry) => {
-      const count = Math.min(ADD_SHOWN, additions.filter((row) => shown(row, entry.key)).length);
-      MM.el(`[data-own-count="${entry.key}"]`).textContent = MM.fmt.int(count);
-      MM.el(`[data-own-kind="${entry.key}"]`).disabled = !count && entry.key !== ownKind;
+      const pending = entry.key === 'free' && freeRows === null;
+      const count = pending ? null : Math.min(ADD_SHOWN,
+        sourceFor(entry.key).filter((row) => shown(row, entry.key)).length);
+      MM.el(`[data-own-count="${entry.key}"]`).textContent = pending ? '…' : MM.fmt.int(count);
+      MM.el(`[data-own-kind="${entry.key}"]`).disabled = !pending && !count && entry.key !== ownKind;
     });
+    if (ownOnly && ownKind === 'free' && freeRows === null) {
+      MM.el('#panel-add').innerHTML = `<div class="card-grid">${MM.cardSkeletons(6)}</div>`;
+      return renderCut(shownCut);
+    }
     const emptyAdd = ownOnly
       ? 'Aucune carte de votre collection parmi les plus jouées pour ce commandant'
         + (priceCap ? ` à ${priceCap} € ou moins.` : '.')
       : (priceCap ? `Aucun ajout proposé à ${priceCap} € ou moins.`
         : 'Aucun ajout proposé pour ce deck.');
     MM.el('#panel-add').innerHTML = grid(shownAdd, 'add', emptyAdd);
+    renderCut(shownCut);
+  }
+
+  function renderCut(shownCut) {
     MM.el('#panel-cut').innerHTML = grid(shownCut, 'cut', priceCap
       ? `Aucun retrait proposé à ${priceCap} € ou moins.`
       : 'Aucun retrait proposé pour ce deck.');
   }
 
   renderPanels();
+  if (ownOnly) loadFree();
 
   MM.el('#priceFilter').addEventListener('click', (event) => {
     const chip = event.target.closest('.chip');
@@ -790,6 +834,7 @@
       else url.searchParams.delete('collection');
       history.replaceState(null, '', url);
       rememberResults();
+      if (ownOnly) loadFree();
     } else {
       ownKind = chip.dataset.ownKind;
       MM.els('[data-own-kind]').forEach((other) =>

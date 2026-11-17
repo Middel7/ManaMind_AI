@@ -444,7 +444,9 @@ def autocomplete_cards(
 @router.get("/api/collection-suggest")
 def api_collection_suggest(
     request: Request,
-    top: int = Query(default=40, ge=1, le=100),
+    # Jusqu'à 300 : le filtre « Libres » des résultats en garde 42, et les
+    # cartes d'extensions ouvertes, mêlées au classement, en prennent leur part.
+    top: int = Query(default=40, ge=1, le=300),
     commander: str | None = Query(default=None),
 ) -> JSONResponse:
     """
