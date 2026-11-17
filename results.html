@@ -337,7 +337,10 @@
     // « #poussee » : l'ancien nom de l'onglet Analyse, encore dans des liens.
     const hash = location.hash === '#poussee' ? '#analyse' : location.hash;
     const fromHash = TABS.find((tab) => `#${tab.hash}` === hash);
-    show(fromHash ? fromHash.id : 'deep');
+    // Venu pour les cartes de sa collection (l'ancien « Ameliorer avec ma
+    // collection »), on arrive sur les cartes a ajouter, filtre deja pose.
+    const firstTab = params.get('collection') === '1' ? 'add' : 'deep';
+    show(fromHash ? fromHash.id : firstTab);
   }
 
   /* Cette page n'affiche que le resultat de la derniere analyse : arriver ici
@@ -377,8 +380,9 @@
             <div class="checks">
               <div class="checks__item">${MM.icons.check}
                 <span><b>Avec les cartes que vous possédez déjà :</b>
-                  <a href="/decks/ameliorer" style="color:var(--accent)">Améliorer mon
-                  deck avec ma collection</a> ne propose rien qu'il faille acheter.</span>
+                  <a href="/decks/analyse?collection=1" style="color:var(--accent)">relancez
+                  l'analyse</a> et gardez le filtre « Mes cartes uniquement » : rien
+                  qu'il faille acheter.</span>
               </div>
               <div class="checks__item">${MM.icons.check}
                 <span><b>En allégeant plutôt qu'en ajoutant :</b>
@@ -664,18 +668,56 @@
     return price != null && price <= priceCap;
   };
 
-  /** Filtres d'affichage, sur les cartes a ajouter. */
-  const shown = (row) => {
+  /* « Mes cartes uniquement » : l'ancien outil « Ameliorer mon deck avec ma
+     collection » n'etait que cette analyse, restreinte aux cartes possedees.
+     Il devient un filtre de l'onglet, sur les memes cartes populaires. Une
+     commune ou peu commune d'une extension ouverte compte comme possedee,
+     comme le faisait l'outil. */
+  let ownOnly = params.get('collection') === '1';
+  let ownKind = 'all';
+  const mine = (info) => (info.owned || 0) > 0 || Boolean(info.opened);
+  const OWN_KINDS = [
+    { key: 'all', label: 'Toutes', title: 'Toutes les cartes que vous possédez',
+      test: () => true },
+    { key: 'free', label: 'Libres',
+      title: 'Cartes que vous possédez et qu’aucun deck n’utilise',
+      test: (info) => (info.owned || 0) > 0 && (info.free || 0) > 0 },
+    { key: 'taken', label: 'Non libres',
+      title: 'Cartes que vous possédez, mais dont tous les exemplaires sont déjà engagés dans un deck',
+      test: (info) => (info.owned || 0) > 0 && (info.free || 0) <= 0 },
+    { key: 'opened', label: 'Édition ouverte',
+      title: 'Communes et peu communes des extensions que vous avez déclaré avoir ouvertes,'
+        + ' tenues pour acquises sans être saisies',
+      test: (info) => !(info.owned > 0) && Boolean(info.opened) },
+  ];
+
+  /** Filtres d'affichage, sur les cartes a ajouter. `kind` force la famille
+   *  de cartes possedees, pour en compter chacune. */
+  const shown = (row, kind = ownKind) => {
     if (!underCap(row)) return false;
     const info = resolved[row.name] || {};
     if (hideStaples && (info.global_frequency || 0) > STAPLE_RATE) return false;
     if (hideLands && /\bLand\b/i.test(info.type_line || '')) return false;
+    if (ownOnly) {
+      if (!mine(info)) return false;
+      if (!OWN_KINDS.find((entry) => entry.key === kind).test(info)) return false;
+    }
     return true;
   };
 
   mountTabs({
     counts: { add: Math.min(ADD_SHOWN, additions.length), cut: removals.length },
     filters: `
+      <div class="chips" id="ownFilter">
+        <button class="chip" data-own="toggle" aria-pressed="${ownOnly}"
+                title="Ne montrer que les cartes de votre collection, parmi les plus jouées">
+          ${MM.icons.collection} Mes cartes uniquement</button>
+        ${OWN_KINDS.map((entry) => `
+          <button class="chip" data-own-kind="${entry.key}" aria-pressed="${entry.key === ownKind}"
+                  title="${MM.esc(entry.title)}" ${ownOnly ? '' : 'hidden'}>
+            ${MM.esc(entry.label)} <span class="chip__count" data-own-count="${entry.key}"></span>
+          </button>`).join('')}
+      </div>
       <div class="chips" id="priceFilter">
         ${CAPS.map((cap) => `
           <button class="chip" data-cap="${cap === null ? '' : cap}"
@@ -693,19 +735,31 @@
     // Les filtres d'incontournables et de terrains ne portent que sur les
     // ajouts : sur l'onglet des retraits, ils ne feraient rien.
     onTab: (id) => {
-      const kind = MM.el('#kindFilter');
-      if (kind) kind.hidden = id !== 'add';
+      ['#kindFilter', '#ownFilter'].forEach((selector) => {
+        const group = MM.el(selector);
+        if (group) group.hidden = id !== 'add';
+      });
     },
   });
 
   function renderPanels() {
-    const shownAdd = additions.filter(shown).slice(0, ADD_SHOWN);
+    const shownAdd = additions.filter((row) => shown(row)).slice(0, ADD_SHOWN);
     const shownCut = removals.filter(underCap);
     MM.el('#count-add').textContent = MM.fmt.int(shownAdd.length);
     MM.el('#count-cut').textContent = MM.fmt.int(shownCut.length);
-    MM.el('#panel-add').innerHTML = grid(shownAdd, 'add', priceCap
-      ? `Aucun ajout proposé à ${priceCap} € ou moins.`
-      : 'Aucun ajout proposé pour ce deck.');
+    // Chaque famille de cartes possedees dit combien elle en compte, avec
+    // les autres filtres appliques ; une famille vide ne se choisit pas.
+    OWN_KINDS.forEach((entry) => {
+      const count = Math.min(ADD_SHOWN, additions.filter((row) => shown(row, entry.key)).length);
+      MM.el(`[data-own-count="${entry.key}"]`).textContent = MM.fmt.int(count);
+      MM.el(`[data-own-kind="${entry.key}"]`).disabled = !count && entry.key !== ownKind;
+    });
+    const emptyAdd = ownOnly
+      ? 'Aucune carte de votre collection parmi les plus jouées pour ce commandant'
+        + (priceCap ? ` à ${priceCap} € ou moins.` : '.')
+      : (priceCap ? `Aucun ajout proposé à ${priceCap} € ou moins.`
+        : 'Aucun ajout proposé pour ce deck.');
+    MM.el('#panel-add').innerHTML = grid(shownAdd, 'add', emptyAdd);
     MM.el('#panel-cut').innerHTML = grid(shownCut, 'cut', priceCap
       ? `Aucun retrait proposé à ${priceCap} € ou moins.`
       : 'Aucun retrait proposé pour ce deck.');
@@ -719,6 +773,28 @@
     priceCap = chip.dataset.cap ? Number(chip.dataset.cap) : null;
     MM.els('#priceFilter .chip').forEach((other) =>
       other.setAttribute('aria-pressed', String(other === chip)));
+    renderPanels();
+  });
+
+  MM.el('#ownFilter').addEventListener('click', (event) => {
+    const chip = event.target.closest('.chip');
+    if (!chip || chip.disabled) return;
+    if (chip.dataset.own === 'toggle') {
+      ownOnly = !ownOnly;
+      chip.setAttribute('aria-pressed', String(ownOnly));
+      MM.els('[data-own-kind]').forEach((other) => { other.hidden = !ownOnly; });
+      // Retenu dans l'adresse : un rechargement, ou le retour depuis la fiche
+      // d'une carte, retrouve le filtre.
+      const url = new URL(location.href);
+      if (ownOnly) url.searchParams.set('collection', '1');
+      else url.searchParams.delete('collection');
+      history.replaceState(null, '', url);
+      rememberResults();
+    } else {
+      ownKind = chip.dataset.ownKind;
+      MM.els('[data-own-kind]').forEach((other) =>
+        other.setAttribute('aria-pressed', String(other === chip)));
+    }
     renderPanels();
   });
 

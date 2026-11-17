@@ -6,6 +6,8 @@ d'apres les outils, redirigent en permanent vers les nouvelles.
 """
 from __future__ import annotations
 
+from urllib.parse import quote
+
 from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, RedirectResponse
 
@@ -82,9 +84,20 @@ def page_deck_new() -> FileResponse:
     return _page("deck_new.html")
 
 
-@router.get("/decks/ameliorer")
-def page_deck_improve() -> FileResponse:
-    return _page("deck_improve.html")
+@router.get("/decks/ameliorer", include_in_schema=False)
+def redirect_deck_improve(request: Request) -> RedirectResponse:
+    """« Améliorer avec ma collection » n'est plus une page à part.
+
+    C'était l'analyse par popularité restreinte aux cartes possédées : elle
+    devient le filtre « Mes cartes uniquement » des résultats. Un deck désigné
+    lance l'analyse sans repasser par le choix, filtre posé.
+    """
+    deck = request.query_params.get("deck")
+    if deck:
+        return RedirectResponse(
+            f"/decks/analyse?deck={quote(deck, safe='')}&run=popular&collection=1",
+            status_code=301)
+    return RedirectResponse("/decks/analyse?collection=1", status_code=301)
 
 
 @router.get("/decks/alleger")

@@ -62,7 +62,7 @@
 
 <div id="page">
   <div class="stack-2">
-    <h2 class="h2">Améliorer mon deck grâce aux suggestions de ManaMind</h2>
+    <h2 class="h2">Améliorer mon deck</h2>
     <p class="muted small" id="chapeauSimple">
       Votre deck comparé à ceux des autres joueurs du même commandant : ce qu'ils
       jouent et qui manque à votre liste. Choisissez un deck, puis lancez
@@ -187,11 +187,10 @@
               s'affichent sur une page de résultats : vous décidez carte par
               carte.</span></span>
           <span class="checks__item" data-check>
-            <span><b>Votre collection n'est pas un filtre ici.</b> Les suggestions
-              peuvent porter sur des cartes que vous ne possédez pas. Pour rester dans
-              vos boîtes, passez par
-              <a href="/decks/ameliorer" style="color:var(--accent)">Améliorer mon deck
-              avec les cartes de ma collection</a>.</span></span>
+            <span><b>Pour rester dans vos boîtes.</b> Les suggestions portent aussi
+              sur des cartes que vous ne possédez pas : dans les cartes à ajouter,
+              le filtre <b>Mes cartes uniquement</b> ne garde que celles de votre
+              collection.</span></span>
         </div>
       </div>
       <p class="note"><b>Bon à savoir.</b> Un deck se juge aussi à la table où il est
@@ -204,7 +203,7 @@
 <script src="/static/js/mm.js"></script>
 <script>
 (async () => {
-  const user = await MM.boot({ title: 'Améliorer mon deck grâce aux suggestions de ManaMind', nav: 'analyze' });
+  const user = await MM.boot({ title: 'Améliorer mon deck', nav: 'analyze' });
   if (!user) return;
 
   // L'analyse par le modele n'est pas encore ouverte a tous : elle demande une
@@ -354,7 +353,11 @@
         commander: currentDeck.commander,
         scryfall_id: currentDeck.scryfall_id,
       }));
-      const target = `/analyse?csv=${encodeURIComponent(data.recommendationsFile)}&algo=v1`;
+      // « Mes cartes uniquement » demande des l'arrivee (ancien chemin
+      // « Ameliorer avec ma collection ») : le filtre suit jusqu'aux resultats.
+      const collection = new URLSearchParams(location.search).get('collection') === '1'
+        ? '&collection=1' : '';
+      const target = `/analyse?csv=${encodeURIComponent(data.recommendationsFile)}&algo=v1${collection}`;
       if (replace) location.replace(target);
       else location.href = target;
     } catch (err) {

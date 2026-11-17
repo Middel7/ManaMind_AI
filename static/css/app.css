@@ -1660,6 +1660,10 @@ a.stat:hover { border-color: var(--line-strong); background: var(--surface-2); }
               color var(--dur-fast) var(--ease);
 }
 
+/* Un pictogramme dans un filtre prend la hauteur du texte : sans taille, le
+   SVG s'etalait sur toute la largeur du bouton. */
+.chip svg { width: 14px; height: 14px; flex-shrink: 0; }
+
 .chip:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
 /* Un filtre sans aucune carte reste visible plutot que de disparaitre : la
    liste des familles ne bouge pas d'un ecran a l'autre, et l'infobulle dit
