@@ -580,9 +580,9 @@
       items: [
         { key: 'build', label: 'Construire un deck avec mes cartes disponibles',
           href: '/collection/commandants', icon: 'crown' },
-        { key: 'improve', label: 'Améliorer mon deck avec les cartes de ma collection',
-          href: '/decks/ameliorer', icon: 'sparkle' },
-        { key: 'analyze', label: 'Améliorer mon deck grâce aux suggestions de ManaMind',
+        // « Avec les cartes de ma collection » n'est plus un outil a part : c'est
+        // le filtre « Mes cartes uniquement » des cartes a ajouter.
+        { key: 'analyze', label: 'Améliorer mon deck',
           href: '/decks/analyse', icon: 'chart' },
         { key: 'card', label: 'Trouver un commandant pour une carte',
           href: '/cartes/commandant', icon: 'search' },

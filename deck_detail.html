@@ -130,7 +130,8 @@
             ${MM.icons.edit}</button>` : ''}
         </div>
         <div class="hero__actions">
-          <a class="btn btn--primary" href="/decks/ameliorer?deck=${encodeURIComponent(deckId)}"
+          <a class="btn btn--primary"
+             href="/decks/analyse?deck=${encodeURIComponent(deckId)}&run=popular&collection=1"
              title="Cartes de votre collection qui amélioreraient ce deck">
             ${MM.icons.sparkle} Améliorer avec ma collection</a>
           <a class="btn" href="/decks/analyse?deck=${encodeURIComponent(deckId)}"

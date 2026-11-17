@@ -438,7 +438,18 @@ async def api_cards_resolve(request: Request) -> Response:
                    price.price AS unit_price,
                    COALESCE(owned.qty, 0) AS owned,
                    COALESCE(du.decks, 0) AS decks_used,
-                   COALESCE(g.global_frequency, 0) AS global_frequency
+                   COALESCE(g.global_frequency, 0) AS global_frequency,
+                   -- Commune ou peu commune d'une extension que l'utilisateur a
+                   -- déclaré avoir ouverte : tenue pour acquise sans être saisie,
+                   -- comme dans les suggestions tirées de la collection.
+                   EXISTS (
+                       SELECT 1
+                       FROM scryfall_card_printings op
+                       JOIN user_opened_sets os
+                         ON os.user_id = :uid AND LOWER(os.set_code) = LOWER(op.set_code)
+                       WHERE op.card_id = c.id AND op.lang = 'en'
+                         AND op.rarity IN ('common', 'uncommon')
+                   ) AS opened
             FROM unnest(CAST(:names AS text[])) AS n(raw)
             LEFT JOIN LATERAL (
                 SELECT sc.id, sc.name, sc.type_line, sc.mana_cost, sc.mana_value,
@@ -531,6 +542,7 @@ async def api_cards_resolve(request: Request) -> Response:
             "used": int(r.decks_used or 0),
             "global_frequency": float(r.global_frequency or 0),
             "free": max(0, int(r.owned or 0) - int(r.decks_used or 0)),
+            "opened": bool(r.opened),
         }
     return _json_response({"cards": cards})
 
