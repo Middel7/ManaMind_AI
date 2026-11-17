@@ -103,6 +103,19 @@
   }
   /* Sous 1400 px, onglets et filtres ne tiennent plus ensemble : les filtres
      passent sous la ligne des onglets, qui reprend sa propre bordure. */
+  /* Un groupe de filtres porte son intitule : « 5 € » seul ne disait pas
+     qu'il s'agit d'un plafond. */
+  .results-filter { display: flex; align-items: center; gap: var(--sp-2); }
+
+  /* Le choix des cartes proposees, sous les onglets : l'interrupteur, les
+     familles de cartes possedees quand elles s'appliquent, et une phrase qui
+     dit ce que montre la liste. */
+  .results-scope {
+    display: flex; flex-wrap: wrap; align-items: center;
+    gap: var(--sp-3) var(--sp-4);
+  }
+  .results-scope__note { flex: 1 1 260px; min-width: 0; }
+
   @media (max-width: 1400px) {
     .results-tabbar { flex-direction: column; align-items: stretch; gap: var(--sp-3); border-bottom: 0; }
     .results-tabbar .view-tabs { border-bottom: 1px solid var(--line); }
@@ -257,10 +270,11 @@
    *   counts   {add, cut}  chiffres portes par les deux premiers onglets
    *   filters  {string}    filtres propres aux onglets de cartes (HTML), poses
    *                        sur la ligne des onglets
+   *   addBar   {string}    barre propre aux cartes a ajouter, sous les onglets
    *   deepBefore {string}  HTML pose en tete de l'analyse poussee
    *   onTab    {(id)=>void} appele a chaque changement d'onglet
    */
-  function mountTabs({ counts, filters = '', deepBefore = '', onTab = () => {} }) {
+  function mountTabs({ counts, filters = '', addBar = '', deepBefore = '', onTab = () => {} }) {
     content.innerHTML = `
       <div class="stack-4">
         <div class="results-tabbar">
@@ -278,6 +292,7 @@
         </div>
         ${filters ? `<div class="results-tabbar__filters" id="filters">${filters}</div>` : ''}
         </div>
+        ${addBar ? `<div class="results-scope" id="addBar">${addBar}</div>` : ''}
         ${TABS.map((tab) => `
           <div role="tabpanel" id="panel-${tab.id}" aria-labelledby="tab-${tab.id}" hidden></div>`).join('')}
       </div>`;
@@ -294,6 +309,7 @@
         MM.el(`#panel-${tab.id}`).hidden = !selected;
       });
       if (filters) MM.el('#filters').hidden = id === 'deep';
+      if (addBar) MM.el('#addBar').hidden = id !== 'add';
       const hash = TABS.find((tab) => tab.id === id).hash;
       history.replaceState(null, '', `${location.pathname}${location.search}#${hash}`);
 
@@ -381,7 +397,7 @@
               <div class="checks__item">${MM.icons.check}
                 <span><b>Avec les cartes que vous possédez déjà :</b>
                   <a href="/decks/analyse?collection=1" style="color:var(--accent)">relancez
-                  l'analyse</a> et gardez le filtre « Mes cartes uniquement » : rien
+                  l'analyse</a> et choisissez « Mes cartes » : rien
                   qu'il faille acheter.</span>
               </div>
               <div class="checks__item">${MM.icons.check}
@@ -651,7 +667,7 @@
     : `<p class="muted small">${empty}</p>`;
 
   // Plafond de prix, commun aux deux onglets de cartes. null = aucun filtre.
-  const CAPS = [null, 20, 10, 5];
+  const CAPS = [null, 20, 10, 5, 1];
   let priceCap = null;
 
   // Au-dela de cette part des decks publics, une carte est un incontournable :
@@ -668,7 +684,7 @@
     return price != null && price <= priceCap;
   };
 
-  /* « Mes cartes uniquement » : l'ancien outil « Ameliorer mon deck avec ma
+  /* « Mes cartes » : l'ancien outil « Ameliorer mon deck avec ma
      collection » n'etait que cette analyse, restreinte aux cartes possedees.
      Il devient un filtre de l'onglet, sur les memes cartes populaires. Une
      commune ou peu commune d'une extension ouverte compte comme possedee,
@@ -736,40 +752,62 @@
     return true;
   };
 
+  // Ce que dit la ligne sous le choix : sur quelles cartes porte la liste.
+  const SCOPE_NOTES = {
+    everything: 'Les cartes les plus jouées par les decks du même commandant, que vous les ayez ou non.',
+    all: 'Parmi les plus jouées, celles de votre collection et de vos extensions ouvertes.',
+    free: 'Les plus jouées pour ce commandant dont un exemplaire est libre chez vous.',
+    taken: 'Parmi les plus jouées, celles que vous avez mais qui servent déjà dans un deck.',
+    opened: 'Parmi les plus jouées, les communes et peu communes de vos extensions ouvertes.',
+  };
+
   mountTabs({
     counts: { add: Math.min(ADD_SHOWN, additions.length), cut: removals.length },
-    filters: `
-      <div class="chips" id="ownFilter">
-        <button class="chip" data-own="toggle" aria-pressed="${ownOnly}"
-                title="Ne montrer que les cartes de votre collection, parmi les plus jouées">
-          ${MM.icons.collection} Mes cartes uniquement</button>
+    // Le choix des cartes proposees est un etat de la liste, pas un filtre
+    // parmi d'autres : il prend sa propre ligne, sous les onglets, en
+    // interrupteur a deux positions.
+    addBar: `
+      <div class="segmented" role="radiogroup" aria-label="Cartes proposées" id="scope">
+        <button class="segmented__opt" type="button" role="radio" data-scope="everything"
+                aria-checked="${!ownOnly}">${MM.icons.layers} Toutes les cartes</button>
+        <button class="segmented__opt" type="button" role="radio" data-scope="mine"
+                aria-checked="${ownOnly}">${MM.icons.collection} Mes cartes</button>
+      </div>
+      <div class="chips" id="ownKinds" ${ownOnly ? '' : 'hidden'}>
         ${OWN_KINDS.map((entry) => `
           <button class="chip" data-own-kind="${entry.key}" aria-pressed="${entry.key === ownKind}"
-                  title="${MM.esc(entry.title)}" ${ownOnly ? '' : 'hidden'}>
+                  title="${MM.esc(entry.title)}">
             ${MM.esc(entry.label)} <span class="chip__count" data-own-count="${entry.key}"></span>
           </button>`).join('')}
       </div>
-      <div class="chips" id="priceFilter">
-        ${CAPS.map((cap) => `
-          <button class="chip" data-cap="${cap === null ? '' : cap}"
-                  aria-pressed="${cap === null}">
-            ${cap === null ? 'Tous les prix' : `${cap} € et moins`}</button>`).join('')}
+      <p class="small muted results-scope__note" id="scopeNote"></p>`,
+    filters: `
+      <div class="results-filter" id="priceGroup">
+        <span class="filter-label">Prix max</span>
+        <div class="chips" id="priceFilter">
+          ${CAPS.map((cap) => `
+            <button class="chip" data-cap="${cap === null ? '' : cap}"
+                    aria-pressed="${cap === null}"
+                    title="${cap === null ? 'Tous les prix' : `${cap} € et moins`}">
+              ${cap === null ? 'Tous' : `${cap} €`}</button>`).join('')}
+        </div>
       </div>
-      <div class="chips" id="kindFilter">
-        <button class="chip" data-hide="staples" aria-pressed="false"
-                title="Masquer les cartes jouées dans plus de ${STAPLE_RATE} % des decks,
-                       comme Sol Ring ou Arcane Signet">
-          Sans les incontournables</button>
-        <button class="chip" data-hide="lands" aria-pressed="false"
-                title="Masquer les terrains">Sans les terrains</button>
+      <div class="results-filter" id="kindGroup">
+        <span class="filter-label">Masquer</span>
+        <div class="chips" id="kindFilter">
+          <button class="chip" data-hide="staples" aria-pressed="false"
+                  title="Masquer les cartes jouées dans plus de ${STAPLE_RATE} % des decks,
+                         comme Sol Ring ou Arcane Signet">
+            Incontournables</button>
+          <button class="chip" data-hide="lands" aria-pressed="false"
+                  title="Masquer les terrains">Terrains</button>
+        </div>
       </div>`,
     // Les filtres d'incontournables et de terrains ne portent que sur les
     // ajouts : sur l'onglet des retraits, ils ne feraient rien.
     onTab: (id) => {
-      ['#kindFilter', '#ownFilter'].forEach((selector) => {
-        const group = MM.el(selector);
-        if (group) group.hidden = id !== 'add';
-      });
+      const group = MM.el('#kindGroup');
+      if (group) group.hidden = id !== 'add';
     },
   });
 
@@ -789,6 +827,7 @@
       MM.el(`[data-own-count="${entry.key}"]`).textContent = pending ? '…' : MM.fmt.int(count);
       MM.el(`[data-own-kind="${entry.key}"]`).disabled = !pending && !count && entry.key !== ownKind;
     });
+    MM.el('#scopeNote').textContent = SCOPE_NOTES[ownOnly ? ownKind : 'everything'];
     if (ownOnly && ownKind === 'free' && freeRows === null) {
       MM.el('#panel-add').innerHTML = `<div class="card-grid">${MM.cardSkeletons(6)}</div>`;
       return renderCut(shownCut);
@@ -820,26 +859,40 @@
     renderPanels();
   });
 
-  MM.el('#ownFilter').addEventListener('click', (event) => {
+  MM.el('#scope').addEventListener('click', (event) => {
+    const option = event.target.closest('[data-scope]');
+    if (!option) return;
+    const next = option.dataset.scope === 'mine';
+    if (next === ownOnly) return;
+    ownOnly = next;
+    MM.els('#scope [data-scope]').forEach((other) =>
+      other.setAttribute('aria-checked', String(other === option)));
+    MM.el('#ownKinds').hidden = !ownOnly;
+    // Retenu dans l'adresse : un rechargement, ou le retour depuis la fiche
+    // d'une carte, retrouve le choix.
+    const url = new URL(location.href);
+    if (ownOnly) url.searchParams.set('collection', '1');
+    else url.searchParams.delete('collection');
+    history.replaceState(null, '', url);
+    rememberResults();
+    if (ownOnly) loadFree();
+    renderPanels();
+  });
+  // Fleches gauche et droite d'une position a l'autre, comme un groupe radio.
+  MM.el('#scope').addEventListener('keydown', (event) => {
+    if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+    const target = MM.el(`#scope [data-scope="${ownOnly ? 'everything' : 'mine'}"]`);
+    target.focus();
+    target.click();
+    event.preventDefault();
+  });
+
+  MM.el('#ownKinds').addEventListener('click', (event) => {
     const chip = event.target.closest('.chip');
     if (!chip || chip.disabled) return;
-    if (chip.dataset.own === 'toggle') {
-      ownOnly = !ownOnly;
-      chip.setAttribute('aria-pressed', String(ownOnly));
-      MM.els('[data-own-kind]').forEach((other) => { other.hidden = !ownOnly; });
-      // Retenu dans l'adresse : un rechargement, ou le retour depuis la fiche
-      // d'une carte, retrouve le filtre.
-      const url = new URL(location.href);
-      if (ownOnly) url.searchParams.set('collection', '1');
-      else url.searchParams.delete('collection');
-      history.replaceState(null, '', url);
-      rememberResults();
-      if (ownOnly) loadFree();
-    } else {
-      ownKind = chip.dataset.ownKind;
-      MM.els('[data-own-kind]').forEach((other) =>
-        other.setAttribute('aria-pressed', String(other === chip)));
-    }
+    ownKind = chip.dataset.ownKind;
+    MM.els('[data-own-kind]').forEach((other) =>
+      other.setAttribute('aria-pressed', String(other === chip)));
     renderPanels();
   });
 

@@ -581,7 +581,7 @@
         { key: 'build', label: 'Construire un deck avec mes cartes disponibles',
           href: '/collection/commandants', icon: 'crown' },
         // « Avec les cartes de ma collection » n'est plus un outil a part : c'est
-        // le filtre « Mes cartes uniquement » des cartes a ajouter.
+        // le choix « Mes cartes » des cartes a ajouter.
         { key: 'analyze', label: 'Améliorer mon deck',
           href: '/decks/analyse', icon: 'chart' },
         { key: 'card', label: 'Trouver un commandant pour une carte',
