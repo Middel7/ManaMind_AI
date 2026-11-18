@@ -578,12 +578,12 @@
     {
       label: 'Analyser',
       items: [
-        { key: 'build', label: 'Construire un deck avec mes cartes disponibles',
-          href: '/collection/commandants', icon: 'crown' },
         // « Avec les cartes de ma collection » n'est plus un outil a part : c'est
         // le choix « Mes cartes » des cartes a ajouter.
         { key: 'analyze', label: 'Améliorer mon deck',
           href: '/decks/analyse', icon: 'chart' },
+        { key: 'build', label: 'Construire un deck avec mes cartes disponibles',
+          href: '/collection/commandants', icon: 'crown' },
         { key: 'card', label: 'Trouver un commandant pour une carte',
           href: '/cartes/commandant', icon: 'search' },
         { key: 'moves', label: 'Cartes à changer de deck',
