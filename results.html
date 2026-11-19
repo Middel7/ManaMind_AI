@@ -113,7 +113,12 @@
   .results-scope {
     display: flex; flex-wrap: wrap; align-items: center;
     gap: var(--sp-3) var(--sp-4);
+    /* collee aux onglets et aux cartes, la ligne de statut se lisait comme
+       une bordure de la grille plutot que comme un choix a faire */
+    padding: var(--sp-5) 0 var(--sp-6);
   }
+  /* un interrupteur plus haut se repere et se clique mieux que des chips */
+  .results-scope .segmented__opt { padding: var(--sp-3) var(--sp-5); font-size: var(--text-base); }
   .results-scope__note { flex: 1 1 260px; min-width: 0; }
 
   @media (max-width: 1400px) {
