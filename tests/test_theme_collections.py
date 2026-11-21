@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 from manamind import collection_store
 from manamind.theme_collections import (
-    CriteriaError, build_where, clean_definition, merge_by_illustration)
+    CriteriaError, build_where, clean_definition, merge_by_illustration, opened_wanted)
 
 
 def test_les_criteres_se_combinent_par_et():
@@ -87,6 +87,7 @@ def test_definition_nettoyee():
     ("delete", "/api/v2/themes/1"),
     ("post", "/api/v2/themes/1/buylist"),
     ("post", "/api/v2/themes/1/editions"),
+    ("get", "/api/v2/themes/1/opened"),
 ])
 def test_routes_fermees_sans_session(client: TestClient, method, url):
     response = getattr(client, method)(url)
@@ -119,11 +120,14 @@ _TARN = [
 ]
 
 
-def _edition(set_code, number, art, released, price, copies=0, declared=False):
+def _edition(set_code, number, art, released, price, copies=0, declared=False,
+             rarity="rare"):
     return {"set_code": set_code, "collector_number": number, "set_name": set_code,
             "illustration_id": art, "released_at": released, "price": price,
             "cardmarket_id": f"cm-{set_code}-{number}", "copies": copies,
-            "declared": declared, "owned": bool(copies) or declared}
+            "declared": declared, "owned": bool(copies) or declared,
+            "rarity": rarity, "scryfall_id": f"sf-{set_code}-{number}",
+            "image_small": None, "image_normal": None}
 
 
 def _zen(merged):
@@ -210,3 +214,54 @@ class _Session:
 def test_illustration_lue_seulement_si_la_colonne_existe(monkeypatch, present, expected):
     monkeypatch.setattr(collection_store, "_PRINTING_COLUMNS", {})
     assert collection_store.printing_illustration_sql(_Session(present)) == expected
+
+
+# ── Boosters ouverts ─────────────────────────────────────────────────────────
+# Serra Angel, impressions anglaises relevées le 2026-11-03 : trois
+# illustrations (Greg Staples, Donato Giancola, Douglas Shuler).
+_STAPLES = "5f5651af-22fb-4fb8-a04c-1f34b5104bd9"
+_GIANCOLA = "7aa16de3-4ff9-4ed9-9d62-62c140599508"
+_SHULER = "6eb98f0e-e947-4efd-a84f-a4b20de70872"
+_SERRA = [
+    ("FDN", "147", _STAPLES, "2024-11-15", 0.1),
+    ("DMR", "25", _GIANCOLA, "2023-01-13", 0.2),
+    ("DMR", "271", _GIANCOLA, "2023-01-13", 0.3),
+    ("DOM", "33", _GIANCOLA, "2018-04-27", 0.2),
+    ("M15", "273", _STAPLES, "2014-07-18", 0.2),
+    ("2ED", "40", _SHULER, "1993-12-01", 70.0),
+]
+
+
+def _serra(copies=None, by_illustration=True):
+    copies = copies or {}
+    editions = [_edition(*row, copies=copies.get(row[:2], 0), rarity="uncommon")
+                for row in _SERRA]
+    if by_illustration:
+        editions = merge_by_illustration(editions)
+    return [{"card_id": 1, "name": "Serra Angel", "local_name": "Ange de Serra",
+             "editions": editions}]
+
+
+def test_boosters_ouverts_ranges_par_extension():
+    sets = opened_wanted(_serra(), {"fdn", "DMR"})
+    assert [(s["set_code"], [c["collector_number"] for c in s["cards"]]) for s in sets] == [
+        ("FDN", ["147"]), ("DMR", ["25", "271"])]
+    assert sets[0]["cards"][0]["local_name"] == "Ange de Serra"
+
+
+def test_boosters_ouverts_ecartent_une_illustration_possedee_ailleurs():
+    # Un exemplaire DOM #33 possède l'image de Giancola : DMR n'a plus rien à chercher.
+    sets = opened_wanted(_serra({("DOM", "33"): 1}), {"FDN", "DMR"})
+    assert [s["set_code"] for s in sets] == ["FDN"]
+
+
+def test_boosters_ouverts_par_edition_sans_regroupement():
+    # Sans comptage par illustration, seule l'édition elle-même compte.
+    sets = opened_wanted(_serra({("DOM", "33"): 1}, by_illustration=False), {"DMR"})
+    assert [c["collector_number"] for c in sets[0]["cards"]] == ["25", "271"]
+
+
+def test_boosters_ouverts_seulement_communes_et_peu_communes():
+    cards = [{"card_id": 2, "name": "Scalding Tarn", "local_name": None,
+              "editions": merge_by_illustration([_edition(*row) for row in _TARN])}]
+    assert opened_wanted(cards, {"MH2", "ZEN"}) == []
