@@ -100,6 +100,15 @@
     return;
   }
 
+  // Les fenetres de cartes reglent le deck : chaque changement se confirme.
+  document.addEventListener('mm:card-change', (event) => {
+    if (event.detail.scope !== 'deck') return;
+    const name = (MM.deckContext && MM.deckContext.name) || 'votre deck';
+    MM.toast.ok(event.detail.delta < 0
+      ? `${event.detail.card_name} retirée de ${name}.`
+      : `${event.detail.card_name} ajoutée à ${name}.`);
+  });
+
   await MM.deepAnalysis(content, {
     deckId,
     commander: deckInfo.commander || null,

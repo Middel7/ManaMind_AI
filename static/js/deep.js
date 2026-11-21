@@ -20,11 +20,29 @@
     return `${MM.fmt.int(rate)} % des decks`;
   };
 
+  // Reglage du deck depuis les fenetres de cartes, une fois le deck connu :
+  //   qty     {(name)=>number} exemplaires dans le deck
+  //   changed {boolean}        le deck a change pendant que la fenetre etait ouverte
+  //   refresh {()=>void}       relit le deck et les categories
+  // null tant que le deck n'a pas de commandant connu : rien a regler alors.
+  let editing = null;
+
   // Les cartes du deck sont deja la : ni achat ni vente. Les absentes se
   // proposent a l'achat. La recherche de commandant n'a rien a faire ici.
-  const tile = (card, resolved, market) => MM.cardTile(
-    { ...(resolved[card.card_name] || {}), card_name: card.card_name },
-    { context: null, note: rateNote(card.rate), market, commander: false });
+  // Le « + » et le « − » reglent le deck : retirer une carte peu jouee, ajouter
+  // une carte jouee ailleurs, sans quitter la categorie.
+  const tile = (card, resolved, market) => {
+    const name = card.card_name;
+    // Une carte de la colonne du deck y est au moins une fois, meme si la
+    // liste du deck n'a pas encore ete relue.
+    const qty = editing
+      ? (market ? editing.qty(name) : Math.max(1, editing.qty(name)))
+      : null;
+    return MM.cardTile(
+      { ...(resolved[name] || {}), card_name: name },
+      { context: editing ? 'deck' : null, deckQty: qty,
+        note: rateNote(card.rate), market, commander: false });
+  };
 
   const tiles = (cards, resolved, market) => `
     <div class="card-grid">
@@ -83,7 +101,16 @@
       title: row.category,
       wide: 'xl',
       body: `<div class="card-grid">${MM.cardSkeletons(6)}</div>`,
-      onClose: () => { closed = true; if (stopRender) stopRender(); },
+      onClose: () => {
+        closed = true;
+        if (stopRender) stopRender();
+        // Les compteurs des categories et la courbe se relisent a la fermeture
+        // seulement : pendant les reglages, les cartes restent a leur place.
+        if (editing && editing.changed) {
+          editing.changed = false;
+          editing.refresh();
+        }
+      },
     });
     // Elargie au-dela de la fiche carte : voir .deep-modal dans app.css.
     dialog.root.querySelector('.modal__box').classList.add('deep-modal');
@@ -292,17 +319,60 @@
     }
     renderMana();
 
-    const rows = data.categories || [];
-    categories.innerHTML = rows.length ? categoriesPanel(rows) : MM.empty({
-      icon: 'box',
-      title: 'Aucun deck similaire connu',
-      text: 'Aucun deck public de ce commandant n’est encore en base : '
-        + 'il n’y a rien à quoi comparer ce deck.',
-    });
+    let rows = [];
+    const renderCategories = () => {
+      rows = data.categories || [];
+      categories.innerHTML = rows.length ? categoriesPanel(rows) : MM.empty({
+        icon: 'box',
+        title: 'Aucun deck similaire connu',
+        text: 'Aucun deck public de ce commandant n’est encore en base : '
+          + 'il n’y a rien à quoi comparer ce deck.',
+      });
+    };
+    renderCategories();
     categories.addEventListener('click', (event) => {
       const button = event.target.closest('[data-row]');
       if (button) openCategory(rows[Number(button.dataset.row)]);
     });
+
+    // Le deck se regle depuis les fenetres de cartes. Le deck vise est celui
+    // de l'ecran s'il en a pose un, sinon celui que l'API vient de decrire.
+    const deck = data.deck || {};
+    const context = MM.deckContext && String(MM.deckContext.deck_id) === String(deckId)
+      ? MM.deckContext
+      : (deck.commander
+        ? { deck_id: deck.deck_id, commander: deck.commander, name: deck.name }
+        : null);
+    if (context) {
+      if (!MM.deckContext) MM.deckContext = context;
+      const readDeck = () => MM.api.get(`/api/v2/decks/${encodeURIComponent(deckId)}`)
+        .then((detail) => { cards = detail.cards || []; renderMana(); })
+        .catch(() => {});
+      editing = {
+        changed: false,
+        qty(name) {
+          const key = name.toLowerCase();
+          const line = (cards || []).find((entry) => entry.card_name.toLowerCase() === key);
+          return line ? line.quantity : 0;
+        },
+        async refresh() {
+          await readDeck();
+          try {
+            data = await MM.api.get(`/api/v2/decks/${encodeURIComponent(deckId)}/categories`);
+          } catch { return; /* les chiffres d'avant restent affiches */ }
+          curveRows = data.curve || null;
+          landsAvg = data.lands_avg == null ? null : data.lands_avg;
+          renderMana();
+          renderCategories();
+        },
+      };
+      // Une carte reglee deux fois de suite doit partir de sa quantite a jour.
+      document.addEventListener('mm:card-change', (event) => {
+        if (event.detail.scope !== 'deck') return;
+        editing.changed = true;
+        readDeck();
+      });
+    }
 
     return {
       setDeckCards(next) { cards = next; renderMana(); },
